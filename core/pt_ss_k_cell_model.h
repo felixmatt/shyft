@@ -1,0 +1,221 @@
+#pragma once
+#include "cell_model.h"
+#include "pt_ss_k.h"
+
+namespace shyft {
+    namespace core {
+        /** \brief pt_ss_k namespace declares the needed pt_ss_k specific parts of a cell
+        * 
+        * See pt_gs_k namespace core/pt_gs_k_cell_model.h for more info
+        */
+        namespace pt_ss_k {
+            using namespace std;
+
+            typedef shared_ptr<parameter_t> parameter_t_;
+            typedef shared_ptr<state_t>     state_t_;
+            typedef shared_ptr<response_t>  response_t_;
+
+            /** \brief all_reponse_collector aims to collect all output from a cell run so that it can be studied afterwards.
+            *
+            * \note could be quite similar between variants of a cell, e.g. pt_gs_k pt_ss_k pt_ss_k, ptss..
+            * TODO: could we use another approach to limit code pr. variant ?
+            * TODO: Really make sure that units are correct, precise and useful..
+            *       both with respect to measurement unit, and also specifying if this
+            *       a 'state in time' value or a average-value for the time-step.
+            */
+            struct all_response_collector {
+                double destination_area;  ///< in [m²]
+                // Collect responses as time series 
+                pts_t avg_discharge;  ///< Kirchner Discharge given in [m³/s] for the timestep
+                pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm] 
+                pts_t snow_output;  ///< gamma snow output [m³/s] for the timestep
+                pts_t ae_output;  ///< actual evap mm/h
+                pts_t pe_output;  ///< actual evap mm/h
+                response_t end_reponse;  ///<< end_response, at the end of collected
+
+                all_response_collector() : destination_area(0.0) {}
+                all_response_collector(const double destination_area) : destination_area(destination_area) {}
+                all_response_collector(const double destination_area, const timeaxis_t& time_axis)
+                 : destination_area(destination_area), avg_discharge(time_axis, 0.0), snow_total_stored_water(time_axis, 0.0),
+                   snow_output(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
+
+                /**\brief Called before run to allocate space for results */
+                void initialize(const timeaxis_t& time_axis, double area) {
+                    destination_area = area;
+                    avg_discharge = pts_t(time_axis, 0.0);
+                    snow_total_stored_water = pts_t(time_axis, 0.0);
+                    snow_output = pts_t(time_axis, 0.0);
+                    ae_output = pts_t(time_axis, 0.0);
+                    pe_output = pts_t(time_axis, 0.0);
+                }
+
+                /**\brief Called at each time step to collect responses
+                 *
+                 * The R in this case is the Response type defined for the pt_g_s_k stack
+                 * and in principle, we can pick out all needed information from this.
+                 * The values are put into the plain point time-series at the i'th position
+                 * corresponding to the i'th simulation step, .. on the time-axis.. that
+                 * again gives us the concrete period in time that this value applies to.
+                 *
+                 */
+                void collect(size_t idx, const response_t& response) {
+                    // Convert discharge to volume per time unit (m^3/s) instead of mm per time step
+                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); 
+                    snow_total_stored_water.set(idx, mmh_to_m3s(response.snow.total_stored_water, destination_area));
+                    // Convert snow outflow to volume per time unit (m^3/s) instead of mm per time step
+                    snow_output.set(idx, mmh_to_m3s(response.snow.outflow, destination_area));
+                    ae_output.set(idx, response.ae.ae);
+                    pe_output.set(idx, response.pt.pot_evapotranspiration);
+                }
+                void set_end_response(const response_t& r) {end_reponse=r;}
+            };
+
+            /** \brief collector for discharge only */
+            struct discharge_collector {
+                double destination_area;
+                pts_t avg_discharge; ///< Discharge given in [m³/s] as the average of the timestep
+                response_t end_response;///<< end_response, at the end of collected
+                discharge_collector() : destination_area(0.0) {}
+                discharge_collector(const double destination_area) : destination_area(destination_area) {}
+                discharge_collector(const double destination_area, const timeaxis_t& time_axis)
+                 : destination_area(destination_area), avg_discharge(time_axis, 0.0) {}
+
+                void initialize(const timeaxis_t& time_axis, double area) {
+                    destination_area = area;
+                    avg_discharge = pts_t(time_axis, 0.0);
+                }
+
+
+                void collect(size_t idx, const response_t& response) {
+                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); // q_avg is given in mm, so compute the totals
+                }
+
+                void set_end_response(const response_t& response) {end_response = response;}
+            };
+
+            /**\brief a state null collector
+             *
+             * Used during calibration/optimization when there is no need for state,
+             * and we need all the RAM for useful purposes.
+             */
+            struct null_collector {
+                void initialize(const timeaxis_t& time_axis, double area=0.0) {}
+                void collect(size_t i, const state_t& response) {}
+            };
+
+            /** \brief the state_collector collects all state if enabled
+             *
+             *  \note that the state collected is instant in time, valid at the beginning of period
+             */
+            struct state_collector {
+                bool collect_state;  ///< if true, collect state, otherwise ignore 
+                                     //(and the state of time-series are undefined/zero)
+                // State variables to collect as time series
+                double destination_area;
+                pts_t kirchner_discharge; ///< Kirchner state instant Discharge given in m^3/s
+                pts_t snow_swe;
+                pts_t snow_sca;
+                pts_t snow_alpha;
+                pts_t snow_nu;
+                pts_t snow_lwc;
+                pts_t snow_residual;
+
+                state_collector() : collect_state(false), destination_area(0.0) {}
+
+                state_collector(const timeaxis_t& time_axis) 
+                 : collect_state(false), destination_area(0.0),
+                   kirchner_discharge(time_axis, 0.0),
+                   snow_swe(time_axis, 0.0),
+                   snow_sca(time_axis, 0.0),
+                   snow_alpha(time_axis, 0.0),
+                   snow_nu(time_axis, 0.0),
+                   snow_lwc(time_axis, 0.0),
+                   snow_residual(time_axis, 0.0)
+                   { /* Do nothing */ }
+
+                /** brief called before run, prepares state time-series with preallocated room 
+                 *  for the supplied time-axis.
+                 *
+                 * \note if collect_state is false, a zero length time-axis is used to ensure 
+                 * data is wiped/out.
+                 */
+                void initialize(const timeaxis_t& time_axis, double area) {
+                    destination_area = area;
+                    timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+                    kirchner_discharge = pts_t(ta, 0.0);
+                    snow_sca = pts_t(ta, 0.0);
+                    snow_swe = pts_t(ta, 0.0);
+                    snow_alpha = pts_t(ta, 0.0);
+                    snow_nu = pts_t(ta, 0.0);
+                    snow_lwc = pts_t(ta, 0.0);
+                    snow_residual = pts_t(ta, 0.0);
+                }
+
+                /** called by the cell.run for each new state*/
+                void collect(size_t idx, const state_t& state) {
+                    if (collect_state) {
+                        kirchner_discharge.set(idx, mmh_to_m3s(state.kirchner.q, destination_area));
+                        snow_sca.set(idx, state.snow.sca);
+                        snow_swe.set(idx, state.snow.swe);
+                        snow_alpha.set(idx, state.snow.alpha);
+                        snow_nu.set(idx, state.snow.nu);
+                        snow_lwc.set(idx, state.snow.free_water);
+                        snow_residual.set(idx, state.snow.residual);
+                    }
+                }
+            };
+
+            // typedef the variants we need exported.
+            typedef cell<parameter_t, environment_t, state_t, null_collector, all_response_collector> cell_complete_response_t;
+            typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> cell_discharge_response_t;
+        } // pt_ss_k
+
+        //specialize run method for all_response_collector
+        template<>
+        inline void cell<pt_ss_k::parameter_t, environment_t, pt_ss_k::state_t, pt_ss_k::null_collector,
+                         pt_ss_k::all_response_collector>::run(const timeaxis_t& time_axis) {
+            if (parameter.get() == nullptr)
+                throw std::runtime_error("pt_ss_k::run with null parameter attempted");
+            begin_run(time_axis);
+            pt_ss_k::run<direct_accessor, pt_ss_k::response_t>(
+                geo,
+                *parameter,
+                time_axis,
+                env_ts.temperature,
+                env_ts.precipitation,
+                env_ts.wind_speed,
+                env_ts.rel_hum,
+                env_ts.radiation,
+                state,
+                sc,
+                rc);
+        }
+
+        template<>
+        inline void cell<pt_ss_k::parameter_t, environment_t, pt_ss_k::state_t, pt_ss_k::state_collector,
+               pt_ss_k::all_response_collector>::set_state_collection(bool collect) {
+            sc.collect_state = collect;
+        }
+
+        //specialize run method for discharge_collector
+        template<>
+        inline void cell<pt_ss_k::parameter_t, environment_t, pt_ss_k::state_t, pt_ss_k::null_collector,
+                         pt_ss_k::discharge_collector>::run(const timeaxis_t& time_axis) {
+            if (parameter.get() == nullptr)
+                throw std::runtime_error("pt_ss_k::run with null parameter attempted");
+            begin_run(time_axis);
+            pt_ss_k::run<direct_accessor, pt_ss_k::response_t>(
+                geo,
+                *parameter,
+                time_axis,
+                env_ts.temperature,
+                env_ts.precipitation,
+                env_ts.wind_speed,
+                env_ts.rel_hum,
+                env_ts.radiation,
+                state,
+                sc,
+                rc);
+        }
+    } // core
+} // shyft

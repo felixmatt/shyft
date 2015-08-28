@@ -1,0 +1,80 @@
+Himalayas:
+  model_config_file: configuration.yaml
+  calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
+  calibration_type: PTGSKOptimizer
+  data_dir: .
+  target:
+  - repository:
+    class: shyft.orchestration2.netcdf.Target
+    file: stations_discharge.nc
+    1D_timeseries:
+    - internal_id: subcatchment2
+      # uid: /SHyFT/STS/Runoff/Vikf-Tistel, 2015-09-01T00:00:00
+      uid: discharge
+      start_datetime: 1990-07-01T00:00:00
+      run_time_step: 86400
+      number_of_steps: 730 # two years
+      weight: 1.0
+      obj_func:
+        name: NSE  # Nash–Sutcliffe efficiency (NSE) or Kling–Gupta efficiency (KGE)
+        scaling_factors:
+          s_corr: 1.0
+          s_var: 1.0
+          s_bias: 1.0
+  catchment_index:
+  - internal_id: subcatchment2
+    catch_id: [2]
+  overrides:
+    model: PTGSKOptModel
+  calibration_parameters:
+    c1:
+      min: -3.0
+      max: 2.0
+    c2:
+      min: 0.8
+      max: 1.2
+    c3:
+      min: -0.15
+      max: -0.05
+    ae_scale_factor:
+      min: 1.5
+      max: 1.5
+    TX:
+      min: -3.0
+      max: 2.0
+    wind_scale:
+      min: 1.0
+      max: 6.0
+    max_water:
+      min: 0.1
+      max: 0.1
+    wind_const:
+      min: 1.0
+      max: 1.0
+    fast_albedo_decay_rate:
+      min: 5.0 # 10.0
+      max: 15.0 # 10.0
+    slow_albedo_decay_rate:
+      min: 20.0 # 30.0
+      max: 40.0 # 30.0
+    surface_magnitude:
+      min: 30.0
+      max: 30.0
+    max_albedo:
+      min: 0.9
+      max: 0.9
+    min_albedo:
+      min: 0.6
+      max: 0.6
+    snowfall_reset_depth:
+      min: 5.0
+      max: 5.0
+    snow_cv:
+      min: 0.4
+      max: 0.4
+    glacier_albedo:
+      min: 0.4
+      max: 0.4
+    p_corr_scale_factor:
+      min: 1.0
+      max: 1.0

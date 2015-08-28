@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3d94cbf1-d487-44a9-b865-82546e1a3cff}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>RunConfiguration.py</StartupFile>
+    <SearchPath>..\..\</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
+    <InterpreterVersion>2.7</InterpreterVersion>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <Name>EnkiRunner</Name>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="cell.py" />
+    <Compile Include="connectors\base.py" />
+    <Compile Include="connectors\netcdf.py" />
+    <Compile Include="connectors\raster_import.py" />
+    <Compile Include="connectors\Saver.py" />
+    <Compile Include="input_source.py" />
+    <Compile Include="repository\base_repository.py" />
+    <Compile Include="repository\cell_read_only_repository.py" />
+    <Compile Include="repository\gis_data.py" />
+    <Compile Include="repository\input_source_repository.py" />
+    <Compile Include="repository\raster_cell_file_repository.py" />
+    <Compile Include="repository\smg_data.py" />
+    <Compile Include="repository\state_repository.py" />
+    <Compile Include="repository\station_data.py" />
+    <Compile Include="repository\station_data_washer.py" />
+    <Compile Include="repository\testsupport\mocks.py" />
+    <Compile Include="repository\testsupport\time_series.py" />
+    <Compile Include="repository\testsupport\__init__.py" />
+    <Compile Include="repository\__init__.py" />
+    <Compile Include="RunConfiguration.py" />
+    <Compile Include="scripts\MasterScheduler.py" />
+    <Compile Include="scripts\ScheduledTokkeRun.py" />
+    <Compile Include="state.py" />
+    <Compile Include="utils\CellBuilder.py" />
+    <Compile Include="utils\ShyftConfig.py" />
+    <Compile Include="utils\ShyftRunner.py" />
+    <Compile Include="utils\yaml_file_io.py" />
+    <Compile Include="utils\__init__.py" />
+    <Compile Include="__init__.py" />
+    <Compile Include="connectors\smg.py" />
+    <Compile Include="connectors\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="connectors\" />
+    <Folder Include="repository\" />
+    <Folder Include="repository\testsupport\" />
+    <Folder Include="scripts\" />
+    <Folder Include="utils\" />
+    <Folder Include="utils\config\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\2.7" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="utils\config\NeaNidelva_calibration.yaml" />
+    <Content Include="utils\config\nn_datasets.yaml" />
+    <Content Include="utils\config\nn_model.yaml" />
+    <Content Include="utils\config\nn_region.yaml" />
+    <Content Include="utils\config\rl_datasets.yaml" />
+    <Content Include="utils\config\rl_model.yaml" />
+    <Content Include="utils\config\rl_region.yaml" />
+    <Content Include="utils\config\runner_configurations.yaml" />
+    <Content Include="utils\mock_calibration.yaml" />
+    <Content Include="utils\mock_config.yaml" />
+    <Content Include="utils\mock_reduced_config.yaml" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

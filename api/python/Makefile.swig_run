@@ -1,0 +1,10 @@
+# Makefile to update the Api_wrap.cxx from Api.i file using swig
+# ...
+
+Generator=swig
+#3.0
+HeaderDependencies= ../api.h ../../core/geo_point.h ../../core/timeseries.h ../../core/utctime_utilities.h ../../core/kirchner.h ../../core/priestley_taylor.h ../../core/actual_evapotranspiration.h ../../core/pt_gs_k_cell_model.h ../../core/pt_gs_k.h
+
+api_wrap.cxx ../../shyft/api.py : api.i Makefile.swig_run $(HeaderDependencies); $(Generator)  -I.. -I../.. -c++ -python -w511 -outdir ../../shyft api.i
+
+

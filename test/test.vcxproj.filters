@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="region_model_test.h" />
+    <ClInclude Include="actual_evapotranspiration_test.h" />
+    <ClInclude Include="bayesian_kriging_test.h" />
+    <ClInclude Include="calibration_test.h" />
+    <ClInclude Include="cell_builder_test.h" />
+    <ClInclude Include="api_test.h" />
+    <ClInclude Include="gamma_snow_test.h" />
+    <ClInclude Include="gaussian_random_field_test.h" />
+    <ClInclude Include="hbv_snow_test.h" />
+    <ClInclude Include="inverse_distance_test.h" />
+    <ClInclude Include="kirchner_test.h" />
+    <ClInclude Include="mocks.h" />
+    <ClInclude Include="priestley_taylor_test.h" />
+    <ClInclude Include="pt_gs_k_test.h" />
+    <ClInclude Include="pt_hs_k_test.h" />
+    <ClInclude Include="skaugen_test.h" />
+    <ClInclude Include="utctime_utilities_test.h" />
+    <ClInclude Include="timeseries_test.h" />
+    <ClInclude Include="test_pch.h" />
+    <ClInclude Include="pt_ss_k_test.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="runner.cpp" />
+    <ClCompile Include="region_model_test.cpp" />
+    <ClCompile Include="actual_evapotranspiration_test.cpp" />
+    <ClCompile Include="bayesian_kriging_test.cpp" />
+    <ClCompile Include="calibration_test.cpp" />
+    <ClCompile Include="cell_builder_test.cpp" />
+    <ClCompile Include="api_test.cpp" />
+    <ClCompile Include="gamma_snow_test.cpp" />
+    <ClCompile Include="gaussian_random_field_test.cpp" />
+    <ClCompile Include="hbv_snow_test.cpp" />
+    <ClCompile Include="inverse_distance_test.cpp" />
+    <ClCompile Include="kirchner_test.cpp" />
+    <ClCompile Include="priestley_taylor_test.cpp" />
+    <ClCompile Include="pt_gs_k_test.cpp" />
+    <ClCompile Include="pt_hs_k_test.cpp" />
+    <ClCompile Include="skaugen_test.cpp" />
+    <ClCompile Include="utctime_utilities_test.cpp" />
+    <ClCompile Include="timeseries_test.cpp" />
+    <ClCompile Include="mocks.cpp" />
+    <ClCompile Include="test_pch.cpp" />
+    <ClCompile Include="pt_ss_k_test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile.testupdate" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="NMakeFile.testupdate" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,44 @@
+parameters:
+  interpolation:
+    btk:
+      gradient: -0.6
+      gradient_sd: 0.25
+      nugget: 0.5
+      range: 200000.0
+      sill: 25.0
+      zscale: 20.0
+    idw:
+      max_distance: 200000.0
+      max_members: 10
+      precipitation_gradient: 2.0
+  model:
+    actual_evapotranspiration:
+      scale_factor: 1.5
+    data:
+      constant_relative_humidity: 0.7
+      constant_wind_speed: 2.0
+    gamma_snow:
+      calculate_iso_pot_energy: false
+      fast_albedo_decay_rate: 5.000092871064955
+      glacier_albedo: 0.4
+      initial_bare_ground_fraction: 0.04
+      max_albedo: 0.9
+      max_water: 0.1
+      min_albedo: 0.6
+      slow_albedo_decay_rate: 39.77470728556266
+      snow_cv: 0.4
+      snow_tx: 2.0
+      snowfall_reset_depth: 5.0
+      surface_magnitude: 30.0
+      wind_const: 1.0
+      wind_scale: 5.801571270653461
+      winter_end_day_of_year: 100
+    kirchner:
+      c1: -2.6303675941421294
+      c2: 0.8
+      c3: -0.05
+    model_api: PTGSKOptModel
+    p_corr_scale_factor: 1.0
+    priestley_taylor:
+      albedo: 0.2
+      alpha: 1.26

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_workspace_file>
+	<Workspace title="SHyFT.Workspace">
+		<Project filename="core/core.cbp" />
+		<Project filename="api/api.cbp">
+			<Depends filename="core/core.cbp" />
+		</Project>
+		<Project filename="test/test.cbp">
+			<Depends filename="core/core.cbp" />
+			<Depends filename="api/api.cbp" />
+		</Project>
+		<Project filename="api/python/api.python.cbp">
+			<Depends filename="core/core.cbp" />
+			<Depends filename="api/api.cbp" />
+		</Project>
+	</Workspace>
+</CodeBlocks_workspace_file>

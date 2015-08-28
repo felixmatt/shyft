@@ -1,0 +1,8 @@
+bin/
+core/obj/
+api/obj/
+test/obj/
+test/main.cpp
+SHyFT.workspace.layout
+*.depend
+*.gch

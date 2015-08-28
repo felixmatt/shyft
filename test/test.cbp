@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="test" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../bin/Debug/test_shyft" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../bin/Debug" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="calibration_test" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../bin/Debug" />
+				</Linker>
+				<ExtraCommands>
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  skaugen_test" />
+					<Mode after="always" />
+				</ExtraCommands>
+			</Target>
+			<Target title="Release">
+				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../bin/Release" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O3" />
+					<Add option="-DARMA_NO_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add directory="../bin/Release" />
+				</Linker>
+				<ExtraCommands>
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft   cell_builder_test" />
+				</ExtraCommands>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-std=c++1y" />
+			<Add option="-Wall" />
+			<Add option="-fexceptions -Winvalid-pch -pthread" />
+			<Add option="-D__UNIT_TEST__" />
+			<Add option="-DVERBOSE=0" />
+			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add directory="../../cxxtest" />
+			<Add directory=".." />
+			<Add directory="../../dlib" />
+		</Compiler>
+		<Linker>
+			<Add option="-pthread" />
+			<Add library="shyftcore" />
+			<Add library="pthread" />
+			<Add library="boost_filesystem" />
+			<Add library="boost_system" />
+			<Add library="blas" />
+			<Add library="lapack" />
+			<Add directory="/usr/local/lib64" />
+			<Add directory="/usr/local/lib" />
+		</Linker>
+		<ExtraCommands>
+			<Add before="make -f Makefile.testupdate" />
+			<Mode after="always" />
+		</ExtraCommands>
+		<Unit filename="Makefile.testupdate" />
+		<Unit filename="NMakeFile.testupdate" />
+		<Unit filename="actual_evapotranspiration_test.cpp" />
+		<Unit filename="actual_evapotranspiration_test.h" />
+		<Unit filename="api_test.cpp" />
+		<Unit filename="api_test.h" />
+		<Unit filename="bayesian_kriging_test.cpp" />
+		<Unit filename="bayesian_kriging_test.h" />
+		<Unit filename="calibration_test.cpp" />
+		<Unit filename="calibration_test.h" />
+		<Unit filename="cell_builder_test.cpp" />
+		<Unit filename="cell_builder_test.h" />
+		<Unit filename="gamma_snow_test.cpp" />
+		<Unit filename="gamma_snow_test.h" />
+		<Unit filename="gaussian_random_field_test.cpp" />
+		<Unit filename="gaussian_random_field_test.h" />
+		<Unit filename="hbv_snow_test.cpp" />
+		<Unit filename="hbv_snow_test.h" />
+		<Unit filename="inverse_distance_test.cpp" />
+		<Unit filename="inverse_distance_test.h" />
+		<Unit filename="kirchner_test.cpp" />
+		<Unit filename="kirchner_test.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="mocks.cpp" />
+		<Unit filename="mocks.h" />
+		<Unit filename="priestley_taylor_test.cpp" />
+		<Unit filename="priestley_taylor_test.h" />
+		<Unit filename="pt_gs_k_test.cpp" />
+		<Unit filename="pt_gs_k_test.h" />
+		<Unit filename="pt_hs_k_test.cpp" />
+		<Unit filename="pt_hs_k_test.h" />
+		<Unit filename="pt_ss_k_test.cpp" />
+		<Unit filename="pt_ss_k_test.h" />
+		<Unit filename="region_model_test.cpp" />
+		<Unit filename="region_model_test.h" />
+		<Unit filename="skaugen_test.cpp" />
+		<Unit filename="skaugen_test.h" />
+		<Unit filename="test_pch.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="test_pch.h">
+			<Option compile="1" />
+			<Option weight="0" />
+		</Unit>
+		<Unit filename="timeseries_test.cpp" />
+		<Unit filename="timeseries_test.h" />
+		<Unit filename="utctime_utilities_test.cpp" />
+		<Unit filename="utctime_utilities_test.h" />
+		<Extensions>
+			<DoxyBlocks>
+				<comment_style block="0" line="0" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot />
+				<general />
+			</DoxyBlocks>
+			<code_completion />
+			<envvars />
+			<lib_finder disable_auto="1" />
+			<debugger>
+				<search_path add="../bin/Debug" />
+			</debugger>
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

@@ -1,0 +1,107 @@
+---
+sources:
+  - repository: source_repo1
+    class: shyft.orchestration2.netcdf.SourceDataset
+    params:
+      stations_met: stations_met.nc
+      types:
+        - type: precipitation
+          stations:
+            - values: /station1/precipitation
+              time: /station1/time
+              location: /station1.x, /station1.y, /station1.z
+            - values: /station2/precipitation
+              time: /station2/time
+              location: /station2.x, /station2.y, /station2.z
+            - values: /station3/precipitation
+              time: /station3/time
+              location: /station3.x, /station3.y, /station3.z
+            - values: /station4/precipitation
+              time: /station4/time
+              location: /station4.x, /station4.y, /station4.z
+            - values: /station5/precipitation
+              time: /station5/time
+              location: /station5.x, /station5.y, /station5.z
+            - values: /station6/precipitation
+              time: /station6/time
+              location: /station6.x, /station6.y, /station6.z
+        - type: temperature
+          stations:
+            - values: /station1/temperature
+              time: /station1/time
+              location: /station1.x, /station1.y, /station1.z
+            - values: /station2/temperature
+              time: /station2/time
+              location: /station2.x, /station2.y, /station2.z
+            - values: /station3/temperature
+              time: /station3/time
+              location: /station3.x, /station3.y, /station3.z
+            - values: /station4/temperature
+              time: /station4/time
+              location: /station4.x, /station4.y, /station4.z
+        - type: relative_humidity
+          stations:
+            - values: /station1/relative_humidity
+              time: /station1/time
+              location: /station1.x, /station1.y, /station1.z
+            - values: /station2/relative_humidity
+              time: /station2/time
+              location: /station2.x, /station2.y, /station2.z
+            - values: /station3/relative_humidity
+              time: /station3/time
+              location: /station3.x, /station3.y, /station3.z
+            - values: /station4/relative_humidity
+              time: /station4/time
+              location: /station4.x, /station4.y, /station4.z
+        - type: radiation
+          stations:
+            - values: /v1/radiation
+              time: /v1/time
+              location: /v1.x, /v1.y, /v1.z
+            - values: /v2/radiation
+              time: /v2/time
+              location: /v2.x, /v2.y, /v2.z
+            - values: /v3/radiation
+              time: /v3/time
+              location: /v3.x, /v3.y, /v3.z
+            - values: /v4/radiation
+              time: /v4/time
+              location: /v4.x, /v4.y, /v4.z
+            - values: /v5/radiation
+              time: /v5/time
+              location: /v5.x, /v5.y, /v5.z
+            - values: /v6/radiation
+              time: /v6/time
+              location: /v6.x, /v6.y, /v6.z
+        - type: wind_speed
+          stations:
+            - values: /v1/wind_speed
+              time: /v1/time
+              location: /v1.x, /v1.y, /v1.z
+            - values: /v2/wind_speed
+              time: /v2/time
+              location: /v2.x, /v2.y, /v2.z
+            - values: /v3/wind_speed
+              time: /v3/time
+              location: /v3.x, /v3.y, /v3.z
+            - values: /v4/wind_speed
+              time: /v4/time
+              location: /v4.x, /v4.y, /v4.z
+            - values: /v5/wind_speed
+              time: /v5/time
+              location: /v5.x, /v5.y, /v5.z
+            - values: /v6/wind_speed
+              time: /v6/time
+              location: /v6.x, /v6.y, /v6.z
+
+      stations_discharge: stations_discharge.nc
+
+# to be implemented...
+#destinations:
+#  - repository:  dest_repo1
+#    class: shyft.orchestration2.netcdf.DestinationDataset
+#    params:
+#      simulated_Q: netcdf://simulation.nc/Q
+#      simulated_SWE: netcdf://simulation.nc/SWE
+
+...
