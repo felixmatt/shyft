@@ -11,7 +11,7 @@ namespace shyft {
             static boost::filesystem::path test_root_dir() {
                 auto cwd=boost::filesystem::current_path();
                 boost::filesystem::path test_path;
-                test_path= cwd/".."/".."/"test"; // assume current dir is <enkiroot>/bin/Debug|Release
+                test_path= cwd/".."/".."/".."/"SHyFT-data"; // assume current dir is <shyftroot>/bin/Debug|Release
                 test_path.normalize();
                 return test_path;
             }
