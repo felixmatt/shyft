@@ -113,7 +113,11 @@ class StateIOTestCase(unittest.TestCase):
         sum_discharge=model.statistics.discharge(cids)
         avg_temperature=model.statistics.temperature(cids)
         avg_precipitation=model.statistics.precipitation(cids)
+        for time_step in xrange(time_axis.size()):
+            precip_raster= model.statistics.precipitation(cids,time_step) # example for raster output
+            self.assertEquals(precip_raster.size(),num_cells)
         avg_gs_sca = model.gamma_snow_response.sca(cids) # swe output
+        
         avg_gs_albedo = model.gamma_snow_state.albedo(cids) # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
         self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
         

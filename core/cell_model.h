@@ -207,6 +207,41 @@ namespace shyft {
 				}
 				return r;
 			}
+			/** \brief catchment_feature extracts cell-features(discharge etc) for specific i'th period of timeaxis
+			*
+			* \tparam cell the cell type, assumed to have geo.catchment_id()
+			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
+			* \param cells that we want to extract feature from
+			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
+			* \param cell_ts, a callable that fetches the cell feature ts
+			* \param i, the i'th step on the time-axis of the cell-feature
+			* \throw runtime_error if number of cells are zero
+			* \return vector filled with feature for the i'th time-step on timeaxis
+			*/
+			template<typename cell, typename cell_feature_ts>
+			static vector<double> catchment_feature(const vector<cell>& cells, const vector<int>& catchment_indexes,
+				cell_feature_ts && cell_ts,size_t i) {
+				if (cells.size() == 0)
+					throw runtime_error("no cells to make extract from");
+
+				vector<double> r; r.reserve(cells.size());
+				bool match_all = catchment_indexes.size() == 0;
+
+				for (const auto& c : cells) {
+					if (match_all) {
+						r.push_back(cell_ts(c).value(i));
+					} else {
+						for (auto cid : catchment_indexes) {
+							if (c.geo.catchment_id() == (size_t)cid) { //criteria
+								r.push_back(cell_ts(c).value(i));  //c.env_ts.temperature, could be a feature(c) func return ref to ts
+								break;
+							}
+						}
+					}
+				}
+				return r;
+			}
+
         };
     } // core
 } // shyft
