@@ -10,7 +10,7 @@ class ForecastLocationFetcher(object):
         self.indices = indices
         
     def read_forecast_series_loc(self):
-        f_path="D:/Users/ysa/config_auto/forecast_pt_locations.yml"
+        f_path="D:/Users/ysa/config_auto/forecast_pt_locations-UTM32N.yml"
         return yaml.load(open(f_path, 'r'))
 
     def fetch(self, **kwargs):

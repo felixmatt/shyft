@@ -289,7 +289,7 @@ class ShyftRunner(object):
         self.save_result_timeseries()
     
     def save_result_timeseries(self):
-        enki_ts_factory=api.TsFactory()
+        #enki_ts_factory=api.TsFactory()
         enki_catchment_result=dict()
         destinations = self._config.destinations
         for repository in destinations:
@@ -334,7 +334,7 @@ class ShyftRunner(object):
             ts_start=self._config.t_start
             ts_dt=self._config.dt
             ts_nsteps=self._config.n_steps
-        enki_ts_factory=api.TsFactory()
+        #enki_ts_factory=api.TsFactory()
         tst=api.TsTransform()
         found_indx = np.in1d(self.catchment_map,i_list)
         if np.count_nonzero(found_indx)==len(i_list):
@@ -373,7 +373,7 @@ class ShyftRunner(object):
         plt.show()
         
  
-class EnkiCalibrator(object):
+class ShyftCalibrator(object):
 
     def __init__(self, config):
         self._config = config
@@ -393,7 +393,7 @@ class EnkiCalibrator(object):
         self.calib_param_names = [self.param_accessor.get_name(i) for i in range(self.param_accessor.size())]
         if self.tv is None:
             self._create_target_SpecVect()
-        self.calibrator = self._config.calibration_type(self.runner.model, self.tv, self.p_min, self.p_max)
+        self.calibrator = self._config.calibration_type(self.runner.model, self.tv, api.DoubleVector(self.p_min), api.DoubleVector(self.p_max))
         self.calibrator.set_verbose_level(1) # To control console print out during calibration
         print "Calibrator catchment index = {}".format(self._config.catchment_index)
     @property
@@ -458,7 +458,8 @@ class EnkiCalibrator(object):
             mapped_indx = [i for i,j in enumerate(self.runner.catchment_map) if j in ts_info['catch_indx']]
             catch_indx = api.IntVector(mapped_indx)
             tsp = self.target_ts[ts_info['uid']]
-            t=api.TargetOptSpecification()
+            #t=api.TargetOptSpecification()
+            t=api.TargetSpecificationPts()
             t.catchment_indexes=catch_indx
             t.scale_factor=ts_info['weight']
             #t.calc_mode=api.NASH_SUTCLIFFE
@@ -466,8 +467,8 @@ class EnkiCalibrator(object):
             t.s_r=ts_info['obj_func']['scaling_factors']['s_corr']
             t.s_a=ts_info['obj_func']['scaling_factors']['s_var']
             t.s_b=ts_info['obj_func']['scaling_factors']['s_bias']
-            #tsa= tst.to_average(ts_info['start_t'],ts_info['dt'],ts_info['nsteps'],tsp)
-            tsa= tst.to_average_staircase(ts_info['start_t'],ts_info['dt'],ts_info['nsteps'],tsp)
+            tsa= tst.to_average(ts_info['start_t'],ts_info['dt'],ts_info['nsteps'],tsp)
+            #tsa= tst.to_average_staircase(ts_info['start_t'],ts_info['dt'],ts_info['nsteps'],tsp)
             t.ts=tsa
             #-To avoid any kind of averaging-----
             #for i in range(len(t.ts)):
@@ -499,7 +500,7 @@ def _main_runner(config_file):
 def make_fake_target(config, time_axis, catchment_index):
     print "Fake target Catchment index = {}".format(catchment_index)
     tv=api.TargetSpecificationVector()
-    t=api.TargetOptSpecification()
+    t=api.TargetSpecificationPts()
     simulator = ShyftRunner(config)
     simulator.build_model(time_axis.start(), time_axis.delta(), time_axis.size())
     simulator.run_model()
@@ -520,9 +521,10 @@ def _main_calibration_runner(config_file):
     t_start = config.model_config.t_start
     delta_t = config.model_config.dt
     n_steps = config.model_config.n_steps
-    time_axis = api.FixedIntervalTimeAxis(t_start, delta_t, n_steps)
+   # time_axis = api.FixedIntervalTimeAxis(t_start, delta_t, n_steps)
+    time_axis = api.TimeAxis(t_start, delta_t, n_steps)
     config._target = make_fake_target(config.model_config, time_axis, config.catchment_index[0]['catch_id'])
-    calibrator = EnkiCalibrator(config)
+    calibrator = ShyftCalibrator(config)
     calibrator.init(time_axis)
     print calibrator.calibrate(tol=1.0e-5)
     print "Exit.."
