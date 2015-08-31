@@ -462,6 +462,12 @@ namespace shyft {
 				}
 			}
 
+			/** \brief using the catchment_calculation_filter to decide if discharge etc. are calculated.
+			 * \param cid  catchment id
+			 * \returns true if catchment id is calculated during runs 
+			 */
+			bool is_calculated(size_t cid) const { return catchment_filter.size() == 0 || (catchment_filter[cid]); }
+
             /** \brief collects current state from all the cells
             * \note that catchment filter can influence which states are calculated/updated.
             *\param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.
@@ -518,7 +524,8 @@ namespace shyft {
                     cr.emplace_back(ts_t(time_axis,0.0));
                 }
                 for(const auto& c: *cells) {
-                    cr[c.geo.catchment_id()].add(c.rc.avg_discharge);
+					if (is_calculated(c.geo.catchment_id()))
+						cr[c.geo.catchment_id()].add(c.rc.avg_discharge);
                 }
             }
 		protected:
