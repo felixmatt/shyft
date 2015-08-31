@@ -4,7 +4,7 @@ SHyFT is an OpenSource hydrological toolbox developed by
 [Statkraft](http://www.statkraft.com). 
 
 The code is based on an early initiative for distributed hydrological
-simulation, called [ENKI](http://www.opensource-enki.org/>).
+simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki).
 
 COMPILING
 =====================
@@ -37,7 +37,7 @@ SHyFT is developed by Statkraft, and the two main initial authors were
 Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and Ola Skavhaug <ola@xal.no>.
 
 Several of the methods implemented are rewrites of corresponding code in
-[ENKI](http://www.opensource-enki.org/>)
+[ENKI](https://bitbucket.org/enkiopensource/enki)
 
 THANKS
 ====================
