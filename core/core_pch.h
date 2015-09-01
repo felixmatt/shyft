@@ -32,6 +32,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cstring>
 #include <algorithm>
 #include <functional>
 #include <ostream>
@@ -40,7 +41,7 @@
 #include <future>
 #include <stdexcept>
 #include <random>
-
+#include <algorithm>
 
 
 

@@ -85,6 +85,8 @@
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_hs_k_cell_model.h" />
 		<Unit filename="region_model.h" />
+		<Unit filename="sceua_optimizer.cpp" />
+		<Unit filename="sceua_optimizer.h" />
 		<Unit filename="skaugen.h" />
 		<Unit filename="timeseries.h" />
 		<Unit filename="utctime_utilities.cpp" />

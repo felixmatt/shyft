@@ -24,26 +24,12 @@
 ///  the Enki project by Sjur Kolberg, Sintef
 ///
 
+#include "optimizer_utils.h"
+
 namespace shyft {
     namespace core {
         namespace optimizer {
             using namespace std;
-            ///< just temporary simple abstract interface for the target function, later just a callable
-            struct ifx {
-                virtual double evaluate(const vector<double>& x)=0;
-            };
-            /// \brief  __autoalloc__ uses alloca and typecast to allocate an array on stack,
-            /// that are automatically deallocated when the calling function returns.
-            /// NB: only useful if a lot of (small) repetitive allocations (speed/memory)
-            /// NB: Too large arrays will result in stack overflow (as a rule of thumb sizes up to 1024 should be safe).
-            /// NB: To make sure the allocation is in the correct scope, this needs be a macro.
-            #define __autoalloc__(TP,n)((TP*)alloca(n*sizeof(TP)))
-            // fastcopy is a template wrapper for memcpy for copying arrays.
-            //template<class T>
-            //static inline void fastcopy(T*dst,const T*src,size_t n) {
-            //    memcpy(dst,src,n*sizeof(T));
-            //}
-
             /** \brief dream optimizer implementing the
               *
               *  Originally MCsetup::RunDREAM in ENKI source, invokes

@@ -1,6 +1,6 @@
 
 #this is the Linux update file, please keep in sync with the windows NMakeFile.testupdate
-CoreTests = inverse_distance_test.h priestley_taylor_test.h gamma_snow_test.h kirchner_test.h bayesian_kriging_test.h utctime_utilities_test.h  pt_gs_k_test.h actual_evapotranspiration_test.h calibration_test.h hbv_snow_test.h pt_hs_k_test.h pt_ss_k_test.h timeseries_test.h api_test.h cell_builder_test.h skaugen_test.h
+CoreTests = inverse_distance_test.h priestley_taylor_test.h gamma_snow_test.h kirchner_test.h bayesian_kriging_test.h utctime_utilities_test.h  pt_gs_k_test.h actual_evapotranspiration_test.h calibration_test.h hbv_snow_test.h pt_hs_k_test.h pt_ss_k_test.h timeseries_test.h api_test.h cell_builder_test.h skaugen_test.h sceua_test.h
 
 
 TestHeaders = $(CoreTests)
