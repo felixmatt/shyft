@@ -331,19 +331,28 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     vector<shyft::core::pt_gs_k::state_t> s0;
     rm.get_states(s0);
     auto t0=ec::utctime_now();
+
+	vector<int> catchment_ids{ 0, 2 };
+	rm.set_catchment_calculation_filter(catchment_ids);
+
     rm.run_cells();
-    cout<<"3. b Done with cellstep :"<<ec::utctime_now()-t0<<" [s]"<<endl;
+
+	
+	cout<<"3. b Done with cellstep :"<<ec::utctime_now()-t0<<" [s]"<<endl;
     pts_t sum_discharge(ta,0.0);
     for(auto &c:*cells) {
-        sum_discharge.add(c.rc.avg_discharge);
+        if(rm.is_calculated(c.geo.catchment_id()))
+			sum_discharge.add(c.rc.avg_discharge);
     }
     cout<<"4. Print Sum discharge"<<endl;
     for(size_t i=0;i< (n<30?n:30);++i) {
         cout<<(i==0?"\t":",")<<sum_discharge.value(i);
     }
     cout<<endl<<"5. now a run with just two catchments"<<endl;
-    vector<int> catchment_ids{0,2};
-    rm.set_catchment_calculation_filter(catchment_ids);
+
+	//vector<int> catchment_ids{0,2};
+    //rm.set_catchment_calculation_filter(catchment_ids);
+
     cout<<"5. b Done, now compute new sum"<<endl;
     rm.set_states(s0);// so that we start at same state.
     rm.run_cells();// this time only two catchments

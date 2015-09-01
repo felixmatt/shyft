@@ -352,8 +352,8 @@ class CellDataFetcher2(object):
         catchment_cells = {}
 
         # Filter all data with each catchment
-        ltf = LandTypeFetcher()
-        rf = ReservoirFetcher()
+        ltf = LandTypeFetcher(epsg_id=self.epsg_id)
+        rf = ReservoirFetcher(epsg_id=self.epsg_id)
         all_reservoir_coords=rf.fetch(geometry=self.geometry);
         all_glaciers=ltf.fetch(name="glacier",geometry=self.geometry)
         prep_glaciers=prep(all_glaciers)
@@ -514,8 +514,8 @@ def run_cell_example(x0, y0, dx, dy, nx, ny, indices):
     ax.set_ylim(geometry[1], geometry[3])
     plt.show()
 
-def run_cell_example2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies):
-    cf = CellDataFetcher2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, indices=catch_indicies)
+def run_cell_example2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,epsg_id):
+    cf = CellDataFetcher2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, indices=catch_indicies,epsg_id=epsg_id)
     print "Start fetching data"
     cf.fetch()
     print "Done, now preparing plot"
@@ -537,21 +537,40 @@ def run_cell_example2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_in
     ax.set_ylim(geometry[1], geometry[3])
     plt.show()
 
-def nea_nidelv_example():
-    x0 = 557600.0
+def nea_nidelv_example(epsg_id):
+    x0 = 270000.0
     y0 = 6960000.0
     dx = 1000
     dy = 1000
-    nx = 122
+    nx = 105
     ny = 75
-    #catch_id=[1966,2728,1330,3178,2195,1228,100011,2465,2041,2718,2277,3002,1000010,3630,2129,1726,1443,2198,1394,1867,1308,2545,2640,1996,2402,1996,2446,3536]
-    #run_cell_example2(x0, y0, dx, dy, nx, ny, catch_id)
-    # test fetching for regulated catchments
-    indices=[38, 87, 115, 188, 259, 291, 292, 295, 389, 465, 496, 516, 551, 780]
-    run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices)
-    # test fetching for unregulated catchments
-    #feltnr=[1691,1686]
-    #run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, feltnr)
+    # test fetching for regulated catchments using CATCH_ID
+    indices=[1228,1308,1394,1443,1726,1867,1996,2041,2129,2195,2198,2277,2402,2446,2465,2545,2640,2718,3002,3536,3630,1000010,1000011]
+    run_cell_example2('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    # test fetching for regulated catchments using POWER_PLANT_ID
+    ##indices=[38, 87, 115, 188, 259, 291, 292, 295, 389, 465, 496, 516, 551, 780]
+    #indices=[38,115,137,188,291,292,389,465,496,551,780,1371,1436]   
+    #run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    # test fetching for unregulated catchments using FELTNR
+    #indices=[1691,1686]
+    #run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    
+def vinjevatn_example(epsg_id):
+    x0 = 73000.0
+    y0 = 6613000.0
+    dx = 1000
+    dy = 1000
+    nx = 40
+    ny = 35
+    # test fetching for regulated catchments using CATCH_ID
+    #indices=[2668,2936,2937,2938,2939,2940,2941,2942]
+    #run_cell_example2('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    # test fetching for regulated catchments using POWER_PLANT_ID
+    indices=[446]
+    run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    # test fetching for unregulated catchments using FELTNR
+    #indices=[645,702]
+    #run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
     
     
 def test_example():
@@ -578,7 +597,8 @@ def central_region_example():
     run_cell_example(x0, y0, dx, dy, nx, ny, indices)
 
 if __name__ == "__main__":
-    test_example()
-    #nea_nidelv_example()
+    #vinjevatn_example(25833)
+    nea_nidelv_example(25833)
+    #test_example()
     #central_region_example()
     #dtm_example()
