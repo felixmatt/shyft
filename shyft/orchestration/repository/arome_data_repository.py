@@ -224,11 +224,9 @@ class AromeDataRepository(object):
         time_series = self.time_series
         sources = {}
         all_ = slice(None)
-        print keys
         for key in keys:
             ts = self.time_series[key]
             if key not in self.source_type_map:
-                print "Not extracting for {}, since its not in {}".format(key, self.source_type_map.keys())
                 continue
             tpe = self.source_type_map[key]
             sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]), ts[idx]) for idx in 
@@ -240,6 +238,7 @@ if __name__ == "__main__":
     from os.path import dirname
     from os.path import pardir
     from os.path import join
+    import shyft
     # Extract Arome for Rana Lang
     EPSG = 32633
     upper_left_x = 436100.0
@@ -249,9 +248,11 @@ if __name__ == "__main__":
     dx = 1000.0
     dy = 1000.0
     base_dir = join(dirname(shyft.__file__), pardir, pardir, "shyft-data", "arome")
+    pth1 = join(base_dir, "arome_metcoop_default2_5km_20150823_06.nc")
+    pth2 = join(base_dir, "arome_metcoop_test2_5km_20150823_06.nc")
     bounding_box = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
                     [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
-    ar1 = AromeReader(join(base_dir, "arome_metcoop_default2_5km_20150823_06.nc"), EPSG, bounding_box)
-    ar2 = AromeReader(join(base_dir, "arome_metcoop_test2_5km_20150823_06.nc"), EPSG, bounding_box)
+    ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
+    ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
     ar1.add_time_series(ar2.time_series)
     sources = ar1.get_sources()
