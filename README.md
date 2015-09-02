@@ -1,10 +1,17 @@
 README	
 ====================
 SHyFT is an OpenSource hydrological toolbox developed by
-[Statkraft](http://www.statkraft.com). 
+[Statkraft](http://www.statkraft.com).
+
+It is optimized for highly efficient modeling of hydrologic processes
+following the paradigm of distributed, lumped parameter models -- though
+recent developments have introduced more physically based / process-level
+methods.
 
 The code is based on an early initiative for distributed hydrological
-simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki).
+simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki)
+developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland
+and Oddbjorn Bruland.
 
 COMPILING
 =====================
@@ -33,8 +40,11 @@ $ python setup.py install
 ```
 AUTHORS
 ====================
-SHyFT is developed by Statkraft, and the two main initial authors were
-Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and Ola Skavhaug <ola@xal.no>.
+SHyFT is developed by Statkraft, and the two main initial authors to the C++ core were
+Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and Ola Skavhaug <ola@xal.no>. 
+
+Orchestration and the Python wrappers were originally developed by
+John F. Burkhart <john.burkhart@statkraft.com>
 
 Several of the methods implemented are rewrites of corresponding code in
 [ENKI](https://bitbucket.org/enkiopensource/enki)
@@ -42,11 +52,14 @@ Several of the methods implemented are rewrites of corresponding code in
 THANKS
 ====================
 
-Contributors and project participants include:
+Contributors and current project participants include:
+ * Sigbjørn Helset <Sigbjorn.Helset@statkraft.com>
+ * Ola Skavhaug <ola@xal.no>
  * John Burkhart <John.Burkhart@statkraft.com>
+ * Yisak Sultan Abdella <YisakSultan.Abdella@statkraft.com>
  * Felix Matt <f.n.matt@geo.uio.no>
  * Francesc Alted <faltet@gmail.com>
- * Yisak Sultan Abdella <YisakSultan.Abdella@statkraft.com>
+
 
 
 COPYING / LICENSE
