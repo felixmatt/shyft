@@ -139,6 +139,7 @@ namespace shyft {
                           R& r) const {
                     const double unit_size = p.unit_size;
 
+                    /*
                     // Redistribute residual, if possible:
                     double corr_prec = prec;
                     if (s.residual > 0.0) {
@@ -153,6 +154,11 @@ namespace shyft {
                             corr_prec = 0.0;
                         }
                     }
+                    */
+
+                    // Redistribute residual, if possible:
+                    const double corr_prec = std::max(0.0, prec + s.residual);
+                    s.residual = std::min(0.0, prec + s.residual);
 
                     // Perhaps Eli can come up with the physics. First hard coded degree day model here
                     const double step_in_days = dt/86400.0;
@@ -207,7 +213,6 @@ namespace shyft {
                         }
                         total_new_snow -= sca*pot_melt;  // New snow and refreeze of old free water
                         lwc += pot_melt;  // EA and OS: We move water from lwc to total new snow, so both add and subtract
-                        //lwc += sca*pot_melt;  // EA and OS: We move water from lwc to total new snow, so both add and subtract
                         pot_melt = 0.0;  // EA and OS: Water has been moved, so zero out the refreeze variable
                     } else {
                         if (pot_melt > total_new_snow) {
@@ -264,12 +269,9 @@ namespace shyft {
                             if (swe >= nnn*unit_size) {
                                 u = nnn*rel_red_sca + 1;
                                 swe = (nnn - u)/sca_scale_factor*unit_size;
-                                if (swe > 0.0)
-                                    compute_shape_vars(stat, nnn, n, u, sca, rel_red_sca, alpha, nu);
-                                else
+                                if (nnn == u)
                                     sca = 0.0;
                             }
-
                             if (sca < 0.005) {
                                 nnn = 0;
                                 alpha = alpha_0;
