@@ -36,9 +36,9 @@ class AromeDataRepository(object):
 
     def __init__(self, filename, epsg_id, bounding_box, x_padding=5000.0, y_padding=5000.0, fields=None):
         """
-        Construct the netCDF4 dataset reader for arome data, and
+        Construct the netCDF4 dataset reader for data from Arome NWP model, and
         initialize data retrieval.
-        
+       
         Arguments:
         * filename: name of netcdf file containing spatially distributed 
                     input fata
@@ -47,6 +47,15 @@ class AromeDataRepository(object):
                          [y_ul, y_ur, y_lr, y_ll]] 
                          of coordinates in
                         the epsg_id coordinate system.
+
+        Arome NWP model output is from:
+        Catalog http://thredds.met.no/thredds/catalog/arome25/catalog.html
+
+        Contact:
+            Name: met.no
+            Organization: met.no
+            Email: thredds@met.no
+            Phone: +47 22 96 30 00
         """
         self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
                                                                                           "WGS84", "WGS84")
