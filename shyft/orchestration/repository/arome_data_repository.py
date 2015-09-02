@@ -12,6 +12,8 @@ from numpy import zeros
 from numpy import clip
 from numpy import empty
 from numpy import ndindex
+from numpy import square
+from numpy import sqrt
 from numpy.linalg import norm
 from matplotlib import pylab as plt
 from functools import partial
@@ -116,7 +118,8 @@ class AromeDataRepository(object):
         self.source_type_map = {"relative_humidity": RelHumSource,
                                 "temperature": TemperatureSource,
                                 "precipitation": PrecipitationSource,
-                                "radiation": RadiationSource}
+                                "radiation": RadiationSource,
+                                "wind": WindSpeedSource}
 
         if fields is None:
             fields = shyft_data_fields
@@ -174,6 +177,11 @@ class AromeDataRepository(object):
             raw_data[data_field] = data[data_slice]
         extracted_data = {key: (data_convert_map[key][0](raw_data[key]),
                                 data_convert_map[key][1]()) for key in raw_data}
+        if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
+            x_wind, _ = extracted_data.pop("x_wind")
+            y_wind, t = extracted_data.pop("y_wind")
+            extracted_data["wind"] = sqrt(square(x_wind) + square(y_wind)), t
+            
         self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
 
     def _construct_geo_points(self):
