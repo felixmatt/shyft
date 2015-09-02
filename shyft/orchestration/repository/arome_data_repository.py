@@ -12,6 +12,7 @@ from numpy import zeros
 from numpy import clip
 from numpy import empty
 from numpy import ndindex
+from numpy.linalg import norm
 from matplotlib import pylab as plt
 from functools import partial
 
@@ -25,6 +26,9 @@ from shyft.api import WindSpeedSource
 from shyft.api import RadiationSource
 from shyft.api import GeoPoint
 
+
+class AromeDataRepositoryException(Exception):
+    pass
 
 class AromeDataRepository(object):
 
@@ -203,11 +207,15 @@ class AromeDataRepository(object):
                                      for i in xrange(I)])
         return time_series, non_time_series
 
-    def add_time_series(self, time_series):
+    def add_time_series(self, other):
         """
         Add the time_series given in the input dictionary to the instance.
         """
-        self.time_series.update(time_series)
+        eps = 1.0e-10
+        if norm(other.xx.ravel() - self.xx.ravel()) > eps or \
+           norm(other.xx.ravel() - self.xx.ravel()) > eps:
+            raise AromeDataRepositoryException()
+        self.time_series.update(other.time_series)
 
     def get_sources(self, keys=None):
         """
@@ -254,5 +262,5 @@ if __name__ == "__main__":
                     [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
     ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
     ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
-    ar1.add_time_series(ar2.time_series)
+    ar1.add_time_series(ar2)
     sources = ar1.get_sources()
