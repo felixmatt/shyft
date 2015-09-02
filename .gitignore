@@ -4,5 +4,15 @@ api/obj/
 test/obj/
 test/main.cpp
 SHyFT.workspace.layout
+api/python/api_wrap.cxx
+api/python/obj
+shyft/api.py
+test/python/state_test.yaml
 *.depend
 *.gch
+*.pyc
+*.obj
+*.exe
+*.lib
+*.a
+*.so

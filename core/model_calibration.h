@@ -3,6 +3,7 @@
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"
+#include "sceua_optimizer.h"
 #pragma once
 
 namespace shyft{
@@ -55,26 +56,26 @@ namespace shyft{
 			}
 			///<Template class to transform model evaluation into something that dream can run
             template<class M>
-            struct fx:public shyft::core::optimizer::ifx {
+            struct dream_fx:public shyft::core::optimizer::ifx {
                 M& m;
-                fx( M & m):m(m){}
+                dream_fx( M & m):m(m){}
                 double evaluate(const vector<double> &x) {
                     return -m(x); // notice that dream find maximumvalue, so we need to negate the goal function, effectively finding the minimum value.
                 }
             };
 
-            /** \brief template function that find the x that minimizes the evaluated value of model M
+            /** \brief template function that find the x that minimizes the evaluated value of model M using DREAM algorithm
              * \tparam M the model that need to have .to_scaled(x) and .from_scaled(x) to normalize the supplied parameters to range 0..1
              * \param model a reference to the model to be evaluated
              * \param x     the initial x parameters to use (actually not, dream is completely random driven), filled in with the optimal values on return
              * \param max_n_evaluations is the maximum number of iterations, currently not used, the routine returns when convergence is reached
-             * \returns the goal function of m value, corresponding to the found x-vector
+             * \return the goal function of m value, corresponding to the found x-vector
              */
 			template  <class M>
 			double min_dream( M& model,vector<double>& x,int max_n_evaluations) {
 				// Scale all parameter ranges to [0, 1]
 				std::vector<double> x_s = model.to_scaled(x);
-                fx<M> fx_m(model);
+                dream_fx<M> fx_m(model);
                 shyft::core::optimizer::dream dr;
 				double res = dr.find_max(fx_m,x_s,max_n_evaluations);
 				// Convert back to real parameter range
@@ -82,6 +83,48 @@ namespace shyft{
 				return res;
 			}
 
+			///<Template class to transform model evaluation into something that dream can run
+            template<class M>
+            struct sceua_fx:public shyft::core::optimizer::ifx {
+                M& m;
+                sceua_fx( M & m):m(m){}
+                double evaluate(const vector<double> &x) {
+                    return m(x);
+                }
+            };
+
+            /** \brief template for the function that finds the x that minimizes the evaluated value of model M using SCEUA algorithm
+             * \tparam M the model, that provide .to_scaled(x) and .from_scaled(x) to normalize the parameters to 0..1 range
+             * \param model a reference to the model evaluated
+             * \param max_n_iterations stop after max_n_interations reached(keep best x until then)
+             * \param x_eps stop when all x's changes less than x_eps(recall range 0..1), convergence in x
+             * \param y_eps stop when last y-values (model goal functions) seems to have converged (no improvements)
+             * \return the goal function of m value, and x is the corresponding parameter-set.
+             * \throw runtime_error with text sceua: max_iterations reached before convergence
+             */
+            template <class M>
+            double min_sceua(M &model, vector<double>&x,size_t max_n_evaluations,double x_eps=0.0001,double y_eps=0.0001) {
+				// Scale all parameter ranges to [0, 1]
+				vector<double> x_s = model.to_scaled(x);
+				vector<double> x_min(x_s.size(),0.0);///normalized range is 0..1 so is min..max
+				vector<double> x_max(x_s.size(),1.0);
+				vector<double> x_epsv(x_s.size(),x_eps);
+				// notice that there is some adapter code here, for now, just to keep
+				// the sceua as close to origin as possible(it is fast&efficient, with stack-based mem.allocs)
+				double *xv=__autoalloc__(double,x_s.size());shyft::core::optimizer::fastcopy(xv,x_s.data(),x_s.size());
+                sceua_fx<M> fx_m(model);
+                shyft::core::optimizer::sceua opt;
+                double y_result=0;
+                // optimize with no specific range for y-exit (max-less than min):
+                auto opt_state= opt.find_min(x_s.size(),x_min.data(),x_max.data(),xv,y_result,fx_m,y_eps,-1.0,-2.0,x_epsv.data(),max_n_evaluations);
+                for(size_t i=0;i<x_s.size();++i) x_s[i]=xv[i];//copy from raw vector
+				// Convert back to real parameter range
+				x = model.from_scaled(x_s);
+				if( !(opt_state== shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state==shyft::core::optimizer::OptimizerState::FinishedXconvergence))
+                    throw runtime_error("sceua: max-iterations reached before convergence");//FinishedMaxIterations)
+				return y_result;
+
+            }
 
 		/**\brief utility class to help transfrom time-series into suitable resolution
 		*/
@@ -291,15 +334,44 @@ namespace shyft{
 				p = expand_p_vector(rp);
                 return p;
             }
+
+			/**\brief Call to optimize model, using DREAM alg., find p, using p_min..p_max as boundaries.
+			 * where p is the full parameter vector.
+			 * the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer
+			 * down to a minimum number to facilitate fast run.
+			 * \param p is used as start point (not really, DREAM use random, but we should be able to pass u and q....
+			 * \param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.
+			 * \return the optimized parameter vector
+			 */
             vector<double> optimize_dream(vector<double> p,size_t max_n_evaluations=1500) {
 				// reduce using min..max the parameter space,
 				p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
 				auto rp = reduce_p_vector(p);
 				min_dream<optimizer>(*this, rp, max_n_evaluations);
-				// expand,put inplace p to return vector.
-				p = expand_p_vector(rp);
+				p = expand_p_vector(rp);// expand,put inplace p to return vector.
                 return p;
             }
+
+			/**\brief Call to optimize model, using SCE UA, using p as startpoint, find p, using p_min..p_max as boundaries.
+			 * where p is the full parameter vector.
+			 * the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer
+			 * down to a minimum number to facilitate fast run.
+			 * \param p is used as start point and is updated with the found optimal points
+			 * \param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.
+			 * \param x_eps is stop condition when all changes in x's are within this range
+			 * \param y_eps is stop condition, and search is stopped when goal function does not improve anymore within this range
+			 * \return the optimized parameter vector
+			 */
+            vector<double> optimize_sceua(vector<double> p,size_t max_n_evaluations=1500, double x_eps=0.0001, double y_eps=1.0e-5) {
+				// reduce using min..max the parameter space,
+				p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
+				auto rp = reduce_p_vector(p);
+				min_sceua(*this, rp, max_n_evaluations, x_eps, y_eps);
+				p = expand_p_vector(rp);				// expand,put inplace p to return vector.
+                return p;
+            }
+
+
 			/**\brief reset the state of the model to the initial state before starting the run/optimize*/
             void reset_states() {
                 auto cells = model.get_cells();
