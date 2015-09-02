@@ -16,6 +16,8 @@
 #include <memory>
 #include <map>
 #include <string>
+#include <cstring>
+#include <algorithm>
 #include <vector>
 #include <cmath>
 #include <queue>
