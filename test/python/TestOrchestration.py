@@ -339,6 +339,9 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 class AromeDataRepositoryTestCase(unittest.TestCase):
 
     def test_create_reader(self):
+        """
+        Simple regression test of arome data respository.
+        """
         from os.path import dirname
         from os.path import pardir
         from os.path import join
@@ -360,9 +363,13 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         ar1.add_time_series(ar2)
         sources = ar1.get_sources()
         self.assertTrue(len(sources) > 0)
-
-
-
+        data_names = "temperature", "radiation", "wind_speed", "precipitation", "relative_humidity"
+        self.assertTrue(all([n in sources for n in data_names]))
+        self.assertTrue(sources["temperature"][0].ts.size() == 66)
+        self.assertTrue(sources["radiation"][0].ts.size() == 66)
+        self.assertTrue(sources["radiation"][0].ts.time(0) < sources["temperature"][0].ts.time(0))
+        self.assertTrue(sources["radiation"][0].ts.time(65) < sources["temperature"][0].ts.time(65))
+    
 
 class LocalStateRepositoryTestCase(unittest.TestCase):
 
