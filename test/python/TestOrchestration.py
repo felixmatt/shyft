@@ -19,6 +19,7 @@ from shyft.orchestration.repository.testsupport.mocks import state_repository_fa
 from shyft.orchestration.repository.testsupport.time_series import create_mock_station_data
 from shyft.orchestration.repository.cell_read_only_repository import CellReadOnlyRepository
 from shyft.orchestration.repository.cell_read_only_repository import FileCellRepository
+from shyft.orchestration.repository.arome_data_repository import AromeDataRepository
 from shyft.orchestration.repository.state_repository import yaml_file_storage_factory
 
 
@@ -309,6 +310,7 @@ class MockInputSourceRepositoryTestCase(unittest.TestCase):
         repository.put("Hylen", station)
         self.assertTrue("Hylen" in repository.find())
 
+
 class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 
     def test_create_mock_cell_read_only_repository(self):
@@ -332,6 +334,35 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
         r = config['repository']
         data = r['constructor'][0](None, *r['constructor'][1:])
         self.assertTrue(isinstance(data, FileCellRepository))
+
+
+class AromeDataRepositoryTestCase(unittest.TestCase):
+
+    def test_create_reader(self):
+        from os.path import dirname
+        from os.path import pardir
+        from os.path import join
+        from shyft import __file__ as shyft_file
+        EPSG = 32633
+        upper_left_x = 436100.0
+        upper_left_y = 7417800.0
+        nx = 74
+        ny = 94
+        dx = 1000.0
+        dy = 1000.0
+        base_dir = join(dirname(shyft_file), pardir, pardir, "shyft-data", "netcdf", "arome-testdata")
+        pth1 = join(base_dir, "arome_metcoop_red_default2_5km_20150823_06.nc")
+        pth2 = join(base_dir, "arome_metcoop_red_test2_5km_20150823_06.nc")
+        bounding_box = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
+                        [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
+        ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
+        ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
+        ar1.add_time_series(ar2)
+        sources = ar1.get_sources()
+        self.assertTrue(len(sources) > 0)
+
+
+
 
 class LocalStateRepositoryTestCase(unittest.TestCase):
 
