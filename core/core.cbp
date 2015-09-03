@@ -78,6 +78,7 @@
 		<Unit filename="inverse_distance.h" />
 		<Unit filename="kirchner.h" />
 		<Unit filename="model_calibration.h" />
+		<Unit filename="optimizer_utils.h" />
 		<Unit filename="precipitation_correction.h" />
 		<Unit filename="priestley_taylor.h" />
 		<Unit filename="pt_gs_k.h" />
