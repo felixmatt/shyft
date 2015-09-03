@@ -28,4 +28,7 @@ api_wrap.cpp
 *.sdf
 ipch
 *.opensdf
+*.exp
+*.pdb
+*.pyd
 
