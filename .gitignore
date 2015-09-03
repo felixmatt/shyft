@@ -31,4 +31,4 @@ ipch
 *.exp
 *.pdb
 *.pyd
-
+*.intermediate.manifest
