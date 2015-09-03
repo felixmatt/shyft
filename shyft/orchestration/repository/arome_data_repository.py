@@ -39,14 +39,24 @@ class AromeDataRepository(object):
         Construct the netCDF4 dataset reader for data from Arome NWP model, and
         initialize data retrieval.
        
-        Arguments:
-        * filename: name of netcdf file containing spatially distributed 
-                    input fata
-        * epsg_id: either 32632 or 32633. Shyft coordinate system.
-        * bounding_box: [[x_ul, x_ur, x_lr, x_ll],
-                         [y_ul, y_ur, y_lr, y_ll]] 
-                         of coordinates in
-                        the epsg_id coordinate system.
+        Parameters
+        ----------
+        filename: string
+            Name of netcdf file containing spatially distributed input fata
+        epsg_id: int 
+            Unique coordinate system id for result coordinates. Currently 32632 and 32633 are supperted.
+        bounding_box: list
+            A list on the form [[x_ul, x_ur, x_lr, x_ll], [y_ul, y_ur, y_lr, y_ll]] describing the
+            outer boundaries of the domain that shoud be extracted. Coordinates are given in 
+            epgs_id coordinate system.
+        x_padding: float
+            Longidutinal padding in meters, added both east and west
+        y_padding: float
+            Latitudinal padding in meters, added both north and south
+        fields: list
+            List of data field names to extract: ["relative_humidity", "temperature", "z",
+            "precipitation", "x_wind", "y_wind", "radiation"]. If not given, all fields are extracted.
+
 
         Arome NWP model output is from:
         Catalog http://thredds.met.no/thredds/catalog/arome25/catalog.html
@@ -230,7 +240,7 @@ class AromeDataRepository(object):
 
     def add_time_series(self, other):
         """
-        Add the time_series given in the input dictionary to the instance.
+        Add the time_series from the other repository to this. 
         """
         eps = 1.0e-10
         if norm(other.xx.ravel() - self.xx.ravel()) > eps or \
@@ -240,8 +250,8 @@ class AromeDataRepository(object):
 
     def get_sources(self, keys=None):
         """
-        Convert timeseries and geo locations, to corresponding input sources to send to the
-        interpolators in shyft, and return these as vectors of suches.
+        Convert timeseries and geo locations, to corresponding input sources, and return these as 
+        shyft source vectors.
         """
         if "geo_points" not in self.other_data:
             self.other_data["geo_points"] = self._construct_geo_points()
@@ -261,27 +271,3 @@ class AromeDataRepository(object):
             sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]), ts[idx]) for idx in 
                             ndindex(pts.shape[:-1])])
         return sources 
-
-
-if __name__ == "__main__":
-    from os.path import dirname
-    from os.path import pardir
-    from os.path import join
-    import shyft
-    # Extract Arome for Rana Lang
-    EPSG = 32633
-    upper_left_x = 436100.0
-    upper_left_y = 7417800.0
-    nx = 74
-    ny = 94
-    dx = 1000.0
-    dy = 1000.0
-    base_dir = join(dirname(shyft.__file__), pardir, pardir, "shyft-data", "netcdf", "arome-testdata")
-    pth1 = join(base_dir, "arome_metcoop_red_default2_5km_20150823_06.nc")
-    pth2 = join(base_dir, "arome_metcoop_red_test2_5km_20150823_06.nc")
-    bounding_box = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
-                    [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
-    ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
-    ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
-    ar1.add_time_series(ar2)
-    sources = ar1.get_sources()
