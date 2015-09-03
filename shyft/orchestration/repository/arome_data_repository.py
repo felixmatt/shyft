@@ -59,10 +59,11 @@ class AromeDataRepository(object):
         """
         self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
                                                                                           "WGS84", "WGS84")
-        self.dataset = Dataset(filename)
+        dataset = Dataset(filename)
+        data_vars = dataset.variables
 
         # Extract time dimension
-        time = self.dataset["time"]
+        time = data_vars["time"]
         t0 = int(time[0])
         data_dt = int(time[1] - time[0])
         nt = len(time)
@@ -128,7 +129,7 @@ class AromeDataRepository(object):
                                 "temperature": TemperatureSource,
                                 "precipitation": PrecipitationSource,
                                 "radiation": RadiationSource,
-                                "wind": WindSpeedSource}
+                                "wind_speed": WindSpeedSource}
 
         if fields is None:
             fields = shyft_data_fields
@@ -141,19 +142,18 @@ class AromeDataRepository(object):
         
         # Target projection 
         shyft_proj = Proj(self.shyft_cs)
-        ds = self.dataset  # Short cut
 
         raw_data = {}
         data_proj = None 
         self.xx = self.yy = self.extracted_data = None
         for data_field in fields:
-            if not shyft_net_map[data_field] in ds.variables.keys():
+            if not shyft_net_map[data_field] in data_vars.keys():
                 continue 
-            data = ds[shyft_net_map[data_field]]
+            data = data_vars[shyft_net_map[data_field]]
 
             if data_proj is None:
                 # Get coordinate system for arome data
-                data_cs = str(ds[data.grid_mapping].proj4)
+                data_cs = str(data_vars[data.grid_mapping].proj4)
                 data_cs += " +towgs84=0,0,0"
                 data_proj = Proj(data_cs)
 
@@ -163,12 +163,12 @@ class AromeDataRepository(object):
                 y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
                 # Limit data
-                x = ds["x"][:] 
+                x = data_vars["x"][:] 
                 x1 = where(x >= x_min)[0]
                 x2 = where(x <= x_max)[0]
                 x_inds = intersect1d(x1, x2, assume_unique=True)
 
-                y = ds["y"][:] 
+                y = data_vars["y"][:] 
                 y1 = where(x >= y_min)[0]
                 y2 = where(x <= y_max)[0]
                 y_inds = intersect1d(y1, y2, assume_unique=True)
@@ -189,7 +189,7 @@ class AromeDataRepository(object):
         if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
             x_wind, _ = extracted_data.pop("x_wind")
             y_wind, t = extracted_data.pop("y_wind")
-            extracted_data["wind"] = sqrt(square(x_wind) + square(y_wind)), t
+            extracted_data["wind_speed"] = sqrt(square(x_wind) + square(y_wind)), t
             
         self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
 
@@ -230,7 +230,7 @@ class AromeDataRepository(object):
         """
         eps = 1.0e-10
         if norm(other.xx.ravel() - self.xx.ravel()) > eps or \
-           norm(other.xx.ravel() - self.xx.ravel()) > eps:
+           norm(other.yy.ravel() - self.yy.ravel()) > eps:
             raise AromeDataRepositoryException()
         self.time_series.update(other.time_series)
 
