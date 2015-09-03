@@ -30,6 +30,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="sceua_test " />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -38,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft   cell_builder_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  sceua_test" />
 				</ExtraCommands>
 			</Target>
 		</Build>
@@ -103,6 +104,8 @@
 		<Unit filename="pt_ss_k_test.h" />
 		<Unit filename="region_model_test.cpp" />
 		<Unit filename="region_model_test.h" />
+		<Unit filename="sceua_test.cpp" />
+		<Unit filename="sceua_test.h" />
 		<Unit filename="skaugen_test.cpp" />
 		<Unit filename="skaugen_test.h" />
 		<Unit filename="test_pch.cpp">
