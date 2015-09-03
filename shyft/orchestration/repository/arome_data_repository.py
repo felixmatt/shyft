@@ -60,6 +60,7 @@ class AromeDataRepository(object):
         self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
                                                                                           "WGS84", "WGS84")
         dataset = Dataset(filename)
+        self.ds = dataset
         data_vars = dataset.variables
 
         # Extract time dimension
@@ -162,6 +163,9 @@ class AromeDataRepository(object):
                 x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
                 y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
+                #print x_min, x_max
+                #print y_min, y_max
+
                 # Limit data
                 x = data_vars["x"][:] 
                 x1 = where(x >= x_min)[0]
@@ -169,8 +173,8 @@ class AromeDataRepository(object):
                 x_inds = intersect1d(x1, x2, assume_unique=True)
 
                 y = data_vars["y"][:] 
-                y1 = where(x >= y_min)[0]
-                y2 = where(x <= y_max)[0]
+                y1 = where(y >= y_min)[0]
+                y2 = where(y <= y_max)[0]
                 y_inds = intersect1d(y1, y2, assume_unique=True)
 
                 # Transform from arome coordinates to shyft coordinates
@@ -272,9 +276,9 @@ if __name__ == "__main__":
     ny = 94
     dx = 1000.0
     dy = 1000.0
-    base_dir = join(dirname(shyft.__file__), pardir, pardir, "shyft-data", "arome")
-    pth1 = join(base_dir, "arome_metcoop_default2_5km_20150823_06.nc")
-    pth2 = join(base_dir, "arome_metcoop_test2_5km_20150823_06.nc")
+    base_dir = join(dirname(shyft.__file__), pardir, pardir, "shyft-data", "netcdf", "arome-testdata")
+    pth1 = join(base_dir, "arome_metcoop_red_default2_5km_20150823_06.nc")
+    pth2 = join(base_dir, "arome_metcoop_red_test2_5km_20150823_06.nc")
     bounding_box = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
                     [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
     ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
