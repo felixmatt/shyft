@@ -74,7 +74,7 @@ class BaseConfig(object):
         self.process_params(section['repository']['params'])
 
     def abspath(self, filepath):
-        """Return the absolute path to the directory of netcdf data files."""
+        """Return the absolute path to the directory of configuration files."""
         if os.path.isabs(filepath):
             return filepath
         else:

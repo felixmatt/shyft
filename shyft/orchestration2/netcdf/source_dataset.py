@@ -19,7 +19,6 @@ class SourceDataset(BaseSourceDataset):
 
     @property
     def _stations_met(self):
-        print("stations_met:", self.stations_met)
         return abs_datafilepath(self.stations_met)
 
     @property
