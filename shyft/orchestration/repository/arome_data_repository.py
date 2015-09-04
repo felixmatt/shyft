@@ -20,28 +20,32 @@ class AromeDataRepositoryException(Exception):
 
 class AromeDataRepository(object):
 
-    def __init__(self, filename, epsg_id, bounding_box, x_padding=5000.0, y_padding=5000.0, fields=None):
+    def __init__(self, filename, epsg_id, bounding_box,
+                 x_padding=5000.0, y_padding=5000.0, fields=None):
         """
-        Construct the netCDF4 dataset reader for data from Arome NWP model, and
-        initialize data retrieval.
-       
+        Construct the netCDF4 dataset reader for data from Arome NWP model,
+        and initialize data retrieval.
+
         Parameters
         ----------
         filename: string
             Name of netcdf file containing spatially distributed input fata
-        epsg_id: int 
-            Unique coordinate system id for result coordinates. Currently 32632 and 32633 are supperted.
+        epsg_id: int
+            Unique coordinate system id for result coordinates. Currently 32632
+            and 32633 are supperted.
         bounding_box: list
-            A list on the form [[x_ul, x_ur, x_lr, x_ll], [y_ul, y_ur, y_lr, y_ll]] describing the
-            outer boundaries of the domain that shoud be extracted. Coordinates are given in 
-            epgs_id coordinate system.
+            A list on the form [[x_ul, x_ur, x_lr, x_ll],
+            [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
+            domain that shoud be extracted. Coordinates are given in epgs_id
+            coordinate system.
         x_padding: float
             Longidutinal padding in meters, added both east and west
         y_padding: float
             Latitudinal padding in meters, added both north and south
         fields: list
-            List of data field names to extract: ["relative_humidity", "temperature", "z",
-            "precipitation", "x_wind", "y_wind", "radiation"]. If not given, all fields are extracted.
+            List of data field names to extract: ["relative_humidity",
+            "temperature", "z", "precipitation", "x_wind", "y_wind",
+            "radiation"]. If not given, all fields are extracted.
 
 
         Arome NWP model output is from:
@@ -53,8 +57,8 @@ class AromeDataRepository(object):
             Email: thredds@met.no
             Phone: +47 22 96 30 00
         """
-        self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
-                                                                                          "WGS84", "WGS84")
+        self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} \
+ +units=m +no_defs".format(epsg_id - 32600, "WGS84", "WGS84")
         dataset = Dataset(filename)
         self.ds = dataset
         data_vars = dataset.variables
@@ -65,20 +69,20 @@ class AromeDataRepository(object):
         data_dt = int(time[1] - time[0])
         nt = len(time)
 
-        # Add a padding to the bounding box to make sure the computational domain is 
-        # fully enclosed in arome dataset
+        # Add a padding to the bounding box to make sure the computational
+        # domain is fully enclosed in arome dataset
         bounding_box = np.array(bounding_box)
-        bounding_box[0][0] -= x_padding 
-        bounding_box[0][1] += x_padding 
-        bounding_box[0][2] += x_padding 
-        bounding_box[0][3] -= x_padding 
-        bounding_box[1][0] += x_padding 
-        bounding_box[1][1] += x_padding 
-        bounding_box[1][2] -= x_padding 
-        bounding_box[1][3] -= x_padding 
+        bounding_box[0][0] -= x_padding
+        bounding_box[0][1] += x_padding
+        bounding_box[0][2] += x_padding
+        bounding_box[0][3] -= x_padding
+        bounding_box[1][0] += x_padding
+        bounding_box[1][1] += x_padding
+        bounding_box[1][2] -= x_padding
+        bounding_box[1][3] -= x_padding
 
         # Field names and mappings
-        netcdf_data_fields = ["relative_humidity_2m", 
+        netcdf_data_fields = ["relative_humidity_2m",
                               "air_temperature_2m",
                               "altitude",
                               "precipitation_amount",
@@ -86,31 +90,35 @@ class AromeDataRepository(object):
                               "y_wind_10m",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
 
-
         # arome data and time conversions, ordered as netcdf_data_fields
         def netcdf_data_convert(t):
             """
             For a given utc time list t, return a list of callable tuples to
             convert from arome data to shyft data. For radiation we calculate:
-            rad[t_i] = sw_flux(t_{i+1}) - sw_flux(t_i)/dt for i in 0, ..., N - 1 
+            rad[t_i] = sw_flux(t_{i+1}) - sw_flux(t_i)/dt for i in 0, ..., N-1,
             where N is the number of values in the dataset, and equals the
-            number of forcast time points + 1. Also temperatures are converted from 
-            Kelvin to Celcius, and the elevation data set is treated as a special case.
+            number of forcast time points + 1. Also temperatures are converted
+            from Kelvin to Celcius, and the elevation data set is treated as a
+            special case.
             """
-            t_to_ta = lambda t, shift: Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
-            t_to_ta_normal = partial(t_to_ta, t, 0)  # Full 
+
+            def t_to_ta(t, shift):
+                return Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
+            t_to_ta_normal = partial(t_to_ta, t, 0)  # Full
             t_to_ta_rad = partial(t_to_ta, t, 1)
-            noop = lambda d: d
+
+            def noop(d): return d
             return [(noop, t_to_ta_normal),
                     (lambda air_temp: (air_temp - 273.15), t_to_ta_normal),
                     (noop, lambda: None),
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
-                    (lambda rad: np.clip(((rad[1:] - rad[:-1])/((t[1:] - t[:-1])
-                                            [:, np.newaxis, np.newaxis, 
-                                             np.newaxis])), 0.0, 1000.0),
-                                             t_to_ta_rad)]
+                    (lambda rad: np.clip(((rad[1:] - rad[:-1])/((t[1:] -
+                                                                 t[:-1])
+                                          [:, np.newaxis, np.newaxis,
+                                          np.newaxis])), 0.0, 1000.0),
+                     t_to_ta_rad)]
 
         shyft_data_fields = ["relative_humidity",
                              "temperature",
@@ -131,19 +139,22 @@ class AromeDataRepository(object):
         else:
             assert all([field in shyft_data_fields for field in fields])
 
-        net_shyft_map = {n: s for n,s in zip(netcdf_data_fields, shyft_data_fields)}
-        shyft_net_map = {s: n for n,s in zip(netcdf_data_fields, shyft_data_fields)}
-        data_convert_map = {s: c for s,c in zip(shyft_data_fields, netcdf_data_convert(time))}
-        
-        # Target projection 
+        net_shyft_map = {n: s for n, s in zip(netcdf_data_fields,
+                                              shyft_data_fields)}
+        shyft_net_map = {s: n for n, s in zip(netcdf_data_fields,
+                                              shyft_data_fields)}
+        data_convert_map = {s: c for s, c in zip(shyft_data_fields,
+                                                 netcdf_data_convert(time))}
+
+        # Target projection
         shyft_proj = Proj(self.shyft_cs)
 
         raw_data = {}
-        data_proj = None 
+        data_proj = None
         self.xx = self.yy = self.extracted_data = None
         for data_field in fields:
             if not shyft_net_map[data_field] in data_vars.keys():
-                continue 
+                continue
             data = data_vars[shyft_net_map[data_field]]
 
             if data_proj is None:
@@ -153,27 +164,27 @@ class AromeDataRepository(object):
                 data_proj = Proj(data_cs)
 
                 # Find bounding box in arome projection
-                bb_proj = transform(shyft_proj, data_proj, bounding_box[0], bounding_box[1])
+                bb_proj = transform(shyft_proj, data_proj,
+                                    bounding_box[0], bounding_box[1])
                 x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
                 y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
-                #print x_min, x_max
-                #print y_min, y_max
-
                 # Limit data
-                x = data_vars["x"][:] 
+                x = data_vars["x"][:]
                 x1 = np.where(x >= x_min)[0]
                 x2 = np.where(x <= x_max)[0]
                 x_inds = np.intersect1d(x1, x2, assume_unique=True)
 
-                y = data_vars["y"][:] 
+                y = data_vars["y"][:]
                 y1 = np.where(y >= y_min)[0]
                 y2 = np.where(y <= y_max)[0]
                 y_inds = np.intersect1d(y1, y2, assume_unique=True)
 
                 # Transform from arome coordinates to shyft coordinates
                 self._ox, self._oy = np.meshgrid(x[x_inds], y[y_inds])
-                self.xx, self.yy = transform(data_proj, shyft_proj, *np.meshgrid(x[x_inds], y[y_inds]))
+                self.xx, self.yy = transform(data_proj, shyft_proj,
+                                             *np.meshgrid(x[x_inds],
+                                                          y[y_inds]))
 
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]
@@ -183,51 +194,61 @@ class AromeDataRepository(object):
             # Add extracted data and corresponding coordinates to class
             raw_data[data_field] = data[data_slice]
         extracted_data = {key: (data_convert_map[key][0](raw_data[key]),
-                                data_convert_map[key][1]()) for key in raw_data}
-        if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
+                                data_convert_map[key][1]())
+                          for key in raw_data}
+        if "x_wind" in extracted_data.keys() and \
+                "y_wind" in extracted_data.keys():
             x_wind, _ = extracted_data.pop("x_wind")
             y_wind, t = extracted_data.pop("y_wind")
-            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), t
-            
-        self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
+            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) +
+                                                   np.square(y_wind)), t
+
+        self.time_series, self.other_data = \
+            self._convert_to_time_series(extracted_data)
 
     def _geo_points(self):
         """Return (x,y,z) coordinates for data sources
 
-        Construct and return a numpy array of (x,y,z) coordinates at each (i,j) having a data source.
+        Construct and return a numpy array of (x,y,z) coordinates at each
+        (i,j) having a data source.
         """
         pts = np.empty(self.xx.shape + (3,), dtype='d')
         pts[:, :, 0] = self.xx
         pts[:, :, 1] = self.yy
-        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else np.zeros(self.xx.shape, dtype='d')
+        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else \
+            np.zeros(self.xx.shape, dtype='d')
         return pts
 
     def _convert_to_time_series(self, extracted_data):
         """Convert data from numpy structures to shyft data.
-        
-        We assume the time axis is regular, and that we can use a point time series with a 
-        parametrized time axis definition and corresponding vector of values.
+
+        We assume the time axis is regular, and that we can use a point time
+        series with a parametrized time axis definition and corresponding
+        vector of values.
         """
         time_series = {}
         non_time_series = {}
-        tsf = TsFactory()
+        tsc = TsFactory().create_point_ts
         for key, (data, ta) in extracted_data.iteritems():
             if ta is None:
                 non_time_series[key] = data
                 continue
             fslice = (len(data.shape) - 2)*(slice(None),)
             I, J = data.shape[-2:]
-            construct = lambda d: tsf.create_point_ts(ta.size(), ta.start(), ta.delta(),
-                                                      DoubleVector_FromNdArray(d.flatten()), 0)
-            time_series[key] = np.array([[construct(data[fslice + (i, j)]) for j in xrange(J)]
-                                          for i in xrange(I)])
+
+            def construct(d):
+                tsc(ta.size(), ta.start(), ta.delta(),
+                    DoubleVector_FromNdArray(d.flatten()), 0)
+            time_series[key] = np.array([[construct(data[fslice + (i, j)])
+                                         for j in xrange(J)] for i in
+                                         xrange(I)])
         return time_series, non_time_series
 
     def add_time_series(self, other, eps=1.0e-10):
         """Add other's timeseries to self
 
-        Add all the time series from the other repository to this, if the x,y locations 
-        match within a tolerance. 
+        Add all the time series from the other repository to this, if the x,y
+        locations match within a tolerance.
 
         Parameters
         ----------
@@ -244,8 +265,8 @@ class AromeDataRepository(object):
     def get_sources(self, keys=None):
         """Get shyft source vectors for keys
 
-        Convert timeseries and geo locations, to corresponding input sources, and return these as 
-        shyft source vectors.
+        Convert timeseries and geo locations, to corresponding input sources,
+        and return these as shyft source vectors.
 
         Parameters
         ----------
@@ -267,6 +288,7 @@ class AromeDataRepository(object):
             if key not in self.source_type_map:
                 continue
             tpe = self.source_type_map[key]
-            sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]), ts[idx]) for idx in 
-                            np.ndindex(pts.shape[:-1])])
-        return sources 
+            sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]),
+                                         ts[idx]) for idx in
+                                         np.ndindex(pts.shape[:-1])])
+        return sources
