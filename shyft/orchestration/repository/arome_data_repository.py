@@ -65,9 +65,6 @@ class AromeDataRepository(object):
 
         # Extract time dimension
         time = data_vars["time"]
-        t0 = int(time[0])
-        data_dt = int(time[1] - time[0])
-        nt = len(time)
 
         # Add a padding to the bounding box to make sure the computational
         # domain is fully enclosed in arome dataset
@@ -104,10 +101,11 @@ class AromeDataRepository(object):
 
             def t_to_ta(t, shift):
                 return Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
+
+            def noop(d):
+                return d
             t_to_ta_normal = partial(t_to_ta, t, 0)  # Full
             t_to_ta_rad = partial(t_to_ta, t, 1)
-
-            def noop(d): return d
             return [(noop, t_to_ta_normal),
                     (lambda air_temp: (air_temp - 273.15), t_to_ta_normal),
                     (noop, lambda: None),
@@ -139,8 +137,6 @@ class AromeDataRepository(object):
         else:
             assert all([field in shyft_data_fields for field in fields])
 
-        net_shyft_map = {n: s for n, s in zip(netcdf_data_fields,
-                                              shyft_data_fields)}
         shyft_net_map = {s: n for n, s in zip(netcdf_data_fields,
                                               shyft_data_fields)}
         data_convert_map = {s: c for s, c in zip(shyft_data_fields,
@@ -280,7 +276,6 @@ class AromeDataRepository(object):
             keys = self.time_series.keys()
         elif isinstance(keys, str):
             keys = [keys]
-        time_series = self.time_series
         sources = {}
         all_ = slice(None)
         for key in keys:
