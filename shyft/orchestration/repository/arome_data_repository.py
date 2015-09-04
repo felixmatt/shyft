@@ -1,12 +1,8 @@
+from functools import partial
 import numpy as np
 from netCDF4 import Dataset
-from netCDF4 import num2date
-from netCDF4 import timedelta
 from pyproj import Proj
 from pyproj import transform
-from matplotlib import pylab as plt
-from functools import partial
-
 from shyft.api import Timeaxis
 from shyft.api import TsFactory
 from shyft.api import DoubleVector_FromNdArray
@@ -20,6 +16,7 @@ from shyft.api import GeoPoint
 
 class AromeDataRepositoryException(Exception):
     pass
+
 
 class AromeDataRepository(object):
 
@@ -94,22 +91,19 @@ class AromeDataRepository(object):
         def netcdf_data_convert(t):
             """
             For a given utc time list t, return a list of callable tuples to
-            convert from arome data to shyft data. We skip the first values in
-            all time series, except from for radiation, where the calculated
-            radiation is given by:
+            convert from arome data to shyft data. For radiation we calculate:
             rad[t_i] = sw_flux(t_{i+1}) - sw_flux(t_i)/dt for i in 0, ..., N - 1 
             where N is the number of values in the dataset, and equals the
-            number of forcast time points + 1. Also temperatures are converted from Kelvin to Celcius,
-            and the elevation data set is treated as a special case.
+            number of forcast time points + 1. Also temperatures are converted from 
+            Kelvin to Celcius, and the elevation data set is treated as a special case.
             """
-            t_to_ta = lambda t, shift: Timeaxis(int(t[1 - shift]), int(t[1] - t[0]), len(t) - 1)
+            t_to_ta = lambda t, shift: Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
             t_to_ta_normal = partial(t_to_ta, t, 0)  # Full 
             t_to_ta_rad = partial(t_to_ta, t, 1)
-            noop = lambda d: d[1:]  # First point (at t[0]) is not a forecast, so we skip it
-            hnoop = lambda d: d # No time for heights
+            noop = lambda d: d
             return [(noop, t_to_ta_normal),
-                    (lambda air_temp: (air_temp - 273.15)[1:], t_to_ta_normal),
-                    (hnoop, lambda: None),
+                    (lambda air_temp: (air_temp - 273.15), t_to_ta_normal),
+                    (noop, lambda: None),
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
@@ -197,9 +191,10 @@ class AromeDataRepository(object):
             
         self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
 
-    def _construct_geo_points(self):
-        """
-        Construct a numpy array over the indices with (x,y,z) coordinates at each (i,j).
+    def _geo_points(self):
+        """Return (x,y,z) coordinates for data sources
+
+        Construct and return a numpy array of (x,y,z) coordinates at each (i,j) having a data source.
         """
         pts = np.empty(self.xx.shape + (3,), dtype='d')
         pts[:, :, 0] = self.xx
@@ -208,10 +203,10 @@ class AromeDataRepository(object):
         return pts
 
     def _convert_to_time_series(self, extracted_data):
-        """
-        Convert data from numpy structures to shyft data. We assume the time axis is regular, and 
-        that we can use a point time series with a parametrized time axis definition and 
-        corresponding vector of values.
+        """Convert data from numpy structures to shyft data.
+        
+        We assume the time axis is regular, and that we can use a point time series with a 
+        parametrized time axis definition and corresponding vector of values.
         """
         time_series = {}
         non_time_series = {}
@@ -228,23 +223,37 @@ class AromeDataRepository(object):
                                           for i in xrange(I)])
         return time_series, non_time_series
 
-    def add_time_series(self, other):
+    def add_time_series(self, other, eps=1.0e-10):
+        """Add other's timeseries to self
+
+        Add all the time series from the other repository to this, if the x,y locations 
+        match within a tolerance. 
+
+        Parameters
+        ----------
+        other: AromeDataRepository
+            Repository with additional time series and lat/long coordinates
+        eps: float, optional
+            Tolerance for point co-location
         """
-        Add the time_series from the other repository to this. 
-        """
-        eps = 1.0e-10
         if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
            np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
             raise AromeDataRepositoryException()
         self.time_series.update(other.time_series)
 
     def get_sources(self, keys=None):
-        """
+        """Get shyft source vectors for keys
+
         Convert timeseries and geo locations, to corresponding input sources, and return these as 
         shyft source vectors.
+
+        Parameters
+        ----------
+        keys: list, optional
+            If given, a list of data names to extract input source vectors for.
         """
         if "geo_points" not in self.other_data:
-            self.other_data["geo_points"] = self._construct_geo_points()
+            self.other_data["geo_points"] = self._geo_points()
         pts = self.other_data["geo_points"]
         if keys is None:
             keys = self.time_series.keys()
