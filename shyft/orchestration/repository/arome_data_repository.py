@@ -60,7 +60,6 @@ class AromeDataRepository(object):
         self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} \
  +units=m +no_defs".format(epsg_id - 32600, "WGS84", "WGS84")
         dataset = Dataset(filename)
-        self.ds = dataset
         data_vars = dataset.variables
 
         # Extract time dimension
@@ -233,8 +232,8 @@ class AromeDataRepository(object):
             I, J = data.shape[-2:]
 
             def construct(d):
-                tsc(ta.size(), ta.start(), ta.delta(),
-                    DoubleVector_FromNdArray(d.flatten()), 0)
+                return tsc(ta.size(), ta.start(), ta.delta(),
+                           DoubleVector_FromNdArray(d.flatten()), 0)
             time_series[key] = np.array([[construct(data[fslice + (i, j)])
                                          for j in xrange(J)] for i in
                                          xrange(I)])
