@@ -25,6 +25,8 @@
 #include <thread>
 #include <future>
 #include <stdexcept>
+#include <random>
+#include <cstring>
 
 #include <cxxtest/TestSuite.h>
 

@@ -91,7 +91,9 @@ namespace shyft {
         #endif
         //ITimeSeriesOfPoints implementation
         point_interpretation_policy point_interpretation() const {return ts_rep.point_interpretation();}
-        void set_point_interpretation(point_interpretation_policy point_interpretation) {ts_rep.set_point_interpretation(point_interpretation);}
+        void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            ts_rep.set_point_interpretation(point_interpretation);
+        }
 
 
         utcperiod total_period() const {return ts_rep.total_period();}
@@ -110,28 +112,29 @@ namespace shyft {
 
         std::shared_ptr<ITimeSeriesOfPoints>
         create_point_ts(int n, utctime tStart, utctimespan dt,
-                        const std::vector<double>& values, point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
+                        const std::vector<double>& values,
+                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
         {
             return shared_ptr<ITimeSeriesOfPoints> (
-                new GenericTs<point_timeseries<timeaxis> >(point_timeseries<timeaxis>(timeaxis(tStart, dt, n), values, interpretation))
-            );
+                new GenericTs<point_timeseries<timeaxis> >(point_timeseries<timeaxis>(timeaxis(tStart,
+                            dt, n), values, interpretation)));
         }
 
 
         std::shared_ptr<ITimeSeriesOfPoints>
         create_time_point_ts(utcperiod period, const std::vector<utctime>& times,
-                                               const std::vector<double>& values, point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-        {
-            if (times.size() == values.size()+1) {
+                             const std::vector<double>& values,
+                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
+            if (times.size() == values.size() + 1) {
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(point_timeaxis(times), values, interpretation))
-                    );
+                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
+                            point_timeaxis(times), values, interpretation)));
             } else if (times.size() == values.size()) {
                 auto tx(times);
-                tx.push_back(period.end > times.back()?period.end:times.back()+utctimespan(1));
+                tx.push_back(period.end > times.back()?period.end:times.back() + utctimespan(1));
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(point_timeaxis(tx), values, interpretation))
-                    );
+                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
+                            point_timeaxis(tx), values, interpretation)));
             } else {
                 throw std::runtime_error("create_time_point_ts times and values arrays must have corresponding count");
             }
