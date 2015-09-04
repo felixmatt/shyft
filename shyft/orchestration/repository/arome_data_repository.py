@@ -1,20 +1,9 @@
+import numpy as np
 from netCDF4 import Dataset
 from netCDF4 import num2date
 from netCDF4 import timedelta
 from pyproj import Proj
 from pyproj import transform
-from numpy import array
-from numpy import intersect1d
-from numpy import where
-from numpy import meshgrid
-from numpy import newaxis
-from numpy import zeros
-from numpy import clip
-from numpy import empty
-from numpy import ndindex
-from numpy import square
-from numpy import sqrt
-from numpy.linalg import norm
 from matplotlib import pylab as plt
 from functools import partial
 
@@ -81,7 +70,7 @@ class AromeDataRepository(object):
 
         # Add a padding to the bounding box to make sure the computational domain is 
         # fully enclosed in arome dataset
-        bounding_box = array(bounding_box)
+        bounding_box = np.array(bounding_box)
         bounding_box[0][0] -= x_padding 
         bounding_box[0][1] += x_padding 
         bounding_box[0][2] += x_padding 
@@ -124,9 +113,10 @@ class AromeDataRepository(object):
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
                     (noop, t_to_ta_normal),
-                    (lambda rad: clip(((rad[1:] - rad[:-1])/((t[1:] - t[:-1])[:, newaxis, newaxis, 
-                                                                             newaxis])), 0.0, 1000.0),
-                                                                             t_to_ta_rad)]
+                    (lambda rad: np.clip(((rad[1:] - rad[:-1])/((t[1:] - t[:-1])
+                                            [:, np.newaxis, np.newaxis, 
+                                             np.newaxis])), 0.0, 1000.0),
+                                             t_to_ta_rad)]
 
         shyft_data_fields = ["relative_humidity",
                              "temperature",
@@ -178,18 +168,18 @@ class AromeDataRepository(object):
 
                 # Limit data
                 x = data_vars["x"][:] 
-                x1 = where(x >= x_min)[0]
-                x2 = where(x <= x_max)[0]
-                x_inds = intersect1d(x1, x2, assume_unique=True)
+                x1 = np.where(x >= x_min)[0]
+                x2 = np.where(x <= x_max)[0]
+                x_inds = np.intersect1d(x1, x2, assume_unique=True)
 
                 y = data_vars["y"][:] 
-                y1 = where(y >= y_min)[0]
-                y2 = where(y <= y_max)[0]
-                y_inds = intersect1d(y1, y2, assume_unique=True)
+                y1 = np.where(y >= y_min)[0]
+                y2 = np.where(y <= y_max)[0]
+                y_inds = np.intersect1d(y1, y2, assume_unique=True)
 
                 # Transform from arome coordinates to shyft coordinates
-                self._ox, self._oy = meshgrid(x[x_inds], y[y_inds])
-                self.xx, self.yy = transform(data_proj, shyft_proj, *meshgrid(x[x_inds], y[y_inds]))
+                self._ox, self._oy = np.meshgrid(x[x_inds], y[y_inds])
+                self.xx, self.yy = transform(data_proj, shyft_proj, *np.meshgrid(x[x_inds], y[y_inds]))
 
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]
@@ -203,7 +193,7 @@ class AromeDataRepository(object):
         if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
             x_wind, _ = extracted_data.pop("x_wind")
             y_wind, t = extracted_data.pop("y_wind")
-            extracted_data["wind_speed"] = sqrt(square(x_wind) + square(y_wind)), t
+            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), t
             
         self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
 
@@ -211,10 +201,10 @@ class AromeDataRepository(object):
         """
         Construct a numpy array over the indices with (x,y,z) coordinates at each (i,j).
         """
-        pts = empty(self.xx.shape + (3,), dtype='d')
+        pts = np.empty(self.xx.shape + (3,), dtype='d')
         pts[:, :, 0] = self.xx
         pts[:, :, 1] = self.yy
-        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else zeros(self.xx.shape, dtype='d')
+        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else np.zeros(self.xx.shape, dtype='d')
         return pts
 
     def _convert_to_time_series(self, extracted_data):
@@ -234,8 +224,8 @@ class AromeDataRepository(object):
             I, J = data.shape[-2:]
             construct = lambda d: tsf.create_point_ts(ta.size(), ta.start(), ta.delta(),
                                                       DoubleVector_FromNdArray(d.flatten()), 0)
-            time_series[key] = array([[construct(data[fslice + (i, j)]) for j in xrange(J)]
-                                     for i in xrange(I)])
+            time_series[key] = np.array([[construct(data[fslice + (i, j)]) for j in xrange(J)]
+                                          for i in xrange(I)])
         return time_series, non_time_series
 
     def add_time_series(self, other):
@@ -243,8 +233,8 @@ class AromeDataRepository(object):
         Add the time_series from the other repository to this. 
         """
         eps = 1.0e-10
-        if norm(other.xx.ravel() - self.xx.ravel()) > eps or \
-           norm(other.yy.ravel() - self.yy.ravel()) > eps:
+        if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
+           np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
             raise AromeDataRepositoryException()
         self.time_series.update(other.time_series)
 
@@ -269,5 +259,5 @@ class AromeDataRepository(object):
                 continue
             tpe = self.source_type_map[key]
             sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]), ts[idx]) for idx in 
-                            ndindex(pts.shape[:-1])])
+                            np.ndindex(pts.shape[:-1])])
         return sources 
