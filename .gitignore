@@ -19,3 +19,16 @@ test/python/state_test.yaml
 *.lib
 *.a
 *.so
+Debug
+x64
+Release
+runner.cpp
+api_wrap.cpp
+*.suo
+*.sdf
+ipch
+*.opensdf
+*.exp
+*.pdb
+*.pyd
+*.intermediate.manifest
