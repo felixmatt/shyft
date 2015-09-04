@@ -3,8 +3,9 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
 import numpy as np
-from shyft import api
+from shyft import api, shyftdata_dir
 
 
 utc_calendar = api.Calendar()
@@ -45,3 +46,11 @@ def get_class(repo):
     except ImportError:
         print("Repository '%s' cannot be imported.  Please check the path.")
     return eval(repo_cls)
+
+def abs_datafilepath(filepath):
+    """Get the absolute path for a data `filepath`.
+    """
+    if os.path.isabs(filepath):
+        return filepath
+    else:
+        return os.path.join(shyftdata_dir, filepath)

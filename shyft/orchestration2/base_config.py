@@ -10,8 +10,9 @@ import urlparse
 
 import yaml
 
+from shyft import shyftdata_dir
 from . import state
-from .utils import utctime_from_datetime, get_class
+from .utils import utctime_from_datetime, get_class, abs_datafilepath
 
 
 def config_constructor(config_file, config_section, **overrides):
@@ -151,7 +152,7 @@ class BaseTarget(object):
 
     def __init__(self, data_file, config):
         self._config_file = config._config_file
-        self.data_file = os.path.join(self.absdir(config.data_dir), data_file)
+        self.data_file = os.path.join(shyftdata_dir, data_file)
 
     def __repr__(self):
         repr = "%s(" % self.__class__.__name__
@@ -216,10 +217,7 @@ class BaseRegion(BaseAncillaryConfig):
 
     def absdir(self, filepath):
         """Return the absolute path to the directory of data files."""
-        if os.path.isabs(filepath):
-            return filepath
-        else:
-            return os.path.join(os.path.dirname(self._config_file), filepath)
+        return abs_datafilepath(filepath)
 
 
 # *** Model ***

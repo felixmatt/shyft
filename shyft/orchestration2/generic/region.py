@@ -20,7 +20,9 @@ class Region(BaseRegion):
         # Get an instance of the class for the repository
         repo = self.repository
         repo_cls = get_class(repo['class'])
+        print("data_file 0:", repo['data_file'])
         data_file = self.absdir(repo['data_file'])
+        print("data_file 1:", data_file)
         repo_instance = repo_cls(config_file, data_file)
         if not isinstance(repo_instance, BaseRegion):
             raise ValueError("The repository class is not an instance of 'BaseRegion'")

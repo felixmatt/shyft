@@ -3,7 +3,7 @@ sources:
   - repository: source_repo1
     class: shyft.orchestration2.netcdf.SourceDataset
     params:
-      stations_met: stations_met.nc
+      stations_met: netcdf/orchestration-testdata/stations_met.nc
       types:
         - type: precipitation
           stations:
