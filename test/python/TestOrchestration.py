@@ -365,10 +365,12 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(len(sources) > 0)
         data_names = "temperature", "radiation", "wind_speed", "precipitation", "relative_humidity"
         self.assertTrue(all([n in sources for n in data_names]))
-        self.assertTrue(sources["temperature"][0].ts.size() == 66)
-        self.assertTrue(sources["radiation"][0].ts.size() == 66)
-        self.assertTrue(sources["radiation"][0].ts.time(0) < sources["temperature"][0].ts.time(0))
-        self.assertTrue(sources["radiation"][0].ts.time(65) < sources["temperature"][0].ts.time(65))
+        self.assertTrue(sources["temperature"][0].ts.size() == 67)
+        r0 = sources["radiation"][0].ts
+        t0 = sources["temperature"][0].ts
+        self.assertTrue(r0.size() == 66)
+        self.assertTrue(r0.time(0) == t0.time(0))
+        self.assertTrue(r0.time(r0.size()-1) < t0.time(t0.size()-1))
     
 
 class LocalStateRepositoryTestCase(unittest.TestCase):
