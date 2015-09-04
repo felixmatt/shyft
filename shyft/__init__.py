@@ -26,9 +26,9 @@ def print_versions():
     import sys
 
     print("-=" * 38)
-    print("SHyFT version: %s" % __version__)
+    print("SHyFT version:     %s" % __version__)
     print("NumPy version:     %s" % numpy.__version__)
-    print("netCDF4 version:     %s" % netCDF4.__version__)
+    print("netCDF4 version:   %s" % netCDF4.__version__)
     print("Python version:    %s" % sys.version)
     if os.name == "posix":
         (sysname, nodename, release, version_, machine) = os.uname()
@@ -39,4 +39,5 @@ def print_versions():
 
 def run_tests():
     import nose
+    print_versions()
     nose.main()
