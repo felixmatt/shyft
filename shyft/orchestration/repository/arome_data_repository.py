@@ -103,19 +103,22 @@ class AromeDataRepository(object):
 
             def noop(d):
                 return d
-            t_to_ta_normal = partial(t_to_ta, t, 0)  # Full
-            t_to_ta_rad = partial(t_to_ta, t, 1)
-            return [(noop, t_to_ta_normal),
-                    (lambda air_temp: (air_temp - 273.15), t_to_ta_normal),
+            
+            def prec(d):
+                return d[1:]
+            t_to_ta_0 = partial(t_to_ta, t, 0)  # Full
+            t_to_ta_1 = partial(t_to_ta, t, 1)
+            return [(noop, t_to_ta_0),
+                    (lambda air_temp: (air_temp - 273.15), t_to_ta_0),
                     (noop, lambda: None),
-                    (noop, t_to_ta_normal),
-                    (noop, t_to_ta_normal),
-                    (noop, t_to_ta_normal),
+                    (prec, t_to_ta_1),
+                    (noop, t_to_ta_0),
+                    (noop, t_to_ta_0),
                     (lambda rad: np.clip(((rad[1:] - rad[:-1])/((t[1:] -
                                                                  t[:-1])
                                           [:, np.newaxis, np.newaxis,
                                           np.newaxis])), 0.0, 1000.0),
-                     t_to_ta_rad)]
+                     t_to_ta_1)]
 
         shyft_data_fields = ["relative_humidity",
                              "temperature",
