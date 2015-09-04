@@ -25,9 +25,9 @@ class InputSourceRepository(DictRepository):
     def add_input_source_vct(self, points):
         input_type = points.keys()[0]
         if(input_type in self.input_source_types.keys()):
-            #self.data[input_type] = points[input_type]
-            for i in range(10):#len(points[input_type])):
-                self.data[input_type].append(points[input_type][i])
+            self.data[input_type].reserve(self.data[input_type].size()+points[input_type].size())
+            [self.data[input_type].push_back(i) for i in points[input_type].iterator()]
+                
 
 
 def dataset_repository_factory(config, t_start, t_end):
