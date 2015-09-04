@@ -1,7 +1,7 @@
 Himalayas:
   model_config_file: configuration.yaml
   calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
-  calibration_type: PTGSKOptimizer
+  calibration_type: PTGSKOptimizer.optimize     # can be 'optimize' or 'optimize_dream'
   data_dir: .
   target:
   - repository:

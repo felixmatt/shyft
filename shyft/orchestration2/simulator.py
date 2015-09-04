@@ -204,7 +204,7 @@ class Simulator(object):
        # Cell assembly
         catchment_map = []
         catchment_parameters=[]
-        print("Creating cells")
+        # print("Creating cells")
         for i in xrange(num_cells):
             c_id = catchment_id[i]
             if c_id not in catchment_map:
@@ -222,7 +222,6 @@ class Simulator(object):
             mid_point = api.GeoPoint(geo_position[i][0],geo_position[i][1],geo_position[i][2])
             radiation_slope_factor = 0.9 # TODO: read from config
             geo = api.GeoCellData(mid_point,area[i],mapped_catchment_id,radiation_slope_factor,ltf)
-            print("creating cell  ", i)
             cell = self.model_api.cell_t() #(*arg_builder[i])
             cell.geo = geo
             cell.state.kirchner.q = 0.0001
@@ -235,9 +234,9 @@ class Simulator(object):
     def build_model(self, t_start, delta_t, n_steps):
         cells = self.build_cells()  # Need to do this to get the number of catchments
         model_parameter = self.api_model_parameters() #api.PTGSKParameter()
-        print ("Ready to create the model")
+        # Ready to create the model
         self._model = self.model_api(model_parameter, cells)
-        print ("Next is reading model")
+        # Next is reading model
         sources = self._config.datasets_config.fetch_sources(
             period=(self._config.start_time, self._config.stop_time))
         time_axis = api.Timeaxis(t_start, delta_t, n_steps)
