@@ -116,7 +116,13 @@ class StateIOTestCase(unittest.TestCase):
         cal = api.Calendar()
         time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
                                  api.deltahours(1), 240)
-        model.run_interpolation(api.InterpolationParameter(), time_axis,
+        model_interpolation_parameter=api.InterpolationParameter()
+        model_interpolation_parameter.temperature_idw.default_temp_gradient=-0.005 # degC/m, so -0.5 degC/100m
+        model_interpolation_parameter.temperature_idw.max_members=6 # max number of temperature sources used for one interpolation
+        model_interpolation_parameter.temperature_idw.max_distance=20000 #20 km is max distance
+        model_interpolation_parameter.temperature_idw.distance_measure_factor=1.0 # pure linear interpolation
+        model_interpolation_parameter.use_idw_for_temperature=True # this enables IDW with default temperature gradient.
+        model.run_interpolation(model_interpolation_parameter, time_axis,
             self.create_dummy_region_environment(time_axis,
             model.get_cells()[num_cells/2].geo.mid_point()))
         model.set_state_collection(-1, True)  # enable state collection for all cells
