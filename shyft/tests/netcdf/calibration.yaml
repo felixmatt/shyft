@@ -6,7 +6,7 @@ Himalayas:
   target:
   - repository:
     class: shyft.orchestration2.netcdf.Target
-    file: stations_discharge.nc
+    file: netcdf/orchestration-testdata/stations_discharge.nc
     1D_timeseries:
     - internal_id: subcatchment2
       # uid: /SHyFT/STS/Runoff/Vikf-Tistel, 2015-09-01T00:00:00

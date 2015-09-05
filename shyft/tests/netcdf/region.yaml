@@ -1,7 +1,7 @@
 ---
 repository:
   class: shyft.orchestration2.netcdf.Region
-  data_file: cell_info.nc
+  data_file: netcdf/orchestration-testdata/cell_info.nc
 
 domain:
   EPSG: 32632

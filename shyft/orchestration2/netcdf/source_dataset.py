@@ -3,6 +3,7 @@ Module for reading dataset files needed for an SHyFT run.
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 
@@ -10,25 +11,19 @@ import numpy as np
 from netCDF4 import Dataset
 
 from ..base_config import BaseSourceDataset
-from shyft import api
+from shyft import api, shyftdata_dir
+from ..utils import abs_datafilepath
 
 
 class SourceDataset(BaseSourceDataset):
 
-    def absdir(self, filepath):
-        """Return the absolute path to the directory of netcdf data files."""
-        if os.path.isabs(filepath):
-            return filepath
-        else:
-            return os.path.join(os.path.dirname(self._config_file), filepath)
-
     @property
     def _stations_met(self):
-        return self.absdir(self.stations_met)
+        return abs_datafilepath(self.stations_met)
 
     @property
     def _stations_discharge(self):
-        return self.absdir(self.stations_discharge)
+        return abs_datafilepath(self.stations_discharge)
 
     def __repr__(self):
         return "%s(stations_met=%r, stations_discharge=%r)" % (
