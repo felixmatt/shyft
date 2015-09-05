@@ -4,6 +4,11 @@ import unittest
 from shyft import api
 import os
 import yaml
+from os.path import dirname
+from os.path import pardir
+from os.path import join
+from shyft import __file__ as shyft_file
+
 from shyft.orchestration.state import set_ptgsk_model_state
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
@@ -334,7 +339,8 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 
 
     def test_raster_cell_repository_construction(self):
-        config_file = "../../doc/example/file_configs/region.yaml"
+        config_file = join(dirname(shyft_file), pardir, pardir, "shyft-data",
+                        "repository", "raster_cell_repository","region.yaml")
         with open(config_file, "r") as cf:
             config = yaml.load(cf.read())
         r = config['repository']
@@ -348,10 +354,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         """
         Simple regression test of arome data respository.
         """
-        from os.path import dirname
-        from os.path import pardir
-        from os.path import join
-        from shyft import __file__ as shyft_file
+
         EPSG = 32633
         upper_left_x = 436100.0
         upper_left_y = 7417800.0
