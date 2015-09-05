@@ -39,12 +39,18 @@ namespace shyft {
 		namespace btk = bayesian_kriging;
 		using namespace std;
 
+        /** \brief the interpolation_parameter keeps parameter needed to perform the
+         * interpolation steps as specified by the user.
+         */
         struct interpolation_parameter {
             typedef btk::parameter btk_parameter_t;
             typedef idw::precipitation_parameter idw_precipitation_parameter_t;
+            typedef idw::temperature_parameter idw_temperature_parameter_t;
             typedef idw::parameter idw_parameter_t;
 
             btk::parameter temperature;
+            bool use_idw_for_temperature=false;
+            idw::temperature_parameter temperature_idw;
             idw::precipitation_parameter precipitation;
             idw::parameter wind_speed;
             idw::parameter radiation;
@@ -54,6 +60,9 @@ namespace shyft {
             interpolation_parameter(const btk::parameter& temperature, const idw::precipitation_parameter& precipitation,
                                    const idw::parameter& wind_speed,const idw::parameter& radiation,const idw::parameter& rel_hum)
               : temperature(temperature), precipitation(precipitation), wind_speed(wind_speed), radiation(radiation), rel_hum(rel_hum) {}
+            interpolation_parameter(const idw::temperature_parameter& temperature, const idw::precipitation_parameter& precipitation,
+                                   const idw::parameter& wind_speed,const idw::parameter& radiation,const idw::parameter& rel_hum)
+              : use_idw_for_temperature(true),temperature_idw(temperature), precipitation(precipitation), wind_speed(wind_speed), radiation(radiation), rel_hum(rel_hum) {}
         };
 
 		/** \brief point_source contains common properties,functions
@@ -214,10 +223,10 @@ namespace shyft {
 			region_model(const parameter_t &region_param, std::shared_ptr<std::vector<C> >& cells)
 				: cells(cells) {
                 set_region_parameter(region_param);// ensure we have a correct model
-				ncore = thread::hardware_concurrency() * 2;
+				ncore = thread::hardware_concurrency() * 4;
 			}
             timeaxis_t time_axis;///<The time_axis as set from run_interpolation, determines the axis for run()..
-			size_t ncore=0;///<< defaults to 2x hardware concurrency, controls number of threads used for cell processing
+			size_t ncore=0;///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
 			/** \brief run_interpolation interpolates region_environment temp,precip,rad.. point sources
 			* to a value representative for the cell.mid_point().
 			*
@@ -237,6 +246,7 @@ namespace shyft {
 			*/
 			template < class RE, class IP>
 			void run_interpolation(const IP& interpolation_parameter, const timeaxis_t& time_axis, const RE& env) {
+                #ifndef SWIG
                 size_t max_catchment_id=0;
 				for_each(begin(*cells), end(*cells), [this, &time_axis,&max_catchment_id](cell_t& c) {
 					c.init_env_ts(time_axis);
@@ -251,17 +261,20 @@ namespace shyft {
 				namespace btk = shyft::core::bayesian_kriging;
 
 
+                typedef shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
 				typedef shyft::timeseries::average_accessor<typename RE::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
 				typedef shyft::timeseries::average_accessor<typename RE::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
 				typedef shyft::timeseries::average_accessor<typename RE::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
 				typedef shyft::timeseries::average_accessor<typename RE::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
 
 
+                typedef idw_compliant_geo_point_ts< typename RE::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point,idw::temperature_default_gradient_scale_computer> idw_temperature_model_t;
 				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename IP::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
 				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_radiation_model_t;
 				typedef idw::wind_speed_model    <idw_compliant_wind_speed_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_windspeed_model_t;
@@ -280,10 +293,17 @@ namespace shyft {
 				auto btkx = async(launch::async, [&]() {
 					if (env.temperature != nullptr) {
                         if(env.temperature->size()>1) {
-                            btk::btk_interpolation< btk_tsa_t >(
-                                begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
-                                time_axis, interpolation_parameter.temperature
-                            );
+                            if(interpolation_parameter.use_idw_for_temperature) {
+                                idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t >(
+                                        time_axis, *env.temperature, interpolation_parameter.temperature_idw, *cells,
+                                        [](cell_t &d, size_t ix, double value) { d.env_ts.temperature.set(ix, value); }
+                                );
+                            } else {
+                                btk::btk_interpolation< btk_tsa_t >(
+                                    begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
+                                    time_axis, interpolation_parameter.temperature
+                                );
+                            }
                         } else {
                             // just one temperature ts. just a a clean copy to destinations
                             btk_tsa_t tsa((*env.temperature)[0].ts,time_axis);
@@ -300,7 +320,7 @@ namespace shyft {
 
 				auto idw_precip = async(launch::async, [&]() {
 					if (env.precipitation != nullptr)
-						idw::run_idw_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t >(
+						idw::run_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t >(
 						time_axis, *env.precipitation, interpolation_parameter.precipitation, *cells,
 						[](cell_t &d, size_t ix, double value) { d.env_ts.precipitation.set(ix, value); }
 					);
@@ -308,7 +328,7 @@ namespace shyft {
 
 				auto idw_radiation = async(launch::async, [&]() {
 					if (env.radiation != nullptr)
-						idw::run_idw_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
+						idw::run_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
 						time_axis, *env.radiation, interpolation_parameter.radiation, *cells,
 						[](cell_t &d, size_t ix, double value) { d.env_ts.radiation.set(ix, value); }
 					);
@@ -316,7 +336,7 @@ namespace shyft {
 
 				auto idw_wind_speed = async(launch::async, [&]() {
 					if (env.wind_speed != nullptr)
-						idw::run_idw_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
+						idw::run_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
 						time_axis, *env.wind_speed, interpolation_parameter.wind_speed, *cells,
 						[](cell_t &d, size_t ix, double value) { d.env_ts.wind_speed.set(ix, value); }
 					);
@@ -326,7 +346,7 @@ namespace shyft {
 
 				auto idw_rel_hum = async(launch::async, [&]() {
 					if (env.rel_hum != nullptr)
-						idw::run_idw_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
+						idw::run_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
 						time_axis, *env.rel_hum, interpolation_parameter.rel_hum, *cells,
 						[](cell_t &d, size_t ix, double value) { d.env_ts.rel_hum.set(ix, value); }
 					);
@@ -339,6 +359,7 @@ namespace shyft {
 				idw_radiation.get();
 				idw_wind_speed.get();
 				idw_rel_hum.get();
+                #endif
 			}
 
 			/** \brief run_cells calculations over specified time_axis
@@ -464,7 +485,7 @@ namespace shyft {
 
 			/** \brief using the catchment_calculation_filter to decide if discharge etc. are calculated.
 			 * \param cid  catchment id
-			 * \returns true if catchment id is calculated during runs 
+			 * \returns true if catchment id is calculated during runs
 			 */
 			bool is_calculated(size_t cid) const { return catchment_filter.size() == 0 || (catchment_filter[cid]); }
 
@@ -557,7 +578,7 @@ namespace shyft {
                     throw runtime_error("parallel_run:cell pr thread is zero ");
 				std::vector<std::future<void>> calcs;
 				for (size_t i = 0; i < len;) {
-					int n = thread_cell_count;
+					size_t n = thread_cell_count;
 					if (i + n > len)
 						n = len - i;
 					calcs.emplace_back(
@@ -579,4 +600,4 @@ namespace shyft {
 
 
     } // core
-} // shyft 
+} // shyft

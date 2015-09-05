@@ -2,7 +2,7 @@
 # Notice that we only aim to update the 64bit distro (considering 32bit not usable for our purposes)
 #
 Generator=$(SWIG_ROOT)\swig
-HeaderDependencies= ..\api.h ..\..\core\geo_point.h ..\..\core\utctime_utilities.h 
+HeaderDependencies= ..\api.h ..\..\core\geo_point.h ..\..\core\utctime_utilities.h ..\..\core\inverse_distance.h ..\..\core\region_model.h ..\..\core\cell_model.h
 
 TargetRoot64=..\..\shyft
 

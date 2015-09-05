@@ -1,6 +1,7 @@
 #pragma once
-
-
+#ifdef WIN32
+#pragma warning(disable:4503)
+#endif // WIN32
 #include <algorithm>
 #include <exception>
 #include <functional>
@@ -14,53 +15,47 @@
 namespace shyft {
     namespace core {
 		namespace inverse_distance {
-	
-	        /** \brief IDWParameter is a simple place-holder for the two common basic
-	         * parameters for IDW, namely the max_distance and the max_members to use for
+
+	        /** \brief parameter is a simple place-holder for IDW parameters
+			 *
+			 *  The two most common
+			 *  max_distance and the max_members to use for
 	         * interpolation.
-	         * \sa ITWTemperatureParameter
+			 * Additionally it keep distance measure-factor,
+			 * so that the IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor)
 	         */
-	        class parameter {
-	            size_t max_members_;
-	            double max_distance_;
-                double distance_measure_factor_;
-	          public:
+	        struct parameter {
+	            size_t max_members;///< number of members that can participate in one destination-cell
+	            double max_distance;///< [meter] only neighbours within max distance is used for each destination-cell
+                double distance_measure_factor;///< IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor)
 	            parameter(size_t max_members=10, double max_distance=200000.0,
                           double distance_measure_factor=2.0)
-	             : max_members_(max_members), max_distance_(max_distance),
-                   distance_measure_factor_(distance_measure_factor) {}
-	
-	            double max_distance() const { return max_distance_; }
-	            size_t max_num_members() const { return max_members_; }
-	            double distance_measure_factor() const { return distance_measure_factor_; }
-	
-	            void set_max_distance(double value) { max_distance_ = value; }
-	            void set_max_num_members(size_t value) { max_members_ = value; }
-	            void set_distance_measure_factor(double value) { distance_measure_factor_ = value; }
+	             : max_members(max_members), max_distance(max_distance),
+                   distance_measure_factor(distance_measure_factor) {}
 	        };
-	
+
 	        /** \brief For temperature inverse distance, also provide default temperature gradient to be used
 	         * when the gradient can not be computed.
+			 * \sa temperature_model
 	         */
-	        class temperature_parameter :public parameter {
-	            double default_temp_gradient;
-	        public:
+	        struct temperature_parameter :public parameter {
+	            double default_temp_gradient;///< unit [degC/m]
 	            temperature_parameter(double default_gradient = -0.006, size_t max_members = 20, double max_distance = 200000.0)
 	                : parameter(max_members, max_distance), default_temp_gradient(default_gradient) {}
 	            double default_gradient() const { return default_temp_gradient; }
 	        };
-	
+
 	        /*\brief For precipitation,the scaling model needs the increase in precipitation for each 100 meters.
+			 * \sa temperature_model
 	        */
-	        class precipitation_parameter: public parameter {
+	        struct precipitation_parameter: public parameter {
 	            double scale_factor;
-	          public:
 	            precipitation_parameter(double increase_pct_m=2, size_t max_members=20, double max_distance=200000.0)
 	              : parameter(max_members, max_distance), scale_factor(1+increase_pct_m/100) {}
 	            double precipitation_scale_factor() const { return scale_factor; } // mm/m,  0.5 mm increase pr. 100 m height
 	        };
-	
-	
+
+
 			 /** \brief Inverse Distance Weighted Interpolation
 			 * The Inverse Distance Weighted algorithm.
 			 *
@@ -100,8 +95,8 @@ namespace shyft {
 			 *    -# other requirements dependent on the Model class could apply (like radiation slope factor, etc.)
 			 * \tparam P
 			 * Parameters for the algorithm, that supplies :
-			 *    -# P.max_distance() const --> double, - locations outside this distance is not available
-			 *    -# P.max_num_members() const --> size_t, - max number of members to use in weight
+			 *    -# P.max_distance const --> double, - locations outside this distance is not available
+			 *    -# P.max_members const --> size_t, - max number of members to use in weight
 			 * \tparam T
 			 * TimeAxis providing:
 			 *  -#  T.size() const --> size_t, number of non-overlapping time intervals
@@ -123,7 +118,7 @@ namespace shyft {
 			 *
 			 *
 			 */
-	
+
 			template<class M, class S, class D, class T, class P, class F>
 			void run_interpolation(S source_begin, S source_end,
 								  D destination_begin, D destination_end,
@@ -134,24 +129,23 @@ namespace shyft {
 				using namespace std;
 				typedef typename S::value_type const * source_pointer;
 				typedef typename S::value_type source_t;
-	
+
 				struct source_weight {
 					source_weight( source_pointer source=nullptr, double weight=0): source(source), weight(weight) {}
 					source_pointer source;
 					double weight;
 					// Source::TsAccessor(S,TimeAxis) should go into this one..
-					// at least if we plan for parallell computing in this alg.
+					// at least if we plan for parallel computing in this alg.
 				};
-	
-	
+
+
 				static const double max_weight = 1.0; // Used in place of inf for weights
-				//const double min_weight = 1.0/(parameter.max_distance()*parameter.max_distance());
-				const double min_weight = 1.0/M::distance_measure(typename source_t::geo_point_t(0.0), 
-                                          typename source_t::geo_point_t(parameter.max_distance()), 
-                                          parameter.distance_measure_factor());
+				const double min_weight = 1.0/M::distance_measure(typename source_t::geo_point_t(0.0),
+                                          typename source_t::geo_point_t(parameter.max_distance),
+                                          parameter.distance_measure_factor);
 				const size_t source_count = distance(source_begin, source_end);
 				const size_t destination_count = distance(destination_begin, destination_end);
-	
+
 				typedef vector<source_weight> source_weight_list;
 				vector<source_weight_list> cell_neighbours;
 				cell_neighbours.reserve(destination_count);
@@ -161,7 +155,7 @@ namespace shyft {
 				//     - a list of sources with weights that are within reaching distance
 				//
 				source_weight_list swl; swl.reserve(source_count);
-				size_t max_entries = parameter.max_num_members();
+				size_t max_entries = parameter.max_members;
 				for(auto destination=destination_begin; destination != destination_end; ++destination) { // for each destination, create a unique SourceWeightList
 					auto destination_point = destination->mid_point();
 					swl.clear();
@@ -170,7 +164,7 @@ namespace shyft {
 							 (const typename S::value_type& source) {
 							   double weight = min(max_weight, 1.0/M::distance_measure(destination_point,
                                                 source.mid_point(),
-                                                parameter.distance_measure_factor()));
+                                                parameter.distance_measure_factor));
 							   if(weight >= min_weight) // max distance value tranformed to minimum weight, so we only use those near enough
 									swl.emplace_back(&source, weight);
 							 }
@@ -183,10 +177,10 @@ namespace shyft {
 						partial_sort(begin(swl), begin(swl) + max_entries, end(swl), [](const source_weight& a, const source_weight &b) {return a.weight>b.weight; });  // partial sort the list (later: only if max_entries>usable_sources.size..)
 						swl.resize(max_entries);// get rid of left-overs
 					}
-	
+
 					cell_neighbours.emplace_back(swl);  // done with this destination source, n_dest x n_source allocs
 				}
-	
+
 				//
 				// 2. for each destination, do the IDW
 				//     using cell_neighbors that keeps a list of reachable sources
@@ -196,10 +190,10 @@ namespace shyft {
 				//
 				vector<double> destination_scale; destination_scale.reserve(destination_count);
 				bool first_time_scale_calc=true;
-	
+
 				for (size_t i=0; i < timeAxis.size(); ++i) {
 					auto period_i = timeAxis(i);
-	
+
 					// compute gradient, scale whatever, based on available sources..
 					if( M::scale_computer::is_source_based() || first_time_scale_calc) {
 						destination_scale.clear();
@@ -226,7 +220,7 @@ namespace shyft {
 						auto &cell_neighbor = cell_neighbours[j];
 						auto destination = destination_begin + j;
 						double computed_scale = destination_scale[j];
-	
+
 						for_each(begin(cell_neighbor), end(cell_neighbor),
 							[&, period_i]
 							(const source_weight &sw) {
@@ -241,8 +235,53 @@ namespace shyft {
 					}
 				}
 			}
-	
-	
+#ifndef SWIG
+			/** \brief temperature_gradient_scale_computer
+			* based on a number of geo-located temperature-sources, compute the temperature gradient.
+			*
+			* Usage in the context of IDW-models,
+			* Linear least square calculation of temperature gradient,
+			* see http://mathworld.wolfram.com/LastSqueresFitting.html
+			*/
+			struct temperature_gradient_scale_computer {
+				static bool is_source_based() { return true; }
+				template <typename P>
+				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()) { clear(); }
+				template<typename T,typename S> void add(const S &s, T tx) {
+					++n;
+					double h = s.mid_point().z;  // we could keep heights, and filter same heights,or to close heights ?
+					double t = s.value(tx);
+					s_h += h; s_ht += h*t; s_t += t; s_hh += h*h;
+				}
+				double compute() const {
+					return n > 1 ? (n*s_ht - s_h*s_t) / (n*s_hh - s_h*s_h) : default_gradient;
+				}
+				void clear() { s_h = s_ht = s_t = s_hh = 0.0; n = 0; }
+			private:
+				double default_gradient;
+				double s_h;
+				double s_ht;
+				double s_t;
+				double s_hh;
+				size_t n;
+			};
+
+			/** \brief temperature_gradient_scale_computer that always returns default gradient
+			* based on a number of geo-located temperature-sources, compute the temperature gradient.
+			*/
+			struct temperature_default_gradient_scale_computer {
+				static bool is_source_based() { return false; }
+				template <typename P>
+				temperature_default_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()) { ; }
+				template<typename T, typename S>
+				void add(const S &s, T tx) {}
+				double compute() const {return default_gradient;}
+				void clear() { }
+			private:
+				double default_gradient;
+			};
+#endif
+
 			/** \brief Provide a minimal temperature model for the IDW algorithm,
 			 *  providing functionality for transformation of source temperature to
 			 *  destination location using computed temperature gradient, based on
@@ -266,35 +305,9 @@ namespace shyft {
 			 *   -# static method .transform(double sourceValue,double scale,const S&source,const D& destination)
 			 *  \sa IDWTemperatureParameter for how to provide parameters to the IDW using this model
 			 */
-			template <class S,class D,class P,class G>
+			template <class S,class D,class P,class G, class SC>
 			struct temperature_model {
-				#ifndef SWIG
-				/** \brief
-				 * Linear least square calculation of temperature gradient,
-				 * see http://mathworld.wolfram.com/LastSqueresFitting.html
-				 */
-				struct scale_computer {
-					static bool is_source_based() {return true;}
-					scale_computer(const P&p): default_gradient(p.default_gradient()) { clear(); }
-					template<typename T> void add(const S &s, T tx) {
-						++n;
-						double h = s.mid_point().z;  // we could keep heights, and filter same heights,or to close heights ?
-						double t = s.value(tx);
-						s_h += h; s_ht += h*t; s_t += t; s_hh += h*h;
-					}
-					double compute() const {
-						return n > 1 ? (n*s_ht - s_h*s_t)/(n*s_hh - s_h*s_h) : default_gradient;
-					}
-					void clear() { s_h = s_ht = s_t = s_hh = 0.0; n = 0; }
-				private:
-					double default_gradient;
-					double s_h;
-					double s_ht;
-					double s_t;
-					double s_hh;
-					size_t n;
-				};
-				#endif
+				typedef SC scale_computer;
 				static inline double distance_measure(const G &a, const G &b, double f) {
 					return G::distance_measure(a, b, f);
 				}
@@ -302,7 +315,7 @@ namespace shyft {
 					return sourceValue + gradient*(d.mid_point().z - s.mid_point().z);
 				}
 			};
-	
+
 		   /** \brief Provide a minimal model for IDW,
 			*  RadiationModel::scale_computer does nothing(returns 1.0)
 			*  the RadiationModel::transform returns sourceValue (radiation) * destination.slope_factor(),
@@ -313,7 +326,7 @@ namespace shyft {
 			struct radiation_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based() { return false; }
+					static  bool is_source_based()  { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -326,7 +339,7 @@ namespace shyft {
 					return sourceValue*d.slope_factor();
 				}
 			};
-	
+
 		   /** \brief Provide a minimal precipitation model for IDW,
 			*  PrecipitationModel::scale_computer provides the constant precipitation_gradient relaying it to the
 			*  transform function through the compute() result.
@@ -339,7 +352,7 @@ namespace shyft {
 			struct precipitation_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based() { return false; }
+					static  bool is_source_based()  { return false; }
 
 					double precipitation_gradient;
 					scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
@@ -365,7 +378,7 @@ namespace shyft {
 			struct wind_speed_model {
 #ifndef SWIG
 				struct scale_computer {
-					static bool is_source_based() { return false; }
+					static bool is_source_based()  { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -387,7 +400,7 @@ namespace shyft {
 			struct rel_hum_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based() { return false; }
+					static  bool is_source_based()  { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -418,6 +431,9 @@ namespace shyft {
 
 			/** \brief run interpolation step, for a given IDW model, sources and parameters.
 			*  run_idw_interpolation of supplied sources to destination locations/cells, over a range as specified by timeaxis, based on supplied templatized parameters.
+			*
+			*  \note this is run in multicore mode, and it it safe because each thread, works on private or const data, and writes to different cells.
+			*
 			* \tparam IDWModel IDW model class, ref. IDW.h
 			* \tparam IDWModelSource IDW source class, ref IDW.h for requirements.
 			* \tparam ApiSource Api source, ref EnkiApiServiceImpl.h
@@ -427,13 +443,39 @@ namespace shyft {
 			*
 			*/
 			template<typename IDWModel, typename IDWModelSource, typename ApiSource, typename P, typename D, typename ResultSetter, typename TimeAxis>
-			void run_idw_interpolation(const TimeAxis &ta, ApiSource api_sources, const P& parameters, D &cells, ResultSetter&& result_setter) {
+			void run_interpolation(const TimeAxis &ta, ApiSource const & api_sources, const P& parameters, D &cells, ResultSetter&& result_setter) {
 				using namespace std;
+				/// 1. make a vector of ts-accessors for the sources. Notice that this vector needs to be modified, since the accessor 'remembers'
+				///    the last position. It is essential for performance, -but again-, then each thread needs it's own copy of the sources.
+				///    Since the accessors just have a const *reference* to the underlying TS; there is no memory involved, so copy is no problem.
+
 				vector<IDWModelSource> src; src.reserve(api_sources.size());
-				for_each(begin(api_sources), end(api_sources), [&src, &ta](typename ApiSource::value_type & s) { src.emplace_back(s, ta); });
+				for_each(begin(api_sources), end(api_sources), [&src, &ta](typename  ApiSource::value_type const & s) { src.emplace_back(s, ta); });
 
 				idw_timeaxis<TimeAxis> idw_ta(ta);
-				run_interpolation<IDWModel>(begin(src), end(src), begin(cells), end(cells), idw_ta, parameters, result_setter);
+				/// 2. Create a set of futures, for the threads that we want to run
+				vector<future<void>> calcs;
+				size_t n_cells= distance(begin(cells),end(cells));
+				///    - and figure out a suitable ncore number. Using single cpu 4..8 core shows we can have more threads than cores, and gain speed.
+				size_t ncore=thread::hardware_concurrency() * 4; /// 4 found to be ok for 1 cpu 4..8 cores(subject to change later)
+				if(ncore==0)ncore=4;//in case of not available, default to 4,
+				size_t thread_cell_count= 1+n_cells/ncore;
+				auto cells_iterator=  begin(cells);
+				for (size_t i = 0; i < n_cells;) {
+					size_t n = thread_cell_count;
+					if (i + n > n_cells) n = n_cells - i;// Figure out a cell-partition to compute
+					calcs.emplace_back( /// spawn a thread to run IDW on this part of the cells, using *all* sources (later we could speculate in sources needed)
+						async(launch::async, [src,cells_iterator,&idw_ta,&parameters,&result_setter,n]() { /// capture src by value, we *want* a copy of that..
+                            run_interpolation<IDWModel>(begin(src), end(src), cells_iterator,cells_iterator+n, idw_ta, parameters, result_setter);
+							}
+						)
+					);
+					cells_iterator =cells_iterator+n;
+					i = i + n;
+				}
+				///3. wait for the IDW computation threads to end.
+				for_each(begin(calcs), end(calcs), [](std::future<void>& f) {f.get(); });
+
 			}
 
 		} // namespace  inverse_distance
