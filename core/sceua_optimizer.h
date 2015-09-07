@@ -61,39 +61,40 @@ namespace shyft {
             public:
                 sceua():distribution(0.0,1.0) {}
                 OptimizerState find_min(
-                    const size_t n,			// Number of active parameters
-                    const double Xmin[],	// Lower limit of all n parameters
-                    const double Xmax[],	// Upper limit of all n parameters
-                    double x[],				// Xmin < x < Xmax. The [input]initial/[output]current/optimal n parameter values
-                    double& FxOptimumFound,	// The optimal value found
-                    ifx& Fx,// Fx(x1..xn) The function that takes x[n] parameters
-                    // Stop criteria goes here: They are important, since evaluating Fx takes time.
-                    double FxEpsilon,		// 1. Stop when diff of 5 last samples: 2x(Fmax-Fmin)/(Fmax+Fmin)<FxEpsilon
-                    double FxSolutionMin,	// 2. Stop when Fx is within FxSolutionMin..FxSolutionMax
-                    double FxSolutionMax,	//   (to disable, set FxSolutionMin > FxSolutionMax)
-                    const double xEpsilon[],// 3. Stop when all x[] are just moving within xEpsilon range
-                    size_t maxIterations	// 4. Stop when maxiterations/invocations are reached
+                    const size_t n,			///< Number of active parameters
+                    const double x_min[],	///< Lower limit of all n parameters
+                    const double x_max[],	///< Upper limit of all n parameters
+                    double x[],				///< x_min < x < x_max. The [input]initial/[output]current/optimal n parameter values
+                    double& fx_optimum_found,	///< The optimal value found
+                    ifx& fx,///< fx(x1..xn) The function that takes x[n] parameters
+                    //< \section Stop criteria goes here: They are important, since evaluating Fx takes time.
+                    double fx_epsilon,		///< 1. Stop when diff of 5 last samples: 2x(Fmax-Fmin)/(Fmax+Fmin)<FxEpsilon
+                    double fx_solution_min,	///< 2. Stop when fx is within fx_solution_min..fx_solution_max
+                    double fx_solution_max,	///<   (to disable, set fx_solution_min > fx_solution_max)
+                    const double x_epsilon[],///< 3. Stop when all x[] are just moving within x_epsilon range
+                    size_t max_iterations	///< 4. Stop when max_iterations/invocations are reached
                     )
                     const;
             private:
-                /// Function evolve corresponds to the competitive complex ecolution (CCE),
+				/// \brief Evolve ..
+                /// Function evolve corresponds to the competitive complex evolution (CCE),
                 /// fig. 2 in Duan et. al (1993). It is called from sceua.
-                void evolve(double *ax[],		// ax[m][n]  are the parameter values of complex to be evovled.
-                    double af[],				// af[m]     is the objective function value of the subcomplex.
-                    size_t m,					// m         is the size of the complex.
-                    size_t n,					// n         is number of parameters to be optimized.
-                    ifx& fn,	// The function (hydrological model) to be evaluated
-                    const double Xmin[],		// Xmin[n]   are the minimum values of the parameters to be optimized.
-                    const double Xmax[],		// maxi[n]   are the maximum values of the parameters to be optimized.
-                    double x[],					// x[n]  is all the parameter vector required by the model.
-                                                // The actual length of this vector is not required in this subroutine.
-                    size_t& evaluations,		// evaluations is a counter for how many times the model is called.
-                    size_t complexno			// For diagnostics: The number of this complex.
+                void evolve(double *ax[],		///< ax[m][n]  are the parameter values of complex to be evolved.
+                    double af[],				///< af[m]     is the objective function value of the sub-complex.
+                    size_t m,					///< m         is the size of the complex.
+                    size_t n,					///< n         is number of parameters to be optimized.
+                    ifx& fn,	///< The function (hydrological model) to be evaluated
+                    const double x_min[],		///< x_min[n]   are the minimum values of the parameters to be optimized.
+                    const double x_max[],		///< x_max[n]   are the maximum values of the parameters to be optimized.
+                    double x[],					///< x[n]  is all the parameter vector required by the model.
+                                                ///< The actual length of this vector is not required in this subroutine.
+                    size_t& evaluations,		///< evaluations is a counter for how many times the model is called.
+                    size_t complexno			///< For diagnostics: The number of this complex.
                     )
                     const;
 
-                void mutate(double *Xset[], double newX[], int na, int nprm) const;
-                void random_generate_x(size_t n, double newX[], const double Xmin[], const double Xmax[]) const;
+                void mutate(double *x_alternatives[], double x_new[], size_t na, size_t nprm) const;
+                void random_generate_x(size_t n, double x_new[], const double x_min[], const double x_max[]) const;
                 double random01() const { return distribution(generator); }
             };
         }

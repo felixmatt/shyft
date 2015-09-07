@@ -317,7 +317,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     cout<<"3. creating a region model and run it for a short period"<<endl;
     auto global_parameter= make_shared<shyft::core::pt_gs_k::parameter_t>();
     region_model_t rm(*global_parameter,cells);
-	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "16");
+	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "32");
 	cout << " - ncore set to " << rm.ncore << endl;
     auto cal= ec::calendar();
     auto start= cal.time(ec::YMDhms(2010,9,1,0,0,0));
@@ -326,8 +326,13 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     size_t n= 24*ndays;//365;// 365 takes 20 seconds at cell stage 8core
     et::timeaxis ta(start,dt,n);
     ec::interpolation_parameter ip;
+    ip.use_idw_for_temperature=true;
+    auto ti1=ec::utctime_now();
     rm.run_interpolation(ip,ta,re);
-    cout<<"3. a Done with interpolation step"<<endl;
+    auto ipt=ec::utctime_now()-ti1;
+    cout<<"3. a Done with interpolation step used="<<ipt<<"[s]"<<endl;
+    if(getenv("SHYFT_IP_ONLY"))
+        return;
     vector<shyft::core::pt_gs_k::state_t> s0;
     rm.get_states(s0);
     auto t0=ec::utctime_now();
@@ -337,7 +342,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 
     rm.run_cells();
 
-	
+
 	cout<<"3. b Done with cellstep :"<<ec::utctime_now()-t0<<" [s]"<<endl;
     pts_t sum_discharge(ta,0.0);
     for(auto &c:*cells) {
