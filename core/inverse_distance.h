@@ -326,7 +326,7 @@ namespace shyft {
 			struct radiation_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based()  { return false; }
+					static  bool is_source_based() { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -352,7 +352,7 @@ namespace shyft {
 			struct precipitation_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based()  { return false; }
+					static  bool is_source_based() { return false; }
 
 					double precipitation_gradient;
 					scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
@@ -378,7 +378,7 @@ namespace shyft {
 			struct wind_speed_model {
 #ifndef SWIG
 				struct scale_computer {
-					static bool is_source_based()  { return false; }
+					static bool is_source_based() { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -400,7 +400,7 @@ namespace shyft {
 			struct rel_hum_model {
 #ifndef SWIG
 				struct scale_computer {
-					static  bool is_source_based()  { return false; }
+					static  bool is_source_based() { return false; }
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
@@ -455,29 +455,26 @@ namespace shyft {
 				idw_timeaxis<TimeAxis> idw_ta(ta);
 				/// 2. Create a set of futures, for the threads that we want to run
 				vector<future<void>> calcs;
-				size_t n_cells= distance(begin(cells),end(cells));
+				size_t n_cells = distance(begin(cells), end(cells));
 				///    - and figure out a suitable ncore number. Using single cpu 4..8 core shows we can have more threads than cores, and gain speed.
-				size_t ncore=thread::hardware_concurrency() * 4; /// 4 found to be ok for 1 cpu 4..8 cores(subject to change later)
-				if(ncore==0)ncore=4;//in case of not available, default to 4,
-				size_t thread_cell_count= 1+n_cells/ncore;
-				auto cells_iterator=  begin(cells);
+				size_t ncore = thread::hardware_concurrency()*4;  /// 4 found to be ok for 1 cpu 4..8 cores(subject to change later)
+				if(ncore == 0) ncore = 4;//in case of not available, default to 4,
+				size_t thread_cell_count = 1 + n_cells/ncore;
+				auto cells_iterator = begin(cells);
 				for (size_t i = 0; i < n_cells;) {
 					size_t n = thread_cell_count;
 					if (i + n > n_cells) n = n_cells - i;// Figure out a cell-partition to compute
 					calcs.emplace_back( /// spawn a thread to run IDW on this part of the cells, using *all* sources (later we could speculate in sources needed)
-						async(launch::async, [src,cells_iterator,&idw_ta,&parameters,&result_setter,n]() { /// capture src by value, we *want* a copy of that..
-                            run_interpolation<IDWModel>(begin(src), end(src), cells_iterator,cells_iterator+n, idw_ta, parameters, result_setter);
-							}
-						)
+						async(launch::async, [src, cells_iterator, &idw_ta, &parameters, &result_setter, n]() { /// capture src by value, we *want* a copy of that..
+                            run_interpolation<IDWModel>(begin(src), end(src), cells_iterator, cells_iterator+n, idw_ta, parameters, result_setter);
+							})
 					);
-					cells_iterator =cells_iterator+n;
+					cells_iterator = cells_iterator+n;
 					i = i + n;
 				}
 				///3. wait for the IDW computation threads to end.
-				for_each(begin(calcs), end(calcs), [](std::future<void>& f) {f.get(); });
-
+				for_each(begin(calcs), end(calcs), [](std::future<void>& f) { f.get(); });
 			}
-
 		} // namespace  inverse_distance
     } // Namespace core
 } // Namespace shyft
