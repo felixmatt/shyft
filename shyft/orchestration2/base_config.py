@@ -59,8 +59,8 @@ class BaseConfig(object):
 
     @property
     def model_api(self):
-        from shyft import api
-        return getattr(api, self.model_config.parameters['model']['model_api'])
+        from shyft import pt_gs_k
+        return getattr(pt_gs_k, self.model_config.parameters['model']['model_api'])
 
     def __init__(self, config_file, config_section, **overrides):
         section = yaml.load(open(config_file))[config_section]

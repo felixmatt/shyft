@@ -2,6 +2,7 @@
 from datetime import datetime
 import unittest
 from shyft import api
+from shyft import pt_gs_k
 import os
 import yaml
 from os.path import dirname
@@ -35,7 +36,7 @@ class StateIOTestCase(unittest.TestCase):
 
         cells = model_t.cell_t.vector_t()
         cell_area = 1000*1000
-        region_parameter = api.PTGSKParameter()
+        region_parameter = pt_gs_k.PTGSKParameter()
         for i in xrange(model_size):
             loc = (10000*random.random(2)).tolist() + \
                 (500*random.random(1)).tolist()
@@ -63,7 +64,7 @@ class StateIOTestCase(unittest.TestCase):
         gs.update({(k, v) for k, v in kwargs.iteritems() if k in gs})
         kirchner.update({(k, v) for k, v in kwargs.iteritems()
                          if k in kirchner})
-        state = api.PTGSKState()
+        state = pt_gs_k.PTGSKState()
         state.gs.albedo = gs["albedo"]
         state.gs.lwc = gs["lwc"]
         state.gs.surface_heat = gs["surface_heat"]
@@ -73,7 +74,7 @@ class StateIOTestCase(unittest.TestCase):
         state.gs.iso_pot_energy = gs["iso_pot_energy"]
         state.gs.temp_swe = gs["temp_swe"]
         state.kirchner.q = kirchner["q"]
-        return api.PTGSKStateIo().to_string(state)
+        return pt_gs_k.PTGSKStateIo().to_string(state)
 
     def _create_constant_geo_ts(self, geoTsType, geo_point, utc_period, value):
         """Create a time point ts, with one value at the start
@@ -110,7 +111,7 @@ class StateIOTestCase(unittest.TestCase):
 
     def test_model_initialize_and_run(self):
         num_cells = 20
-        model_type = api.PTGSKModel
+        model_type = pt_gs_k.PTGSKModel
         model = self.build_model(model_type, num_cells)
         self.assertEqual(model.size(), num_cells)
         cal = api.Calendar()
@@ -142,7 +143,7 @@ class StateIOTestCase(unittest.TestCase):
 
     def test_model_state_io(self):
         num_cells = 2
-        for model_type in [api.PTGSKModel, api.PTGSKOptModel]:
+        for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             model = self.build_model(model_type, num_cells)
             state_list = []
             x = ""
@@ -165,7 +166,7 @@ class StateIOTestCase(unittest.TestCase):
 
     def test_set_too_few_model_states(self):
         num_cells = 20
-        for model_type in [api.PTGSKModel, api.PTGSKOptModel]:
+        for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             model = self.build_model(model_type, num_cells)
             states = []
             x = ""

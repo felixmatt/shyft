@@ -9,6 +9,7 @@ import os
 import yaml
 
 from shyft import api
+from shyft  import pt_gs_k
 from .utils import utctime_from_datetime2
 from .base_config import target_constructor
 
@@ -47,7 +48,7 @@ class Calibrator(object):
         self.calib_param_names = [self.param_accessor.get_name(i) for i in range(self.param_accessor.size())]
         if self.tv is None:
             self._create_target_specvect()
-        calibration_type = getattr(api, self._config.calibration_type)
+        calibration_type = getattr(pt_gs_k, self._config.calibration_type)
         self.calibrator = calibration_type(self.runner.model, self.tv, self.p_min, self.p_max)
         self.calibrator.set_verbose_level(1)  # To control console print out during calibration
         print("Calibrator catchment index = {}".format(self._config.catchment_index))
