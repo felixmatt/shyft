@@ -8,14 +8,14 @@
 
 
 #include "api/api.h"
-
+#include "api/pt_gs_k.h"
 using namespace std;
 using namespace shyft::core;
 using namespace shyft::timeseries;
 
 using namespace shyft::api;
 
-bool operator==(const ptgsk_state_t& a, const ptgsk_state_t& b) {
+bool operator==(const pt_gs_k_state_t& a, const pt_gs_k_state_t& b) {
 	const double tol = 1e-9;
 	return fabs(a.gs.albedo - b.gs.albedo) < tol
 		&& fabs(a.gs.alpha - b.gs.alpha) < tol
@@ -30,7 +30,7 @@ bool operator==(const ptgsk_state_t& a, const ptgsk_state_t& b) {
 }
 void api_test::test_ptgsk_state_io() {
 	using namespace shyft::api;
-	ptgsk_state_t s;
+	pt_gs_k_state_t s;
 	s.gs.albedo = 0.5;
 	s.gs.alpha = 0.8;
 	s.gs.sdc_melt_mean = 12.2;
@@ -40,12 +40,12 @@ void api_test::test_ptgsk_state_io() {
 	s.gs.lwc = 1.2;
 	s.gs.surface_heat = 3000.0;
 	s.kirchner.q = 12.2;
-	ptgsk_state_io sio;
+	pt_gs_k_state_io sio;
 	string s1 = sio.to_string(s);
-	ptgsk_state_t  sr;
+	pt_gs_k_state_t  sr;
 	TS_ASSERT(sio.from_string(s1, sr));
 	TS_ASSERT_EQUALS(s, sr);
-	vector<ptgsk_state_t> sv;
+	vector<pt_gs_k_state_t> sv;
 	size_t n = 20 * 20;
 	sv.reserve(n);
 	for (size_t i = 0; i<n; ++i) {
@@ -53,7 +53,7 @@ void api_test::test_ptgsk_state_io() {
 		s.gs.temp_swe += 0.01;
 	}
 	string ssv = sio.to_string(sv);
-	vector<ptgsk_state_t> rsv;
+	vector<pt_gs_k_state_t> rsv;
 	rsv = sio.vector_from_string(ssv);
 	TS_ASSERT_EQUALS(rsv.size(), sv.size());
 	for (size_t i = 0; i<sv.size(); ++i) {

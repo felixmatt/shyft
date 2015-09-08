@@ -64,6 +64,9 @@
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="api_wrap.cxx" />
+		<Unit filename="pt_gs_k.i">
+			<Option compile="1" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<envvars />
