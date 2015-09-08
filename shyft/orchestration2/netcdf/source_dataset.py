@@ -37,16 +37,18 @@ class SourceDataset(BaseSourceDataset):
                     continue
                 for station in type_['stations']:
                     tseries = {}
-                    times = dset[station['time']][:]
+                    tpath=station['time'].split('/')[1:] # v1 time, the first one is empty
+                    vpath=station['values'].split('/')[1:]
+                    times = dset.groups[tpath[0]].variables[tpath[1]][:]#variables[station['time']][:]
                     imin = times.searchsorted(period[0], side='left')
                     imax = times.searchsorted(period[1], side='right')
                     # Get the indices of the valid period
-                    tseries['values'] = dset[station['values']][imin:imax]
+                    tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
                     tseries['time'] = times[imin:imax].astype(np.long).tolist()
                     coords = []
                     for loc in station['location'].split(","):
                         grname, axis = loc.split(".")
-                        coords.append(getattr(dset[grname[1:]], axis))
+                        coords.append(getattr(dset.groups[grname.split('/')[1]], axis))
                     tseries['location'] = tuple(coords)
                     stations_ts.append(tseries)
         print(len(stations_ts), input_source, 'series found.')
