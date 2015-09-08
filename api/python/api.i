@@ -6,7 +6,7 @@
 ///
 ///  %template:
 ///   * remember to always use fully qualified names in template parameters(stay out of trouble with difficult )
-///   * it takes forever(several minutes) to regenerate swig (its an issue we work on) 
+///   * it takes forever(several minutes) to regenerate swig (its an issue we work on)
 
 
 %module api
@@ -57,13 +57,14 @@
 %}
 
 //-- in this section, include all standard mappings available for swig
+#define SWIG_SHARED_PTR_NAMESPACE std
+    %include <std_shared_ptr.i>
 
     %include "numpy.i"
     %include <windows.i>
     %include <std_string.i>
     %include <std_vector.i>
     %include <exception.i>
-    %include <std_shared_ptr.i>
 
 
 //-- in this section, declare all the shared pointers needs to be declared here,

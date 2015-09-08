@@ -20,7 +20,8 @@
 %include <std_string.i>
 %include <std_vector.i>
 %include <exception.i>
-%include <std_shared_ptr.i>
+#define SWIG_SHARED_PTR_NAMESPACE std
+%include <shared_ptr.i>
 
 // Add type information from api module
 %import "api.i"

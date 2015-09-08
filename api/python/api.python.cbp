@@ -36,6 +36,32 @@
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="pt_gs_k_Debug">
+				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
+			<Target title="pt_gs_k_Release">
+				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DARMA_NO_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-std=c++1y" />
@@ -60,12 +86,19 @@
 		</ExtraCommands>
 		<Unit filename="Makefile.swig_run" />
 		<Unit filename="api.i">
-			<Option compile="1" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="api_wrap.cxx" />
+		<Unit filename="api_wrap.cxx">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
 		<Unit filename="pt_gs_k.i">
-			<Option compile="1" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="pt_gs_k_wrap.cxx">
+			<Option target="Debug" />
+			<Option target="pt_gs_k_Debug" />
+			<Option target="pt_gs_k_Release" />
 		</Unit>
 		<Extensions>
 			<code_completion />

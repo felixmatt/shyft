@@ -2,14 +2,16 @@
 # Notice that we only aim to update the 64bit distro (considering 32bit not usable for our purposes)
 #
 Generator=$(SWIG_ROOT)\swig
-HeaderDependencies= ..\api.h ..\..\core\geo_point.h ..\..\core\utctime_utilities.h ..\..\core\inverse_distance.h ..\..\core\region_model.h ..\..\core\cell_model.h
 
-TargetRoot64=..\..\shyft
+api_dependencies= ../api.h ../../core/geo_point.h ../../core/geo_cell_data.h ../../core/timeseries.h ../../core/utctime_utilities.h
+model_dependencies = ../../core/region_model.h ../../core/cell_model.h ../../core/model_calibration.h ../../core/inverse_distance.h
+pt_gs_k_dependencies=  $(api_dependencies) $(model_dependencies) ../pt_gs_k.h  ../../core/priestley_taylor.h ../../core/gamma_snow.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_gs_k_cell_model.h ../../core/pt_gs_k.h
 
-PyTarget=..\..\shyft\api.py
 
-all: $(PyTarget) api_wrap.cpp 
+all: api_wrap.cpp ../../shyft/api.py pt_gs_k_wrap.cpp ../../shyft/pt_gs_k.py
 
-$(PyTarget) api_wrap.cpp : api.i NMakefile.swig_run $(HeaderDependencies);
-	@echo Really running swig to regenerate api_wrap.cpp from api.i due to dependency change
-	@$(Generator) -DWIN32 -I.. -I../.. -c++  -w511 -python -o api_wrap.cpp -outdir ../../shyft api.i
+api_wrap.cxx ../../shyft/api.py : api.i $(MAKEFILE) $(api_dependencies);
+	$(Generator) -c++ -python -w511 -I.. -I../..  -outdir ../../shyft api.i
+
+pt_gs_k_wrap.cxx ../../shyft/pt_gs_k.py : pt_gs_k.i $(MAKEFILE) $(pt_gs_k_dependencies);
+	$(Generator) -c++ -python -w511  -I.. -I../.. -outdir ../../shyft pt_gs_k.i

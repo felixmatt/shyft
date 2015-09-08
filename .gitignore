@@ -32,3 +32,8 @@ ipch
 *.pdb
 *.pyd
 *.intermediate.manifest
+api/python/pt_gs_k_wrap.cxx
+*.ilk
+shyft/pt_gs_k.py
+shyft/tests/netcdf/state.yaml
+
