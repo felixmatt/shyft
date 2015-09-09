@@ -11,7 +11,7 @@ namespace shyft {
   namespace core {
     namespace pt_ss_k {
 
-        struct parameter_t {
+        struct parameter {
             typedef priestley_taylor::parameter pt_parameter_t;
             typedef skaugen::parameter snow_parameter_t;
             typedef actual_evapotranspiration::parameter ae_parameter_t;
@@ -23,27 +23,83 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
 
-            parameter_t(pt_parameter_t& pt,
+            parameter(pt_parameter_t& pt,
                       snow_parameter_t& snow,
                       ae_parameter_t& ae,
-                      kirchner_parameter_t& kirchner, precipitation_correction_parameter_t p_corr)
-             : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */
+                      kirchner_parameter_t& kirchner,
+                      precipitation_correction_parameter_t p_corr)
+             : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
+
+            ///< Calibration support, size is the total number of calibration parameters
+            size_t size() const { return 13; }
+
+            void set(const vector<double>& p) {
+                if (p.size() != size())
+                    throw runtime_error("pt_ss_k parameter accessor: .set size missmatch");
+                int i = 0;
+                kirchner.c1 = p[i++];
+                kirchner.c2 = p[i++];
+                kirchner.c3 = p[i++];
+                ae.ae_scale_factor = p[i++];
+                snow.alpha_0 = p[i++];
+                snow.d_range = p[i++];
+                snow.unit_size = p[i++];
+                snow.max_water_fraction = p[i++];
+                snow.tx = p[i++];
+                snow.cx = p[i++];
+                snow.ts = p[i++];
+                snow.cfr = p[i++];
+                p_corr.scale_factor = p[i++];
             }
+            //
+            ///< calibration support, get the value of i'th parameter
+            double get(size_t i) const {
+                switch (i) {
+                    case  0:return kirchner.c1;
+                    case  1:return kirchner.c2;
+                    case  2:return kirchner.c3;
+                    case  3:return ae.ae_scale_factor;
+                    case  4:return snow.alpha_0;
+                    case  5:return snow.d_range;
+                    case  6:return snow.unit_size;
+                    case  7:return snow.max_water_fraction;
+                    case  8:return snow.tx;
+                    case  9:return snow.cx;
+                    case 10:return snow.ts;
+                    case 11:return snow.cfr;
+                    case 12:return p_corr.scale_factor;
+                default:
+                    throw runtime_error("pt_ss_k parameter accessor:.get(i) Out of range.");
+                }
+            return 0.0;
+            }
+
+            ///< calibration and python support, get the i'th parameter name
+            string get_name(size_t i) const {
+                static const char *names[] = {
+                    "c1", "c2", "c3", "ae_scale_factor",
+                    "alpha_0", "d_range", "unit_size", "max_water_fraction",
+                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor"};
+                if (i >= size())
+                    throw runtime_error("pt_gs_k parameter accessor:.get_name(i) Out of range.");
+                return names[i];
+            }
+
         };
 
-        struct state_t {
+        struct state {
             typedef skaugen::state snow_state_t;
             typedef kirchner::state kirchner_state_t;
             snow_state_t snow;
             kirchner_state_t kirchner;
-            state_t() {}
-            state_t(snow_state_t& snow, kirchner_state_t& kirchner)
+            state() {}
+            state(snow_state_t& snow, kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
-            state_t(const state_t& state) : snow(state.snow), kirchner(state.kirchner) {}
+            state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
         };
 
 
-        struct response_t {
+        struct response {
             // Model responses
             typedef priestley_taylor::response  pt_response_t;
             typedef skaugen::response snow_response_t;

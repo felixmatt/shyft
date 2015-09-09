@@ -10,7 +10,9 @@ namespace shyft {
         */
         namespace pt_ss_k {
             using namespace std;
-
+            typedef parameter parameter_t;
+            typedef state state_t;
+            typedef response response_t;
             typedef shared_ptr<parameter_t> parameter_t_;
             typedef shared_ptr<state_t>     state_t_;
             typedef shared_ptr<response_t>  response_t_;
