@@ -36,4 +36,7 @@ api/python/pt_gs_k_wrap.cxx
 *.ilk
 shyft/pt_gs_k.py
 shyft/tests/netcdf/state.yaml
+api/python/pt_ss_k_wrap.cxx
+shyft/pt_ss_k.py
+
 

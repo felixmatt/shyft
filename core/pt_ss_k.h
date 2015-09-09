@@ -10,7 +10,7 @@
 namespace shyft {
   namespace core {
     namespace pt_ss_k {
-
+        using namespace std;
         struct parameter {
             typedef priestley_taylor::parameter pt_parameter_t;
             typedef skaugen::parameter snow_parameter_t;
@@ -115,7 +115,7 @@ namespace shyft {
         };
 
 #ifndef SWIG
-        template<template <typename, typename> class A, class R, class T_TS, class P_TS, 
+        template<template <typename, typename> class A, class R, class T_TS, class P_TS,
                  class WS_TS, class RH_TS, class RAD_TS, class T, class S, class GCD,
                  class P, class SC, class RC>
         void run(const GCD& geo_cell_data,
@@ -190,7 +190,7 @@ namespace shyft {
                 // Adjust land response for lakes and reservoirs (Treat them the same way for now)
                 double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() +
                     geo_cell_data.land_type_fractions_info().reservoir();
-                double lake_corrected_discharge = prec*total_lake_fraction + 
+                double lake_corrected_discharge = prec*total_lake_fraction +
                     (1.0 - total_lake_fraction)*q_avg;
                 response.total_discharge = lake_corrected_discharge;
 

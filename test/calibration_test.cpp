@@ -398,7 +398,7 @@ void calibration_test::test_simple() {
 	const double tr_start = 0.1;
 	const double tr_end = 1e-6;
 	auto rx = model.reduce_p_vector(x);
-    double residual = min_sceua(model,rx,n_max,0.001,0.001);//min_dream(model,rx,n_max);//min_bobyqa(model, rx,n_max, tr_start,tr_end);
+    double residual = min_bobyqa(model, rx,n_max, tr_start,tr_end);//min_sceua(model,rx,n_max,0.001,0.001);//min_dream(model,rx,n_max);//min_bobyqa(model, rx,n_max, tr_start,tr_end);
     cout << "====================" << endl;
 	x = model.expand_p_vector(rx);
 	model.p_expanded = x;
