@@ -1,13 +1,10 @@
 bin/
 core/obj/
 api/obj/
-api/python/api_wrap.cxx
 api/python/obj
 test/obj/
 test/main.cpp
-api/python/api_wrap.cxx
 api/python/obj
-shyft/api.py
 test/python/state_test.yaml
 *.layout
 *.depend
@@ -32,11 +29,16 @@ ipch
 *.pdb
 *.pyd
 *.intermediate.manifest
-api/python/pt_gs_k_wrap.cxx
 *.ilk
-shyft/pt_gs_k.py
 shyft/tests/netcdf/state.yaml
-api/python/pt_ss_k_wrap.cxx
+shyft/api.py
+shyft/pt_gs_k.py
 shyft/pt_ss_k.py
+api/python/pt_ss_k_wrap.cxx
+api/python/pt_ss_k_wrap.cpp
+api/python/pt_gs_k_wrap.cxx
+api/python/pt_gs_k_wrap.cpp
+api/python/api_wrap.cxx
+api/python/api_wrap.cpp
 
 
