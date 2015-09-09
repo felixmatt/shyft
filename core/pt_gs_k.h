@@ -30,8 +30,12 @@ namespace shyft {
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
 
-            parameter(pt_parameter_t pt,gs_parameter_t gs,ae_parameter_t ae,kirchner_parameter_t k,precipitation_correction_parameter_t p_corr)
-            : pt(pt),gs(gs),ae(ae),kirchner(k),p_corr(p_corr){}
+            parameter(pt_parameter_t pt,
+                      gs_parameter_t gs,
+                      ae_parameter_t ae,
+                      kirchner_parameter_t k,
+                      precipitation_correction_parameter_t p_corr)
+             : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) { /*Do nothing */ }
             parameter() {}
 
             pt_parameter_t pt;
@@ -49,19 +53,19 @@ namespace shyft {
                 kirchner.c1 = p[i++];
                 kirchner.c2 = p[i++];
                 kirchner.c3 = p[i++];
-                ae.ae_scale_factor=p[i++];
-                gs.tx=p[i++];
-                gs.wind_scale=p[i++];
-                gs.max_water=p[i++];
-                gs.wind_const=p[i++];
-                gs.fast_albedo_decay_rate=p[i++];
-                gs.slow_albedo_decay_rate=p[i++];
-                gs.surface_magnitude=p[i++];
-                gs.max_albedo=p[i++];
-                gs.min_albedo=p[i++];
-                gs.snowfall_reset_depth=p[i++];
-                gs.snow_cv=p[i++];
-                gs.glacier_albedo=p[i++];
+                ae.ae_scale_factor = p[i++];
+                gs.tx = p[i++];
+                gs.wind_scale = p[i++];
+                gs.max_water = p[i++];
+                gs.wind_const = p[i++];
+                gs.fast_albedo_decay_rate = p[i++];
+                gs.slow_albedo_decay_rate = p[i++];
+                gs.surface_magnitude = p[i++];
+                gs.max_albedo = p[i++];
+                gs.min_albedo = p[i++];
+                gs.snowfall_reset_depth = p[i++];
+                gs.snow_cv = p[i++];
+                gs.glacier_albedo = p[i++];
                 p_corr.scale_factor = p[i++];
             }
 

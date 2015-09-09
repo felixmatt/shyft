@@ -20,17 +20,20 @@ namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
 
 typedef TSPointTarget<point_timeaxis> catchment_t;
+typedef shyft::core::pt_ss_k::response response_t;
+typedef shyft::core::pt_ss_k::state state_t;
+typedef shyft::core::pt_ss_k::parameter parameter_t;
 
 namespace shyfttest {
     namespace mock {
         template<> template<>
-        void ResponseCollector<timeaxis>::collect<response_t>(size_t idx, const response_t& response) {
+        void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
             _snow_output.set(idx, response.snow.outflow);
             _snow_swe.set(idx, response.snow.total_stored_water);
         }
 
         template <> template <>
-        void DischargeCollector<timeaxis>::collect<response_t>(size_t idx, const response_t& response) {
+        void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
             avg_discharge.set(idx, destination_area*response.kirchner.q_avg/1000.0/3600.0); // q_avg is given in mm, so compute the totals
         }
     } // mock

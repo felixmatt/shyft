@@ -53,6 +53,7 @@
 		</Linker>
 		<Unit filename="api.cpp" />
 		<Unit filename="api.h" />
+		<Unit filename="pt_gs_k.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

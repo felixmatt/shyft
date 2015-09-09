@@ -1,4 +1,4 @@
-from shyft import api
+from shyft import pt_gs_k
 import yaml
 
 class State(object):
@@ -33,12 +33,12 @@ class State(object):
         return len(self.state_list)
 
 def build_ptgsk_model_state_from_string(data):
-    sio = api.PTGSKStateIo()
+    sio = pt_gs_k.PTGSKStateIo()
     return sio.vector_from_string(data)
 
 def extract_ptgsk_model_state_as_string(model):
-    sio = api.PTGSKStateIo()
-    state_vector = api.PTGSKStateVector()
+    sio = pt_gs_k.PTGSKStateIo()
+    state_vector = pt_gs_k.PTGSKStateVector()
     model.get_states(state_vector)
     return sio.to_string(state_vector)
 

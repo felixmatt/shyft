@@ -1,10 +1,11 @@
 from shyft import api
+from shyft import pt_gs_k
 
 def cell_argument_factory(cell_type, *args):
         type_to_builder = {#api.FullPTHSKModel: PTHSKArgBuilder,
                            #api.ReducedPTHSKModel: PTHSKArgBuilder, 
-                           api.PTGSKModel: PTGSKArgBuilder,
-                           api.PTGSKOptModel: PTGSKArgBuilder}
+                           pt_gs_k.PTGSKModel: PTGSKArgBuilder,
+                           pt_gs_k.PTGSKOptModel: PTGSKArgBuilder}
         assert cell_type in type_to_builder
         return type_to_builder[cell_type](*args)
 

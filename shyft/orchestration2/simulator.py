@@ -11,6 +11,7 @@ import collections
 import numpy as np
 
 from shyft import api
+from shyft import pt_gs_k
 from .state import build_ptgsk_model_state_from_string, extract_ptgsk_model_state
 from shyft.orchestration.utils.CellBuilder import cell_argument_factory
 #from shyft.orchestration.repository.state_repository import TimeCondition
@@ -98,7 +99,7 @@ class Simulator(object):
 
     def model_parameters_dict(self):
         # TODO: Replace with polymorphism
-        if self.model_api in [api.PTGSKModel, api.PTGSKOptModel]:
+        if self.model_api in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             priestley_taylor = self._model_values("priestley_taylor", "albedo", "alpha")
             gamma_snow = self._model_values("gamma_snow", "winter_end_day_of_year", "initial_bare_ground_fraction",
                                             "snow_cv", "snow_tx",
@@ -122,7 +123,7 @@ class Simulator(object):
         k_params = api.KirchnerParameter(*params["kirchner"])
         #c_params = api.CellParameter(*params["cell"])
         p_params = api.PrecipitationCorrectionParameter()
-        return api.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+        return pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
 
     def interpolation_parameters(self):
         btk_param = api.BTKParameter(
