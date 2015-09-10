@@ -1,7 +1,7 @@
-# Makefile to update the api_wrap.cxx from api.i file using swig
+# Makefile to update the __init___wrap.cxx from __init__.i file using swig
 # Notice that we only aim to update the 64bit distro (considering 32bit not usable for our purposes)
 #
-Generator=$(SWIG_ROOT)\swig -cppext cpp -Fmicrosoft -DWIN32 -c++ -python -w511 -I.. -I../..  -outdir ../../shyft
+Generator=$(SWIG_ROOT)\swig -cppext cpp -Fmicrosoft -DWIN32 -c++ -python -w511 -I.. -I../..  -outdir ../../shyft/api
 
 api_dependencies= ../api.h ../../core/geo_point.h ../../core/geo_cell_data.h ../../core/timeseries.h ../../core/utctime_utilities.h
 model_dependencies = ../../core/region_model.h ../../core/cell_model.h ../../core/model_calibration.h ../../core/inverse_distance.h
@@ -9,13 +9,13 @@ pt_gs_k_dependencies=  $(api_dependencies) $(model_dependencies) ../pt_gs_k.h  .
 pt_ss_k_dependencies =  $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/skaugen.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_ss_k_cell_model.h ../../core/pt_ss_k.h
 
 
-all: api_wrap.cpp ../../shyft/api.py pt_gs_k_wrap.cpp ../../shyft/pt_gs_k.py pt_ss_k_wrap.cpp ../../shyft/pt_ss_k.py
+all: __init___wrap.cpp ../../shyft/api/api/__init__.py pt_gs_k_wrap.cpp ../../shyft/api/pt_gs_k.py pt_ss_k_wrap.cpp ../../shyft/api/pt_ss_k.py
 
-api_wrap.cpp ../../shyft/api.py : api.i $(MAKEFILE) $(api_dependencies);
-	$(Generator)  api.i
+__init___wrap.cpp ../../shyft/api/__init__.py : __init__.i $(MAKEFILE) $(api_dependencies);
+	$(Generator)  __init__.i
 
-pt_gs_k_wrap.cpp ../../shyft/pt_gs_k.py : pt_gs_k.i  $(pt_gs_k_dependencies);
+pt_gs_k_wrap.cpp ../../shyft/api/pt_gs_k.py : pt_gs_k.i  $(pt_gs_k_dependencies);
 	$(Generator)  pt_gs_k.i
 
-pt_ss_k_wrap.cpp ../../shyft/pt_ss_k.py : pt_ss_k.i $(pt_ss_k_dependencies);
+pt_ss_k_wrap.cpp ../../shyft/api/pt_ss_k.py : pt_ss_k.i $(pt_ss_k_dependencies);
 	$(Generator)  pt_ss_k.i
