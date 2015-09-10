@@ -7,12 +7,10 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="api_Debug">
-				<Option output="../../shyft/_api" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/___init__" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -21,7 +19,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_gs_k_Debug">
-				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_gs_k" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -33,12 +31,10 @@
 				</Linker>
 			</Target>
 			<Target title="api_Release">
-				<Option output="../../shyft/_api" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/___init__" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -49,7 +45,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_gs_k_Release">
-				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_gs_k" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -63,7 +59,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_ss_k_Debug">
-				<Option output="../../shyft/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -75,7 +71,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_ss_k_Release">
-				<Option output="../../shyft/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -110,11 +106,11 @@
 			<Add before="make -f Makefile.swig_run" />
 		</ExtraCommands>
 		<Unit filename="Makefile.swig_run" />
-		<Unit filename="api.i">
+		<Unit filename="__init__.i">
 			<Option compile="1" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="api_wrap.cxx">
+		<Unit filename="__init___wrap.cxx">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
@@ -123,18 +119,14 @@
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="pt_gs_k_wrap.cxx">
-			<Option target="api_Debug" />
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
-			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="pt_ss_k.i">
 			<Option compile="1" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="pt_ss_k_wrap.cxx">
-			<Option target="api_Debug" />
-			<Option target="api_Release" />
 			<Option target="pt_ss_k_Debug" />
 			<Option target="pt_ss_k_Release" />
 		</Unit>
