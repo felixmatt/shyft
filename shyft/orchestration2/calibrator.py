@@ -9,6 +9,7 @@ import os
 import yaml
 
 from shyft import api
+from shyft  import pt_gs_k
 from .utils import utctime_from_datetime2
 from .base_config import target_constructor
 
@@ -52,7 +53,7 @@ class Calibrator(object):
         # The actual calibration type class is at the beginning
         calibration_class = ctype[:ctype.rfind(".")]
         self.calibration_optimize = ctype[ctype.rfind(".") + 1:]
-        calibration_type = getattr(api, calibration_class)
+        calibration_type = getattr(pt_gs_k, calibration_class)
 
         self.calibrator = calibration_type(self.runner.model, self.tv, self.p_min, self.p_max)
         self.calibrator.set_verbose_level(self.verbose_level)

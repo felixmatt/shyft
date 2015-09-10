@@ -92,17 +92,15 @@ namespace shyfttest_idw {
     struct Parameter
     {
         Parameter(double max_distance, size_t max_number_of_neigbours)
-            : _max_distance(max_distance), _max_number_of_neighbours(max_number_of_neigbours) {}
-        double _max_distance;
-        size_t _max_number_of_neighbours;
-        double max_distance() const { return _max_distance; }
-        size_t max_num_members() const { return _max_number_of_neighbours; }
-        double default_gradient() const { return -0.006; } // C/m decrease 0.6 degC/100m
+            : max_distance(max_distance), max_members(max_number_of_neigbours) {}
+        double max_distance;
+        size_t max_members;
+        double default_gradient() const {return  -0.006;}  // C/m decrease 0.6 degC/100m
         double precipitation_scale_factor() const { return 1.0 + 2.0/100.0; } // 2 pct /100m
-        double distance_measure_factor() const { return 2.0 ; } // Square distance
+        double distance_measure_factor=2.0; // Square distance
     };
 
-    typedef temperature_model  <Source, MCell, Parameter, geo_point> TestTemperatureModel;
+    typedef temperature_model  <Source, MCell, Parameter, geo_point,temperature_gradient_scale_computer> TestTemperatureModel;
     typedef radiation_model    <Source, MCell, Parameter, geo_point> TestRadiationModel;
     typedef precipitation_model<Source, MCell, Parameter, geo_point> TestPrecipitationModel;
 
@@ -155,7 +153,13 @@ void inverse_distance_test::test_temperature_model() {
     TS_ASSERT_DELTA(transformedValue, sourceValue + scaleValue*(d1.point.z - s1.point.z),TEST_EPS);
 
 }
-
+void inverse_distance_test::test_temperature_model_default_gradient() {
+    inverse_distance::temperature_parameter p;
+    p.default_temp_gradient=1.0;
+    inverse_distance::temperature_default_gradient_scale_computer gsc(p);
+    TS_ASSERT_DELTA(p.default_temp_gradient,gsc.compute(),TEST_EPS);
+    TS_ASSERT(inverse_distance::temperature_default_gradient_scale_computer::is_source_based()==false);
+}
 void inverse_distance_test::test_radiation_model() {
     //
     // Verify temperature gradient calculator, needs to be robust ...
@@ -354,7 +358,7 @@ void inverse_distance_test::test_eliminate_far_away_sources() {
     vector<Source> s(Source::GenerateTestSources(ta,n_sources,0.5*nx*1000,0.5*ny*1000,0.25*0.5*(nx+ny)*1000));// n sources, radius 50km, starting at 100,100 km center
     vector<MCell> d(MCell::GenerateTestGrid(nx,ny));// 200x200 km
     Parameter p(2.75*0.5*(nx+ny)*1000,n_sources);
-    s[2].point=geo_point(p.max_distance()+1000,p.max_distance()+1000,300);// place a point far away to ensure it's not part of interpolation
+    s[2].point=geo_point(p.max_distance+1000,p.max_distance+1000,300);// place a point far away to ensure it's not part of interpolation
     //
     // Act
     //

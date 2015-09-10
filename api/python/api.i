@@ -6,7 +6,7 @@
 ///
 ///  %template:
 ///   * remember to always use fully qualified names in template parameters(stay out of trouble with difficult )
-///   * it takes forever(several minutes) to regenerate swig (its an issue we work on) 
+///   * it takes forever(several minutes) to regenerate swig (its an issue we work on)
 
 
 %module api
@@ -54,26 +54,17 @@
 
     #include "core/inverse_distance.h"
     #include "core/bayesian_kriging.h"
-
-    #include "core/pt_gs_k.h"
-
-    //#include "core/pt_hs_k_cell_model.h"
-    #include "core/pt_gs_k_cell_model.h"
-    #include "core/pt_ss_k_cell_model.h"
-
-    //#include "core/model_calibration.h"
-
-
 %}
 
 //-- in this section, include all standard mappings available for swig
+#define SWIG_SHARED_PTR_NAMESPACE std
+    %include <std_shared_ptr.i>
 
     %include "numpy.i"
     %include <windows.i>
     %include <std_string.i>
     %include <std_vector.i>
     %include <exception.i>
-    %include <std_shared_ptr.i>
 
 
 //-- in this section, declare all the shared pointers needs to be declared here,
@@ -82,20 +73,11 @@
 //
 
 
-%shared_ptr(std::vector<shyft::core::pt_gs_k::cell_discharge_response_t>)
-%shared_ptr(std::vector<shyft::core::pt_gs_k::cell_complete_response_t>)
-
-%shared_ptr(std::vector<shyft::core::pt_ss_k::cell_discharge_response_t>)
-%shared_ptr(std::vector<shyft::core::pt_ss_k::cell_complete_response_t>)
-
 %shared_ptr(std::vector<shyft::api::TemperatureSource>)
 %shared_ptr(std::vector<shyft::api::PrecipitationSource>)
 %shared_ptr(std::vector<shyft::api::RadiationSource>)
 %shared_ptr(std::vector<shyft::api::WindSpeedSource>)
 %shared_ptr(std::vector<shyft::api::RelHumSource>)
-
-%shared_ptr(std::vector<shyft::core::pt_gs_k::state_t>)
-%shared_ptr(std::vector<shyft::core::pt_ss_k::state_t>)
 
 %shared_ptr( shyft::api::ITimeSeriesOfPoints)
 %shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis>>)
@@ -103,16 +85,6 @@
 %shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::timeseries::timeaxis,shyft::timeseries::sin_fx>>)
 //%shared_ptr( shyft::core::pts_t )
 %shared_ptr( shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis> )
-%shared_ptr(shyft::core::pt_gs_k::parameter)
-%shared_ptr(shyft::core::pt_ss_k::parameter)
-
-%shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector> > )
-%shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::null_collector, shyft::core::pt_gs_k::discharge_collector> > )
-
-%shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> > )
-%shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> > )
-
-
 
 // -- Now we let SWIG parse and interpret the types in enki_api.h
 // swig will do its best to reflect all types/methods exposed there into the python wrapper.
@@ -189,39 +161,12 @@
     %rename(PrecipitationCorrectionCalculator) shyft::core::precipitation_correction::calculator;
     %include "core/precipitation_correction.h"
 
-    //-- method stacks/assemblies
-    %rename(PTGSKResponse)    shyft::core::pt_gs_k::response;
-    %rename(PTGSKState)       shyft::core::pt_gs_k::state;
-    %rename(PTGSKParameter)   shyft::core::pt_gs_k::parameter;
-    %include "core/pt_gs_k.h"
-
-    %rename(PTSSKResponse)  shyft::core::pt_ss_k::response;
-    %rename(PTSSKState)     shyft::core::pt_ss_k::state;
-    %rename(PTSSKParameter) shyft::core::pt_ss_k::parameter;
-    %include "core/pt_ss_k.h"
-
     %include "core/cell_model.h"
-
-    %rename(PTGSKDischargeCollector )  shyft::core::pt_gs_k::discharge_collector;
-    %rename(PTGSKNullCollector)        shyft::core::pt_gs_k::null_collector;
-    %rename(PTGSKStateCollector)       shyft::core::pt_gs_k::state_collector;
-    %rename(PTGSKAllCollector)         shyft::core::pt_gs_k::all_response_collector;
-
-    %rename(PTSSKDischargeCollector )  shyft::core::pt_ss_k::discharge_collector;
-    %rename(PTSSKNullCollector)        shyft::core::pt_ss_k::null_collector;
-    %rename(PTSSKStateCollector)       shyft::core::pt_ss_k::state_collector;
-    %rename(PTSSKAllCollector)         shyft::core::pt_ss_k::all_response_collector;
-
-
-    %include "core/pt_gs_k_cell_model.h"
-    %include "core/pt_ss_k_cell_model.h"
 
     %rename(IDWParameter)  shyft::core::inverse_distance::parameter;
     %rename(IDWTemperatureParameter)  shyft::core::inverse_distance::temperature_parameter;
     %rename(IDWPrecipitationParameter)  shyft::core::inverse_distance::precipitation_parameter;
     %include "core/inverse_distance.h"
-
-
 
     %rename(BTKConstParameter)  shyft::core::bayesian_kriging::const_parameter;
     %rename(BTKParameter)       shyft::core::bayesian_kriging::parameter;
@@ -232,59 +177,26 @@
 
     %include "core/model_calibration.h"
 
-
-    %rename (PTGSKStateIo) shyft::api::ptgsk_state_io;
     %include "api.h"
+
+namespace shyft {
+  namespace core {
+    namespace model_calibration {
+        %template(TargetSpecificationPts) target_specification<shyft::core::pts_t>;
+        typedef ts_transform TsTransform;
+        %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>;
+        %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::core::pts_t>;
+    }
+  }
+}
 
 
 namespace shyft {
-    namespace core {
-        namespace pt_gs_k {
-            %template(PTGSKCellAll)  cell<parameter_t, environment_t, state_t, state_collector, all_response_collector>;
-            typedef cell<parameter_t, environment_t, state_t, state_collector, all_response_collector> PTGSKCellAll;
-
-            %template(PTGSKCellOpt)     cell<parameter_t, environment_t, state_t, null_collector, discharge_collector>;
-            typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> PTGSKCellOpt;
-        }
-
-        namespace pt_ss_k {
-            %template(PTSSKCellAll)  cell<parameter_t, environment_t, state_t, state_collector, all_response_collector>;
-            typedef cell<parameter_t, environment_t, state_t, state_collector, all_response_collector> PTSSKCellAll;
-
-            %template(PTSSKCellOpt)     cell<parameter_t, environment_t, state_t, null_collector, discharge_collector>;
-            typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> PTSSKCellOpt;
-        }
-
-        namespace model_calibration {
-            //  integrated in parameter :%template(PTGSKParameterAccessor) model_calibration::ptgsk_parameter_accessor<shyft::core::pt_gs_k::parameter>;
-
-            %template(TargetSpecificationPts) target_specification<shyft::core::pts_t>;
-         typedef ts_transform TsTransform;
-         // to_average template method specialization
-         %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>;
-         %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::core::pts_t>;
-            %template(PTGSKOptimizer) optimizer<region_model<pt_gs_k::cell_discharge_response_t>,shyft::core::pt_gs_k::parameter,pts_t>;
-        }
-        %template(CellEnvironment)              environment<timeaxis_t, pts_t, pts_t, pts_t, pts_t, pts_t>;
-        %template(CellEnvironmentConstRHumWind) environment<timeaxis_t, pts_t, pts_t, pts_t, cts_t, cts_t>;
-
-        ///-- region model
-        %template(PTGSKOptModel) region_model<pt_gs_k::cell_discharge_response_t>;
-        typedef region_model<pt_gs_k::cell_discharge_response_t> PTGSKOptModel;
-        %template(PTGSKModel) region_model<pt_gs_k::cell_complete_response_t>;
-        typedef region_model<pt_gs_k::cell_complete_response_t> PTGSKModel;
-        %template(run_interpolation) PTGSKModel::run_interpolation<shyft::api::a_region_environment,shyft::core::interpolation_parameter>;
-        %template(run_interpolation) PTGSKOptModel::run_interpolation<shyft::api::a_region_environment,shyft::core::interpolation_parameter>;
-
-        %template(PTSSKOptModel) region_model<pt_ss_k::cell_discharge_response_t>;
-        typedef region_model<pt_ss_k::cell_discharge_response_t> PTSSKOptModel;
-        %template(PTSSKModel) region_model<pt_ss_k::cell_complete_response_t>;
-        typedef region_model<pt_ss_k::cell_complete_response_t> PTSSKModel;
-        %template(run_pt_ss_k_interpolation) PTSSKModel::run_interpolation<shyft::api::a_region_environment, shyft::core::interpolation_parameter>;
-        %template(run_pt_ss_k_interpolation) PTSSKOptModel::run_interpolation<shyft::api::a_region_environment, shyft::core::interpolation_parameter>;
-    }
+  namespace core {
+    %template(CellEnvironment)              environment<timeaxis_t, pts_t, pts_t, pts_t, pts_t, pts_t>;
+    %template(CellEnvironmentConstRHumWind) environment<timeaxis_t, pts_t, pts_t, pts_t, cts_t, cts_t>;
+  }
 }
-
 
 // Expose the individual methods in the method stack
 namespace shyft {
@@ -317,14 +229,6 @@ namespace std {
     %template(WindSpeedSourceVector) vector<shyft::api::WindSpeedSource>;
 
    // then vectors of cells and state
-   %template(PTGSKCellAllVector) vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector> >;
-    %template(PTGSKCellOptVector) vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::null_collector, shyft::core::pt_gs_k::discharge_collector> >;
-    %template(PTGSKStateVector) vector<shyft::core::pt_gs_k::state_t >;
-
-   %template(PTSSKCellAllVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> >;
-    %template(PTSSKCellOptVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> >;
-    %template(PTSSKStateVector) vector<shyft::core::pt_ss_k::state_t >;
-
    %template(TargetSpecificationVector) vector<shyft::core::model_calibration::target_specification<shyft::core::pts_t>>;
 
    // some extensions to ease conversion to/from numpy
@@ -346,43 +250,21 @@ namespace std {
 }
 
 namespace shyft {
+  namespace timeseries {
+    %template(TsFixed) point_timeseries<timeaxis>;
+    %template(TsPoint) point_timeseries<point_timeaxis>;
+    %template(TsSinFx) function_timeseries<timeaxis,sin_fx>;
+    %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis>>,shyft::timeseries::timeaxis>;
+    %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::point_timeaxis>>,shyft::timeseries::timeaxis>;
+    %template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::timeseries::timeaxis>;
+  }
 
-    namespace timeseries {
-        %template(TsFixed) point_timeseries<timeaxis>;
-        %template(TsPoint) point_timeseries<point_timeaxis>;
-      %template(TsSinFx) function_timeseries<timeaxis,sin_fx>;
-      %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis>>,shyft::timeseries::timeaxis>;
-      %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::point_timeaxis>>,shyft::timeseries::timeaxis>;
-        %template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::timeseries::timeaxis>;
-
-    }
-
-    namespace api {
-        typedef ITimeSeriesOfPoints ITimeSeriesDouble;
-        %template(TsCoreFixed) GenericTs<point_timeseries<timeaxis>>;
-        %template(TsCorePoint) GenericTs<point_timeseries<point_timeaxis>>;
-
-        // PT_GS_K
-        %template(PTGSKCellAllStatistics) basic_cell_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-      %template(PTGSKCellGammaSnowStateStatistics) gamma_snow_cell_state_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-      %template(PTGSKCellGammaSnowResponseStatistics) gamma_snow_cell_response_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-      %template(PTGSKCellPriestleyTaylorResponseStatistics) priestley_taylor_cell_response_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-      %template(PTGSKCellActualEvapotranspirationResponseStatistics) actual_evapotranspiration_cell_response_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-        %template(PTGSKCellKirchnerStateStatistics) kirchner_cell_state_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector>>;
-      %template(PTGSKCellOptStatistics) basic_cell_statistics<shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state_t, shyft::core::pt_gs_k::null_collector, shyft::core::pt_gs_k::discharge_collector>>;
-
-        // PT_SS_K
-        %template(PTSSKCellAllStatistics) basic_cell_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-      %template(PTSSKCellSnowStateStatistics) skaugen_cell_state_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-      %template(PTSSKCellSnowResponseStatistics) skaugen_cell_response_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-      %template(PTSSKCellPriestleyTaylorResponseStatistics) priestley_taylor_cell_response_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-      %template(PTSSKCellActualEvapotranspirationResponseStatistics) actual_evapotranspiration_cell_response_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-        %template(PTSSKCellKirchnerStateStatistics) kirchner_cell_state_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector>>;
-      %template(PTSSKCellOptStatistics) basic_cell_statistics<shyft::core::cell<shyft::core::pt_ss_k::parameter_t, shyft::core::environment_t, shyft::core::pt_ss_k::state_t, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector>>;
-    }
+  namespace api {
+    typedef ITimeSeriesOfPoints ITimeSeriesDouble;
+    %template(TsCoreFixed) GenericTs<point_timeseries<timeaxis>>;
+    %template(TsCorePoint) GenericTs<point_timeseries<point_timeaxis>>;
+  }
 }
-
-
 
 
 %extend shyft::core::geo_point {
@@ -416,13 +298,13 @@ namespace shyft {
 
 %}
 }
+
 %extend shyft::core::utcperiod {
 %pythoncode %{
     def __str__(self):
         return self.to_string()
 
 %}
-
 }
 
 // to ease the python interface, we attach the type-specific species to the mode.s
@@ -433,43 +315,15 @@ namespace shyft {
 //
 %pythoncode %{
 
-PTGSKModel.cell_t = PTGSKCellAll
-PTGSKModel.statistics=property(lambda self:PTGSKCellAllStatistics(self.get_cells()))
-PTGSKModel.gamma_snow_state=property(lambda self:PTGSKCellGammaSnowStateStatistics(self.get_cells()))
-PTGSKModel.gamma_snow_response=property(lambda self:PTGSKCellGammaSnowResponseStatistics(self.get_cells()))
-PTGSKModel.priestley_taylor_response=property(lambda self:PTGSKCellPriestleyTaylorResponseStatistics(self.get_cells()))
-PTGSKModel.actual_evaptranspiration_response=property(lambda self:PTGSKCellActualEvapotranspirationResponseStatistics(self.get_cells()))
-PTGSKModel.kirchner_state=property(lambda self:PTGSKCellKirchnerStateStatistics(self.get_cells()))
-
-PTGSKOptModel.cell_t = PTGSKCellOpt
-PTGSKOptModel.statistics=property(lambda self:PTGSKCellOptStatistics(self.get_cells()))
-
-PTGSKCellAll.vector_t=PTGSKCellAllVector
-PTGSKCellOpt.vector_t=PTGSKCellOptVector
-
-PTSSKModel.cell_t = PTSSKCellAll
-PTSSKModel.statistics = property(lambda self: PTSSKCellAllStatistics(self.get_cells()))
-PTSSKModel.snow_state = property(lambda self: PTSSKCellSnowStateStatistics(self.get_cells()))
-PTSSKModel.snow_response = property(lambda self:PTSSKCellSnowResponseStatistics(self.get_cells()))
-PTSSKModel.priestley_taylor_response = property(lambda self:PTSSKCellPriestleyTaylorResponseStatistics(self.get_cells()))
-PTSSKModel.actual_evaptranspiration_response = property(lambda self:PTSSKCellActualEvapotranspirationResponseStatistics(self.get_cells()))
-PTSSKModel.kirchner_state = property(lambda self:PTSSKCellKirchnerStateStatistics(self.get_cells()))
-PTSSKOptModel.cell_t = PTSSKCellOpt
-PTSSKOptModel.statistics = property(lambda self:PTSSKCellOptStatistics(self.get_cells()))
-PTSSKCellAll.vector_t = PTSSKCellAllVector
-PTSSKCellOpt.vector_t = PTSSKCellOptVector
-
 TemperatureSource.vector_t = TemperatureSourceVector
 PrecipitationSource.vector_t = PrecipitationSourceVector
 RadiationSource.vector_t = RadiationSourceVector
 RelHumSource.vector_t = RelHumSourceVector
 WindSpeedSource.vector_t = WindSpeedSourceVector
 %}
-//
-//
-// Finally, exception handling mapping std::exception to python
-//
 
+//
+// Exception handling mapping std::exception to Python
 %exception {
   try {
     $action

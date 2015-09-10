@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Test</name>
+	<name>shyft</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -14,11 +14,4 @@
 	<natures>
 		<nature>org.python.pydev.pythonNature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>pyEnki</name>
-			<type>2</type>
-			<location>/home/sih/projects/enki/EnkiService/pyEnki</location>
-		</link>
-	</linkedResources>
 </projectDescription>

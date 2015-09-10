@@ -16,6 +16,7 @@ class Region(BaseRegion):
     def __init__(self, config_file, data_file):
         super(Region, self).__init__(config_file)
         self._mask = None
+        print("data_file:", data_file)
         self._data_file = data_file
 
     @property

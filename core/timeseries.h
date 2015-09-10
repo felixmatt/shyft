@@ -144,42 +144,54 @@ namespace shyft{
             vector<double> v;
             /** point intepretation: how we should map points to f(t) */
             point_interpretation_policy point_fx=POINT_INSTANT_VALUE;
-            point_interpretation_policy point_interpretation() const {return point_fx;}
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {point_fx=point_interpretation;}
+            point_interpretation_policy point_interpretation() const { return point_fx; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                point_fx=point_interpretation;
+            }
 
 
             point_timeseries() { }
             // make it move-able
             point_timeseries(const point_timeseries &c) : time_axis(c.time_axis),v(c.v) {}
             #ifndef SWIG
-            point_timeseries(point_timeseries&& c) : time_axis(std::move(c.time_axis)),v(std::move(c.v)),point_fx(c.point_fx) {}
-            point_timeseries& operator=(point_timeseries&& c) { time_axis=std::move(c.time_axis);v=std::move(c.v);point_fx=c.point_fx;return *this;}
+            point_timeseries(point_timeseries&& c)
+             : time_axis(std::move(c.time_axis)), v(std::move(c.v)), point_fx(c.point_fx) {}
+            point_timeseries& operator=(point_timeseries&& c) {
+                time_axis = std::move(c.time_axis);
+                v = std::move(c.v);
+                point_fx = c.point_fx;
+                return *this;
+            }
             point_timeseries& operator=(const point_timeseries& c) {
-                if(&c==this)return *this;
-                time_axis=c.time_axis;
-                v=c.v;
-                point_fx=c.point_fx;
+                if (&c == this) return *this;
+                time_axis = c.time_axis;
+                v = c.v;
+                point_fx = c.point_fx;
                 return *this;
             }
             #endif
 
-            point_timeseries(const TA &time_axis_ref, double fill_value,point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-              : time_axis(time_axis_ref), v(time_axis_ref.size(), fill_value),point_fx(interpretation) {}
-            point_timeseries(const TA &time_axis, const vector<double> &fill_values,point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-              : time_axis(time_axis), v(fill_values) {
+            point_timeseries(const TA &time_axis_ref, double fill_value,
+                    point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
+             : time_axis(time_axis_ref), v(time_axis_ref.size(), fill_value),
+               point_fx(interpretation) {}
+            point_timeseries(const TA &time_axis, const vector<double> &fill_values,
+                    point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
+              : time_axis(time_axis), v(fill_values), point_fx(interpretation) {
                 if(time_axis.size() != v.size())
                     throw std::runtime_error("ct with ta and values: timeaxis.size() vs. values missmatch ");
               }
             template<typename S>
-            point_timeseries(const TA& time_axis, S value_begin, S value_end,point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-              : time_axis(time_axis), v(value_begin, value_end) {
-               if(time_axis.size() != v.size())
+            point_timeseries(const TA& time_axis, S value_begin, S value_end,
+                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
+             : time_axis(time_axis), v(value_begin, value_end), point_fx(interpretation) {
+                if(time_axis.size() != v.size())
                     throw std::runtime_error("ct with iterators timeaxis.size() vs. values missmatch ");
             }
                         // constructor from interators
 
-            const timeaxis_t& get_time_axis() const {return time_axis;}
-            utcperiod total_period() const {return time_axis.total_period();}
+            const timeaxis_t& get_time_axis() const { return time_axis; }
+            utcperiod total_period() const { return time_axis.total_period(); }
             // Source read interface:
             point get(size_t i) const { return point(time_axis(i).start, v[i]); } // maybe verify v.size(), vs. time_axis size ?
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
@@ -189,7 +201,7 @@ namespace shyft{
 
             /**< .value() implements the Accessor pattern */
             double value(size_t i) const { return v[i]; }
-            utctime time(size_t i) const { return time_axis(i).start;}
+            utctime time(size_t i) const { return time_axis(i).start; }
             // Additional write interface
             void add(size_t i, double value) { v[i] += value; }
             void add(const point_timeseries<TA>& other) {

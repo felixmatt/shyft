@@ -24,6 +24,7 @@
     <ClInclude Include="timeseries_test.h" />
     <ClInclude Include="test_pch.h" />
     <ClInclude Include="pt_ss_k_test.h" />
+    <ClInclude Include="sceua_test.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="runner.cpp" />
@@ -47,6 +48,7 @@
     <ClCompile Include="mocks.cpp" />
     <ClCompile Include="test_pch.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
+    <ClCompile Include="sceua_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.testupdate" />

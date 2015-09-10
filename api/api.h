@@ -91,7 +91,9 @@ namespace shyft {
         #endif
         //ITimeSeriesOfPoints implementation
         point_interpretation_policy point_interpretation() const {return ts_rep.point_interpretation();}
-        void set_point_interpretation(point_interpretation_policy point_interpretation) {ts_rep.set_point_interpretation(point_interpretation);}
+        void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            ts_rep.set_point_interpretation(point_interpretation);
+        }
 
 
         utcperiod total_period() const {return ts_rep.total_period();}
@@ -110,28 +112,29 @@ namespace shyft {
 
         std::shared_ptr<ITimeSeriesOfPoints>
         create_point_ts(int n, utctime tStart, utctimespan dt,
-                        const std::vector<double>& values, point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
+                        const std::vector<double>& values,
+                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
         {
             return shared_ptr<ITimeSeriesOfPoints> (
-                new GenericTs<point_timeseries<timeaxis> >(point_timeseries<timeaxis>(timeaxis(tStart, dt, n), values, interpretation))
-            );
+                new GenericTs<point_timeseries<timeaxis> >(point_timeseries<timeaxis>(timeaxis(tStart,
+                            dt, n), values, interpretation)));
         }
 
 
         std::shared_ptr<ITimeSeriesOfPoints>
         create_time_point_ts(utcperiod period, const std::vector<utctime>& times,
-                                               const std::vector<double>& values, point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-        {
-            if (times.size() == values.size()+1) {
+                             const std::vector<double>& values,
+                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
+            if (times.size() == values.size() + 1) {
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(point_timeaxis(times), values, interpretation))
-                    );
+                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
+                            point_timeaxis(times), values, interpretation)));
             } else if (times.size() == values.size()) {
                 auto tx(times);
-                tx.push_back(period.end > times.back()?period.end:times.back()+utctimespan(1));
+                tx.push_back(period.end > times.back()?period.end:times.back() + utctimespan(1));
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(point_timeaxis(tx), values, interpretation))
-                    );
+                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
+                            point_timeaxis(tx), values, interpretation)));
             } else {
                 throw std::runtime_error("create_time_point_ts times and values arrays must have corresponding count");
             }
@@ -205,68 +208,10 @@ namespace shyft {
 
     typedef shyft::timeseries::point_timeseries<timeaxis> result_ts_t;
     typedef std::shared_ptr<result_ts_t> result_ts_t_;
-    typedef shyft::core::pt_gs_k::state_t ptgsk_state_t;
 
     /** \brief A class that facilitates fast state io, the yaml in Python is too slow
      *
      */
-    struct ptgsk_state_io {
-        bool from_string(const std::string &str, ptgsk_state_t &s) const {
-            return from_raw_string(str.c_str(), s);
-        }
-
-        bool from_raw_string(const char* str, ptgsk_state_t& s) const {
-            if (str && *str) {
-                if (sscanf(str, "ptgsk:%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                    &s.gs.albedo, &s.gs.alpha, &s.gs.sdc_melt_mean,
-                    &s.gs.acc_melt, &s.gs.iso_pot_energy, &s.gs.temp_swe, &s.gs.surface_heat, &s.gs.lwc,
-                    &s.kirchner.q) == 9)
-                    return true;
-
-                // support old 7 string state variable format
-                if (sscanf(str, "ptgsk:%lf %lf %lf %lf %lf %lf %lf",
-                    &s.gs.albedo, &s.gs.alpha, &s.gs.sdc_melt_mean,
-                    &s.gs.acc_melt, &s.gs.iso_pot_energy, &s.gs.temp_swe,
-                    &s.kirchner.q) == 7)
-                    return true;
-            }
-            return false;
-        }
-
-        std::string to_string(const ptgsk_state_t& s) const {
-            char r[500];
-            sprintf(r, "ptgsk:%f %f %f %f %f %f %f %f %f\n",
-                s.gs.albedo, s.gs.alpha, s.gs.sdc_melt_mean,
-                s.gs.acc_melt, s.gs.iso_pot_energy, s.gs.temp_swe, s.gs.surface_heat, s.gs.lwc,
-                s.kirchner.q);
-            return r;
-        }
-
-        std::string to_string(const std::vector<ptgsk_state_t> &sv) const {
-            std::string r; r.reserve(200*200*50);
-            for (size_t i = 0; i<sv.size(); ++i) {
-                r.append(to_string(sv[i]));
-            }
-            return r;
-        }
-
-        std::vector<ptgsk_state_t> vector_from_string(const std::string &s)const {
-            std::vector<ptgsk_state_t> r;
-            if (s.size() > 0) {
-                r.reserve(200*200);
-                const char *l = s.c_str();
-                const char *h;
-                ptgsk_state_t e;
-                while (*l && (h = strstr(l, "ptgsk:"))) {
-                    if (!from_raw_string(h, e))
-                        break;
-                    r.emplace_back(e);
-                    l = h + 6;// advance after ptgsk marker
-                }
-            }
-            return r;
-        }
-    };
 
     template <typename cell>
     struct basic_cell_statistics {
