@@ -34,11 +34,7 @@ shyft/tests/netcdf/state.yaml
 shyft/api.py
 shyft/pt_gs_k.py
 shyft/pt_ss_k.py
-api/python/pt_ss_k_wrap.cxx
-api/python/pt_ss_k_wrap.cpp
-api/python/pt_gs_k_wrap.cxx
-api/python/pt_gs_k_wrap.cpp
-api/python/api_wrap.cxx
-api/python/api_wrap.cpp
+api/python/*_wrap.cxx
+api/python/*_wrap.cpp
 
 
