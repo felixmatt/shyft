@@ -9,7 +9,7 @@ import os
 import yaml
 
 from shyft import api
-from shyft  import pt_gs_k
+from shyft.api import pt_gs_k
 from .utils import utctime_from_datetime2
 from .base_config import target_constructor
 

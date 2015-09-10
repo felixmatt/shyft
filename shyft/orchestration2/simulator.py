@@ -11,7 +11,7 @@ import collections
 import numpy as np
 
 from shyft import api
-from shyft import pt_gs_k
+from shyft.api import pt_gs_k
 from .state import build_ptgsk_model_state_from_string, extract_ptgsk_model_state
 from shyft.orchestration.utils.CellBuilder import cell_argument_factory
 #from shyft.orchestration.repository.state_repository import TimeCondition

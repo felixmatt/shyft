@@ -2,7 +2,7 @@
 from datetime import datetime
 import unittest
 from shyft import api
-from shyft import pt_gs_k
+from shyft.api import pt_gs_k
 import os
 import yaml
 from os.path import dirname

@@ -1,5 +1,5 @@
 from shyft import api 
-from shyft import pt_gs_k
+from shyft.api import pt_gs_k
 import unittest
 import numpy as np
 

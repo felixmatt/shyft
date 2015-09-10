@@ -1,4 +1,4 @@
-from shyft import pt_gs_k
+from shyft.api import pt_gs_k
 import yaml
 
 class State(object):
