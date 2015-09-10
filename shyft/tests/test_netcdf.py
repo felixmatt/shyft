@@ -74,12 +74,12 @@ class Calibration():
         config = CalibrationConfig(config_file, section)
 
         # Build the calibrator
-        time_axis = api.Timeaxis(config.model_config.start_time, config.model_config.run_time_step,
-                                 config.model_config.number_of_steps)
+        self.time_axis = api.Timeaxis(config.model_config.start_time, config.model_config.run_time_step,
+                                      config.model_config.number_of_steps)
         self.calibrator = Calibrator(config)
-        self.calibrator.init(time_axis)
 
     def test_calibration(self):
+        self.calibrator.init(self.time_axis)
         calibr_results = self.calibrator.calibrate(tol=1.0e-5)
         # print("calibrated results:", calibr_results)
         expected_results = {
@@ -90,7 +90,21 @@ class Calibration():
             'min_albedo': 0.6, 'max_water': 0.1}
         # Check that the results are as expected
         for key, val in calibr_results.iteritems():
-            assert val == expected_results[key]
+            np.testing.assert_allclose(np.float64(val), np.float64(expected_results[key]), rtol=1e-2)
+
+    def test_calibration_dream(self):
+        # Mock the calibration configuration to use the dream optimizer
+        self.calibrator._config.calibration_type = "PTGSKOptimizer.optimize_dream"
+        self.calibrator.init(self.time_axis)
+        calibr_results = self.calibrator.calibrate(tol=1.0e-5)
+        # print("calibrated results:", calibr_results)
+        expected_results = {'wind_const': 1.0, 'max_albedo': 0.9, 'p_corr_scale_factor': 1.0,
+                            'fast_albedo_decay_rate': 10.194, 'TX': 0.394, 'glacier_albedo': 0.4,
+                            'surface_magnitude': 30.0, 'snowfall_reset_depth': 5.0, 'wind_scale': 5.67,
+                            'slow_albedo_decay_rate': 20.69, 'ae_scale_factor': 1.5, 'c3': -0.128, 'c2': 0.983,
+                            'c1': -2.34, 'snow_cv': 0.4, 'min_albedo': 0.6, 'max_water': 0.1}
+        # Check that the results are as expected
+        for key, val in calibr_results.iteritems():
             np.testing.assert_allclose(np.float64(val), np.float64(expected_results[key]), rtol=1e-2)
 
 
