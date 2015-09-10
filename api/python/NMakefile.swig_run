@@ -8,8 +8,12 @@ model_dependencies = ../../core/region_model.h ../../core/cell_model.h ../../cor
 pt_gs_k_dependencies=  $(api_dependencies) $(model_dependencies) ../pt_gs_k.h  ../../core/priestley_taylor.h ../../core/gamma_snow.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_gs_k_cell_model.h ../../core/pt_gs_k.h
 pt_ss_k_dependencies =  $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/skaugen.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_ss_k_cell_model.h ../../core/pt_ss_k.h
 
+all: api pt_gs_k pt_ss_k
 
-all: __init___wrap.cpp ../../shyft/api/api/__init__.py pt_gs_k_wrap.cpp ../../shyft/api/pt_gs_k.py pt_ss_k_wrap.cpp ../../shyft/api/pt_ss_k.py
+api: __init___wrap.cpp ../../shyft/api/__init__.py
+pt_gs_k: pt_gs_k_wrap.cpp ../../shyft/api/pt_gs_k.py
+pt_ss_k: pt_ss_k_wrap.cpp ../../shyft/api/pt_ss_k.py
+
 
 __init___wrap.cpp ../../shyft/api/__init__.py : __init__.i $(MAKEFILE) $(api_dependencies);
 	$(Generator)  __init__.i

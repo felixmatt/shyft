@@ -73,7 +73,7 @@
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-12.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
@@ -82,7 +82,7 @@
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -107,10 +107,10 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run pt_ss_k</Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files</Message>
+      <Message>Update swig generated files pt_ss_k</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,10 +137,10 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run pt_ss_k</Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files</Message>
+      <Message>Update swig generated files pt_ss_k</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
