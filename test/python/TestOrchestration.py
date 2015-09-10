@@ -1,9 +1,15 @@
-﻿from numpy import random 
+﻿from numpy import random
 from datetime import datetime
 import unittest
 from shyft import api
+from shyft import pt_gs_k
 import os
 import yaml
+from os.path import dirname
+from os.path import pardir
+from os.path import join
+from shyft import __file__ as shyft_file
+
 from shyft.orchestration.state import set_ptgsk_model_state
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
@@ -19,6 +25,7 @@ from shyft.orchestration.repository.testsupport.mocks import state_repository_fa
 from shyft.orchestration.repository.testsupport.time_series import create_mock_station_data
 from shyft.orchestration.repository.cell_read_only_repository import CellReadOnlyRepository
 from shyft.orchestration.repository.cell_read_only_repository import FileCellRepository
+from shyft.orchestration.repository.arome_data_repository import AromeDataRepository
 from shyft.orchestration.repository.state_repository import yaml_file_storage_factory
 
 
@@ -28,161 +35,173 @@ class StateIOTestCase(unittest.TestCase):
     def build_model(model_t, model_size, num_catchments=1):
 
         cells = model_t.cell_t.vector_t()
-        cell_area=1000*1000
-        region_parameter=api.PTGSKParameter()
+        cell_area = 1000*1000
+        region_parameter = pt_gs_k.PTGSKParameter()
         for i in xrange(model_size):
-            loc = (10000*random.random(2)).tolist() + (500*random.random(1)).tolist()
+            loc = (10000*random.random(2)).tolist() + \
+                (500*random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
-            geo_cell_data=api.GeoCellData(gp,cell_area,random.randint(0, num_catchments))
-            cell=model_t.cell_t()
-            cell.geo=geo_cell_data
+            geo_cell_data = api.GeoCellData(gp, cell_area,
+                                            random.randint(0, num_catchments))
+            cell = model_t.cell_t()
+            cell.geo = geo_cell_data
             cells.append(cell)
         return model_t(region_parameter, cells)
 
     @staticmethod
     def build_mock_state_dict(**kwargs):
         pt = {}
-        gs = {"albedo": 0.4, 
+        gs = {"albedo": 0.4,
               "lwc": 0.1,
               "surface_heat": 30000,
               "alpha": 1.26,
               "sdc_melt_mean": 1.0,
               "acc_melt": 0.0,
               "iso_pot_energy": 0.0,
-              "temp_swe": 0.0,
-             }
+              "temp_swe": 0.0}
         kirchner = {"q": 0.25}
-        pt.update({(k,v) for k,v in kwargs.iteritems() if k in pt})
-        gs.update({(k,v) for k,v in kwargs.iteritems() if k in gs})
-        kirchner.update({(k,v) for k,v in kwargs.iteritems() if k in kirchner})
-        state=api.PTGSKState()
-        state.gs.albedo=gs["albedo"]
-        state.gs.lwc=gs["lwc"]
-        state.gs.surface_heat=gs["surface_heat"]
-        state.gs.alpha=gs["alpha"]
-        state.gs.sdc_melt_mean=gs["sdc_melt_mean"]
-        state.gs.acc_melt=gs["acc_melt"]
-        state.gs.iso_pot_energy=gs["iso_pot_energy"]
-        state.gs.temp_swe=gs["temp_swe"]
-        state.kirchner.q=kirchner["q"]
-        sio=api.PTGSKStateIo()
-        return sio.to_string(state) #{"pt": pt, "gs": gs, "kirchner": kirchner}
+        pt.update({(k, v) for k, v in kwargs.iteritems() if k in pt})
+        gs.update({(k, v) for k, v in kwargs.iteritems() if k in gs})
+        kirchner.update({(k, v) for k, v in kwargs.iteritems()
+                         if k in kirchner})
+        state = pt_gs_k.PTGSKState()
+        state.gs.albedo = gs["albedo"]
+        state.gs.lwc = gs["lwc"]
+        state.gs.surface_heat = gs["surface_heat"]
+        state.gs.alpha = gs["alpha"]
+        state.gs.sdc_melt_mean = gs["sdc_melt_mean"]
+        state.gs.acc_melt = gs["acc_melt"]
+        state.gs.iso_pot_energy = gs["iso_pot_energy"]
+        state.gs.temp_swe = gs["temp_swe"]
+        state.kirchner.q = kirchner["q"]
+        return pt_gs_k.PTGSKStateIo().to_string(state)
 
-    def _create_constant_geo_ts(self,geoTsType,geo_point,utc_period,value):
-        """ creates a time point ts, with one value at the start of the supplied utc_period """
-        tv=api.UtcTimeVector()
+    def _create_constant_geo_ts(self, geoTsType, geo_point, utc_period, value):
+        """Create a time point ts, with one value at the start
+        of the supplied utc_period."""
+        tv = api.UtcTimeVector()
         tv.push_back(utc_period.start)
-        vv=api.DoubleVector()
+        vv = api.DoubleVector()
         vv.push_back(value)
-        cts=api.TsFactory().create_time_point_ts(utc_period,tv,vv)
-        return geoTsType(geo_point,cts)
-        
-    def create_dummy_region_environment(self,time_axis,mid_point):
-        re=api.ARegionEnvironment()
-        
-        re.precipitation=api.PrecipitationSourceVector()
-        re.precipitation.append(self._create_constant_geo_ts(api.PrecipitationSource,mid_point,time_axis.total_period(),5.0))
+        cts = api.TsFactory().create_time_point_ts(utc_period, tv, vv)
+        return geoTsType(geo_point, cts)
 
-        re.temperature=api.TemperatureSourceVector()
-        re.temperature.append(self._create_constant_geo_ts(api.TemperatureSource,mid_point,time_axis.total_period(),10.0))
-        
-        re.wind_speed=api.WindSpeedSourceVector()
-        re.wind_speed.append(self._create_constant_geo_ts(api.WindSpeedSource,mid_point,time_axis.total_period(),2.0))
-        
-        re.rel_hum=api.RelHumSourceVector()
-        re.rel_hum.append(self._create_constant_geo_ts(api.RelHumSource,mid_point,time_axis.total_period(),0.7))
-        
-        re.radiation=api.RadiationSourceVector()
-        re.radiation.append(self._create_constant_geo_ts(api.RadiationSource,mid_point,time_axis.total_period(),300.0))
+    def create_dummy_region_environment(self, time_axis, mid_point):
+        re = api.ARegionEnvironment()
+        re.precipitation = api.PrecipitationSourceVector()
+        re.precipitation.append(self._create_constant_geo_ts(
+            api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
+
+        re.temperature = api.TemperatureSourceVector()
+        re.temperature.append(self._create_constant_geo_ts(
+            api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
+
+        re.wind_speed = api.WindSpeedSourceVector()
+        re.wind_speed.append(self._create_constant_geo_ts(
+            api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
+
+        re.rel_hum = api.RelHumSourceVector()
+        re.rel_hum.append(self._create_constant_geo_ts(
+            api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
+
+        re.radiation = api.RadiationSourceVector()
+        re.radiation.append(self._create_constant_geo_ts(
+            api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
         return re
-        
-        
-
 
     def test_model_initialize_and_run(self):
         num_cells = 20
-        model_type=api.PTGSKModel
+        model_type = pt_gs_k.PTGSKModel
         model = self.build_model(model_type, num_cells)
         self.assertEqual(model.size(), num_cells)
-        cal=api.Calendar()
-        time_axis=api.Timeaxis(cal.time(api.YMDhms(2015,1,1,0,0,0)),api.deltahours(1),240)
-        model.run_interpolation(api.InterpolationParameter(),time_axis,self.create_dummy_region_environment(time_axis,model.get_cells()[num_cells/2].geo.mid_point()))
-        model.set_state_collection(-1,True) # enable state collection for all cells
+        cal = api.Calendar()
+        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
+                                 api.deltahours(1), 240)
+        model_interpolation_parameter=api.InterpolationParameter()
+        model_interpolation_parameter.temperature_idw.default_temp_gradient=-0.005 # degC/m, so -0.5 degC/100m
+        model_interpolation_parameter.temperature_idw.max_members=6 # max number of temperature sources used for one interpolation
+        model_interpolation_parameter.temperature_idw.max_distance=20000 #20 km is max distance
+        model_interpolation_parameter.temperature_idw.distance_measure_factor=1.0 # pure linear interpolation
+        model_interpolation_parameter.use_idw_for_temperature=True # this enables IDW with default temperature gradient.
+        model.run_interpolation(model_interpolation_parameter, time_axis,
+            self.create_dummy_region_environment(time_axis,
+            model.get_cells()[num_cells/2].geo.mid_point()))
+        model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
-        cids=api.IntVector() # optional, we can add selective catchment_ids here
-        sum_discharge=model.statistics.discharge(cids)
-        avg_temperature=model.statistics.temperature(cids)
-        avg_precipitation=model.statistics.precipitation(cids)
+        cids = api.IntVector()  # optional, we can add selective catchment_ids here
+        sum_discharge = model.statistics.discharge(cids)
+        avg_temperature = model.statistics.temperature(cids)
+        avg_precipitation = model.statistics.precipitation(cids)
         for time_step in xrange(time_axis.size()):
-            precip_raster= model.statistics.precipitation(cids,time_step) # example for raster output
-            self.assertEquals(precip_raster.size(),num_cells)
-        avg_gs_sca = model.gamma_snow_response.sca(cids) # swe output
-        
+            precip_raster = model.statistics.precipitation(cids, time_step)  # example for raster output
+            self.assertEquals(precip_raster.size(), num_cells)
+        avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
+
         avg_gs_albedo = model.gamma_snow_state.albedo(cids) # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
         self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
-        
+
 
     def test_model_state_io(self):
         num_cells = 2
-        for model_type in [api.PTGSKModel, api.PTGSKOptModel]:
+        for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             model = self.build_model(model_type, num_cells)
             state_list = []
-            x=""
+            x = ""
             for i in xrange(num_cells):
                 state_list.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
-            initial_states=x.join(state_list)
+            initial_states = x.join(state_list)
             set_ptgsk_model_state(model, State(initial_states, datetime.strftime(datetime.utcnow(), "%Y-%m-%d-%M-%S")))
             retrieved_states = extract_ptgsk_model_state(model)
-            self.assertEqual(initial_states,retrieved_states.state_list)
+            self.assertEqual(initial_states, retrieved_states.state_list)
 
             # Test that the state can be serialized and de-serialized:
             serialized_states = yaml.dump(retrieved_states, default_flow_style=False)
             self.assertTrue(isinstance(serialized_states, str))
             deserialized_states = yaml.load(serialized_states)
 
-            self.assertEqual(retrieved_states.state_list,deserialized_states.state_list)
+            self.assertEqual(retrieved_states.state_list, deserialized_states.state_list)
 
             # Finally, set the deserialized states into the model:
             set_ptgsk_model_state(model, deserialized_states)
 
     def test_set_too_few_model_states(self):
         num_cells = 20
-        for model_type in [api.PTGSKModel, api.PTGSKOptModel]:
+        for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             model = self.build_model(model_type, num_cells)
             states = []
-            x=""
+            x = ""
             for i in xrange(num_cells - 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
-            statestr=x.join(states)
+            statestr = x.join(states)
             self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
             for i in xrange(num_cells + 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
-            statestr=x.join(states)
+            statestr = x.join(states)
             self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
 
     #def test_pthsk_state_io(self):
     #    """ Just to verify it is pthsk and state io is working """
-    #    sio=api.pthsk_state_io()
-    #    s0=api.PTHSKStat()
-    #    s0.hbv_snow.swe=30.0
-    #    s0.hbv_snow.sca=3.0
+    #    sio = api.pthsk_state_io()
+    #    s0 = api.PTHSKStat()
+    #    s0.hbv_snow.swe = 30.0
+    #    s0.hbv_snow.sca = 3.0
 
-    #   str= sio.to_string(s0)
-    #   self.assertEqual(len(str),35)
-    #    statev=api.PTHSKStateVector()
-    #    s1=api.PTHSKStat()
-    #    s1.hbv_snow.sca=3.0
-    #    s1.hbv_snow.swe=40
+    #   str = sio.to_string(s0)
+    #   self.assertEqual(len(str), 35)
+    #    statev = api.PTHSKStateVector()
+    #    s1 = api.PTHSKStat()
+    #    s1.hbv_snow.sca = 3.0
+    #    s1.hbv_snow.swe = 40
 
     #   statev.push_back(s0)
     #   statev.push_back(s1)
-    #    sstr=sio.to_string(statev)
+    #    sstr = sio.to_string(statev)
 
-    #    self.assertEqual(sstr,'pthsk:3.000000 30.000000 0.000100 \npthsk:3.000000 40.000000 0.000100 \n')
+    #    self.assertEqual(sstr, 'pthsk:3.000000 30.000000 0.000100 \npthsk:3.000000 40.000000 0.000100 \n')
 
-    #    stv=sio.vector_from_string(sstr)
-    #    self.assertAlmostEqual(stv[0].hbv_snow.sca,statev[0].hbv_snow.sca)
-    #    self.assertAlmostEqual(stv[1].hbv_snow.swe,statev[1].hbv_snow.swe)
+    #    stv = sio.vector_from_string(sstr)
+    #    self.assertAlmostEqual(stv[0].hbv_snow.sca, statev[0].hbv_snow.sca)
+    #    self.assertAlmostEqual(stv[1].hbv_snow.swe, statev[1].hbv_snow.swe)
 
 class MockRepositoryTestCase(unittest.TestCase):
 
@@ -265,7 +284,7 @@ class MockStateRepositoryTestCase(unittest.TestCase):
             self.repository.get(keys[-1])
         except RuntimeError:
             self.fail("Reading existing entry failed with RuntimeError")
-        
+
     def test_find_with_simple_condition(self):
         condition = TimeCondition() > "2014-10-01-0-0-0"
         keys = self.repository.find(condition=condition)
@@ -293,7 +312,7 @@ class MockStateRepositoryTestCase(unittest.TestCase):
 
 
 class MockInputSourceRepositoryTestCase(unittest.TestCase):
-    
+
     def test_create_mock_station_data(self):
         data = create_mock_station_data(0, 3600, 24)
         self.assertEqual(len(data), 5)
@@ -309,6 +328,7 @@ class MockInputSourceRepositoryTestCase(unittest.TestCase):
         repository.put("Hylen", station)
         self.assertTrue("Hylen" in repository.find())
 
+
 class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 
     def test_create_mock_cell_read_only_repository(self):
@@ -318,7 +338,7 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
                   "dy": 1000,
                   "n_x": 10,
                   "n_y": 10}
-        
+
         class Config(object):
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
@@ -326,12 +346,56 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 
 
     def test_raster_cell_repository_construction(self):
-        config_file = "../../doc/example/file_configs/region.yaml"
+        config_file = join(dirname(shyft_file), pardir, pardir, "shyft-data",
+                        "repository", "raster_cell_repository","region.yaml")
         with open(config_file, "r") as cf:
             config = yaml.load(cf.read())
         r = config['repository']
         data = r['constructor'][0](None, *r['constructor'][1:])
         self.assertTrue(isinstance(data, FileCellRepository))
+
+
+class AromeDataRepositoryTestCase(unittest.TestCase):
+
+    def test_create_reader(self):
+        """
+        Simple regression test of arome data respository.
+        """
+
+        EPSG = 32633
+        upper_left_x = 436100.0
+        upper_left_y = 7417800.0
+        nx = 74
+        ny = 94
+        dx = 1000.0
+        dy = 1000.0
+        base_dir = join(dirname(shyft_file), pardir, pardir, "shyft-data",
+                        "repository", "arome_data_repository")
+        pth1 = join(base_dir, "arome_metcoop_red_default2_5km_20150823_06.nc")
+        pth2 = join(base_dir, "arome_metcoop_red_test2_5km_20150823_06.nc")
+        bounding_box = ([upper_left_x, upper_left_x + nx*dx,
+                         upper_left_x + nx*dx, upper_left_x],
+                        [upper_left_y, upper_left_y,
+                         upper_left_y - ny*dy, upper_left_y - ny*dy])
+        ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
+        ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
+        ar1.add_time_series(ar2)
+        sources = ar1.get_sources()
+        self.assertTrue(len(sources) > 0)
+        data_names = ("temperature", "radiation", "wind_speed",
+                      "precipitation", "relative_humidity")
+        self.assertTrue(all([n in sources for n in data_names]))
+        self.assertTrue(sources["temperature"][0].ts.size() == 67)
+        r0 = sources["radiation"][0].ts
+        p0 = sources["precipitation"][0].ts
+        t0 = sources["temperature"][0].ts
+        self.assertTrue(r0.size() == 66)
+        self.assertTrue(p0.size() == 66)
+        self.assertTrue(r0.time(0) == t0.time(0))
+        self.assertTrue(p0.time(0) == t0.time(0))
+        self.assertTrue(r0.time(r0.size() - 1) < t0.time(t0.size()-1))
+        self.assertTrue(p0.time(r0.size() - 1) < t0.time(t0.size()-1))
+
 
 class LocalStateRepositoryTestCase(unittest.TestCase):
 
@@ -356,7 +420,7 @@ class LocalStateRepositoryTestCase(unittest.TestCase):
     #    state_repository = yaml_file_storage_factory({}, "D:/Users/sih/enki_config_for_test/states", "ptgsk_state.yaml")
     #    k0=state_repository.find()[0]
     #    s0=state_repository.get(k0)
-    #    self.assertTrue(len(s0)>0,"Assume we got some states")
+    #    self.assertTrue(len(s0)>0, "Assume we got some states")
 
 
 if __name__ == "__main__":

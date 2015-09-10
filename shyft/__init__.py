@@ -2,6 +2,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
+import os.path
+
 
 this_dir = __path__[0]
 __version__ = "development"
@@ -10,43 +12,23 @@ try:
 except:
     pass
 
-
-def _get_hg_description(path_):
-    """ Get the output of hg summary when executed in a given path. """
-    import subprocess
-
-    # make an absolute path if required, for example when running in a clone
-    if not os.path.isabs(path_):
-        loc_path = os.path.abspath(os.path.curdir)
-        path_ = os.path.join(loc_path, path_)
-    # look up the commit using subprocess and hg summary
-    try:
-        # redirect stderr to stdout to make sure the hg error message in case
-        # we are not in a hg repo doesn't appear on the screen and confuse the
-        # user.
-        out = subprocess.check_output(
-            ["hg", "summary"], cwd=path_, stderr=subprocess.STDOUT).strip()
-        out = "".join(['\n  ' + l for l in out.split('\n')])
-        return out
-    except OSError:  # in case hg wasn't found
-        pass
-    except subprocess.CalledProcessError:  # not in hg repo
-        pass
-
-
-_hg_description = _get_hg_description(this_dir)
+if "SHYFTDATA" in os.environ:
+    shyftdata_dir = os.environ["SHYFTDATA"]
+else:
+    # If SHYFTDATA environment variable is not here, then use a decent guess
+    shyftdata_dir = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "shyft-data")
 
 
 def print_versions():
-    """Print all the versions for packages that pflexible relies on."""
+    """Print all the versions for packages that SHyFT relies on."""
     import numpy
+    import netCDF4
     import sys
 
     print("-=" * 38)
-    print("shyft version: %s" % __version__)
-    if _hg_description:
-        print("shyft hg summary:    %s" % _hg_description)
+    print("SHyFT version:     %s" % __version__)
     print("NumPy version:     %s" % numpy.__version__)
+    print("netCDF4 version:   %s" % netCDF4.__version__)
     print("Python version:    %s" % sys.version)
     if os.name == "posix":
         (sysname, nodename, release, version_, machine) = os.uname()
@@ -57,4 +39,5 @@ def print_versions():
 
 def run_tests():
     import nose
+    print_versions()
     nose.main()

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{EDFDEE14-75D7-455C-AAE4-E89A4E43C062}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_shyft", "test\test.vcxproj", "{EDFDEE14-75D7-455C-AAE4-E89A4E43C062}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "api", "api\api.vcxproj", "{FDFDAA14-75D7-455C-AAE4-E89A4E43C062}"
 EndProject
@@ -18,6 +18,16 @@ EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "orchestration2", "shyft\orchestration2\orchestration2.pyproj", "{CC31582C-9D99-4C08-97D0-67A2B971CFE1}"
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "tests", "shyft\tests\tests.pyproj", "{9D4B92C2-21E7-4DE4-8295-FE87CB43CDA3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pt_gs_k.python", "api\python\pt_gs_k.python.vcxproj", "{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pt_ss_k.python", "api\python\pt_ss_k.python.vcxproj", "{CBADAA14-75D7-455C-AAE4-E89A4E43C062}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "python api", "python api", "{B410953E-0D13-40A7-B94F-FE2A89DFBEC8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "python modules", "python modules", "{124B0C33-4C3A-4542-96FE-DBACECF30C26}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "python test", "python test", "{9FA22655-9861-427A-BE32-A0DADC95F52C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -118,9 +128,47 @@ Global
 		{9D4B92C2-21E7-4DE4-8295-FE87CB43CDA3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{9D4B92C2-21E7-4DE4-8295-FE87CB43CDA3}.Release|Win32.ActiveCfg = Release|Any CPU
 		{9D4B92C2-21E7-4DE4-8295-FE87CB43CDA3}.Release|x64.ActiveCfg = Release|Any CPU
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Win32.ActiveCfg = Debug|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Win32.Build.0 = Debug|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.ActiveCfg = Debug|x64
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.Build.0 = Debug|x64
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Any CPU.ActiveCfg = Release|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.ActiveCfg = Release|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.Build.0 = Release|Win32
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|x64.ActiveCfg = Release|x64
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062}.Release|x64.Build.0 = Release|x64
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|Win32.Build.0 = Debug|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.ActiveCfg = Debug|x64
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.Build.0 = Debug|x64
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Any CPU.ActiveCfg = Release|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.ActiveCfg = Release|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.Build.0 = Release|Win32
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|x64.ActiveCfg = Release|x64
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FDFDAA14-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+		{CFADAA14-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+		{3E3B8F45-003F-4F88-BF3F-400E7AF8CB1F} = {9FA22655-9861-427A-BE32-A0DADC95F52C}
+		{3D94CBF1-D487-44A9-B865-82546E1A3CFF} = {124B0C33-4C3A-4542-96FE-DBACECF30C26}
+		{CC31582C-9D99-4C08-97D0-67A2B971CFE1} = {124B0C33-4C3A-4542-96FE-DBACECF30C26}
+		{9D4B92C2-21E7-4DE4-8295-FE87CB43CDA3} = {9FA22655-9861-427A-BE32-A0DADC95F52C}
+		{ABCDAA14-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+		{CBADAA14-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
 	EndGlobalSection
 	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
 		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}

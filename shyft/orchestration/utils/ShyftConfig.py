@@ -218,6 +218,8 @@ class RegionConfig(BaseConfig):
         self.epsg_id = domain["EPSG"]
         self.x_min = domain["upper_left_x"]
         self.y_min = domain["upper_left_y"] - self.n_y*self.dy
+        self.x_max = domain["upper_left_x"] + self.n_x*self.dx
+        self.y_max = domain["upper_left_y"]
         self.catchment_indices = self.config["repository"]["catchment_indices"]
         self.model_constructor = self.config["repository"]["constructor"][0]
         self.model_constructor_args = self.config["repository"]["constructor"][1:]

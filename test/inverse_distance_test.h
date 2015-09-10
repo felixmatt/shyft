@@ -6,6 +6,7 @@
 class inverse_distance_test: public CxxTest::TestSuite {
 public:
     void test_temperature_model();
+    void test_temperature_model_default_gradient();
     void test_radiation_model();
     void test_precipitation_model();
     void test_one_source_one_dest_calculation();

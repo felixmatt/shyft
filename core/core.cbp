@@ -78,12 +78,15 @@
 		<Unit filename="inverse_distance.h" />
 		<Unit filename="kirchner.h" />
 		<Unit filename="model_calibration.h" />
+		<Unit filename="optimizer_utils.h" />
 		<Unit filename="precipitation_correction.h" />
 		<Unit filename="priestley_taylor.h" />
 		<Unit filename="pt_gs_k.h" />
 		<Unit filename="pt_gs_k_cell_model.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_hs_k_cell_model.h" />
+		<Unit filename="pt_ss_k.h" />
+		<Unit filename="pt_ss_k_cell_model.h" />
 		<Unit filename="region_model.h" />
 		<Unit filename="sceua_optimizer.cpp" />
 		<Unit filename="sceua_optimizer.h" />

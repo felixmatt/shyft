@@ -27,6 +27,7 @@
     <Compile Include="connectors\raster_import.py" />
     <Compile Include="connectors\Saver.py" />
     <Compile Include="input_source.py" />
+    <Compile Include="repository\arome_data_repository.py" />
     <Compile Include="repository\base_repository.py" />
     <Compile Include="repository\cell_read_only_repository.py" />
     <Compile Include="repository\gis_data.py" />

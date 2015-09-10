@@ -22,6 +22,7 @@
     <ProjectGuid>{EDFDEE14-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ShyftTest</RootNamespace>
+    <ProjectName>test_shyft</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -201,6 +202,7 @@
     <ClInclude Include="cell_builder_test.h" />
     <ClInclude Include="api_test.h" />
     <ClInclude Include="pt_ss_k_test.h" />
+    <ClInclude Include="sceua_test.h" />
     <ClInclude Include="test_pch.h" />
     <ClInclude Include="gamma_snow_test.h" />
     <ClInclude Include="gaussian_random_field_test.h" />
@@ -238,6 +240,7 @@
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
+    <ClCompile Include="sceua_test.cpp" />
     <ClCompile Include="test_pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

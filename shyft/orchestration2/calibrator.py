@@ -9,6 +9,7 @@ import os
 import yaml
 
 from shyft import api
+from shyft  import pt_gs_k
 from .utils import utctime_from_datetime2
 from .base_config import target_constructor
 
@@ -29,9 +30,10 @@ class Calibrator(object):
         return api.DoubleVector([self._config.calibration_parameters[name]['max']
                                  for name in self.calib_param_names])
 
-    def __init__(self, config):
+    def __init__(self, config, verbose_level=0):
         from .simulator import Simulator
         self._config = config
+        self.verbose_level = verbose_level     # to control console print out during calibration
         self._model_config = config.model_config
         self.runner = Simulator(self._model_config)
         self.calibrator = None
@@ -47,9 +49,14 @@ class Calibrator(object):
         self.calib_param_names = [self.param_accessor.get_name(i) for i in range(self.param_accessor.size())]
         if self.tv is None:
             self._create_target_specvect()
-        calibration_type = getattr(api, self._config.calibration_type)
+        ctype = self._config.calibration_type
+        # The actual calibration type class is at the beginning
+        calibration_class = ctype[:ctype.rfind(".")]
+        self.calibration_optimize = ctype[ctype.rfind(".") + 1:]
+        calibration_type = getattr(pt_gs_k, calibration_class)
+
         self.calibrator = calibration_type(self.runner.model, self.tv, self.p_min, self.p_max)
-        self.calibrator.set_verbose_level(1)  # To control console print out during calibration
+        self.calibrator.set_verbose_level(self.verbose_level)
         print("Calibrator catchment index = {}".format(self._config.catchment_index))
 
     def calibrate(self, p_init=None, tol=1.0e-8):
@@ -58,7 +65,13 @@ class Calibrator(object):
             # p_init = [(a + b) * 0.5 for a, b in zip(self.p_min, self.p_max)]
             p_init = [a + (b - a) * 0.5 for a, b in zip(self.p_min, self.p_max)]
         n_iterations = 1500
-        results = [p for p in self.calibrator.optimize(api.DoubleVector(p_init), n_iterations, 0.1, tol)]
+        calibration_optimize_api = getattr(self.calibrator, self.calibration_optimize)
+        if self.calibration_optimize == "optimize":
+            results = [p for p in calibration_optimize_api(api.DoubleVector(p_init), n_iterations, 0.1, tol)]
+        elif self.calibration_optimize == "optimize_dream":
+            results = [p for p in calibration_optimize_api(api.DoubleVector(p_init), n_iterations)]
+        else:
+            raise ValueError("Unknown optimization method: %s" % self.calibration_optimize)
         mapped_results = dict(zip(self.calib_param_names, results))
         return mapped_results
 
@@ -106,7 +119,7 @@ class Calibrator(object):
 
     def calculate_goal_function(self, optim_param_list):
         """ calls calibrator with parameter vector"""
-        self.calibrator.set_verbose_level(0)
+        self.calibrator.set_verbose_level(self.verbose_level)
         return self.calibrator.calculate_goal_function(api.DoubleVector(optim_param_list))
 
     def _load_target_spec_input(self):

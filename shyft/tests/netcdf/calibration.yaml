@@ -1,12 +1,12 @@
 Himalayas:
   model_config_file: configuration.yaml
   calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
-  calibration_type: PTGSKOptimizer
+  calibration_type: PTGSKOptimizer.optimize     # can be 'optimize' or 'optimize_dream'
   data_dir: .
   target:
   - repository:
     class: shyft.orchestration2.netcdf.Target
-    file: stations_discharge.nc
+    file: netcdf/orchestration-testdata/stations_discharge.nc
     1D_timeseries:
     - internal_id: subcatchment2
       # uid: /SHyFT/STS/Runoff/Vikf-Tistel, 2015-09-01T00:00:00

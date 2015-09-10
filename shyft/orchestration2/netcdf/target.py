@@ -25,7 +25,6 @@ class Target(BaseTarget):
 
     def __init__(self, data_file, config):
         super(Target, self).__init__(data_file, config)
-        print("data_file:", self.data_file)
 
     def fetch_id(self, internal_id, uids, period):
         """Fetch all the time series given in `uids` list within date `period`.
@@ -39,7 +38,6 @@ class Target(BaseTarget):
             time = dset.groups[internal_id].variables['time'][:]
             nptime = np.array(time, dtype='datetime64[s]')
             # Index of time in the interesting period
-            print("period:", np_period)
             idx = np.where((nptime >= np_period[0]) & (nptime < np_period[1]))[0]
             times = api.UtcTimeVector.FromNdArray(nptime[idx].astype(np.long))
             for uid in uids:

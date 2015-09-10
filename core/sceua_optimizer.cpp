@@ -259,13 +259,13 @@ namespace shyft {
             }
 
             void
-            sceua::mutate(double *x_alternatives[], double x_new[], int na, int nprm) const {
+            sceua::mutate(double *x_alternatives[], double x_new[], size_t na, size_t nprm) const {
                 double *x_min = __autoalloc__(double,nprm);
                 double *x_max = __autoalloc__(double,nprm);
                 fastcopy(x_min,x_alternatives[0],nprm);
                 fastcopy(x_max,x_alternatives[0],nprm);
-                for (int i=1;i<na;i++) {
-                    for (int j=1;j<nprm;j++) {
+                for (size_t i=1;i<na;i++) {
+                    for (size_t j=1;j<nprm;j++) {
                         if (x_alternatives[i][j] < x_min[j])
                             x_min[j] = x_alternatives[i][j];
                         if (x_alternatives[i][j] > x_max[j])
