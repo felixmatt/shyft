@@ -8,14 +8,14 @@ model_dependencies = ../../core/region_model.h ../../core/cell_model.h ../../cor
 pt_gs_k_dependencies =  $(api_dependencies) $(model_dependencies) ../pt_gs_k.h  ../../core/priestley_taylor.h ../../core/gamma_snow.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_gs_k_cell_model.h ../../core/pt_gs_k.h
 pt_ss_k_dependencies =  $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/skaugen.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_ss_k_cell_model.h ../../core/pt_ss_k.h
 
-all: api_wrap.cxx ../../shyft/api.py pt_gs_k_wrap.cxx ../../shyft/pt_gs_k.py pt_ss_k_wrap.cxx ../../shyft/pt_ss_k.py  
+all: __init___wrap.cxx ../../shyft/api/__init__.py pt_gs_k_wrap.cxx ../../shyft/api/pt_gs_k.py pt_ss_k_wrap.cxx ../../shyft/api/pt_ss_k.py  
 
-api_wrap.cxx ../../shyft/api.py : api.i $(MAKEFILE) $(api_dependencies);
-	$(Generator) -c++ -python -w511 -I.. -I../..  -outdir ../../shyft api.i
+__init___wrap.cxx ../../shyft/api/__init__.py : __init__.i $(MAKEFILE) $(api_dependencies);
+	$(Generator) -c++ -python -w511 -I.. -I../..  -outdir ../../shyft/api __init__.i
 
-pt_gs_k_wrap.cxx ../../shyft/pt_gs_k.py : pt_gs_k.i $(MAKEFILE) $(pt_gs_k_dependencies);
-	$(Generator) -c++ -python -w511  -I.. -I../.. -outdir ../../shyft pt_gs_k.i
+pt_gs_k_wrap.cxx ../../shyft/api/pt_gs_k.py : pt_gs_k.i $(MAKEFILE) $(pt_gs_k_dependencies);
+	$(Generator) -c++ -python -w511  -I.. -I../.. -outdir ../../shyft/api pt_gs_k.i
 
-pt_ss_k_wrap.cxx ../../shyft/pt_ss_k.py : pt_ss_k.i $(MAKEFILE) $(pt_ss_k_dependencies);
-	$(Generator) -c++ -python -w511  -I.. -I../.. -outdir ../../shyft pt_ss_k.i
+pt_ss_k_wrap.cxx ../../shyft/api/pt_ss_k.py : pt_ss_k.i $(MAKEFILE) $(pt_ss_k_dependencies);
+	$(Generator) -c++ -python -w511  -I.. -I../.. -outdir ../../shyft/api pt_ss_k.i
 

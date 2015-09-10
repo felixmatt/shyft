@@ -1,5 +1,5 @@
 from shyft import api
-from shyft import pt_gs_k
+from shyft.api import pt_gs_k
 
 def cell_argument_factory(cell_type, *args):
         type_to_builder = {#api.FullPTHSKModel: PTHSKArgBuilder,

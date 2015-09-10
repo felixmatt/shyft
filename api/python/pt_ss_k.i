@@ -1,4 +1,4 @@
-%module pt_ss_k
+%module(package="shyft.api") pt_ss_k
 
 #define SWIG_FILE_WITH_INIT
 
@@ -23,7 +23,7 @@
 %include <shared_ptr.i>
 
 // Add type information from api module
-%import "api.i"
+%import "__init__.i"
 
 %shared_ptr(std::vector<shyft::core::pt_ss_k::cell_discharge_response_t>)
 %shared_ptr(std::vector<shyft::core::pt_ss_k::cell_complete_response_t>)

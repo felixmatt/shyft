@@ -9,7 +9,7 @@
 ///   * it takes forever(several minutes) to regenerate swig (its an issue we work on)
 
 
-%module api
+%module(package="shyft.api") __init__
 
 %feature("autodoc", "2");
 %feature("kwargs");
