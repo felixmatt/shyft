@@ -37,8 +37,8 @@ class SourceDataset(BaseSourceDataset):
                     continue
                 for station in type_['stations']:
                     tseries = {}
-                    tpath=station['time'].split('/')[1:] # v1 time, the first one is empty
-                    vpath=station['values'].split('/')[1:]
+                    tpath = station['time'].split('/')[1:] # v1 time, the first one is empty
+                    vpath = station['values'].split('/')[1:]
                     times = dset.groups[tpath[0]].variables[tpath[1]][:]#variables[station['time']][:]
                     imin = times.searchsorted(period[0], side='left')
                     imax = times.searchsorted(period[1], side='right')
