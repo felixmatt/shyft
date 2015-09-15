@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  sceua_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  utctime_utilities_test" />
 				</ExtraCommands>
 			</Target>
 		</Build>
@@ -50,6 +50,8 @@
 			<Add option="-D__UNIT_TEST__" />
 			<Add option="-DVERBOSE=0" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DCXXTEST_HAVE_EH" />
+			<Add option="-DCXXTEST_HAVE_STD" />
 			<Add directory="../../cxxtest" />
 			<Add directory=".." />
 			<Add directory="../../dlib" />
