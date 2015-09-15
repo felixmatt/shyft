@@ -15,18 +15,18 @@ from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
 from shyft.orchestration.state import save_state_as_yaml_file
 from shyft.orchestration.input_source import InputSource
-from shyft.orchestration.repository.state_repository import TimeCondition
-from shyft.orchestration.repository.state_repository import combine_conditions
-from shyft.orchestration.repository.testsupport.mocks import MockRepository
-from shyft.orchestration.repository.testsupport.mocks import MockStateRepository
-from shyft.orchestration.repository.testsupport.mocks import MockInputSourceRepository
-from shyft.orchestration.repository.testsupport.mocks import mock_cell_data
-from shyft.orchestration.repository.testsupport.mocks import state_repository_factory
-from shyft.orchestration.repository.testsupport.time_series import create_mock_station_data
-from shyft.orchestration.repository.cell_read_only_repository import CellReadOnlyRepository
-from shyft.orchestration.repository.cell_read_only_repository import FileCellRepository
-from shyft.orchestration.repository.arome_data_repository import AromeDataRepository
-from shyft.orchestration.repository.state_repository import yaml_file_storage_factory
+from shyft.repository.state_repository import TimeCondition
+from shyft.repository.state_repository import combine_conditions
+from shyft.repository.testsupport.mocks import MockRepository
+from shyft.repository.testsupport.mocks import MockStateRepository
+from shyft.repository.testsupport.mocks import MockInputSourceRepository
+from shyft.repository.testsupport.mocks import mock_cell_data
+from shyft.repository.testsupport.mocks import state_repository_factory
+from shyft.repository.testsupport.time_series import create_mock_station_data
+from shyft.repository.cell_read_only_repository import CellReadOnlyRepository
+from shyft.repository.cell_read_only_repository import FileCellRepository
+from shyft.repository.arome_data_repository import AromeDataRepository
+from shyft.repository.state_repository import yaml_file_storage_factory
 
 
 class StateIOTestCase(unittest.TestCase):
