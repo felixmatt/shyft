@@ -4,11 +4,11 @@ from math import ceil
 import random
 import math
 from shyft import api
-from shyft.orchestration.repository.base_repository import BaseRepository
+from shyft.repository.base_repository import BaseRepository
 from shyft.orchestration.state import State
 from shyft.orchestration.input_source import InputSource
-from shyft.orchestration.repository.testsupport.time_series import create_mock_station_data
-from shyft.orchestration.repository.cell_read_only_repository import CellReadOnlyRepository
+from shyft.repository.testsupport.time_series import create_mock_station_data
+from shyft.repository.cell_read_only_repository import CellReadOnlyRepository
 
 
 class MockRepository(BaseRepository):

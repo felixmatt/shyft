@@ -7,7 +7,7 @@ import numpy as np
 from gis_data import CellDataFetcher2
 
 from abc import ABCMeta
-from shyft.orchestration.repository.base_repository import BaseCellRepository
+from .base_repository import BaseCellRepository
 
 class CellReadOnlyRepository(BaseCellRepository):
 
