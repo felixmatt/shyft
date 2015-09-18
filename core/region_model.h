@@ -217,7 +217,7 @@ namespace shyft {
 			//
 
 			parameter_t_ region_parameter;///< applies to all cells, except those with catchment override
-			std::map<size_t,parameter_t_> catchment_parameters;///<  for each catchment parameter is possible
+			std::map<size_t, parameter_t_> catchment_parameters;///<  for each catchment parameter is possible
 
             std::vector<bool> catchment_filter;///<if active (alias .size()>0), only calc if catchment_filter[catchment_id] is true.
 
@@ -229,9 +229,18 @@ namespace shyft {
              * \param region_param ref to parameters to apply to all cells, the constructor loops over cells and implants a ref to a copy of this param.
              * \param cells a shared pointer to a vector of cells, notice, we do share the cell-vector!
              */
-			region_model(const parameter_t &region_param, std::shared_ptr<std::vector<C> >& cells)
+			region_model(std::shared_ptr<std::vector<C> >& cells, const parameter_t &region_param)
 				: cells(cells) {
                 set_region_parameter(region_param);// ensure we have a correct model
+				ncore = thread::hardware_concurrency()*4;
+			}
+			region_model(std::shared_ptr<std::vector<C> >& cells,
+                         const parameter_t &region_param,
+                         const std::map<size_t, parameter_t>& catchment_parameters)
+				: cells(cells) {
+                set_region_parameter(region_param); 
+                for_each(catchment_parameters.cbegin(), catchment_parameters.cend(),
+                    [this] (auto& pair) { this->set_catchment_parameter(pair.first, pair.second); });
 				ncore = thread::hardware_concurrency()*4;
 			}
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
@@ -436,7 +445,7 @@ namespace shyft {
 					catchment_parameters[catchment_id] = shared_p;
 					for_each(begin(*cells), end(*cells),
 						[this, catchment_id, &shared_p](cell_t& c) {
-							if(c.geo.catchment_id()==catchment_id)
+							if (c.geo.catchment_id() == catchment_id)
 								c.set_parameter(shared_p);
 					});
 				} else {
@@ -483,7 +492,7 @@ namespace shyft {
 				if (catchment_id_list.size()) {
 					int mx = 0;
 					for (auto i : catchment_id_list) mx = i > mx ? i : mx;
-					catchment_filter=vector<bool>(mx+1, false);
+					catchment_filter = vector<bool>(mx + 1, false);
 					for (auto i : catchment_id_list) catchment_filter[i] = true;
 				} else {
 					catchment_filter.clear();

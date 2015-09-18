@@ -16,8 +16,9 @@ if "SHYFTDATA" in os.environ:
     shyftdata_dir = os.environ["SHYFTDATA"]
 else:
     # If SHYFTDATA environment variable is not here, then use a decent guess
-    shyftdata_dir = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "shyft-data")
-
+    shyftdata_dir = os.path.join(os.path.dirname(__file__), os.path.pardir,
+                                 os.path.pardir, "shyft-data")
+shyftdata_dir = os.path.normpath(shyftdata_dir)
 
 def print_versions():
     """Print all the versions for packages that SHyFT relies on."""

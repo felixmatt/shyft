@@ -44,7 +44,8 @@ def get_class(repo):
     try:
         exec "from %s import %s" % (import_path, repo_cls)
     except ImportError:
-        print("Repository '%s' cannot be imported.  Please check the path.")
+        print("Repository '{}' not found in {}. Please check the\
+ path.".format(repo_cls, import_path))
     return eval(repo_cls)
 
 def abs_datafilepath(filepath):

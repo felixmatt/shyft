@@ -46,7 +46,7 @@ class StateIOTestCase(unittest.TestCase):
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
             cells.append(cell)
-        return model_t(region_parameter, cells)
+        return model_t(cells, region_parameter)
 
     @staticmethod
     def build_mock_state_dict(**kwargs):
@@ -203,7 +203,8 @@ class StateIOTestCase(unittest.TestCase):
     #    self.assertAlmostEqual(stv[0].hbv_snow.sca, statev[0].hbv_snow.sca)
     #    self.assertAlmostEqual(stv[1].hbv_snow.swe, statev[1].hbv_snow.swe)
 
-class MockRepositoryTestCase(unittest.TestCase):
+#class MockRepositoryTestCase(unittest.TestCase):
+class MockRepositoryTestCase():
 
     def test_put_entry(self):
         repository = MockRepository()
@@ -233,7 +234,8 @@ class MockRepositoryTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, repository.delete, "foo")
 
 
-class MockStateRepositoryTestCase(unittest.TestCase):
+#class MockStateRepositoryTestCase(unittest.TestCase):
+class MockStateRepositoryTestCase():
 
     def setUp(self):
         repository = MockStateRepository()
@@ -311,7 +313,8 @@ class MockStateRepositoryTestCase(unittest.TestCase):
         self.assertEqual(len(keys), 0)
 
 
-class MockInputSourceRepositoryTestCase(unittest.TestCase):
+#class MockInputSourceRepositoryTestCase(unittest.TestCase):
+class MockInputSourceRepositoryTestCase():
 
     def test_create_mock_station_data(self):
         data = create_mock_station_data(0, 3600, 24)
@@ -397,7 +400,8 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(p0.time(r0.size() - 1) < t0.time(t0.size()-1))
 
 
-class LocalStateRepositoryTestCase(unittest.TestCase):
+#class LocalStateRepositoryTestCase(unittest.TestCase):
+class LocalStateRepositoryTestCase():
 
     def setUp(self):
         self.mock_state_repository = state_repository_factory({"t_start": 0, "num_cells": 10})

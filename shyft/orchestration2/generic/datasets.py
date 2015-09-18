@@ -4,7 +4,7 @@ Module for reading a list of dataset sources and destinations needed for an SHyF
 
 from __future__ import absolute_import
 
-from ..base_config import BaseDatasets, BaseSourceDataset
+from ..base_config import BaseDatasets, BaseSourceRepository
 from ..utils import get_class
 from shyft import api
 
@@ -34,18 +34,22 @@ class Datasets(BaseDatasets):
                                   "radiation": api.RadiationSource,
                                   "wind_speed": api.WindSpeedSource,
                                   "relative_humidity": api.RelHumSource}
-        # Prepare data container to be returned
-        data = {k: v.vector_t() for (k, v) in input_source_types.iteritems()}
 
         self._source_repos = []
+        data = {}
         for source in self.sources:
             self._source_repos.append(source['repository'])
             repo_cls = get_class(source['class'])
             repo_instance = repo_cls(self._config_file)
-            if not isinstance(repo_instance, BaseSourceDataset):
+            if not isinstance(repo_instance, BaseSourceRepository):
                 raise ValueError("The repository class is not an instance of 'BaseSourceDataset'")
-            repo_instance.fetch_sources(input_source_types, data, source['params'], period)
-
+            repo_data = repo_instance.fetch_sources(input_source_types, source['params'], period)
+            for (key, val) in repo_data.iteritems():
+                if key in data:
+                    data[key].reserve(len(data[key]) + len(val))
+                    [data[key].push_back(v) for v in val]
+                else:
+                    data[key] = val
         return data
 
     def store_destinations(self):

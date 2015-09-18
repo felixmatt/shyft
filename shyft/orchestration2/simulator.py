@@ -236,7 +236,7 @@ class Simulator(object):
         cells = self.build_cells()  # Need to do this to get the number of catchments
         model_parameter = self.api_model_parameters() #api.PTGSKParameter()
         # Ready to create the model
-        self._model = self.model_api(model_parameter, cells)
+        self._model = self.model_api(cells, model_parameter)
         # Next is reading model
         sources = self._config.datasets_config.fetch_sources(
             period=(self._config.start_time, self._config.stop_time))
@@ -249,7 +249,6 @@ class Simulator(object):
         region_env.wind_speed = sources["wind_speed"]
         region_env.rel_hum = sources["relative_humidity"]
         self._model.run_interpolation(self.interpolation_parameters(), time_axis, region_env)
-        print("Done with model setup/interpolation step")
 
     def run_model(self, *args, **kwargs):
         self.model.run_cells()

@@ -133,7 +133,7 @@ void region_model_test::test_build(void) {
     typedef em::region_model<pt_gs_k::cell_complete_response_t> ptgsk_region_model_t;
     auto ptgsk_cells= make_shared<std::vector<pt_gs_k::cell_complete_response_t>> ();//ptgsk_cells;
     ptgsk_cells->push_back(c1);
-    ptgsk_region_model_t rm(*gp,ptgsk_cells);
+    ptgsk_region_model_t rm(ptgsk_cells, *gp);
 
     ec::interpolation_parameter ip;
     rm.run_interpolation(ip,ta,testenv);

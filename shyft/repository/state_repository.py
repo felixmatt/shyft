@@ -1,4 +1,3 @@
-from base_repository import DictRepository
 from datetime import datetime
 from shyft.orchestration.state import State
 from shyft.orchestration.state import load_state_from_yaml_string
@@ -29,7 +28,7 @@ class TimeCondition(object):
         return lambda x: x.utc_timestamp >= utc_timestamp
 
 
-class LocalStateRepository(DictRepository):
+class LocalStateRepository(object):
     """Local file storage of states."""
     pass
 

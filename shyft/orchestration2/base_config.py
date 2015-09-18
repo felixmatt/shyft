@@ -3,6 +3,7 @@ Interfaces for all configuration objects (region, model, datasets...).
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 from abc import ABCMeta, abstractproperty, abstractmethod
@@ -220,6 +221,52 @@ class BaseRegion(BaseAncillaryConfig):
         return abs_datafilepath(filepath)
 
 
+class RegionRepository(object):
+    """New interface for Region objects."""
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def get_region(self, region_id, region_model, catchments=None):
+        """
+        Return a fully specified region_model for region_id.
+        
+        Parameters
+        -----------
+        region_id: string
+            unique identifier of region in data
+        region_model: shyft.api type
+            model to construct. Has cell constructor and region/catchment
+            parameter constructor.
+        catchments: list of unique integers
+            catchment indices when extracting a region consisting of a subset
+            of the catchments
+        has attribs to construct  params and cells etc.
+
+        Returns
+        -------
+        region_model: shyft.api type
+
+        ```
+        # Pseudo code below
+        # Concrete implementation must construct cells, region_parameter 
+        # and catchment_parameters and return a region_model
+
+        # Use data to create cells
+        cells = [region_model.cell_type(*args, **kwargs) for cell in region]
+
+         # Use data to create regional parameters
+        region_parameter = region_model.parameter_type(*args, **kwargs)
+
+        # Use data to override catchment parameters
+        catchment_parameters = {}
+        for all catchments in region:
+            catchment_parameters[c] = region_model.parameter_type(*args,
+                                                                  **kwargs)
+        return region_model(cells, region_parameter, catchment_parameters)
+        ```
+        """
+        pass
+
 # *** Model ***
 
 class BaseModel(BaseAncillaryConfig):
@@ -243,13 +290,12 @@ class BaseDatasets(BaseAncillaryConfig):
         pass
 
 
-class BaseSourceDataset(BaseAncillaryConfig):
-    """Interface for SourceDataset objects."""
+class BaseSourceRepository(BaseAncillaryConfig):
+    """Interface for SourceRepository objects."""
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def fetch_sources(self, input_source_types, data, params, period):
-        """`data` is a container for geo-located time-series that should be filled (appended)."""
+    def fetch_sources(self, input_source_types, params, period):
         pass
 
 

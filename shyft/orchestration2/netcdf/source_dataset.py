@@ -10,12 +10,12 @@ import os
 import numpy as np
 from netCDF4 import Dataset
 
-from ..base_config import BaseSourceDataset
+from ..base_config import BaseSourceRepository
 from shyft import api, shyftdata_dir
 from ..utils import abs_datafilepath
 
 
-class SourceDataset(BaseSourceDataset):
+class SourceDatasetRepository(BaseSourceRepository):
 
     @property
     def _stations_met(self):
@@ -54,27 +54,33 @@ class SourceDataset(BaseSourceDataset):
         print(len(stations_ts), input_source, 'series found.')
         return stations_ts
 
-    def fetch_sources(self, input_source_types, data, params, period):
+    def fetch_sources(self, input_source_types, params, period):
         """Method for fetching the sources in NetCDF files.
 
         Parameters
         ----------
         input_source_types : dict
             A map between the data to be extracted and the data containers in shyft.api.
-        data : dict
-            An geo-located time series shyft.api container.
         params : dict
             Additional parameters for locating the datasets.
         period : tuple
             A (start_time, stop_time) tuple that species the simulation period.
 
+        Returns
+        -------
+        data: dict
+            Shyft.api container for geo-located time series. Types are found from the 
+            input_source_type.vector_t attribute.
+
         """
         self.__dict__.update(params)
+        data = dict()
         # Fill the data with actual values
         for input_source, source_api in input_source_types.iteritems():
             ts = self._fetch_station_tseries(input_source, params['types'], period)
             assert type(ts) is list
             tsf = api.TsFactory()
+            acc_data = []
             for station in ts:
                 times = station['time']
                 assert type(times) is list
@@ -86,5 +92,6 @@ class SourceDataset(BaseSourceDataset):
                 value_points = api.DoubleVector.FromNdArray(values)
                 api_ts = tsf.create_time_point_ts(total_period, time_points, value_points)
                 data_source = source_api(api.GeoPoint(*station['location']), api_ts)
-                data[input_source].append(data_source)
+                acc_data.append(data_source)
+            data[input_source] = source_api.vector_t(acc_data)
         return data

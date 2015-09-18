@@ -18,6 +18,7 @@
 %include "numpy.i"
 %include <windows.i>
 %include <std_string.i>
+%include <std_map.i>
 %include <std_vector.i>
 %include <exception.i>
 #define SWIG_SHARED_PTR_NAMESPACE std
@@ -81,6 +82,7 @@ namespace std {
    %template(PTGSKCellAllVector) vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector> >;
     %template(PTGSKCellOptVector) vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state, shyft::core::pt_gs_k::null_collector, shyft::core::pt_gs_k::discharge_collector> >;
     %template(PTGSKStateVector) vector<shyft::core::pt_gs_k::state>;
+    %template(PTGSKParameterMap) map<size_t, shyft::core::pt_gs_k::parameter>;
 }
 
 namespace shyft {
@@ -96,6 +98,8 @@ namespace shyft {
 }
 %pythoncode %{
 PTGSKModel.cell_t = PTGSKCellAll
+PTGSKParameter.map_t = PTGSKParameterMap
+PTGSKModel.parameter_t = PTGSKParameter
 PTGSKModel.statistics = property(lambda self: PTGSKCellAllStatistics(self.get_cells()))
 PTGSKModel.gamma_snow_state = property(lambda self: PTGSKCellGammaSnowStateStatistics(self.get_cells()))
 PTGSKModel.gamma_snow_response = property(lambda self: PTGSKCellGammaSnowResponseStatistics(self.get_cells()))
@@ -103,6 +107,7 @@ PTGSKModel.priestley_taylor_response = property(lambda self: PTGSKCellPriestleyT
 PTGSKModel.actual_evaptranspiration_response=property(lambda self: PTGSKCellActualEvapotranspirationResponseStatistics(self.get_cells()))
 PTGSKModel.kirchner_state = property(lambda self: PTGSKCellKirchnerStateStatistics(self.get_cells()))
 PTGSKOptModel.cell_t = PTGSKCellOpt
+PTGSKModel.parameter_t = PTGSKParameter
 PTGSKOptModel.statistics = property(lambda self:PTGSKCellOptStatistics(self.get_cells()))
 PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
