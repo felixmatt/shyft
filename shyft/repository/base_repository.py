@@ -1,6 +1,6 @@
 """
 Module description:
-Should contain the abstract base-classes for the repositories in enki.
+Should contain the abstract base-classes for the repositories in shyft.
 Brief intro to Repository pattern here:
 http://martinfowler.com/eaaCatalog/repository.html
 http://www.codeproject.com/Articles/526874/Repositorypluspattern-cplusdoneplusright
@@ -17,7 +17,7 @@ repositories for
 * cells       - for reading distributed static cell information(typicall GIS system) for a given region/model spec.
 * state       - for reading model-state, cell-level (snapshot of internal statevariables of the models).
 
-each repository should provide/take enki-type classes, so that the orchestration
+each repository should provide/take shyft.api-type classes, so that the orchestration
 
 """
 
