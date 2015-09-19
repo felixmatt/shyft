@@ -65,8 +65,8 @@ void region_model_test::test_build(void) {
     // create one cell..
 
     // GeoCell, easy to understand
-    ec::geo_cell_data gc(ec::geo_point(100.0,100.0,10.0),1000.0*1000.0,1);
-
+    ec::geo_cell_data gc1(ec::geo_point(100.0,100.0,10.0),1000.0*1000.0,0);
+    ec::geo_cell_data gc2(ec::geo_point(100.0,100.0,10.0),1000.0*1000.0,1);
     // The model stack needs its parameters:
     pt::parameter pt;
     gs::parameter gs;
@@ -74,6 +74,7 @@ void region_model_test::test_build(void) {
     kr::parameter kp;
     pc::parameter scp;
     shared_ptr<pt_gs_k::parameter_t> gp(new pt_gs_k::parameter_t{pt,gs,ae,kp,scp});
+
 
     // And there has to be a start state
 
@@ -85,7 +86,7 @@ void region_model_test::test_build(void) {
     pt_gs_k::cell_complete_response_t c1;
     pt_gs_k::cell_discharge_response_t c2;
 
-    c1.geo=gc;
+    c1.geo=gc1;
     c1.env_ts=env;
     c1.set_parameter(gp);
 
@@ -96,7 +97,7 @@ void region_model_test::test_build(void) {
     c1.set_state(state);
     c1.run(ta);
 
-    c2.geo=gc;
+    c2.geo=gc2;
     c2.env_ts=env;
     c2.set_parameter(gp);
 
@@ -132,8 +133,19 @@ void region_model_test::test_build(void) {
 
     typedef em::region_model<pt_gs_k::cell_complete_response_t> ptgsk_region_model_t;
     auto ptgsk_cells= make_shared<std::vector<pt_gs_k::cell_complete_response_t>> ();//ptgsk_cells;
+    auto c1b=c1;
+    c1b.geo.set_catchment_id(1);
     ptgsk_cells->push_back(c1);
-    ptgsk_region_model_t rm(ptgsk_cells, *gp);
+    ptgsk_cells->push_back(c1b);
+    map<size_t,pt_gs_k::parameter_t> catchment_params;
+    auto c1p=pt_gs_k::parameter_t{pt,gs,ae,kp,scp};
+    c1p.kirchner.c1=-2.5;
+    catchment_params[1]=c1p;
+
+    ptgsk_region_model_t rm(ptgsk_cells, *gp,catchment_params);
+    TS_ASSERT(rm.has_catchment_parameter(1));
+    auto &c1pr=rm.get_catchment_parameter(1);
+    TS_ASSERT_DELTA(c1pr.kirchner.c1,-2.5,0.0001);
 
     ec::interpolation_parameter ip;
     rm.run_interpolation(ip,ta,testenv);

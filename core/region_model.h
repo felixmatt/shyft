@@ -57,20 +57,20 @@ namespace shyft {
             idw::parameter rel_hum;
 
             interpolation_parameter() {}
-            interpolation_parameter(const btk::parameter& temperature, 
+            interpolation_parameter(const btk::parameter& temperature,
                                     const idw::precipitation_parameter& precipitation,
                                     const idw::parameter& wind_speed,
                                     const idw::parameter& radiation,
                                     const idw::parameter& rel_hum)
-             : temperature(temperature), precipitation(precipitation), 
+             : temperature(temperature), precipitation(precipitation),
                wind_speed(wind_speed), radiation(radiation), rel_hum(rel_hum) {}
-            interpolation_parameter(const idw::temperature_parameter& temperature, 
+            interpolation_parameter(const idw::temperature_parameter& temperature,
                                     const idw::precipitation_parameter& precipitation,
                                     const idw::parameter& wind_speed,
                                     const idw::parameter& radiation,
                                     const idw::parameter& rel_hum)
-             : use_idw_for_temperature(true), temperature_idw(temperature), 
-               precipitation(precipitation), wind_speed(wind_speed), 
+             : use_idw_for_temperature(true), temperature_idw(temperature),
+               precipitation(precipitation), wind_speed(wind_speed),
                radiation(radiation), rel_hum(rel_hum) {}
         };
 
@@ -238,7 +238,7 @@ namespace shyft {
                          const parameter_t &region_param,
                          const std::map<size_t, parameter_t>& catchment_parameters)
 				: cells(cells) {
-                set_region_parameter(region_param); 
+                set_region_parameter(region_param);
                 for_each(catchment_parameters.cbegin(), catchment_parameters.cend(),
                     [this] (auto& pair) { this->set_catchment_parameter(pair.first, pair.second); });
 				ncore = thread::hardware_concurrency()*4;
@@ -453,6 +453,7 @@ namespace shyft {
 				}
 			}
 
+
 			/** \brief remove a catchment specific parameter override, if it exists.
 			*/
 			void remove_catchment_parameter(size_t catchment_id) {
@@ -477,7 +478,7 @@ namespace shyft {
 			* \returns reference to the real parameter structure for the catchment_id if exists, otherwise the global parameters
 			*/
 			parameter_t& get_catchment_parameter(size_t catchment_id) {
-				if (catchment_parameters.find(catchment_id) == catchment_parameters.end())
+				if (catchment_parameters.find(catchment_id) != catchment_parameters.end())
 					return *(catchment_parameters[catchment_id]);
 				else
 					return *region_parameter;

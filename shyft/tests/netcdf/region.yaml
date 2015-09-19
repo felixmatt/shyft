@@ -1,6 +1,6 @@
 ---
 repository:
-  class: shyft.orchestration2.netcdf.Region
+  class: shyft.repository.netcdf.NetCDFRegionModelRepository
   data_file: netcdf/orchestration-testdata/cell_info.nc
 
 domain:

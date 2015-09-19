@@ -21,15 +21,15 @@ repositories for
                  
 * state         - for reading region model-state, cell-level (snapshot of internal state variables of the models).
 
-* time-series  - for input observations,forecasts, runoff timeseries, that is useful/related to the
+* time-series  - for input observations,forecasts, run-off time-series, that is useful/related to the
                     region model. E.g. precipitation, temperature, radiation, wind-speed, relative humidity and
                     even measured run-off, and other time-series that can be utilized by the region-model.
                     Notice that this repository can serve most type of region-models.
 
-* configuration - helps *orchestation* to assemble data (region, model, sources etc) and repository impl.
+* configuration - helps *orchestration* to assemble data (region, model, sources etc) and repository impl.
 
 We try to design the interfaces, input types, return types, so that the number of lines needed in the orchestration
-part of the code is keept to a minimum.
+part of the code is kept to a minimum.
 
 This implies that the input arguments to the repositories are types that goes easily with the shyft.api.
 The returned types should also be shyft.api compatible types, - thus the orchestrator can just pass on
@@ -38,7 +38,7 @@ values returned into the shyft.api.
 
 """
 
-class RegionRepository(object):
+class RegionModelRepository(object):
     """Interface for RegionModel  objects. 
        The responsibility is to provide shyft.api RegionModel objects to the orchestrator,
        hiding away any implementation specific details regarding how the model is stored
@@ -47,7 +47,7 @@ class RegionRepository(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_region(self, region_id, region_model, catchments=None):
+    def get_region_model(self, region_id, region_model, catchments=None):
         """
         Return a fully specified region_model for region_id.
         

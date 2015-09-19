@@ -11,7 +11,7 @@ import urlparse
 
 import yaml
 
-from shyft.repository.interfaces import RegionRepository
+from shyft.repository.interfaces import RegionModelRepository
 
 from shyft import shyftdata_dir
 from . import state
@@ -189,11 +189,11 @@ class BaseAncillaryConfig(object):
         self.__dict__.update(config)
 
     def __repr__(self):
-        repr = "%s(" % self.__class__.__name__
+        srepr = "%s(" % self.__class__.__name__
         for key in self.__dict__:
-            repr += "%s=%r, " % (key, self.__dict__[key])
-        repr = repr[:-2]
-        return repr + ")"
+            srepr += "%s=%r, " % (key, self.__dict__[key])
+        srepr = srepr[:-2]
+        return srepr + ")"
 
 
 # *** Region ***
