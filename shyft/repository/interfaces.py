@@ -21,7 +21,7 @@ repositories for
                  
 * state         - for reading region model-state, cell-level (snapshot of internal state variables of the models).
 
-* input time-series  - for input observations,forecasts, runoff timeseries, that is useful/related to the
+* time-series  - for input observations,forecasts, runoff timeseries, that is useful/related to the
                     region model. E.g. precipitation, temperature, radiation, wind-speed, relative humidity and
                     even measured run-off, and other time-series that can be utilized by the region-model.
                     Notice that this repository can serve most type of region-models.
@@ -87,3 +87,135 @@ class RegionRepository(object):
         ```
         """
         pass
+    
+    
+class StateInfo(object):
+    """ Keeps needed information for a persisted region model state.
+        Currently, the of a region model is unique to the model, but we plan to 
+        do some magic so that you can extract part of state in order to transfer/apply to other state.
+        
+        This simple structure is utilized by the StateRepository to provide information about the stored
+        state
+        
+        state_id
+        A unique identifier for this state, -note that there might be infinite number of a state for a specific region-model/time
+        
+        region_model_id
+        As a minimum the state contains the region_model_id that uniquely (within context) identifies
+        the model that the state originated from.
+        
+        utc_timestamp
+        The point in time where the state was sampled
+        
+        tags
+        not so important, but useful text list that we think could be useful in order to describe
+        the state
+    
+    """
+    def __init__(self,  state_id=None,region_model_id=None,utc_timestamp=None, tags=None):
+        self.state_id=state_id
+        self.region_model_id=region_model_id
+        self.utc_timestamp=utc_timestamp
+        self.tags=tags
+
+
+    
+class StateRepository(object):
+    """ Provides needed functionality to maintain state for region-model
+        We provide simple search functionality, based on StateInfo
+        
+        The class should provide ready to use shyft.api type of state for a specified region-model
+        It should also be able to stash away new states for later use/retrieval
+        
+    """
+    __metaclass__ = ABCMeta
+    
+    @abstractmethod
+    def find_state(self,region_model_id_criteria=None,utc_period_criteria=None,tag_criteria=None):
+        """ Find the states in the repository that matches the specified criterias
+         (note: if we provide match-lambda type, then it's hard to use a db to do the matching)
+         
+        Parameters
+        region_model_id_criteria: match-lambda, or specific string, list of strings 
+        utc_period_criteria: match-lambda, or period
+        tag_criteria: match-lambda, or list of strings ?
+         
+        return list of StateInfo objects that matches the specified criteria
+        """
+        pass
+
+    @abstractmethod
+    def get_state(self, state_id):
+        """
+        return the state for a specified state_id, - the returned object/type can be passed directly to the region-model 
+        """
+        pass
+    
+    @abstractmethod
+    def put_state(self, region_model_id,utc_timestamp,region_model_state,tags=None):
+        """ 
+        persist the state into the repository,
+        assigning a new unique state_id, so that it can later be retrieved by that
+        return state_id assigned
+        """
+        pass
+    
+    @abstractmethod
+    def delete_state(self, state_id):
+        pass
+    
+
+class SourceRepository(object):
+    """
+    Interface for SourceRepository objects.
+    note SiH: Figure out a better name for this 
+    
+    Responsibility:
+     - to provide all hydrology relevant types of geo-located source time-series, forecasts and ensembles needed
+     for region-model inputs/calibrations.
+     
+     
+    These are typical (but not limited to)
+        precipitation
+        temperature
+        wind (speed,direction)
+        radiation
+        relative humidity
+        snow (depth,snow water equivalent, other snow-stuff, like coverage etc.)
+        runoff/discharge (historical observed, we use this for calibration) 
+    
+    geo-located time-series def:
+        a time-series where the geographic location,area for which the values applies is well defined
+        
+        for historical observations, we usually have point observations (xyz + coord-system id) 
+        forecasts, might or might not be points, they could be a grid-shape. So far these have been treated as points(centre of grid-shape)
+        
+        
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def get_timeseries(self, input_source_types, utc_period):
+        """
+        
+        Parameters:
+        input_source_types: list of source types to retrieve (precipitation,temperature..)
+        utc_period: the utc time period that should (as a minimum) be covered.
+        return { "precipitation": shyft.api.GeoLocatedPrecipitation etc..}
+        
+        """
+        pass
+    
+    @abstractmethod
+    def get_forecast(self, input_source_types, utc_period):
+        """
+        Parameters:
+        see get_timeseries
+        semantics for utc_period: Get the forecast closest up to utc_period.start
+        """
+        pass
+    
+    @abstractmethod
+    def get_forecast_ensemble(self, input_source_types, utc_period):
+        pass
+    

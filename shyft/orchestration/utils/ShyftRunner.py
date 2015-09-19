@@ -11,7 +11,7 @@ from shyft import api
 from shyft.orchestration.state import build_ptgsk_model_state_from_data
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import save_state_as_yaml_file
-from shyft.orchestration.repository.state_repository import TimeCondition
+from shyft.repository.state_repository import TimeCondition
 from itertools import imap
 import collections
 from matplotlib import pylab as plt
