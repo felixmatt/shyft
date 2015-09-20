@@ -1,5 +1,5 @@
 """
-Module for reading dataset files needed for an SHyFT run.
+Module for reading netcdf dataset with a specific layout needed for an SHyFT run.
 """
 
 from __future__ import absolute_import
@@ -10,12 +10,21 @@ import os
 import numpy as np
 from netCDF4 import Dataset
 
-from ..base_config import BaseSourceRepository
+from ..interfaces import SourceRepository
 from shyft import api, shyftdata_dir
-from ..utils import abs_datafilepath
+#from ..utils import abs_datafilepath
 
 
-class SourceDatasetRepository(BaseSourceRepository):
+
+def abs_datafilepath(filepath):
+    """Get the absolute path for a data `filepath`.
+    """
+    if os.path.isabs(filepath):
+        return filepath
+    else:
+        return os.path.join(shyftdata_dir, filepath)
+
+class NetCDFSourceRepository(SourceRepository):
 
     @property
     def _stations_met(self):
