@@ -10,7 +10,7 @@ import os
 import numpy as np
 from netCDF4 import Dataset
 
-from ..interfaces import SourceRepository
+from ..interfaces import GeoTsRepository
 from shyft import api, shyftdata_dir
 #from ..utils import abs_datafilepath
 
@@ -24,19 +24,25 @@ def abs_datafilepath(filepath):
     else:
         return os.path.join(shyftdata_dir, filepath)
 
-class NetCDFSourceRepository(SourceRepository):
-
+class NetCDFGeoTsRepository(GeoTsRepository):
+    
+    def __init__(self,params, metstation_filepath,discharge_filepath):
+        """ """
+        self._params=params
+        self._metstation_filepath=metstation_filepath
+        self._discharge_filepath=discharge_filepath
+        
     @property
     def _stations_met(self):
-        return abs_datafilepath(self.stations_met)
+        return abs_datafilepath(self._metstation_filepath)
 
     @property
     def _stations_discharge(self):
-        return abs_datafilepath(self.stations_discharge)
+        return abs_datafilepath(self._discharge_filepath)
 
     def __repr__(self):
-        return "%s(stations_met=%r, stations_discharge=%r)" % (
-            self.__class__.__name__, self.stations_met,  self.stations_discharge)
+        return "%s(metstation_filepath=%r, discharge_filepath=%r)" % (
+            self.__class__.__name__, self._metstation_filepath,  self._discharge_filepath)
 
     def _fetch_station_tseries(self, input_source, types, period):
         stations_ts = []
@@ -63,17 +69,14 @@ class NetCDFSourceRepository(SourceRepository):
         print(len(stations_ts), input_source, 'series found.')
         return stations_ts
 
-    def fetch_sources(self, input_source_types, params, period):
+    def get_timeseries(self, input_source_types, utc_period):
         """Method for fetching the sources in NetCDF files.
 
         Parameters
         ----------
         input_source_types : dict
             A map between the data to be extracted and the data containers in shyft.api.
-        params : dict
-            Additional parameters for locating the datasets.
-        period : tuple
-            A (start_time, stop_time) tuple that species the simulation period.
+        period : UtcPeriod
 
         Returns
         -------
@@ -82,11 +85,11 @@ class NetCDFSourceRepository(SourceRepository):
             input_source_type.vector_t attribute.
 
         """
-        self.__dict__.update(params)
+        #self.__dict__.update(params)
         data = dict()
         # Fill the data with actual values
         for input_source, source_api in input_source_types.iteritems():
-            ts = self._fetch_station_tseries(input_source, params['types'], period)
+            ts = self._fetch_station_tseries(input_source, self._params['types'], utc_period)
             assert type(ts) is list
             tsf = api.TsFactory()
             acc_data = []

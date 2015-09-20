@@ -167,13 +167,12 @@ class StateRepository(object):
         pass
     
 
-class SourceRepository(object):
+class GeoTsRepository(object):
     """
-    Interface for SourceRepository objects.
-    note SiH: Figure out a better name for this 
+    Interface for GeoTsRepository (Geo Located Timeseries) objects.
     
     Responsibility:
-     - to provide all hydrology relevant types of geo-located source time-series, forecasts and ensembles needed
+     - to provide all hydrology relevant types of geo-located time-series, forecasts and ensembles needed
      for region-model inputs/calibrations.
      
      
@@ -202,6 +201,7 @@ class SourceRepository(object):
         
         Parameters:
         input_source_types: list of source types to retrieve (precipitation,temperature..)
+        
         utc_period: the utc time period that should (as a minimum) be covered.
         return { "precipitation": shyft.api.GeoLocatedPrecipitation etc..}
         

@@ -7,7 +7,11 @@ from shyft.api.pt_gs_k import PTGSKModel
 
 
 class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
-
+    """ Verify that yaml-based config, with netcdf data
+        can provide ready made shyft models extracted from
+        configuration at region-model level, (parameters)
+        cell properties ( geo_cell_data, mid_point, elevation etc..
+    """
     def test_construct_repository(self):
         rcf = path.join(path.dirname(__file__), "netcdf", "region.yaml")
         mcf = path.join(path.dirname(__file__), "netcdf", "model.yaml")
