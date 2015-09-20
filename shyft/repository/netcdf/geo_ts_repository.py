@@ -108,3 +108,14 @@ class NetCDFGeoTsRepository(GeoTsRepository):
                 acc_data.append(data_source)
             data[input_source] = source_api.vector_t(acc_data)
         return data
+    
+    def get_forecast(self, input_source_types,geo_location_criteria, utc_period):
+        """
+        Parameters:
+        see get_timeseries
+        semantics for utc_period: Get the forecast closest up to utc_period.start
+        """
+        raise NotImplementedError("get_forecast")
+    
+    def get_forecast_ensemble(self, input_source_types, geo_location_criteria,utc_period):
+        raise NotImplementedError("get_forecast_ensemble")

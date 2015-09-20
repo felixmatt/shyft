@@ -209,7 +209,7 @@ class GeoTsRepository(object):
         pass
     
     @abstractmethod
-    def get_forecast(self, input_source_types, utc_period):
+    def get_forecast(self, input_source_types,geo_location_criteria, utc_period):
         """
         Parameters:
         see get_timeseries
@@ -218,6 +218,6 @@ class GeoTsRepository(object):
         pass
     
     @abstractmethod
-    def get_forecast_ensemble(self, input_source_types, utc_period):
+    def get_forecast_ensemble(self, input_source_types, geo_location_criteria,utc_period):
         pass
     
