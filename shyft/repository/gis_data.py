@@ -22,7 +22,7 @@ class GisDataFetchError(Exception): pass
 
 class BaseGisDataFetcher(object):
 
-    def __init__(self, geometry=None, server_name=None, server_port=None, service_index=None, epsg_id=32632):
+    def __init__(self, geometry=None, server_name=None, server_port=None, service_index=None, epsg_id=32633):
         self.server_name = server_name
         self.server_port = server_port
         self.service_index = service_index
@@ -76,7 +76,7 @@ class BaseGisDataFetcher(object):
 
 class LandTypeFetcher(BaseGisDataFetcher):
 
-    def __init__(self, geometry=None, epsg_id=32632):
+    def __init__(self, geometry=None, epsg_id=32633):
         super(LandTypeFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=0, epsg_id=epsg_id)
         self.name_to_layer_map = {"glacier":0,"forest":1,"lake":2}
         self.query["outFields"]="OBJECTID"
@@ -121,7 +121,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
 
 class ReservoirFetcher(BaseGisDataFetcher):
 
-    def __init__(self, geometry=None, epsg_id=32632):
+    def __init__(self, geometry=None, epsg_id=32633):
         super(ReservoirFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=5, epsg_id=epsg_id)
         self.query["where"]="1 = 1"
         self.query["outFields"]="OBJECTID"
@@ -141,45 +141,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
             points.append(Point(x, y))
         return points
 
-
 class CatchmentFetcher(BaseGisDataFetcher):
-
-    def __init__(self, geometry=None, indices=None, extract_all=False, epsg_id=32632):
-        super(CatchmentFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=3, epsg_id=epsg_id)
-        self.indices = indices
-        if self.indices:
-            self.query["where"] = "VANNKVNR IN ({})".format(", ".join([str(i) for i in indices]))
-        else:
-            self.query["where"] = "1 = 1"
-        self.query["outFields"] = "VANNKVNR, DELFELTNR, VANNKVNAVN"
-
-    def build_query(self, **kwargs):
-        q = self.get_query(kwargs.pop("geometry", None))
-        indices = kwargs.pop("indices", None)
-        if indices:
-            q["where"] = "VANNKVNR IN ({})".format(", ".join([str(i) for i in indices]))
-        return q
-
-    def fetch(self, **kwargs):
-        q = self.build_query(**kwargs)
-        response = requests.get(self.url, params=q)
-        if response.status_code != 200:
-            raise GisDataFetchError("Could not fetch catchment index data from gis server.")
-        data = response.json()
-        #from IPython.core.debugger import Tracer; Tracer()()
-        polygons = {}
-        for feature in data['features']:
-            c_id = feature['attributes']['VANNKVNR']
-            shell = feature["geometry"]["rings"][0]
-            holes = feature["geometry"]["rings"][1:]
-            polygon = Polygon(shell=shell, holes=holes)
-            if polygon.is_valid:
-                if not c_id in polygons:
-                    polygons[c_id] = []
-                polygons[c_id].append(polygon) 
-        return {key: cascaded_union(polygons[key]) for key in polygons if polygons[key]}
-
-class CatchmentFetcher2(BaseGisDataFetcher):
 
     def __init__(self, catchment_type, identifier, geometry=None, indices=None, extract_all=False, epsg_id=32632):
         if (catchment_type=='regulated'):
@@ -190,7 +152,7 @@ class CatchmentFetcher2(BaseGisDataFetcher):
             #self.identifier = 'FELTNR'
         else:
             raise GisDataFetchError("Undefined catchment type {} - use either regulated or unregulated".format(catchment_type))
-        super(CatchmentFetcher2, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=service_index, epsg_id=epsg_id)
+        super(CatchmentFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=service_index, epsg_id=epsg_id)
         self.identifier = identifier       
         self.indices = indices
         if self.indices:
@@ -228,101 +190,7 @@ class CatchmentFetcher2(BaseGisDataFetcher):
 
 class CellDataFetcher(object):
 
-    def __init__(self, x0, y0, dx, dy, nx, ny, indices, epsg_id=32632):
-        self.x0 = x0
-        self.y0 = y0
-        self.dx = dx
-        self.dy = dy
-        self.nx = nx
-        self.ny = ny
-        self.indices = indices
-        server_name="oslwvagi001q"
-        server_port="6080"  
-        self.cell_data = {}
-        self.catchment_land_types = {}
-        self.epsg_id = epsg_id
-
-    def fetch(self):
-        from shapely.prepared import prep
-        catchment_fetcher = CatchmentFetcher(geometry=self.geometry, indices=self.indices, epsg_id=self.epsg_id)
-        catchments = catchment_fetcher.fetch()
-
-        # Construct cells and populate with elevations from tdm
-        dtm_fetcher = DTMFetcher(self.x0, self.y0, self.dx, self.dy, self.nx, self.ny, epsg_id=self.epsg_id)
-        elevations = dtm_fetcher.fetch()
-        cells = []
-        for i in xrange(self.nx):
-            for j in xrange(self.ny):
-                cells.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[self.ny-j-1,i]))) 
-        catchment_land_types = {}
-        catchment_cells = {}
-
-        # Filter all data with each catchment
-        ltf = LandTypeFetcher()
-        rf = ReservoirFetcher()
-        all_reservoir_coords=rf.fetch(geometry=self.geometry);
-        all_glaciers=ltf.fetch(name="glacier",geometry=self.geometry)
-        prep_glaciers=prep(all_glaciers)
-        all_lakes   =ltf.fetch(name="lake",geometry=self.geometry)
-        prep_lakes= prep(all_lakes)
-        all_forest  =ltf.fetch(name="forest",geometry=self.geometry)
-        prep_forest=prep(all_forest)
-        print "Doing catchment loop, n reservoirs", len(all_reservoir_coords)
-        for catchment_id, catchment in catchments.iteritems():
-            if not catchment_id in catchment_land_types: # SiH: default landtype, plus the special ones fetched below
-                catchment_land_types[catchment_id] = {}
-            if prep_lakes.intersects(catchment):
-                lake_in_catchment = all_lakes.intersection(catchment)
-                if isinstance(lake_in_catchment, (Polygon, MultiPolygon)):
-                    reservoir_list=[]
-                    for rsv_point in all_reservoir_coords:
-                        for lake in lake_in_catchment:
-                            if lake.contains(rsv_point):
-                                reservoir_list.append(lake)
-                    if reservoir_list:
-                        reservoir= MultiPolygon(reservoir_list)
-                        catchment_land_types[catchment_id]["reservoir"] = reservoir
-                        catchment_land_types[catchment_id]["lake"] = lake_in_catchment.difference(reservoir)
-                    else:
-                        catchment_land_types[catchment_id]["lake"]=lake_in_catchment
-            if prep_glaciers.intersects(catchment):
-                glacier_in_catchment=all_glaciers.intersection(catchment)
-                if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
-                    catchment_land_types[catchment_id]["glacier"]=glacier_in_catchment
-            if prep_forest.intersects(catchment):
-                forest_in_catchment= all_forest.intersection(catchment)
-                if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
-                    catchment_land_types[catchment_id]["forest"]=forest_in_catchment
-
-
-            catchment_cells[catchment_id] = []
-            for cell, elevation in cells: 
-                if cell.intersects(catchment):
-                    catchment_cells[catchment_id].append((cell.intersection(catchment), elevation))
-
-        # Gather cells on a per catchment basis, and compute the area fraction for each landtype
-        print "Done with catchment cell loop, calc fractions"
-        cell_data = {}
-        for catchment_id in catchments.iterkeys():
-            cell_data[catchment_id] = []
-            for cell, elevation in catchment_cells[catchment_id]:
-                data = {"cell": cell, "elevation": elevation}
-                for land_type_name, land_type_shape in catchment_land_types[catchment_id].iteritems():
-                    data[land_type_name] = cell.intersection(land_type_shape).area/cell.area
-                cell_data[catchment_id].append(data)
-        self.cell_data = cell_data
-        self.catchment_land_types = catchment_land_types
-        self.elevation_raster = elevations
-        print "Done constructing cell-data and landtypes"
-        return {"cell_data": self.cell_data, "catchment_land_types": self.catchment_land_types, "elevation_raster": self.elevation_raster}
-
-    @property
-    def geometry(self):
-        return [self.x0, self.y0, self.x0 + self.dx*self.nx , self.y0 + self.dy*self.ny]
-
-class CellDataFetcher2(object):
-
-    def __init__(self, catchment_type, identifier, x0, y0, dx, dy, nx, ny, indices, epsg_id=32632):
+    def __init__(self, catchment_type, identifier, x0, y0, dx, dy, nx, ny, indices, epsg_id=32633):
         self.catchment_type=catchment_type
         self.identifier=identifier
         self.x0 = x0
@@ -338,7 +206,7 @@ class CellDataFetcher2(object):
 
     def fetch(self):
         from shapely.prepared import prep
-        catchment_fetcher = CatchmentFetcher2(self.catchment_type, self.identifier, geometry=self.geometry, indices=self.indices, epsg_id=self.epsg_id)
+        catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier, geometry=self.geometry, indices=self.indices, epsg_id=self.epsg_id)
         catchments = catchment_fetcher.fetch()
 
         # Construct cells and populate with elevations from tdm
@@ -491,31 +359,8 @@ def add_plot_polygons(ax, polygons, color):
     patches = imap(PolygonPatch, [p for p in ps])
     ax.add_collection(PatchCollection(patches, facecolors=(color,), linewidths=0.1, alpha=0.3))
 
-def run_cell_example(x0, y0, dx, dy, nx, ny, indices):
-    cf = CellDataFetcher(x0, y0, dx, dy, nx, ny, indices=indices)
-    print "Start fetching data"
-    cf.fetch()
-    print "Done, now preparing plot"
-    # Plot the extracted data
-    fig, ax = plt.subplots(1)
-    color_map = {"forest": 'g', "lake": 'b', "glacier": 'r', "cell": "0.75", "reservoir": "purple"}
-
-    extent = cf.geometry[0], cf.geometry[2], cf.geometry[1], cf.geometry[3]
-    ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
-
-    for catchment_cells in cf.cell_data.itervalues():
-        add_plot_polygons(ax, [cell["cell"] for cell in catchment_cells], color=color_map["cell"])
-    for catchment_land_type in cf.catchment_land_types.itervalues():
-        for k,v in catchment_land_type.iteritems():
-            add_plot_polygons(ax, v, color=color_map[k])
-
-    geometry = cf.geometry
-    ax.set_xlim(geometry[0], geometry[2])
-    ax.set_ylim(geometry[1], geometry[3])
-    plt.show()
-
-def run_cell_example2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,epsg_id):
-    cf = CellDataFetcher2(catchment_type,identifier,x0, y0, dx, dy, nx, ny, indices=catch_indicies,epsg_id=epsg_id)
+def run_cell_example(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,epsg_id):
+    cf = CellDataFetcher(catchment_type,identifier,x0, y0, dx, dy, nx, ny, indices=catch_indicies,epsg_id=epsg_id)
     print "Start fetching data"
     cf.fetch()
     print "Done, now preparing plot"
@@ -546,11 +391,11 @@ def nea_nidelv_example(epsg_id):
     ny = 75
     # test fetching for regulated catchments using CATCH_ID
     indices=[1228,1308,1394,1443,1726,1867,1996,2041,2129,2195,2198,2277,2402,2446,2465,2545,2640,2718,3002,3536,3630,1000010,1000011]
-    run_cell_example2('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    run_cell_example('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
     # test fetching for regulated catchments using POWER_PLANT_ID
     ##indices=[38, 87, 115, 188, 259, 291, 292, 295, 389, 465, 496, 516, 551, 780]
     #indices=[38,115,137,188,291,292,389,465,496,551,780,1371,1436]   
-    #run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    #run_cell_example('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
     # test fetching for unregulated catchments using FELTNR
     #indices=[1691,1686]
     #run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
@@ -564,10 +409,10 @@ def vinjevatn_example(epsg_id):
     ny = 35
     # test fetching for regulated catchments using CATCH_ID
     #indices=[2668,2936,2937,2938,2939,2940,2941,2942]
-    #run_cell_example2('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    #run_cell_example('regulated','CATCH_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
     # test fetching for regulated catchments using POWER_PLANT_ID
     indices=[446]
-    run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
+    run_cell_example('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
     # test fetching for unregulated catchments using FELTNR
     #indices=[645,702]
     #run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices,epsg_id=epsg_id)
@@ -583,22 +428,10 @@ def test_example():
     #indices = [163,287,332]
     #run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, indices)
     indices = [1225,1226]
-    run_cell_example2('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices)
-
-
-def central_region_example():
-    x0 = 340000
-    y0 = 6572000
-    dx  = 1000
-    dy  = 1000
-    nx = 122
-    ny = 95
-    indices=[446, 203]
-    run_cell_example(x0, y0, dx, dy, nx, ny, indices)
+    run_cell_example('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, indices)
 
 if __name__ == "__main__":
-    #vinjevatn_example(25833)
-    nea_nidelv_example(25833)
+    #vinjevatn_example(32633)
+    nea_nidelv_example(32633)
     #test_example()
-    #central_region_example()
     #dtm_example()
