@@ -6,7 +6,7 @@ from shyft.api.pt_gs_k import PTGSKModel
 
 
 
-class NetCDFRegionRepositoryTestCase(unittest.TestCase):
+class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
 
     def test_construct_repository(self):
         rcf = path.join(path.dirname(__file__), "netcdf", "region.yaml")
