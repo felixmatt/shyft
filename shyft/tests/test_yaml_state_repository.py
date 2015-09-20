@@ -47,17 +47,11 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         
         # arrange, by creating one State
         cal=Calendar()
-        
         utc_timestamp=cal.time(YMDhms(2001,1,1))
-        utc_timestamp_str=cal.to_string(utc_timestamp)
         region_model_id="neanidelv-ptgsk"
         n_cells=10
-        state_id= "{}_{}".format(region_model_id,utc_timestamp_str)
         tags=["initial","unverified"]
-        state_info= StateInfo(state_id, region_model_id, utc_timestamp, tags)
         state_vector=self._create_state_vector(n_cells)
-        
-        self.assertIsNotNone(state_info, "we should have a valid state info object at this spot")
         self.assertIsNotNone(state_vector, "we should have a valid state vector object at this spot")
         # now start state_repository test
         state_repository= YamlStateRepository(self._test_state_directory)
@@ -85,6 +79,43 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         self.assertEquals(state_list[0].utc_timestamp,utc_timestamp)
         self.assertEquals(state_list[0].state_id,state_id_2)
         
-            
+    def test_find_with_region_model_filter(self):
+        cal=Calendar()
+        utc_timestamp=cal.time(YMDhms(2001,1,1))
+        region_model_id="neanidelv-ptgsk"
+        n_cells=10
+        tags=["initial","unverified"]
+        state_vector=self._create_state_vector(n_cells)
+        # now start state_repository test
+        state_repository= YamlStateRepository(self._test_state_directory)
+        # put in two states, record the unique state_id..
+        state_repository.put_state(region_model_id, utc_timestamp, state_vector, tags)
+        state_repository.put_state("tokke-ptgsk", utc_timestamp, state_vector, tags)
+        all_states= state_repository.find_state()
+        neanidelv_states=state_repository.find_state(region_model_id)
+        self.assertEquals(2,len(all_states))
+        self.assertEquals(1,len(neanidelv_states))
+        self.assertEquals(neanidelv_states[0].region_model_id,region_model_id)
+        
+    def test_find_with_region_model_and_time_filter(self):
+        cal=Calendar()
+        region_model_id="neanidelv-ptgsk"
+        n_cells=10
+        tags=["initial","unverified"]
+        state_vector=self._create_state_vector(n_cells)
+        # now start state_repository test
+        state_repository= YamlStateRepository(self._test_state_directory)
+        # put in two states, record the unique state_id..
+        state_id_1=state_repository.put_state(region_model_id, cal.time(YMDhms(2001,1,1,0,0,0)), state_vector, tags)
+        state_id_2=state_repository.put_state(region_model_id, cal.time(YMDhms(2001,1,2,0,0,0)), state_vector, tags)
+        all_states= state_repository.find_state()
+        neanidelv_states=state_repository.find_state(region_model_id)
+        self.assertEquals(2,len(all_states))
+        self.assertEquals(2,len(neanidelv_states))
+        most_recent_state_before_time=state_repository.find_state(region_model_id,cal.time(YMDhms(2001,1,1,0,0,0)))
+        self.assertEquals(1,len(most_recent_state_before_time))
+        self.assertEquals(state_id_1,most_recent_state_before_time[0].state_id)
+        self.assertEquals(0,len(state_repository.find_state(region_model_id,cal.time(YMDhms(2000,12,31,23,59,59)))))
+        self.assertEquals(state_id_2,state_repository.find_state(region_model_id,cal.time(YMDhms(2002,1,1,0,0,0)))[0].state_id)
         
         

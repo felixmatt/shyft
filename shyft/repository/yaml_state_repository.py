@@ -153,25 +153,38 @@ class YamlStateRepository(StateRepository):
             return None
                                            
         
-    def find_state(self,region_model_id_criteria=None,utc_period_criteria=None,tag_criteria=None):
+    def find_state(self,region_model_id_criteria=None,utc_timestamp_criteria=None,tag_criteria=None):
         """ Find the states in the repository that matches the specified criterias
          (note: if we provide match-lambda type, then it's hard to use a db to do the matching)
          
         Parameters
-        region_model_id_criteria: match-lambda, or specific string, list of strings 
-        utc_period_criteria: match-lambda, or period
+        region_model_id_criteria: exact match string (could be extended) 
+        utc_timestamp_criteria:  require region_model_id criteria, if spec. return state with highest possible time before critera
         tag_criteria: match-lambda, or list of strings ?
          
         return list of StateInfo objects that matches the specified criteria
         """
-         
+        if utc_timestamp_criteria is not None and region_model_id_criteria is None:
+            raise StateRepositoryError("You have to specify a region_model_id AND a utc_timestamp_critera")
+        
         file_list=get_state_file_list(self._directory_path,self._file_pattern)
         res=[]
         for filename in file_list:
             si= self._state_info_from_filename(os.path.basename(filename))
             if si is not None:
-                res.append(si)
-        #TODO add criteria matching
+                if region_model_id_criteria is None or si.region_model_id == region_model_id_criteria :
+                    res.append(si)
+            # NOTE: in this implementation you have to specify regon_model_id AND time_spec..
+        if len(res)>0 and utc_timestamp_criteria is not None: # find state with max.utc_timestamp <= criteria
+            item=None
+            for e in res :
+                if e.utc_timestamp <= utc_timestamp_criteria:
+                    if item is None or ( e.utc_timestamp > item.utc_timestamp ):
+                        item=e
+            if item is None:
+                res=[]
+            else:
+                res=[item]
         return res
 
     def get_state(self, state_id):
