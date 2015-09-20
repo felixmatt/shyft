@@ -27,7 +27,20 @@ def abs_datafilepath(filepath):
 class NetCDFGeoTsRepository(GeoTsRepository):
     
     def __init__(self,params, metstation_filepath,discharge_filepath):
-        """ """
+        """
+        Parameters:
+        params is a structure with the following layout
+            types list of
+              type (precipitation|temperature|relative_humidity|wind_speed ..) 
+              list of stations
+                values: netcdf (group)/variablename of the values, e.g. /station1/precipitation
+                time: netcdf variable for the time corresponding to values e.g. /station1/time
+                location: netcdf variables tuple(x,y,z) /station.x, /station.y,/station1.z
+            Yaml config files can be used to provide this information
+            and we have the shyft.Repository.BaseYamlConfig that provides the structure from 
+            yaml file (given the structure in the supplied yaml-files is ok
+            
+        """
         self._params=params
         self._metstation_filepath=metstation_filepath
         self._discharge_filepath=discharge_filepath
@@ -55,8 +68,8 @@ class NetCDFGeoTsRepository(GeoTsRepository):
                     tpath=station['time'].split('/')[1:] # v1 time, the first one is empty
                     vpath=station['values'].split('/')[1:]
                     times = dset.groups[tpath[0]].variables[tpath[1]][:]#variables[station['time']][:]
-                    imin = times.searchsorted(period[0], side='left')
-                    imax = times.searchsorted(period[1], side='right')
+                    imin = times.searchsorted(period.start, side='left')
+                    imax = times.searchsorted(period.end, side='right')
                     # Get the indices of the valid period
                     tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
                     tseries['time'] = times[imin:imax].astype(np.long).tolist()
