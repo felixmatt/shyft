@@ -69,14 +69,15 @@ class NetCDFGeoTsRepository(GeoTsRepository):
         print(len(stations_ts), input_source, 'series found.')
         return stations_ts
 
-    def get_timeseries(self, input_source_types, utc_period):
+    def get_timeseries(self, input_source_types, geo_location_criteria, utc_period):
         """Method for fetching the sources in NetCDF files.
 
         Parameters
         ----------
         input_source_types : dict
             A map between the data to be extracted and the data containers in shyft.api.
-        period : UtcPeriod
+        geo_location_criteria: bbox + proj.ref ?
+        utc_period : of type UtcPeriod
 
         Returns
         -------

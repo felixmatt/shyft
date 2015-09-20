@@ -196,12 +196,12 @@ class GeoTsRepository(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_timeseries(self, input_source_types, utc_period):
+    def get_timeseries(self, input_source_types,geo_location_criteria, utc_period):
         """
         
         Parameters:
         input_source_types: list of source types to retrieve (precipitation,temperature..)
-        
+        geo_location_criteria: some type (to be decided), extent (bbox + coord.ref)
         utc_period: the utc time period that should (as a minimum) be covered.
         return { "precipitation": shyft.api.GeoLocatedPrecipitation etc..}
         
