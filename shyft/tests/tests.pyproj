@@ -24,6 +24,7 @@
     <Compile Include="test_netcdf.py" />
     <Compile Include="test_netcdf_geo_ts_repository.py" />
     <Compile Include="test_netcdf_region_model_repository.py" />
+    <Compile Include="test_ssa_geo_ts_repository.py" />
     <Compile Include="test_yaml_state_repository.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>

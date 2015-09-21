@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from os import path
 from shyft import shyftdata_dir
 from shyft.repository.netcdf.geo_ts_repository import GeoTsRepository
@@ -9,7 +9,7 @@ from shyft.api import UtcPeriod
 from shyft.api import TemperatureSource
 
 
-class NetCDFSourceRepositoryTestCase(unittest.TestCase):
+class NetCDFGeoTsRepositoryTestCase(unittest.TestCase):
     """
     Verify that we correctly can read geo-located timeseries from a netCDF
     based file-store.

@@ -25,9 +25,9 @@ from shyft import api
 import numpy as np
 
 import abc
-from shyft.repository.base_repository import BaseRepository
+#from shyft.repository.base_repository import BaseRepository
 
-from shyft.repository.base_repository import BaseTimeSeriesRepository
+#from shyft.repository.base_repository import BaseTimeSeriesRepository
 
 
 class SmgDataError(Exception):
@@ -72,7 +72,7 @@ class SmgDataFetcher(object):
 
 
 
-class SmGTsRepository(BaseTimeSeriesRepository):
+class SmGTsRepository(object):
     def __init__(self, env):
         self.env=env
 
@@ -119,7 +119,7 @@ class SmGTsRepository(BaseTimeSeriesRepository):
                     tsid=e.Key
                     mi= MetaInfo()
                     mi.Identity=tsid
-                    mi.Description='Automatically created by enki '
+                    mi.Description='Automatically created by shyft '
                     # Here we might fill in some properties to the created timeseries
                     # e.g. unit, if we could figure out that
                     missing_list.Add(mi)
@@ -216,10 +216,10 @@ class TestSmgRepository(unittest.TestCase):
         [self.assertAlmostEqual(shyft_ts.time(i),ssa_ts.Time(i).ToUnixTime()) for i in xrange(shyft_ts.size())]
         
     
-    def test_is_type_of_BaseTimeSerieRepository(self):
-        ds=SmGTsRepository(PREPROD)
-        self.assertTrue(issubclass(SmGTsRepository,BaseTimeSeriesRepository))
-        self.assertTrue(isinstance(ds,BaseTimeSeriesRepository))
+    #def test_is_type_of_BaseTimeSerieRepository(self):
+    #    ds=SmGTsRepository(PREPROD)
+    #    self.assertTrue(issubclass(SmGTsRepository,BaseTimeSeriesRepository))
+    #    self.assertTrue(isinstance(ds,BaseTimeSeriesRepository))
 
     def test_store(self):
         ds=SmGTsRepository(PREPROD)

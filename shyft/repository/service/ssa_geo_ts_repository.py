@@ -1,13 +1,97 @@
 ﻿from __future__ import print_function
+from __future__ import absolute_import
 import os
 from shyft import api
-from base_repository import BaseRepository
+from .. import interfaces
+
+class GeoTsRepository(interfaces.GeoTsRepository):
+    """
+    Statkraft Script Api version of  for GeoTsRepository (Geo Located Timeseries) objects.
+
+    Provide a GeoTsRepository by means of services for 
+       * timeseries/forecasts/ensembles: Powel SmG through Statkraft Script Api
+       * geo-locations : ESRI arc GIS, and custom published services 
+
+    These are tied together using configuration classes ( interfaces, but with yaml-implementations in real life)
+    that provide data-sets with mapping of time-series and consistent geo-locations.
 
 
-class InputSourceRepository(BaseRepository):
+    Usage
+    -----
+    when constructing the GeoTsRepository,
+     pass the following parameters: 
+       
+       1. GIS-service-endpoints , smg db-service (prod/preprod, role/username)
+          we need those, so we can select prod/preprod etc.
+
+       2. List of "met-station" items for observations/forecasts..
+         gis-id : <unique id> we use to get x,y,z from GIS-location-service
+         then a list of features(all optional, could be empty, each feature just one series)
+           temperature  : <smg ts-id>
+           precipitation: <smg ts-id>
+           wind_speed   : <smg ts-id>
+           radiation    : <smg ts-id>
+           rel_humidity : <smg ts-id>
+            :
+
+       3.? List of catchments with observed discharge (calibration, and common sense/presentation etc)
+         gis-id: <unique-id> that could be used to get the shape etc. in GIS-catchment service (but we don't need the location here)
+                              we are more interested in the correlation between catchment-discharge time-series.
+           discharge    : <smg ts-id>  
+
+    """
+
+    def __init__(self):
+        pass
+
+
+    def get_timeseries(self, input_source_types,
+                       geo_location_criteria, utc_period):
+        """
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve (precipitation,temperature..)
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+
+        Returns
+        -------
+        geo_loc_ts: dictionary
+            dictionary keyed by ts type, where values are api vectors of geo
+            located timeseries.
+        """
+        pass
+
+    def get_forecast(self, input_source_types,
+                     geo_location_criteria, utc_period):
+        """
+        Parameters
+        ----------
+        See get_timeseries
+            Semantics for utc_period: Get the forecast closest up to
+            utc_period.start
+        Returns
+        -------
+        forecast: same layout/type as for get_timeseries
+        """
+        pass
+
+    def get_forecast_ensemble(self, input_source_types,
+                              geo_location_criteria, utc_period):
+        """
+        Returns
+        -------
+        ensemble: list of same type as get_timeseries
+        """
+        pass
+
+class InputSourceRepository(object):
 
     def __init__(self, *args, **kwargs):
-        super(InputSourceRepository, self).__init__()
+        #super(InputSourceRepository, self).__init__()
         self.input_source_types = {"temperature": api.TemperatureSource,
                                    "precipitation": api.PrecipitationSource,
                                    "radiation": api.RadiationSource,

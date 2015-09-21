@@ -1,4 +1,4 @@
-
+﻿
 from abc import ABCMeta, abstractmethod
 
 """Module description: This module contain the abstract base-classes for the
@@ -22,7 +22,8 @@ repositories for
 * state         - for reading region model-state, cell-level (snapshot of
                   internal state variables of the models).
 
-* time-series  - for input observations,forecasts, run-off time-series, that is
+* geo-located time-series  
+                - for input observations,forecasts, run-off time-series, that is
                  useful/related to the region model. E.g. precipitation,
                  temperature, radiation, wind-speed, relative humidity and even
                  measured run-off, and other time-series that can be utilized
