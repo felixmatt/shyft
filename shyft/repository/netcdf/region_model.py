@@ -1,26 +1,36 @@
 """
-    Module for reading region netCDF files needed for an SHyFT run.
-    note: it do require a specific content/layout of the supplied netcdf files
-          this should be clearly stated
+Read region netCDF files with cell data.
+Note: It does require a specific content/layout of the supplied netcdf files
+      this should be clearly stated.
 """
 
 from __future__ import absolute_import
 
 import numpy as np
 from netCDF4 import Dataset
-from .. import interfaces 
-from ..yaml_config import BaseYamlConfig
-#from ..base_config import BaseRegion
-#from ..base_config import RegionModelRepository
-#from ..base_config import BaseAncillaryConfig
+from .. import interfaces
 from shyft import api
 
 
 class RegionModelRepository(interfaces.RegionModelRepository):
 
-    def __init__(self, region_config_file, model_config_file, data_file):
-        self._rconf = BaseYamlConfig(region_config_file)
-        self._mconf = BaseYamlConfig(model_config_file)
+    def __init__(self, region_config, model_config, data_file):
+        """
+        Parameters
+        ----------
+        region_config: subclass of interfaces.RegionConfig
+            Object containing regional information, like
+            catchment overrides, and which netcdf file to read
+        model_config: subclass of interfaces.ModelConfig
+            Object containing model information, i.e.
+            information concerning interpolation and model
+            parameters
+        """
+        if not isinstance(region_config, interfaces.RegionConfig) or \
+           not isinstance(model_config, interfaces.ModelConfig):
+            raise interfaces.InterfaceError()
+        self._rconf = region_config
+        self._mconf = model_config
         self._mask = None
         self._data_file = data_file
 
@@ -51,16 +61,20 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             catchments = dset.groups['catchments'].variables[
                 "catchments"][:].reshape(-1)[self.mask]
             c_ids = dset.groups['catchments'].variables["catchment_indices"][:]
-            ff = dset.groups["forest-fraction"].variables["forest-fraction"][:].reshape(-1)[self.mask]
-            lf = dset.groups["lake-fraction"].variables["lake-fraction"][:].reshape(-1)[self.mask]
-            rf = dset.groups["reservoir-fraction"].variables["reservoir-fraction"][:].reshape(-1)[self.mask]
-            gf = dset.groups["glacier-fraction"].variables["glacier-fraction"][:].reshape(-1)[self.mask]
+
+            def frac_extract(name):
+                g = dset.groups  # Alias for readability
+                return g[name].variables[name][:].reshape(-1)[self.mask]
+            ff = frac_extract("forest-fraction")
+            lf = frac_extract("lake-fraction")
+            rf = frac_extract("reservoir-fraction")
+            gf = frac_extract("glacier-fraction")
         # Construct region parameter:
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
                     "skaugen": "skaugen"}
         region_parameter = region_model.parameter_t()
-        for p_type_name, value_ in self._mconf.parameters["model"].iteritems():
+        for p_type_name, value_ in self._mconf.model_parameters().iteritems():
             if p_type_name in name_map:
                 sub_param = getattr(region_parameter, name_map[p_type_name])
                 for p, v in value_.iteritems():
@@ -73,16 +87,18 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
         # Construct cells
         cell_vector = region_model.cell_t.vector_t()
-        for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments, ff, lf, rf, gf):
+        for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments,
+                                               ff, lf, rf, gf):
             cell = region_model.cell_t()
             cell.geo = api.GeoCellData(api.GeoPoint(*pt),
                                        a, c_id, radiation_slope_factor,
-                                       api.LandTypeFractions(gf, lf, rf, ff, 0.0))
+                                       api.LandTypeFractions(gf, lf, rf,
+                                                             ff, 0.0))
             cell_vector.append(cell)
 
         # Construct catchment overrides
         catchment_parameters = region_model.parameter_t.map_t()
-        for k, v in self._rconf.parameter_overrides.iteritems():
+        for k, v in self._rconf.parameter_overrides().iteritems():
             if k in c_ids:
                 param = region_model.parameter_t(region_parameter)
                 for p_type_name, value_ in v.iteritems():
@@ -93,6 +109,5 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param
-        return region_model(cell_vector, region_parameter, catchment_parameters)
-
-
+        return region_model(cell_vector, region_parameter,
+                            catchment_parameters)

@@ -1,19 +1,16 @@
 """
-Module for reading netcdf dataset with a specific layout needed for an SHyFT run.
+Module for reading netcdf dataset with a specific layout needed for a
+SHyFT run.
 """
 
 from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-
 import numpy as np
 from netCDF4 import Dataset
-
-from ..interfaces import GeoTsRepository
+from .. import interfaces
 from shyft import api, shyftdata_dir
-#from ..utils import abs_datafilepath
-
 
 
 def abs_datafilepath(filepath):
@@ -24,27 +21,33 @@ def abs_datafilepath(filepath):
     else:
         return os.path.join(shyftdata_dir, filepath)
 
-class NetCDFGeoTsRepository(GeoTsRepository):
-    
-    def __init__(self,params, metstation_filepath,discharge_filepath):
+
+class GeoTsRepository(interfaces.GeoTsRepository):
+
+    def __init__(self, params, metstation_filepath, discharge_filepath):
         """
-        Parameters:
-        params is a structure with the following layout
-            types list of
-              type (precipitation|temperature|relative_humidity|wind_speed ..) 
-              list of stations
-                values: netcdf (group)/variablename of the values, e.g. /station1/precipitation
-                time: netcdf variable for the time corresponding to values e.g. /station1/time
-                location: netcdf variables tuple(x,y,z) /station.x, /station.y,/station1.z
-            Yaml config files can be used to provide this information
-            and we have the shyft.Repository.BaseYamlConfig that provides the structure from 
-            yaml file (given the structure in the supplied yaml-files is ok
-            
+        Parameters
+        ----------
+        params: dict
+            key "types" contains a dict list with
+              "type": string, any of
+                precipitation, temperature, relative_humidity, wind_speed, ...
+              "stations": list of dictionaries with:
+                values: netcdf (group)/variablename of the values
+                    e.g. /station1/precipitation
+                time: netcdf variable for the time corresponding to values
+                    e.g. /station1/time
+                location: netcdf variables tuple(x,y,z)
+                    /station.x, /station.y,/station1.z
+            Yaml config files can be used to provide this information and we
+            have the shyft.Repository.BaseYamlConfig that provides the
+            structure from yaml file (given the structure in the supplied
+            yaml-files is ok).
         """
-        self._params=params
-        self._metstation_filepath=metstation_filepath
-        self._discharge_filepath=discharge_filepath
-        
+        self._params = params
+        self._metstation_filepath = metstation_filepath
+        self._discharge_filepath = discharge_filepath
+
     @property
     def _stations_met(self):
         return abs_datafilepath(self._metstation_filepath)
@@ -55,7 +58,8 @@ class NetCDFGeoTsRepository(GeoTsRepository):
 
     def __repr__(self):
         return "%s(metstation_filepath=%r, discharge_filepath=%r)" % (
-            self.__class__.__name__, self._metstation_filepath,  self._discharge_filepath)
+            self.__class__.__name__, self._metstation_filepath,
+            self._discharge_filepath)
 
     def _fetch_station_tseries(self, input_source, types, period):
         stations_ts = []
@@ -65,9 +69,9 @@ class NetCDFGeoTsRepository(GeoTsRepository):
                     continue
                 for station in type_['stations']:
                     tseries = {}
-                    tpath=station['time'].split('/')[1:] # v1 time, the first one is empty
-                    vpath=station['values'].split('/')[1:]
-                    times = dset.groups[tpath[0]].variables[tpath[1]][:]#variables[station['time']][:]
+                    tpath = station['time'].split('/')[1:]  # v1 time, the first one is empty
+                    vpath = station['values'].split('/')[1:]
+                    times = dset.groups[tpath[0]].variables[tpath[1]][:]  # variables[station['time']][:]
                     imin = times.searchsorted(period.start, side='left')
                     imax = times.searchsorted(period.end, side='right')
                     # Get the indices of the valid period
@@ -95,15 +99,17 @@ class NetCDFGeoTsRepository(GeoTsRepository):
         Returns
         -------
         data: dict
-            Shyft.api container for geo-located time series. Types are found from the 
+            Shyft.api container for geo-located time series. Types are found from the
             input_source_type.vector_t attribute.
 
         """
-        #self.__dict__.update(params)
+        # self.__dict__.update(params)
         data = dict()
         # Fill the data with actual values
         for input_source, source_api in input_source_types.iteritems():
-            ts = self._fetch_station_tseries(input_source, self._params['types'], utc_period)
+            ts = self._fetch_station_tseries(input_source,
+                                             self._params['types'],
+                                             utc_period)
             assert type(ts) is list
             tsf = api.TsFactory()
             acc_data = []
@@ -121,14 +127,16 @@ class NetCDFGeoTsRepository(GeoTsRepository):
                 acc_data.append(data_source)
             data[input_source] = source_api.vector_t(acc_data)
         return data
-    
-    def get_forecast(self, input_source_types,geo_location_criteria, utc_period):
+
+    def get_forecast(self, input_source_types,
+                     geo_location_criteria, utc_period):
         """
         Parameters:
         see get_timeseries
         semantics for utc_period: Get the forecast closest up to utc_period.start
         """
         raise NotImplementedError("get_forecast")
-    
-    def get_forecast_ensemble(self, input_source_types, geo_location_criteria,utc_period):
+
+    def get_forecast_ensemble(self, input_source_types, 
+                              geo_location_criteria, utc_period):
         raise NotImplementedError("get_forecast_ensemble")

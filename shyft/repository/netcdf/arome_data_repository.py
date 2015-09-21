@@ -14,7 +14,7 @@ from shyft.api import RadiationSource
 from shyft.api import GeoPoint
 
 
-class AromeDataRepositoryException(Exception):
+class AromeDataRepositoryError(Exception):
     pass
 
 
@@ -257,7 +257,7 @@ class AromeDataRepository(object):
         """
         if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
            np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
-            raise AromeDataRepositoryException()
+            raise AromeDataRepositoryError()
         self.time_series.update(other.time_series)
 
     def get_sources(self, keys=None):
