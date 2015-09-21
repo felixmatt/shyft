@@ -2,11 +2,11 @@
 import os
 from datetime import datetime
 import collections
-from shyft.orchestration.repository.testsupport.mocks import MockStateRepository
-from shyft.orchestration.repository.testsupport.mocks import MockInputSourceRepository
-from shyft.orchestration.repository.testsupport.mocks import mock_state_data
-from shyft.orchestration.repository.testsupport.mocks import mock_station_data
-from shyft.orchestration.repository.testsupport.mocks import mock_cell_data
+from shyft.repository.testsupport.mocks import MockStateRepository
+from shyft.repository.testsupport.mocks import MockInputSourceRepository
+from shyft.repository.testsupport.mocks import mock_state_data
+from shyft.repository.testsupport.mocks import mock_station_data
+from shyft.repository.testsupport.mocks import mock_cell_data
 
 
 def update(d, u):

@@ -95,7 +95,7 @@ class ShyftRunner(object):
 
     def model_parameters_dict(self):
         #TODO: Replace with polymorphism
-        if self._config.model in [api.PTGSKModel, api.PTGSKOptModel]:
+        if self._config.model in [api.pt_gs_k.PTGSKModel, api.pt_gs_k.PTGSKOptModel]:
             priestley_taylor = self._model_values("priestley_taylor", "albedo", "alpha")
             gamma_snow = self._model_values("gamma_snow", "winter_end_day_of_year", "initial_bare_ground_fraction", "snow_cv", "snow_tx",
                                                 "wind_scale", "wind_const", "max_water", "surface_magnitude", "max_albedo", "min_albedo",
@@ -114,7 +114,7 @@ class ShyftRunner(object):
         ae_params = api.ActualEvapotranspirationParameter(*params["act_evap"])
         k_params = api.KirchnerParameter(*params["kirchner"])
         p_params = api.PrecipitationCorrectionParameter() #TODO; default 1.0, is it used ??
-        return api.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+        return api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
 
     def interpolation_parameters(self):
         btk_param = api.BTKParameter(*self._interpolation_values("btk", "gradient", "gradient_sd", "sill", "nugget", "range", "zscale"))
@@ -162,7 +162,7 @@ class ShyftRunner(object):
         self.cell_map.append((idx_x, idx_y))
 
     def build_cells(self):
-        if not self._config.model in [api.PTGSKModel, api.PTGSKOptModel]:
+        if not self._config.model in [api.pt_gs_k.PTGSKModel, api.pt_gs_k.PTGSKOptModel]:
             raise RuntimeError("Unknown model: {}".format(self._config.model))
         catchment_id = self.cell_data("catchment_id")
         geo_position = self.cell_data("geo_position")
