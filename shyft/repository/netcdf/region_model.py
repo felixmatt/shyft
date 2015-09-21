@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 import numpy as np
 from netCDF4 import Dataset
-from ..interfaces import RegionModelRepository
+from .. import interfaces 
 from ..yaml_config import BaseYamlConfig
 #from ..base_config import BaseRegion
 #from ..base_config import RegionModelRepository
@@ -16,7 +16,7 @@ from ..yaml_config import BaseYamlConfig
 from shyft import api
 
 
-class NetCDFRegionModelRepository(RegionModelRepository):
+class RegionModelRepository(interfaces.RegionModelRepository):
 
     def __init__(self, region_config_file, model_config_file, data_file):
         self._rconf = BaseYamlConfig(region_config_file)

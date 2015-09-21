@@ -182,11 +182,22 @@ class StateRepository(object):
         """ 
         Persist the state into the repository, assigning a new unique state_id,
         so that it can later be retrieved by that return state_id assigned.
+        Returns
+        -------
+        state_id: immutable id
+            can be used as argument to get_state, and you should then get back the persisted state
         """
         pass
     
     @abstractmethod
     def delete_state(self, state_id):
+        """
+        Delete the state associated with state_id,
+        Throws
+        ------
+        StateRepositoryError: if invalid state_id, or not able to delete the state (access rights)
+    
+        """
         pass
     
 
@@ -248,11 +259,19 @@ class GeoTsRepository(object):
         See get_timeseries
             Semantics for utc_period: Get the forecast closest up to
             utc_period.start
+        Returns
+        -------
+        forecast: same layout/type as for get_timeseries
         """
         pass
     
     @abstractmethod
     def get_forecast_ensemble(self, input_source_types,
                               geo_location_criteria, utc_period):
+        """
+        Returns
+        -------
+        ensemble: list of same type as get_timeseries 
+        """
         pass
     

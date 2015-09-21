@@ -53,7 +53,7 @@ class YamlStateRepository(StateRepository):
     the version number is not guaranteed to be increasing
     .. we could utilize file create/modified time
     """
-    def __init__(self,directory_path,state_serializer=PTGSKStateIo(),file_pattern="*.yaml"):
+    def __init__(self,directory_path,state_serializer=None,file_pattern="*.yaml"):
         """
         Parameters:
         directory_path should point to the directory where the state files are stored
@@ -62,8 +62,9 @@ class YamlStateRepository(StateRepository):
         """
         if not os.path.exists(directory_path):
             os.makedirs(directory_path)
+        
         self._directory_path=directory_path
-        self._sio=state_serializer
+        self._sio=state_serializer if state_serializer is not None else PTGSKStateIo()
         self._file_pattern=file_pattern
     
     def _get_state_file_list(self,state_directory,glob_pattern):

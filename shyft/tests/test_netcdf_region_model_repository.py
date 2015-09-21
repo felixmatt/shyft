@@ -1,7 +1,7 @@
 import unittest
 from os import path
 from shyft import shyftdata_dir
-from shyft.repository.netcdf.region_model import NetCDFRegionModelRepository as RegionModelRepository
+from shyft.repository.netcdf.region_model import RegionModelRepository 
 from shyft.api.pt_gs_k import PTGSKModel
 
 
