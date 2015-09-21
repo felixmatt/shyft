@@ -331,7 +331,7 @@ class ModelConfig(object):
         Returns
         -------
         parameters: dict
-            parameters for the various interpolation routines
+            Parameters for the various interpolation routines
         """
         pass
 
@@ -341,7 +341,7 @@ class ModelConfig(object):
         Returns
         -------
         parameters: dict
-            parameters for the method stack
+            Parameters for the method stack
         """
         pass
 

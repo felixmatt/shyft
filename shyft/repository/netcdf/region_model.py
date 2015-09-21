@@ -6,15 +6,17 @@ Note: It does require a specific content/layout of the supplied netcdf files
 
 from __future__ import absolute_import
 
+from os import path
 import numpy as np
 from netCDF4 import Dataset
 from .. import interfaces
 from shyft import api
+from shyft import shyftdata_dir
 
 
 class RegionModelRepository(interfaces.RegionModelRepository):
 
-    def __init__(self, region_config, model_config, data_file):
+    def __init__(self, region_config, model_config):
         """
         Parameters
         ----------
@@ -32,7 +34,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         self._rconf = region_config
         self._mconf = model_config
         self._mask = None
-        self._data_file = data_file
+        self._data_file = path.join(shyftdata_dir, self._rconf.repository()["data_file"])
 
     @property
     def mask(self):

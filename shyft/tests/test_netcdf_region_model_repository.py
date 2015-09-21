@@ -10,17 +10,14 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
     """ Verify that yaml-based config, with netcdf data
         can provide ready made shyft models extracted from
         configuration at region-model level, (parameters)
-        cell properties ( geo_cell_data, mid_point, elevation etc..
+        cell properties (geo_cell_data, mid_point, elevation etc..)
     """
     def test_construct_repository(self):
         reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),
                                             "netcdf", "region.yaml"))
         mod_conf = yaml_config.ModelConfig(path.join(path.dirname(__file__),
                                            "netcdf", "model.yaml"))
-        df = path.join(shyftdata_dir, "netcdf", "orchestration-testdata",
-                       "cell_info.nc")
-        region_model_repository = RegionModelRepository(reg_conf, mod_conf, df)
-        self.assertTrue(path.isfile(df))
+        region_model_repository = RegionModelRepository(reg_conf, mod_conf)
         self.assertIsNotNone(region_model_repository.mask)
         region_model = \
             region_model_repository.get_region_model("NeaNidelv_PTGSK",
