@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+﻿from __future__ import absolute_import
 
 from .interfaces import StateInfo, StateRepository
 
@@ -66,6 +66,7 @@ class YamlStateRepository(StateRepository):
         self._directory_path=directory_path
         self._sio=state_serializer if state_serializer is not None else PTGSKStateIo()
         self._file_pattern=file_pattern
+        self._filename_item_separator="@" # we encode the filename with info separated by this 
     
     def _get_state_file_list(self,state_directory,glob_pattern):
         full_path=""
@@ -102,13 +103,14 @@ class YamlStateRepository(StateRepository):
             notice that we encode part of the state info into the filename, and utilizes the
             directory as the container (ensuring unique names)
         """
-        if '_' in region_model_id:
-            raise StateRepositoryError("'_' is illegal character in region_model_id ")
+        if self._filename_item_separator in region_model_id:
+            raise StateRepositoryError("{} is illegal character in region_model_id ".format(self._filename_item_separator))
         version=0
         state_id=""
+        utc_timestamp_str=Calendar().to_string(utc_timestamp).replace(":",".") # ms does not tolerate : in filenames
         while True:
             version =version +1
-            state_id= "{}_{}_{}.yaml".format(region_model_id,Calendar().to_string(utc_timestamp),version)
+            state_id= "{}{}{}{}{}.yaml".format(region_model_id,self._filename_item_separator,utc_timestamp_str,self._filename_item_separator,version)
             if not os.path.exists(os.path.join(self._directory_path,state_id)):
                 break
         return state_id
@@ -120,12 +122,12 @@ class YamlStateRepository(StateRepository):
             or None if the filename did not conform to standard
         """
         try:
-            parts=filename.split("_")
+            parts=filename.split(self._filename_item_separator)
             si=StateInfo()
             si.region_model_id= parts[0]
             si.state_id=filename
             ymd=parts[1].split("T")[0].split(".")#TODO: does datetime parse the format directly?
-            hms=parts[1].split("T")[1].split(":")
+            hms=parts[1].split("T")[1].split(".")
             utc_calendar=Calendar()
             si.utc_timestamp=utc_calendar.time(YMDhms(int(ymd[0]),int(ymd[1]),int(ymd[2]),int(hms[0]),int(hms[1]),int(hms[2])))
             return si
