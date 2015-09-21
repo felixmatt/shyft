@@ -66,8 +66,7 @@ void utctime_utilities_test::test_calendar_month() {
 }
 
 void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
-    TS_ASSERT_THROWS({YMDhms(10000 ,1,1,0,0,0);},std::runtime_error);
-    //TS_ASSERT_EQUALS(.is_valid_coordinates(),false);
+	TS_ASSERT_THROWS_ANYTHING(YMDhms(10000, 1, 1, 0, 0, 0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(-10000,1,1,0,0,0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,0,1,0,0,0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,13,1,0,0,0));

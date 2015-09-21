@@ -240,7 +240,7 @@ namespace shyft {
 				: cells(cells) {
                 set_region_parameter(region_param);
                 for_each(catchment_parameters.cbegin(), catchment_parameters.cend(),
-                    [this] (auto& pair) { this->set_catchment_parameter(pair.first, pair.second); });
+					[this](const std::map<size_t, parameter_t>::value_type& pair) { this->set_catchment_parameter(pair.first, pair.second); });
 				ncore = thread::hardware_concurrency()*4;
 			}
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
