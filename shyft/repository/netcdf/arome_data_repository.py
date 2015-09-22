@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 
 from os import path
 from functools import partial
@@ -26,7 +27,7 @@ class AromeDataRepositoryError(Exception):
 class AromeDataRepository(interfaces.GeoTsRepository):
 
     def __init__(self, filename, epsg_id, bounding_box, utc_period,
-                 x_padding=5000.0, y_padding=5000.0, fields=None):
+                 x_padding=5000.0, y_padding=5000.0, elevation_file=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP
         model, and initialize data retrieval.
@@ -51,10 +52,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Longidutinal padding in meters, added both east and west
         y_padding: float
             Latitudinal padding in meters, added both north and south
-        fields: list
-            List of data field names to extract: ["relative_humidity",
-            "temperature", "z", "precipitation", "x_wind", "y_wind",
-            "radiation"]. If not given, all fields are extracted.
+        elevation_file: string, optional
+            Name of netcdf file of same dimensions in x and y, subject to
+            constraints given by bounding box and padding, that contains
+            elevation that should be used in stead of elevations in file.
 
 
         Arome NWP model output is from:
@@ -71,6 +72,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             raise interfaces.InterfaceError("No such file {}".format(filename))
 
         self.filename = filename
+        self.elevation_file = elevation_file
         self.epsg_id = epsg_id
         self.shyft_cs = \
             "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
@@ -154,27 +156,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 return tsc(ta.size(), ta.start(), ta.delta(),
                            DoubleVector_FromNdArray(d.flatten()), 0)
             time_series[key] = np.array([[construct(data[fslice + (i, j)])
-                                         for j in xrange(J)] for i in
-                                         xrange(I)])
+                                         for j in xrange(J)] for i in xrange(I)])
         return time_series, non_time_series
-
-    def add_timeseries(self, other, eps=1.0e-10):
-        """Add other's timeseries to self
-
-        Add all the time series from the other repository to this, if the x,y
-        locations match within a tolerance.
-
-        Parameters
-        ----------
-        other: AromeDataRepository
-            Repository with additional time series and lat/long coordinates
-        eps: float, optional
-            Tolerance for point co-location
-        """
-        if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
-           np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
-            raise AromeDataRepositoryError()
-        self.time_series.update(other.time_series)
 
     def get_timeseries(self, input_source_types, geo_location_criteria, utc_period):
         """Get shyft source vectors of time series for input_source_types
@@ -195,21 +178,29 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
 
-        if isinstance(utc_period, UtcPeriod):
-            utc_period = [utc_period.start, utc_period.end]
+        if not isinstance(utc_period, UtcPeriod):
+            utc_period = UtcPeriod(utc_period[0]. utc_period[1])
+
+        if "wind_speed" in input_source_types:
+            input_source_types = list(input_source_types)  # We change input list, so take a copy
+            input_source_types.remove("wind_speed")
+            input_source_types.append("x_wind")
+            input_source_types.append("y_wind")
+
+        # Open netcdf dataset. TODO: use with...
+        dataset = Dataset(self.filename)
+        data_vars = dataset.variables
 
         # Extract time dimension
         time = data_vars["time"][:]
         dts = time[1:] - time[:-1]
 
-        idx_min = time.searchsorted(utc_period[0], side='left')
-        idx_max = time.searchsorted(utc_period[1], side='right')
+        idx_min = time.searchsorted(utc_period.start, side='left')
+        idx_max = time.searchsorted(utc_period.end, side='right')
         time_slice = slice(idx_min, idx_max)
         extract_subset = True if time[time_slice].shape != time.shape else False
         time = time[time_slice]
 
-        dataset = Dataset(self.filename)
-        data_vars = dataset.variables
 
         # arome data and time conversions, ordered as _netcdf_fields
         def netcdf_data_convert(t):
@@ -245,11 +236,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                           np.newaxis])), 0.0, 1000.0),
                      t_to_ta_1)]
 
-        if fields is None:
-            fields = self._shyft_fields
+        if input_source_types is None:
+            input_source_types = self._shyft_fields
         else:
-            # set(fields).issubset(self._shyft_fields)  # TODO: Check
-            assert all([field in self._shyft_fields for field in fields])
+            assert set(input_source_types).issubset(self._shyft_fields)  # TODO: Check
+            #print(input_source_types)
+            #print(self._shyft_fields)
+            #assert all([field in self._shyft_fields for field in input_source_types])
 
         shyft_net_map = {s: n for n, s in zip(self._netcdf_fields, self._shyft_fields)}
         data_convert_map = {s: c for s, c in zip(self._shyft_fields, netcdf_data_convert(time))}
@@ -257,42 +250,46 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         # Target projection
         shyft_proj = Proj(self.shyft_cs)
 
+        def find_inds(data_vars, data):
+            # Get coordinate system for arome data
+            data_cs = str(data_vars[data.grid_mapping].proj4)
+            data_cs += " +towgs84=0,0,0"
+            data_proj = Proj(data_cs)
+
+            # Find bounding box in arome projection
+            bb_proj = transform(shyft_proj, data_proj,
+                                self.bounding_box[0], self.bounding_box[1])
+            x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
+            y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
+
+            # Limit data
+            x = data_vars["x"][:]
+            x1 = np.where(x >= x_min)[0]
+            x2 = np.where(x <= x_max)[0]
+            x_inds = np.intersect1d(x1, x2, assume_unique=True)
+
+            y = data_vars["y"][:]
+            y1 = np.where(y >= y_min)[0]
+            y2 = np.where(y <= y_max)[0]
+            y_inds = np.intersect1d(y1, y2, assume_unique=True)
+
+            # Transform from arome coordinates to shyft coordinates
+            self._ox, self._oy = np.meshgrid(x[x_inds], y[y_inds])
+            xx, yy = transform(data_proj, shyft_proj, *np.meshgrid(x[x_inds], y[y_inds]))
+
+            return xx, yy, x_inds, y_inds
+
         raw_data = {}
-        data_proj = None
+        inds_found = False
         self.xx = self.yy = self.extracted_data = None
-        for data_field in fields:
+        for data_field in input_source_types:
             if not shyft_net_map[data_field] in data_vars.keys():
                 continue
             data = data_vars[shyft_net_map[data_field]]
 
-            if data_proj is None:
-                # Get coordinate system for arome data
-                data_cs = str(data_vars[data.grid_mapping].proj4)
-                data_cs += " +towgs84=0,0,0"
-                data_proj = Proj(data_cs)
-
-                # Find bounding box in arome projection
-                bb_proj = transform(shyft_proj, data_proj,
-                                    self.bounding_box[0], self.bounding_box[1])
-                x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
-                y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
-
-                # Limit data
-                x = data_vars["x"][:]
-                x1 = np.where(x >= x_min)[0]
-                x2 = np.where(x <= x_max)[0]
-                x_inds = np.intersect1d(x1, x2, assume_unique=True)
-
-                y = data_vars["y"][:]
-                y1 = np.where(y >= y_min)[0]
-                y2 = np.where(y <= y_max)[0]
-                y_inds = np.intersect1d(y1, y2, assume_unique=True)
-
-                # Transform from arome coordinates to shyft coordinates
-                self._ox, self._oy = np.meshgrid(x[x_inds], y[y_inds])
-                self.xx, self.yy = transform(data_proj, shyft_proj,
-                                             *np.meshgrid(x[x_inds],
-                                                          y[y_inds]))
+            if not inds_found:
+                self.xx, self.yy, x_inds, y_inds = find_inds(data_vars, data)
+                inds_found = True
 
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]
@@ -301,28 +298,38 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
             # Add extracted data and corresponding coordinates to class
             raw_data[data_field] = data[data_slice]
+
         extracted_data = {key: (data_convert_map[key][0](raw_data[key]),
-                                data_convert_map[key][1]())
-                          for key in raw_data}
-        if "x_wind" in extracted_data.keys() and \
-                "y_wind" in extracted_data.keys():
+                                data_convert_map[key][1]()) for key in raw_data}
+
+        if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
             x_wind, _ = extracted_data.pop("x_wind")
             y_wind, t = extracted_data.pop("y_wind")
-            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) +
-                                                   np.square(y_wind)), t
-        self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
+            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), t
+
+        if self.elevation_file is not None:
+            ds2 = Dataset(self.elevation_file)
+            data = ds2.variables["altitude"]
+            if not "altitude" in ds2.variables.keys():
+                raise interfaces.InterfaceError(
+                    "File '{}' does not contain altitudes".format(self.elevation_file))
+            xx, yy, x_inds, y_inds = find_inds(ds2.variables, data)
+            data_slice = len(data.dimensions)*[slice(None)]
+            data_slice[data.dimensions.index("x")] = x_inds
+            data_slice[data.dimensions.index("y")] = y_inds
+            assert np.linalg.norm(self.xx - xx) < 1.0e-10
+            assert np.linalg.norm(self.yy - yy) < 1.0e-10
+            extracted_data["z"] = data[data_slice], None
+            
+        self.time_series, self.other_data = self._convert_to_timeseries(extracted_data)
 
         if "geo_points" not in self.other_data:
             self.other_data["geo_points"] = self._geo_points()
         pts = self.other_data["geo_points"]
-        if keys is None:
-            keys = self.time_series.keys()
-        elif isinstance(keys, str):
-            keys = [keys]
         sources = {}
         all_ = slice(None)
-        for key in keys:
-            ts = self.time_series[key]
+        for key, ts in self.time_series.iteritems():
+            #ts = self.time_series[key]
             if key not in self.source_type_map:
                 continue
             tpe = self.source_type_map[key]
