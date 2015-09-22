@@ -393,13 +393,13 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
                          upper_left_x + nx*dx, upper_left_x],
                         [upper_left_y, upper_left_y,
                          upper_left_y - ny*dy, upper_left_y - ny*dy])
-        ar1 = AromeDataRepository(pth1, EPSG, bounding_box, period)
-        ar2 = AromeDataRepository(pth2, EPSG, bounding_box, period, elevation_file=pth1)
+        ar1 = AromeDataRepository(pth1, EPSG, period, bounding_box)
+        ar2 = AromeDataRepository(pth2, EPSG, period, elevation_file=pth1)
         ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
         ar2_data_names = ("radiation",)
-        sources = ar1.get_timeseries(ar1_data_names, None, period)
+        sources = ar1.get_timeseries(ar1_data_names, period, None)
         self.assertTrue(len(sources) > 0)
-        sources2 = ar2.get_timeseries(ar2_data_names, None, period)
+        sources2 = ar2.get_timeseries(ar2_data_names, period, geo_location_criteria=bounding_box)
 
         self.assertTrue(set(sources) == set(ar1_data_names))
         self.assertTrue(set(sources2) == set(ar2_data_names))

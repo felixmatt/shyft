@@ -26,7 +26,7 @@ class AromeDataRepositoryError(Exception):
 
 class AromeDataRepository(interfaces.GeoTsRepository):
 
-    def __init__(self, filename, epsg_id, bounding_box, utc_period,
+    def __init__(self, filename, epsg_id, utc_period, bounding_box=None,
                  x_padding=5000.0, y_padding=5000.0, elevation_file=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP
@@ -77,19 +77,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self.shyft_cs = \
             "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
                                                                               "WGS84", "WGS84")
-        # Add a padding to the bounding box to make sure the computational
-        # domain is fully enclosed in arome dataset
-        bounding_box = np.array(bounding_box)
-        bounding_box[0][0] -= x_padding
-        bounding_box[0][1] += x_padding
-        bounding_box[0][2] += x_padding
-        bounding_box[0][3] -= x_padding
-        bounding_box[1][0] += x_padding
-        bounding_box[1][1] += x_padding
-        bounding_box[1][2] -= x_padding
-        bounding_box[1][3] -= x_padding
-        self.bounding_box = bounding_box
-
+        self._x_padding = x_padding
+        self._y_padding = y_padding
+        self._bounding_box = bounding_box
         # Field names and mappings
         self._netcdf_fields = ["relative_humidity_2m",
                                "air_temperature_2m",
@@ -112,6 +102,23 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                 "precipitation": PrecipitationSource,
                                 "radiation": RadiationSource,
                                 "wind_speed": WindSpeedSource}
+
+    @property
+    def bounding_box(self):
+        # Add a padding to the bounding box to make sure the computational
+        # domain is fully enclosed in arome dataset
+        if self._bounding_box is None:
+            raise interfaces.InterfaceError("A bounding box must be provided")
+        bounding_box = np.array(self._bounding_box)
+        bounding_box[0][0] -= self._x_padding
+        bounding_box[0][1] += self._x_padding
+        bounding_box[0][2] += self._x_padding
+        bounding_box[0][3] -= self._x_padding
+        bounding_box[1][0] += self._y_padding
+        bounding_box[1][1] += self._y_padding
+        bounding_box[1][2] -= self._y_padding
+        bounding_box[1][3] -= self._y_padding
+        return bounding_box
 
     def _geo_points(self):
         """Return (x,y,z) coordinates for data sources
@@ -159,14 +166,14 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                          for j in xrange(J)] for i in xrange(I)])
         return time_series, non_time_series
 
-    def get_timeseries(self, input_source_types, geo_location_criteria, utc_period):
+    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
 
         Parameters
         ----------
         input_source_types: list
             List of source types to retrieve (precipitation,temperature..)
-        geo_location_criteria: object
+        geo_location_criteria: object, optional
             Some type (to be decided), extent (bbox + coord.ref)
         utc_period: api.UtcPeriod
             The utc time period that should (as a minimum) be covered.
@@ -177,6 +184,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
+
+        if geo_location_criteria is not None:
+            self._bounding_box = geo_location_criteria
 
         if not isinstance(utc_period, UtcPeriod):
             utc_period = UtcPeriod(utc_period[0]. utc_period[1])
@@ -257,8 +267,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             data_proj = Proj(data_cs)
 
             # Find bounding box in arome projection
+            bbox = self.bounding_box
             bb_proj = transform(shyft_proj, data_proj,
-                                self.bounding_box[0], self.bounding_box[1])
+                                bbox[0], bbox[1])
             x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
             y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
