@@ -30,6 +30,7 @@
     <Compile Include="service\cell_read_only_repository.py" />
     <Compile Include="service\forecast_pt_location.py" />
     <Compile Include="service\gis_data.py" />
+    <Compile Include="service\gis_station_data.py" />
     <Compile Include="service\ssa_geo_ts_repository.py" />
     <Compile Include="service\ssa_smg_db.py" />
     <Compile Include="service\__init__.py" />

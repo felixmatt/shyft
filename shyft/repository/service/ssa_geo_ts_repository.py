@@ -1,8 +1,49 @@
-﻿from __future__ import print_function
+﻿# -*- coding: utf-8 -*-
+from __future__ import print_function
 from __future__ import absolute_import
+from abc import ABCMeta,abstractmethod,abstractproperty
 import os
 from shyft import api
 from .. import interfaces
+from gis_station_data import StationDataFetcher
+from ssa_smg_db import SmGTsRepository
+
+class MetStationConfig(object):
+    """
+    Contains keys needed to correctly map time-series and geo-location-id in the underlying services.
+    Later when this information-mapping is available directly in the underlying servies, this configuration
+    will be obsolete
+    """
+    def __init__(self,gis_id,temperature=None,precipitation=None,wind_speed=None,radiation=None,rel_humidity=None):
+        """ 
+        Constructs a MetStationConfig objects with needed keys
+        Parameters
+        ----------
+        gis_id: int
+            mandatory immutable unique identifier that can be passed to the gis-service to retrieve xyz
+        temperature: string
+            identifier for temperature[degC] time-series in SSA ts service (SMG)
+        precipitation: string
+            identifier for temperature[mm/h] time-series in SSA ts service (SMG)
+        wind_speed: string
+            identifier for wind_speed[m/s] time-series in SSA ts service (SMG)
+        radiation: string
+            identifier for radiation[W/m2] time-series in SSA ts service (SMG)
+        rel_humidity: string
+            identifier for relative humidity [%] time-series in SSA ts service (SMG)
+
+        """
+        self.gis_id=gis_id
+        self.temperature=temperature
+        self.precipitation=precipitation
+        self.wind_speed=wind_speed
+        self.radiation=radiation
+        self.rel_humidity=rel_humidity
+    
+    
+
+
+
 
 class GeoTsRepository(interfaces.GeoTsRepository):
     """
@@ -41,8 +82,28 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, gis_service,smg_service,met_station_list):
+        """
+        Parameters
+        ----------
+            gis_service: string
+                server like oslwvagi001p, to be passed to the gis_station_data fetcher service
+
+            smg_service: ssa.environment.SmgEnvironment
+                the SMG_PROD or SMG_PREPROD environment configuration (user,db-service)
+
+            met_station_list: list of type MetStationConfig
+                list that identifies met_stations in the scope of this repository
+                e.g. 
+                [ 
+                MetStation(gis_id='123',temperature='/Vossevangen/temperature',precipitation='/Vossevangen/precipitation')
+                MetStation(gis_id='244', wind_speed='/Hestvollan/wind_speed')
+                ]
+
+        """
+        self.gis_service=gis_service
+        self.smg_service=smg_service
+        self.met_station_list=met_station_list
 
 
     def get_timeseries(self, input_source_types,
@@ -63,7 +124,24 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
-        pass
+        # 1 get the station-> location map
+        station_ids=[ x.gis_id for x in self.met_station_list ]
+        gis_station_service= StationDataFetcher(epsg_id=32632)
+        station_locaton_map= gis_station_service.fetch(station_ids=station_ids)
+        # 2 read all the timeseries
+        # create map ts-id to station (could be position..)
+        ts_to_station={ k:v for k,v in ([x.temperature,x] for x  in self.met_station_list if x.temperature is not None) }
+        ts_to_station.update({ k:v for k,v in ([x.temperature,x] for x  in self.met_station_list) if x.precipitation is not None })
+        ts_to_station.update({ k:v for k,v in ([x.wind_speed,x] for x  in self.met_station_list) if x.wind_speed is not None })
+        ts_to_station.update({ k:v for k,v in ([x.radiation,x] for x  in self.met_station_list) if x.radiation is not None })
+        ts_to_station.update({ k:v for k,v in ([x.rel_humidity,x] for x  in self.met_station_list) if x.rel_humidity is not None })
+        ts_list=ts_to_station.keys();
+        ssa_ts_service=SmGTsRepository(self.smg_service)
+        read_ts_map=ssa_ts_service.read(ts_ids,utc_period)
+        # 3 map all returned series with geo-location, and create the
+        #   vector of geo-located  TemperatureSource,PrecipitationSource
+        #TODO!!! fix smart map ts --> geopos and type, then just lookup..
+        return read_ts_map
 
     def get_forecast(self, input_source_types,
                      geo_location_criteria, utc_period):
@@ -121,6 +199,7 @@ def dataset_repository_factory(config, t_start, t_end):
     # Construct data and repository
     isr = InputSourceRepository()
     cal = api.Calendar()  # UTC
+
 
     if('point_sources' in config.datasets_config.sources.keys()):
         sources = config.datasets_config.sources['point_sources']

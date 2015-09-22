@@ -4,6 +4,7 @@
 # by other systems.
 # In statkraft we use pythonnet to add in .NET functionality that provide a safe and efficient bridge to the Powel SMG system
 # sigbjorn.helset@statkraft.com
+from __future__ import print_function
 
 from ssa.timeseriesrepository import TimeSeriesRepositorySmg as repository
 from ssa.environment import SMG_PREPROD as PREPROD
@@ -11,8 +12,8 @@ from ssa.environment import SMG_PROD as PROD
 from ssa.environment import SmgEnvironment
 from Statkraft import Time
 from Statkraft.Time import UtcTime,Period,Calendar
-from datetime import datetime
-from datetime import timedelta
+#from datetime import datetime
+#from datetime import timedelta
 
 import clr
 import System
@@ -25,50 +26,9 @@ from shyft import api
 import numpy as np
 
 import abc
-#from shyft.repository.base_repository import BaseRepository
-
-#from shyft.repository.base_repository import BaseTimeSeriesRepository
-
 
 class SmgDataError(Exception):
     pass
-
-
-class SmgDataFetcher(object):
-
-    def __init__(self, env, t_start, t_end, names=None, ids=None):
-        if names == ids == None:
-            raise SmgDataError("Please provide either names or ids")
-        if names != None and ids != None:
-            raise SmgDataError("Please provide either names or ids")
-        if not isinstance(t_start, datetime) or not isinstance(t_end, datetime):
-            raise SmgDataError("t_start and t_end must be datetime.datetime instances")
-
-        self.env = env
-        self.keys = names if names else ids
-        self.keys_are_names = True if names else False
-        self.ids = ids
-        self.t_start = t_start - timedelta(2)
-        self.t_end = t_end + timedelta(2)
-
-    def fetch(self, **kwargs):
-        """Open a connection to the SMG database and fetch all the time series given in self.keys.
-        Return the result as a dictionary of dictionaries."""
-        result = {}
-        raw_data = []
-        with repository(self.env) as tsr:
-            raw_data = tsr.readRawPoints(self.t_start, self.t_end, self.keys, useNameAsId=self.keys_are_names)
-        if len(self.keys) != raw_data.Count:
-            print "WARNING: Could only find {} out of {} requested timeseries".format(raw_data.Count, len(self.keys))
-        for d in raw_data:
-            times = [d.Time(i).ToUnixTime() for i in xrange(d.Count)]
-            values = [d.Value(i).V for i in xrange(d.Count)]
-            print min(values), max(values)
-            print min(times), max(times)
-            print "Getting timeseries {} with {} datapoints and end date {}".format(d.Name, len(times), str(datetime.utcfromtimestamp(times[-1])))
-            key = d.Name if self.keys_are_names else d.Info.Id
-            result[key] = {"times": times, "values": values}
-        return result
 
 
 
@@ -91,7 +51,7 @@ class SmGTsRepository(object):
         with repository(self.env) as tsr:
             raw_data = tsr.repo.ReadRawPoints(ListOf_TsIdentities,ssa_period)
         if len(list_of_ts_id) != raw_data.Count:
-            print "WARNING: Could only find {} out of {} requested timeseries".format(raw_data.Count, len(list_of_ts_id))
+            print( "WARNING: Could only find {} out of {} requested timeseries".format(raw_data.Count, len(list_of_ts_id)))
         for d in raw_data:
             key = d.Name #todo : if self.keys_are_names else d.Info.Id
             result[key] = self._make_shyft_ts_from_ssa_ts(d)
