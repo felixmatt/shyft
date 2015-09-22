@@ -48,11 +48,11 @@ class StationDataFetcher(BaseGisDataFetcher):
 
 def _main():
 
-    station_ids = [678,506,217,503,421,489,574,598,610,121,423]
+    station_ids = [7] #,678,506,217,503,421,489,574,598,610,121,423
     sf = StationDataFetcher(epsg_id=32632)
     stations = sf.fetch(station_ids=station_ids)
-    assert len(stations) == len(indices)
-    for i in indices:
+    assert len(stations) == len(station_ids)
+    for i in station_ids:
         assert i in stations
 
 if __name__ == "__main__":

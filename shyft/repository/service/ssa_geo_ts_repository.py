@@ -1,12 +1,15 @@
 ﻿# -*- coding: utf-8 -*-
+"""
+PLEASE NOTE: This module relies on services specific to Statkraft, for other parties, it could serve as a template for how to glue together a gis-system and a ts-db system
+"""
 from __future__ import print_function
 from __future__ import absolute_import
 from abc import ABCMeta,abstractmethod,abstractproperty
 import os
 from shyft import api
 from .. import interfaces
-from gis_station_data import StationDataFetcher
-from ssa_smg_db import SmGTsRepository
+from .gis_station_data import StationDataFetcher # StationDataFetcher is Statkraft dependent service, we could substitute with an interface later
+from .ssa_smg_db import SmGTsRepository,PREPROD,PROD # ssa_smg_db is a Statkraft dependent service, we could substitute with an interface later
 
 class MetStationConfig(object):
     """
@@ -14,9 +17,11 @@ class MetStationConfig(object):
     Later when this information-mapping is available directly in the underlying servies, this configuration
     will be obsolete
     """
-    def __init__(self,gis_id,temperature=None,precipitation=None,wind_speed=None,radiation=None,rel_humidity=None):
+    def __init__(self,gis_id,temperature=None,precipitation=None,wind_speed=None,radiation=None,relative_humidity=None):
         """ 
         Constructs a MetStationConfig objects with needed keys
+        NOTICE that the attribute names are choosen with care, they matches exactly the shyft attribute names for observations/forecast
+               we will figure out better aproaches for this, but it allows us to keep it simple and clear at the interface
         Parameters
         ----------
         gis_id: int
@@ -29,7 +34,7 @@ class MetStationConfig(object):
             identifier for wind_speed[m/s] time-series in SSA ts service (SMG)
         radiation: string
             identifier for radiation[W/m2] time-series in SSA ts service (SMG)
-        rel_humidity: string
+        relative_humidity: string
             identifier for relative humidity [%] time-series in SSA ts service (SMG)
 
         """
@@ -38,7 +43,7 @@ class MetStationConfig(object):
         self.precipitation=precipitation
         self.wind_speed=wind_speed
         self.radiation=radiation
-        self.rel_humidity=rel_humidity
+        self.relative_humidity=relative_humidity
     
     
 
@@ -101,13 +106,17 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                 ]
 
         """
-        self.gis_service=gis_service
-        self.smg_service=smg_service
-        self.met_station_list=met_station_list
+        self.gis_service=gis_service # later we will pass this to the gis-service api
+        self.smg_service= PROD if smg_service=='prod' else PREPROD # we pass this to the ssa smg db interface
+        self.met_station_list=met_station_list # this defines the scope of the service, and glue together consistent positions and time-series
+        self.source_type_map = {"relative_humidity": api.RelHumSource, #we need this map to provide shyft.api types back to the orchestrator
+                                "temperature": api.TemperatureSource,
+                                "precipitation": api.PrecipitationSource,
+                                "radiation": api.RadiationSource,
+                                "wind_speed": api.WindSpeedSource}
 
 
-    def get_timeseries(self, input_source_types,
-                       geo_location_criteria, utc_period):
+    def get_timeseries(self, input_source_types, utc_period,geo_location_criteria=None):
         """
         Parameters
         ----------
@@ -127,21 +136,28 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         # 1 get the station-> location map
         station_ids=[ x.gis_id for x in self.met_station_list ]
         gis_station_service= StationDataFetcher(epsg_id=32632)
-        station_locaton_map= gis_station_service.fetch(station_ids=station_ids)
+        geo_loc= gis_station_service.fetch(station_ids=station_ids)
         # 2 read all the timeseries
-        # create map ts-id to station (could be position..)
-        ts_to_station={ k:v for k,v in ([x.temperature,x] for x  in self.met_station_list if x.temperature is not None) }
-        ts_to_station.update({ k:v for k,v in ([x.temperature,x] for x  in self.met_station_list) if x.precipitation is not None })
-        ts_to_station.update({ k:v for k,v in ([x.wind_speed,x] for x  in self.met_station_list) if x.wind_speed is not None })
-        ts_to_station.update({ k:v for k,v in ([x.radiation,x] for x  in self.met_station_list) if x.radiation is not None })
-        ts_to_station.update({ k:v for k,v in ([x.rel_humidity,x] for x  in self.met_station_list) if x.rel_humidity is not None })
-        ts_list=ts_to_station.keys();
+        # create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
+        ts_to_geo_ts_info= dict()
+        result={}
+        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
+            result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
+            ts_to_geo_ts_info.update(
+                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id][0] ) )] #this constructs a key,value list from the result below
+                         for x  in self.met_station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
+                 })
+        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         ssa_ts_service=SmGTsRepository(self.smg_service)
-        read_ts_map=ssa_ts_service.read(ts_ids,utc_period)
-        # 3 map all returned series with geo-location, and create the
-        #   vector of geo-located  TemperatureSource,PrecipitationSource
-        #TODO!!! fix smart map ts --> geopos and type, then just lookup..
-        return read_ts_map
+        read_ts_map=ssa_ts_service.read(ts_list,utc_period)
+        # 3 map all returned series with geo-location, and fill in the
+        #   vectors of geo-located  TemperatureSource,PrecipitationSource etc.
+        for tsn,ts in read_ts_map.iteritems():
+            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
+            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
+            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
+        return result
 
     def get_forecast(self, input_source_types,
                      geo_location_criteria, utc_period):
@@ -155,7 +171,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         forecast: same layout/type as for get_timeseries
         """
-        pass
+        raise NotImplementedError("get_forecast will be implemented later")
 
     def get_forecast_ensemble(self, input_source_types,
                               geo_location_criteria, utc_period):
@@ -164,117 +180,9 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         ensemble: list of same type as get_timeseries
         """
-        pass
-
-class InputSourceRepository(object):
-
-    def __init__(self, *args, **kwargs):
-        #super(InputSourceRepository, self).__init__()
-        self.input_source_types = {"temperature": api.TemperatureSource,
-                                   "precipitation": api.PrecipitationSource,
-                                   "radiation": api.RadiationSource,
-                                   "wind_speed": api.WindSpeedSource,
-                                   "relative_humidity": api.RelHumSource}
-        self.data.update({k: v.vector_t() for (k, v) in
-                          self.input_source_types.iteritems()})
-
-    def add_input_source(self, station):
-        for input_source in self.input_source_types:
-            ts = getattr(station, input_source)
-            if ts is not None:
-                api_source = self.input_source_types[input_source](
-                    api.GeoPoint(*station.geo_location), ts)
-                self.data[input_source].append(api_source)
-
-    def add_input_source_vct(self, points):
-        input_type = points.keys()[0]
-        if(input_type in self.input_source_types.keys()):
-            self.data[input_type].reserve(self.data[input_type].size()
-                                          + points[input_type].size())
-            [self.data[input_type].push_back(i) for i in
-             points[input_type].iterator()]
+        raise NotImplementedError("get_forecast will be implemented later")
 
 
-def dataset_repository_factory(config, t_start, t_end):
-    # Construct data and repository
-    isr = InputSourceRepository()
-    cal = api.Calendar()  # UTC
 
 
-    if('point_sources' in config.datasets_config.sources.keys()):
-        sources = config.datasets_config.sources['point_sources']
-        for repository in sources:
-            constructor = repository["repository"][0]
-            args_ = repository["repository"][1:]
-            args = []
-            t_str = cal.to_string(t_start).replace('.', '')
-            args.append(os.path.join(args_[0], args_[1] + t_str[0:8] +
-                        '_' + t_str[9:11] + '.nc'))  # filepath
-            args.append(config.region_config.epsg_id)  # EPSG
-            bounding_box = ([config.region_config.x_min,
-                             config.region_config.x_max,
-                             config.region_config.x_max,
-                             config.region_config.x_min],
-                            [config.region_config.y_max,
-                             config.region_config.y_max,
-                             config.region_config.y_min,
-                             config.region_config.y_min])
-            args.append(bounding_box)
-            ts_fetcher = constructor(*args)
-            sources = ts_fetcher.get_sources()
-            for source_type in repository['types']:
-                isr.add_input_source_vct({source_type: sources[source_type]})
-    if('station_sources' in config.datasets_config.sources.keys()):
-        uid2id = {}
-        station_config = config.region_config.stations
-        for item in station_config["indices"]:
-            uid2id[item["uid"]] = item["id"]
 
-        # Get station locations and elevations:
-        constructor = station_config["database"]  # TODO: Fix name in yaml file
-        data_fetcher = constructor(indices=uid2id.keys(),
-                                   epsg_id=config.region_config.epsg_id)
-        geo_pos_by_uid = data_fetcher.fetch()
-
-        # Get time series data
-        sources = config.datasets_config.sources['station_sources']
-        time_series = {}
-        for repository in sources:
-            data_uids = []
-            for source_type in repository["types"]:
-                data_uids.extend([source["uid"] for source in
-                                  source_type["stations"]])
-            constructor = repository["repository"][0]
-            arg = repository["repository"][1]
-            ts_fetcher = constructor(arg)
-            period = api.UtcPeriod(t_start, t_end)
-            time_series = ts_fetcher.read(data_uids, period)
-
-        for station in station_config["indices"]:
-            input_source = construct_input_source(station, geo_pos_by_uid,
-                                                  sources, time_series)
-            if input_source:
-                isr.add_input_source(input_source)
-    return isr
-
-
-def construct_input_source(station, geo_pos_by_uid, sources, time_series):
-    station_uid = station["uid"]
-    station_id = station["id"]
-    source_by_type = {}
-    for repository in sources:
-        for source_type in repository["types"]:
-            if station_id in [source["station_id"] for source in
-                              source_type["stations"]]:
-                source_uid = [source["uid"] for source in
-                              source_type["stations"]
-                              if source["station_id"] == station_id][0]
-                if source_uid in time_series:
-                    source_by_type[source_type["type"]] = \
-                        time_series[source_uid]
-                else:
-                    print("WARNING: time series {} not found, \
- skipping".format(source_uid))
-    if source_by_type:
-        return InputSource(geo_pos_by_uid[station_uid][0], source_by_type)
-    return None
