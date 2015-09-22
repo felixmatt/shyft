@@ -4,10 +4,10 @@ import gdal
 from gdalconst import * # TODO: Fixme
 import struct
 import numpy as np
-from gis_data import CellDataFetcher2
+from gis_data import CellDataFetcher
 
 from abc import ABCMeta
-from shyft.orchestration.repository.base_repository import BaseCellRepository
+from .base_repository import BaseCellRepository
 
 class CellReadOnlyRepository(BaseCellRepository):
 
@@ -43,7 +43,7 @@ class CellReadOnlyRepository(BaseCellRepository):
 
 
 def cell_repository_factory(config, *args):
-    cdf = CellDataFetcher2(args[0], args[1], config.x_min, config.y_min, config.dx, config.dy, config.n_x, config.n_y,
+    cdf = CellDataFetcher(args[0], args[1], config.x_min, config.y_min, config.dx, config.dy, config.n_x, config.n_y,
                           config.repository_data["catchment_indices"], epsg_id=config.epsg_id)
     region_cell_data = cdf.fetch()
     #from IPython.core.debugger import Tracer; Tracer()()

@@ -25,9 +25,9 @@ from shyft import api
 import numpy as np
 
 import abc
-from shyft.orchestration.repository.base_repository import BaseRepository
+from shyft.repository.base_repository import BaseRepository
 
-from shyft.orchestration.repository.base_repository import BaseTimeSeriesRepository
+from shyft.repository.base_repository import BaseTimeSeriesRepository
 
 
 class SmgDataError(Exception):
