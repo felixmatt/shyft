@@ -15,6 +15,7 @@ from shyft.api import WindSpeedSource
 from shyft.api import RadiationSource
 from shyft.api import GeoPoint
 from .. import interfaces
+from shyft.api import UtcPeriod
 
 
 class AromeDataRepositoryError(Exception):
@@ -23,7 +24,7 @@ class AromeDataRepositoryError(Exception):
 
 class AromeDataRepository(object):
 
-    def __init__(self, filename, epsg_id, bounding_box,
+    def __init__(self, filename, epsg_id, bounding_box, utc_period,
                  x_padding=5000.0, y_padding=5000.0, fields=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
@@ -41,6 +42,9 @@ class AromeDataRepository(object):
             [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
             domain that shoud be extracted. Coordinates are given in epgs_id
             coordinate system.
+        utc_period: api.UtcPeriod
+            period to fetch such that utc_period.start and utc_period.end are 
+            both included in the interval, if possible
         x_padding: float
             Longidutinal padding in meters, added both east and west
         y_padding: float
@@ -65,8 +69,18 @@ class AromeDataRepository(object):
         dataset = Dataset(filename)
         data_vars = dataset.variables
 
+        if isinstance(utc_period, UtcPeriod):
+            utc_period = [utc_period.start, utc_period.end]
+
         # Extract time dimension
-        time = data_vars["time"]
+        time = data_vars["time"][:]
+        dts = time[1:] - time[:-1]
+
+        idx_min = time.searchsorted(utc_period[0], side='left')
+        idx_max = time.searchsorted(utc_period[1], side='right')
+        time_slice = slice(idx_min, idx_max)
+        extract_subset = True if time[time_slice].shape != time.shape else False
+        time = time[time_slice]
 
         # Add a padding to the bounding box to make sure the computational
         # domain is fully enclosed in arome dataset
@@ -102,24 +116,24 @@ class AromeDataRepository(object):
             """
 
             def t_to_ta(t, shift):
+                if extract_subset:
+                    shift = 0
                 return Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
 
             def noop(d):
-                return d
+                return d[time_slice]
             
             def prec(d):
-                return d[1:]
+                return d[1:][time_slice]
             t_to_ta_0 = partial(t_to_ta, t, 0)  # Full
             t_to_ta_1 = partial(t_to_ta, t, 1)
             return [(noop, t_to_ta_0),
-                    (lambda air_temp: (air_temp - 273.15), t_to_ta_0),
-                    (noop, lambda: None),
+                    (lambda air_temp: air_temp[time_slice] - 273.15, t_to_ta_0),
+                    (lambda x: x, lambda: None), # Altitude
                     (prec, t_to_ta_1),
                     (noop, t_to_ta_0),
                     (noop, t_to_ta_0),
-                    (lambda rad: np.clip(((rad[1:] - rad[:-1])/((t[1:] -
-                                                                 t[:-1])
-                                          [:, np.newaxis, np.newaxis,
+                    (lambda rad: np.clip(((rad[1:][time_slice] - rad[:-1][time_slice])/(dts[time_slice, np.newaxis, np.newaxis,
                                           np.newaxis])), 0.0, 1000.0),
                      t_to_ta_1)]
 
@@ -203,7 +217,6 @@ class AromeDataRepository(object):
             y_wind, t = extracted_data.pop("y_wind")
             extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) +
                                                    np.square(y_wind)), t
-
         self.time_series, self.other_data = \
             self._convert_to_time_series(extracted_data)
 
@@ -263,7 +276,7 @@ class AromeDataRepository(object):
             raise AromeDataRepositoryError()
         self.time_series.update(other.time_series)
 
-    def get_sources(self, keys=None):
+    def fetch_sources(self, keys=None):
         """Get shyft source vectors for keys
 
         Convert timeseries and geo locations, to corresponding input sources,
