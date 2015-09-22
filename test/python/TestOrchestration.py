@@ -25,7 +25,7 @@ from shyft.repository.testsupport.mocks import state_repository_factory
 from shyft.repository.testsupport.time_series import create_mock_station_data
 from shyft.repository.cell_read_only_repository import CellReadOnlyRepository
 from shyft.repository.cell_read_only_repository import FileCellRepository
-from shyft.repository.arome_data_repository import AromeDataRepository
+from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
 from shyft.repository.state_repository import yaml_file_storage_factory
 
 
@@ -364,7 +364,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         """
         Simple regression test of arome data respository.
         """
-
         EPSG = 32633
         upper_left_x = 436100.0
         upper_left_y = 7417800.0

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from functools import partial
 import numpy as np
 from netCDF4 import Dataset
@@ -12,6 +14,7 @@ from shyft.api import PrecipitationSource
 from shyft.api import WindSpeedSource
 from shyft.api import RadiationSource
 from shyft.api import GeoPoint
+from .. import interfaces
 
 
 class AromeDataRepositoryError(Exception):
