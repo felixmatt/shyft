@@ -2,12 +2,13 @@
 import unicodedata
 from gis_data import BaseGisDataFetcher
 
-#import sys
-#sys.path.insert(0, "D:/Users/os/projects/shyft")
 
-class StationDataError(Exception): pass
+class StationDataError(Exception):
+    pass
+
 
 class StationDataFetcher(BaseGisDataFetcher):
+
 
     def __init__(self, station_ids=None, epsg_id=32632):
         super(StationDataFetcher, self).__init__(geometry=None, server_name="oslwvagi001p", server_port="6080", service_index=4)
@@ -38,12 +39,15 @@ class StationDataFetcher(BaseGisDataFetcher):
                 z = feature["attributes"]["MOH"]
                 name = unicodedata.normalize('NFKC', feature["attributes"]["ST_NAVN"])
                 name = str(unicode(name).encode("ascii", errors="replace"))
+
                 stations[index] = ((x,y,z), {"owner": feature["attributes"]["EIER"],"name": name})
         else:
             raise StationDataError("Could not get data from GIS service!")
         return stations
 
+
 def _main():
+
     station_ids = [678,506,217,503,421,489,574,598,610,121,423]
     sf = StationDataFetcher(epsg_id=32632)
     stations = sf.fetch(station_ids=station_ids)

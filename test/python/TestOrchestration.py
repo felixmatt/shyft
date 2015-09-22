@@ -1,15 +1,16 @@
-﻿from numpy import random
+﻿from __future__ import print_function
+from numpy import random
 from datetime import datetime
 import unittest
-from shyft import api
-from shyft.api import pt_gs_k
 import os
 import yaml
 from os.path import dirname
 from os.path import pardir
 from os.path import join
-from shyft import __file__ as shyft_file
 
+from shyft import __file__ as shyft_file
+from shyft import api
+from shyft.api import pt_gs_k
 from shyft.orchestration.state import set_ptgsk_model_state
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
@@ -25,7 +26,7 @@ from shyft.repository.testsupport.mocks import state_repository_factory
 from shyft.repository.testsupport.time_series import create_mock_station_data
 from shyft.repository.cell_read_only_repository import CellReadOnlyRepository
 from shyft.repository.cell_read_only_repository import FileCellRepository
-from shyft.repository.arome_data_repository import AromeDataRepository
+from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
 from shyft.repository.state_repository import yaml_file_storage_factory
 
 
@@ -360,7 +361,7 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
 
 class AromeDataRepositoryTestCase(unittest.TestCase):
 
-    def test_create_reader(self):
+    def test_read_time_interval(self):
         """
         Simple regression test of arome data respository.
         """
@@ -372,32 +373,46 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         ny = 94
         dx = 1000.0
         dy = 1000.0
+
+        # Period start
+        year = 2015
+        month = 8
+        day = 23
+        hour = 6
+        n_hours = 30
+        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = api.YMDhms(year, month, day, hour)
+        period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
+
         base_dir = join(dirname(shyft_file), pardir, pardir, "shyft-data",
                         "repository", "arome_data_repository")
-        pth1 = join(base_dir, "arome_metcoop_red_default2_5km_20150823_06.nc")
-        pth2 = join(base_dir, "arome_metcoop_red_test2_5km_20150823_06.nc")
+        pth1 = join(base_dir, "arome_metcoop_red_default2_5km_{}.nc".format(date_str))
+        pth2 = join(base_dir, "arome_metcoop_red_test2_5km_{}.nc".format(date_str))
         bounding_box = ([upper_left_x, upper_left_x + nx*dx,
                          upper_left_x + nx*dx, upper_left_x],
                         [upper_left_y, upper_left_y,
                          upper_left_y - ny*dy, upper_left_y - ny*dy])
-        ar1 = AromeDataRepository(pth1, EPSG, bounding_box)
-        ar2 = AromeDataRepository(pth2, EPSG, bounding_box)
-        ar1.add_time_series(ar2)
-        sources = ar1.get_sources()
+        ar1 = AromeDataRepository(pth1, EPSG, period, bounding_box)
+        ar2 = AromeDataRepository(pth2, EPSG, period, elevation_file=pth1)
+        ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
+        ar2_data_names = ("radiation",)
+        sources = ar1.get_timeseries(ar1_data_names, period, None)
         self.assertTrue(len(sources) > 0)
-        data_names = ("temperature", "radiation", "wind_speed",
-                      "precipitation", "relative_humidity")
-        self.assertTrue(all([n in sources for n in data_names]))
-        self.assertTrue(sources["temperature"][0].ts.size() == 67)
-        r0 = sources["radiation"][0].ts
+        sources2 = ar2.get_timeseries(ar2_data_names, period, geo_location_criteria=bounding_box)
+
+        self.assertTrue(set(sources) == set(ar1_data_names))
+        self.assertTrue(set(sources2) == set(ar2_data_names))
+        self.assertTrue(sources["temperature"][0].ts.size() == n_hours + 1)
+        r0 = sources2["radiation"][0].ts
         p0 = sources["precipitation"][0].ts
         t0 = sources["temperature"][0].ts
-        self.assertTrue(r0.size() == 66)
-        self.assertTrue(p0.size() == 66)
+        self.assertTrue(r0.size() == n_hours + 1)
+        self.assertTrue(p0.size() == n_hours + 1)
         self.assertTrue(r0.time(0) == t0.time(0))
         self.assertTrue(p0.time(0) == t0.time(0))
-        self.assertTrue(r0.time(r0.size() - 1) < t0.time(t0.size()-1))
-        self.assertTrue(p0.time(r0.size() - 1) < t0.time(t0.size()-1))
+        self.assertTrue(r0.time(r0.size() - 1) == t0.time(t0.size() - 1))
+        self.assertTrue(p0.time(r0.size() - 1) == t0.time(t0.size() - 1))
 
 
 #class LocalStateRepositoryTestCase(unittest.TestCase):
