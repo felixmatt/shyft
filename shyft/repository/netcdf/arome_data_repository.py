@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from os import path
 from functools import partial
 import numpy as np
 from netCDF4 import Dataset
@@ -22,21 +23,22 @@ class AromeDataRepositoryError(Exception):
     pass
 
 
-class AromeDataRepository(object):
+class AromeDataRepository(interfaces.GeoTsRepository):
 
     def __init__(self, filename, epsg_id, bounding_box, utc_period,
                  x_padding=5000.0, y_padding=5000.0, fields=None):
         """
-        Construct the netCDF4 dataset reader for data from Arome NWP model,
-        and initialize data retrieval.
+        Construct the netCDF4 dataset reader for data from Arome NWP
+        model, and initialize data retrieval.
 
         Parameters
         ----------
         filename: string
-            Name of netcdf file containing spatially distributed input fata
+            Name of netcdf file containing spatially distributed input
+            data.
         epsg_id: int
-            Unique coordinate system id for result coordinates. Currently 32632
-            and 32633 are supperted.
+            Unique coordinate system id for result coordinates.
+            Currently 32632 and 32633 are supperted.
         bounding_box: list
             A list on the form [[x_ul, x_ur, x_lr, x_ll],
             [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
@@ -56,7 +58,7 @@ class AromeDataRepository(object):
 
 
         Arome NWP model output is from:
-        Catalog http://thredds.met.no/thredds/catalog/arome25/catalog.html
+        http://thredds.met.no/thredds/catalog/arome25/catalog.html
 
         Contact:
             Name: met.no
@@ -64,10 +66,134 @@ class AromeDataRepository(object):
             Email: thredds@met.no
             Phone: +47 22 96 30 00
         """
-        self.shyft_cs = "+proj=utm +zone={} +ellps={} +datum={} \
- +units=m +no_defs".format(epsg_id - 32600, "WGS84", "WGS84")
-        dataset = Dataset(filename)
-        data_vars = dataset.variables
+
+        if not path.isfile(filename):
+            raise interfaces.InterfaceError("No such file {}".format(filename))
+
+        self.filename = filename
+        self.epsg_id = epsg_id
+        self.shyft_cs = \
+            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
+                                                                              "WGS84", "WGS84")
+        # Add a padding to the bounding box to make sure the computational
+        # domain is fully enclosed in arome dataset
+        bounding_box = np.array(bounding_box)
+        bounding_box[0][0] -= x_padding
+        bounding_box[0][1] += x_padding
+        bounding_box[0][2] += x_padding
+        bounding_box[0][3] -= x_padding
+        bounding_box[1][0] += x_padding
+        bounding_box[1][1] += x_padding
+        bounding_box[1][2] -= x_padding
+        bounding_box[1][3] -= x_padding
+        self.bounding_box = bounding_box
+
+        # Field names and mappings
+        self._netcdf_fields = ["relative_humidity_2m",
+                               "air_temperature_2m",
+                               "altitude",
+                               "precipitation_amount",
+                               "x_wind_10m",
+                               "y_wind_10m",
+                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
+
+        self._shyft_fields = ["relative_humidity",
+                              "temperature",
+                              "z",
+                              "precipitation",
+                              "x_wind",
+                              "y_wind",
+                              "radiation"]
+
+        self.source_type_map = {"relative_humidity": RelHumSource,
+                                "temperature": TemperatureSource,
+                                "precipitation": PrecipitationSource,
+                                "radiation": RadiationSource,
+                                "wind_speed": WindSpeedSource}
+
+    def _geo_points(self):
+        """Return (x,y,z) coordinates for data sources
+
+        Construct and return a numpy array of (x,y,z) coordinates at each
+        (i,j) having a data source.
+        """
+        pts = np.empty(self.xx.shape + (3,), dtype='d')
+        pts[:, :, 0] = self.xx
+        pts[:, :, 1] = self.yy
+        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else \
+            np.zeros(self.xx.shape, dtype='d')
+        return pts
+
+    def _convert_to_timeseries(self, extracted_data):
+        """Convert timeseries from numpy structures to shyft.api timeseries.
+
+        We assume the time axis is regular, and that we can use a point time
+        series with a parametrized time axis definition and corresponding
+        vector of values. If the time series is missing on the data, we insert
+        it into non_time_series.
+
+        Returns
+        -------
+        timeseries: dict
+            Time series arrays keyed by type
+        non_timeseries: dict
+            Other data that can not be converted to time series
+            
+        """
+        time_series = {}
+        non_time_series = {}
+        tsc = TsFactory().create_point_ts
+        for key, (data, ta) in extracted_data.iteritems():
+            if ta is None:
+                non_time_series[key] = data
+                continue
+            fslice = (len(data.shape) - 2)*(slice(None),)
+            I, J = data.shape[-2:]
+
+            def construct(d):
+                return tsc(ta.size(), ta.start(), ta.delta(),
+                           DoubleVector_FromNdArray(d.flatten()), 0)
+            time_series[key] = np.array([[construct(data[fslice + (i, j)])
+                                         for j in xrange(J)] for i in
+                                         xrange(I)])
+        return time_series, non_time_series
+
+    def add_timeseries(self, other, eps=1.0e-10):
+        """Add other's timeseries to self
+
+        Add all the time series from the other repository to this, if the x,y
+        locations match within a tolerance.
+
+        Parameters
+        ----------
+        other: AromeDataRepository
+            Repository with additional time series and lat/long coordinates
+        eps: float, optional
+            Tolerance for point co-location
+        """
+        if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
+           np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
+            raise AromeDataRepositoryError()
+        self.time_series.update(other.time_series)
+
+    def get_timeseries(self, input_source_types, geo_location_criteria, utc_period):
+        """Get shyft source vectors of time series for input_source_types
+
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve (precipitation,temperature..)
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+
+        Returns
+        -------
+        geo_loc_ts: dictionary
+            dictionary keyed by ts type, where values are api vectors of geo
+            located timeseries.
+        """
 
         if isinstance(utc_period, UtcPeriod):
             utc_period = [utc_period.start, utc_period.end]
@@ -82,28 +208,10 @@ class AromeDataRepository(object):
         extract_subset = True if time[time_slice].shape != time.shape else False
         time = time[time_slice]
 
-        # Add a padding to the bounding box to make sure the computational
-        # domain is fully enclosed in arome dataset
-        bounding_box = np.array(bounding_box)
-        bounding_box[0][0] -= x_padding
-        bounding_box[0][1] += x_padding
-        bounding_box[0][2] += x_padding
-        bounding_box[0][3] -= x_padding
-        bounding_box[1][0] += x_padding
-        bounding_box[1][1] += x_padding
-        bounding_box[1][2] -= x_padding
-        bounding_box[1][3] -= x_padding
+        dataset = Dataset(self.filename)
+        data_vars = dataset.variables
 
-        # Field names and mappings
-        netcdf_data_fields = ["relative_humidity_2m",
-                              "air_temperature_2m",
-                              "altitude",
-                              "precipitation_amount",
-                              "x_wind_10m",
-                              "y_wind_10m",
-                              "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
-
-        # arome data and time conversions, ordered as netcdf_data_fields
+        # arome data and time conversions, ordered as _netcdf_fields
         def netcdf_data_convert(t):
             """
             For a given utc time list t, return a list of callable tuples to
@@ -137,29 +245,14 @@ class AromeDataRepository(object):
                                           np.newaxis])), 0.0, 1000.0),
                      t_to_ta_1)]
 
-        shyft_data_fields = ["relative_humidity",
-                             "temperature",
-                             "z",
-                             "precipitation",
-                             "x_wind",
-                             "y_wind",
-                             "radiation"]
-
-        self.source_type_map = {"relative_humidity": RelHumSource,
-                                "temperature": TemperatureSource,
-                                "precipitation": PrecipitationSource,
-                                "radiation": RadiationSource,
-                                "wind_speed": WindSpeedSource}
-
         if fields is None:
-            fields = shyft_data_fields
+            fields = self._shyft_fields
         else:
-            assert all([field in shyft_data_fields for field in fields])
+            # set(fields).issubset(self._shyft_fields)  # TODO: Check
+            assert all([field in self._shyft_fields for field in fields])
 
-        shyft_net_map = {s: n for n, s in zip(netcdf_data_fields,
-                                              shyft_data_fields)}
-        data_convert_map = {s: c for s, c in zip(shyft_data_fields,
-                                                 netcdf_data_convert(time))}
+        shyft_net_map = {s: n for n, s in zip(self._netcdf_fields, self._shyft_fields)}
+        data_convert_map = {s: c for s, c in zip(self._shyft_fields, netcdf_data_convert(time))}
 
         # Target projection
         shyft_proj = Proj(self.shyft_cs)
@@ -180,7 +273,7 @@ class AromeDataRepository(object):
 
                 # Find bounding box in arome projection
                 bb_proj = transform(shyft_proj, data_proj,
-                                    bounding_box[0], bounding_box[1])
+                                    self.bounding_box[0], self.bounding_box[1])
                 x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
                 y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
@@ -217,76 +310,8 @@ class AromeDataRepository(object):
             y_wind, t = extracted_data.pop("y_wind")
             extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) +
                                                    np.square(y_wind)), t
-        self.time_series, self.other_data = \
-            self._convert_to_time_series(extracted_data)
+        self.time_series, self.other_data = self._convert_to_time_series(extracted_data)
 
-    def _geo_points(self):
-        """Return (x,y,z) coordinates for data sources
-
-        Construct and return a numpy array of (x,y,z) coordinates at each
-        (i,j) having a data source.
-        """
-        pts = np.empty(self.xx.shape + (3,), dtype='d')
-        pts[:, :, 0] = self.xx
-        pts[:, :, 1] = self.yy
-        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else \
-            np.zeros(self.xx.shape, dtype='d')
-        return pts
-
-    def _convert_to_time_series(self, extracted_data):
-        """Convert data from numpy structures to shyft data.
-
-        We assume the time axis is regular, and that we can use a point time
-        series with a parametrized time axis definition and corresponding
-        vector of values.
-        """
-        time_series = {}
-        non_time_series = {}
-        tsc = TsFactory().create_point_ts
-        for key, (data, ta) in extracted_data.iteritems():
-            if ta is None:
-                non_time_series[key] = data
-                continue
-            fslice = (len(data.shape) - 2)*(slice(None),)
-            I, J = data.shape[-2:]
-
-            def construct(d):
-                return tsc(ta.size(), ta.start(), ta.delta(),
-                           DoubleVector_FromNdArray(d.flatten()), 0)
-            time_series[key] = np.array([[construct(data[fslice + (i, j)])
-                                         for j in xrange(J)] for i in
-                                         xrange(I)])
-        return time_series, non_time_series
-
-    def add_time_series(self, other, eps=1.0e-10):
-        """Add other's timeseries to self
-
-        Add all the time series from the other repository to this, if the x,y
-        locations match within a tolerance.
-
-        Parameters
-        ----------
-        other: AromeDataRepository
-            Repository with additional time series and lat/long coordinates
-        eps: float, optional
-            Tolerance for point co-location
-        """
-        if np.linalg.norm(other.xx.ravel() - self.xx.ravel()) > eps or \
-           np.linalg.norm(other.yy.ravel() - self.yy.ravel()) > eps:
-            raise AromeDataRepositoryError()
-        self.time_series.update(other.time_series)
-
-    def fetch_sources(self, keys=None):
-        """Get shyft source vectors for keys
-
-        Convert timeseries and geo locations, to corresponding input sources,
-        and return these as shyft source vectors.
-
-        Parameters
-        ----------
-        keys: list, optional
-            If given, a list of data names to extract input source vectors for.
-        """
         if "geo_points" not in self.other_data:
             self.other_data["geo_points"] = self._geo_points()
         pts = self.other_data["geo_points"]
@@ -305,3 +330,9 @@ class AromeDataRepository(object):
                                          ts[idx]) for idx in
                                          np.ndindex(pts.shape[:-1])])
         return sources
+
+    def get_forecast(self, input_source_types, geo_location_criteria, utc_period):
+        raise interfaces.InterfaceError()
+
+    def get_forecast_ensemble(self, input_source_types, geo_location_criteria, utc_period):
+        raise interfaces.InterfaceError()

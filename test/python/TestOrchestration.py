@@ -394,7 +394,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
                          upper_left_y - ny*dy, upper_left_y - ny*dy])
         ar1 = AromeDataRepository(pth1, EPSG, bounding_box, period)
         ar2 = AromeDataRepository(pth2, EPSG, bounding_box, period)
-        ar1.add_time_series(ar2)
+        #ar1.add_time_series(ar2)
         sources = ar1.fetch_sources()
         self.assertTrue(len(sources) > 0)
         data_names = ("temperature", "radiation", "wind_speed",
