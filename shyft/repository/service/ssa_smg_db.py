@@ -23,6 +23,7 @@ from System.Collections.Generic import List,IList,Dictionary,IDictionary
 from Statkraft.XTimeSeries import MetaInfo, PointTimeStepConstraint, TsIdentity,ITimeSeries
 from Statkraft.ScriptApi import TsAsVector,TimeSystemReference,SsaTimeSeries
 from shyft import api
+from .ssa_geo_ts_repository import TsRepository
 import numpy as np
 
 import abc
@@ -32,7 +33,7 @@ class SmgDataError(Exception):
 
 
 
-class SmGTsRepository(object):
+class SmGTsRepository(TsRepository):
     def __init__(self, env):
         self.env=env
 

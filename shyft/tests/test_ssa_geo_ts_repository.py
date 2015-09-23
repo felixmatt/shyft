@@ -3,6 +3,8 @@ import unittest
 
 from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
 from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
+from shyft.repository.service.gis_location_service import GisLocationService
+from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD
 from shyft.api import Calendar
 from shyft.api import YMDhms
 from shyft.api import UtcPeriod
@@ -21,7 +23,13 @@ class SSAGeoTsRepositoryTestCase(unittest.TestCase):
             MetStationConfig(gis_id=574,temperature=u'/NeNi-Stuggusjøen...-T0017V3KI0114',precipitation=u'/NeNi-Stuggusjøen...-T0000D9BI0124',radiation=u'/ENKI/STS/Radiation/Sim.-Stuggusjøen...-T0006A0B-0119')
         ]
         #note: the MetStationConfig can be constructed from yaml-config
-        geo_ts_repository = GeoTsRepository(gis_service="",smg_service='prod',met_station_list=met_stations) #pass service info and met_stations
+        gis_location_repository=GisLocationService() # this provides the gis locations for my stations
+        smg_ts_repository = SmGTsRepository(PROD) # this provide the read function for my time-series
+
+        geo_ts_repository = GeoTsRepository(
+            geo_location_repository=gis_location_repository,
+            ts_repository=smg_ts_repository,
+            met_station_list=met_stations) #pass service info and met_stations
 
         self.assertIsNotNone(geo_ts_repository)
         utc_period = UtcPeriod(utc.time(YMDhms(2010, 1, 1, 0, 0, 0)),utc.time(YMDhms(2010, 1, 2, 0, 0, 0)))

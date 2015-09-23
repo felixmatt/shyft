@@ -125,12 +125,12 @@ class StateInfo(object):
     """
 
     def __init__(self, state_id=None, region_model_id=None,
-                 utc_timestamp=None, tags=None, state_data=None):
+                 utc_timestamp=None, tags=None):
         self.state_id = state_id
         self.region_model_id = region_model_id
         self.utc_timestamp = utc_timestamp
         self.tags = tags
-        self.state_data = state_data
+        
 
 
 class StateRepository(object):

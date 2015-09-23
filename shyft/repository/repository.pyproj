@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{5907ed02-15f7-409c-85f3-b5989175c56c}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>service\gis_station_data.py</StartupFile>
+    <StartupFile>service\gis_location_service.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -13,6 +13,9 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId />
     <InterpreterVersion />
+    <InterpreterArguments>
+    </InterpreterArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -29,7 +32,7 @@
     <Compile Include="service\cell_read_only_repository.py" />
     <Compile Include="service\forecast_pt_location.py" />
     <Compile Include="service\gis_data.py" />
-    <Compile Include="service\gis_station_data.py" />
+    <Compile Include="service\gis_location_service.py" />
     <Compile Include="service\ssa_geo_ts_repository.py" />
     <Compile Include="service\ssa_smg_db.py" />
     <Compile Include="service\__init__.py" />

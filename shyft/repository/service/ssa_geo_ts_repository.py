@@ -7,9 +7,7 @@ from __future__ import absolute_import
 from abc import ABCMeta,abstractmethod,abstractproperty
 import os
 from shyft import api
-from .. import interfaces
-from .gis_station_data import StationDataFetcher # StationDataFetcher is Statkraft dependent service, we could substitute with an interface later
-from .ssa_smg_db import SmGTsRepository,PREPROD,PROD # ssa_smg_db is a Statkraft dependent service, we could substitute with an interface later
+from shyft.repository import interfaces
 
 class MetStationConfig(object):
     """
@@ -46,9 +44,55 @@ class MetStationConfig(object):
         self.relative_humidity=relative_humidity
     
     
+class GeoLocationRepository(object):
+    """
+    Responsible for providing locations for specified gis-identifiers
+    A candidate for interfaces
+    """
+    __metaclass__ = ABCMeta
+    @abstractmethod
+    def get_locations(self,location_id_list,epgs_id=32632):
+        """
+        Given that we know the location-id (typically an integer, could be string)
+        provide the locations (x,y,z) in a specified coordinate system
+        Parameters
+        ----------
+        location_id_list:list of type integer
+            identifies the gis-locationns, uniquely
+        epgs_id: integer
+            identifies the coordinate system
 
+        Returns
+        -------
+        dictionary of identifier:tuple(x,y,z)
+        """
+        pass
 
+class TsRepository(object):
+    """
+    Defines the contract of a time-series repository for this specific use
+    The responsibility is to read and store time-series,forecasts, ensembles
+    A candidate for interfaces
+    """
+    @abstractmethod
+    def read(self,list_of_ts_id,period):
+        """
+        """
+        pass
+    @abstractmethod
+    def store(self,timeseries_dict):
+        """ Store the supplied time-series to the underlying db-system.
+            Parameters
+            ----------
+            timeseries_dict: dict string:timeseries
+                the keys are the wanted ts(-path) names
+                and the values are shyft api.time-series.
+                If the named time-series does not exist, create it.
+        """
+        pass
 
+class GeoTsRepositoryError(Exception):
+    pass
 
 class GeoTsRepository(interfaces.GeoTsRepository):
     """
@@ -87,14 +131,14 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self, gis_service,smg_service,met_station_list):
+    def __init__(self, geo_location_repository,ts_repository,met_station_list):
         """
         Parameters
         ----------
-            gis_service: string
+            geo_location_repository: GeoLocationRepository
                 server like oslwvagi001p, to be passed to the gis_station_data fetcher service
 
-            smg_service: ssa.environment.SmgEnvironment
+            ts_repository: TsRepository
                 the SMG_PROD or SMG_PREPROD environment configuration (user,db-service)
 
             met_station_list: list of type MetStationConfig
@@ -106,8 +150,10 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                 ]
 
         """
-        self.gis_service=gis_service # later we will pass this to the gis-service api
-        self.smg_service= PROD if smg_service=='prod' else PREPROD # we pass this to the ssa smg db interface
+        if not isinstance(geo_location_repository,GeoLocationRepository): raise GeoTsRepositoryError("geo_location_repository should be an implementation of GeoLocationRepository")
+        if not isinstance(ts_repository,TsRepository):raise GeoTsRepositoryError("ts_repository should be an implementation of TsRepository")
+        self.geo_location_repository=geo_location_repository
+        self.ts_repository= ts_repository # we pass this to the ssa smg db interface
         self.met_station_list=met_station_list # this defines the scope of the service, and glue together consistent positions and time-series
         self.source_type_map = {"relative_humidity": api.RelHumSource, #we need this map to provide shyft.api types back to the orchestrator
                                 "temperature": api.TemperatureSource,
@@ -135,8 +181,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         # 1 get the station-> location map
         station_ids=[ x.gis_id for x in self.met_station_list ]
-        gis_station_service= StationDataFetcher(epsg_id=32632)
-        geo_loc= gis_station_service.fetch(station_ids=station_ids)
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epgs_id=32632)
         # 2 read all the timeseries
         # create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         ts_to_geo_ts_info= dict()
@@ -145,12 +190,12 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
             result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
             ts_to_geo_ts_info.update(
-                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id][0] ) )] #this constructs a key,value list from the result below
+                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ) )] #this constructs a key,value list from the result below
                          for x  in self.met_station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
                  })
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
-        ssa_ts_service=SmGTsRepository(self.smg_service)
-        read_ts_map=ssa_ts_service.read(ts_list,utc_period)
+        
+        read_ts_map=self.ts_repository.read(ts_list,utc_period)
         # 3 map all returned series with geo-location, and fill in the
         #   vectors of geo-located  TemperatureSource,PrecipitationSource etc.
         for tsn,ts in read_ts_map.iteritems():
@@ -159,8 +204,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
         return result
 
-    def get_forecast(self, input_source_types,
-                     geo_location_criteria, utc_period):
+    def get_forecast(self, input_source_types,utc_period,t_c,geo_location_criteria):
         """
         Parameters
         ----------
@@ -173,8 +217,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         raise NotImplementedError("get_forecast will be implemented later")
 
-    def get_forecast_ensemble(self, input_source_types,
-                              geo_location_criteria, utc_period):
+    def get_forecast_ensemble(self, input_source_types,utc_period,t_c,geo_location_criteria):
         """
         Returns
         -------
