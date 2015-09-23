@@ -15,6 +15,27 @@ from shyft import shyftdata_dir
 
 
 class RegionModelRepository(interfaces.RegionModelRepository):
+    """
+    Repository that delivers fully specified shyft api region_models
+    based on data found in netcdf files.
+
+    Netcdf dataset assumptions:
+        * Group "elevation" with variables:
+            * xcoord: array of floats
+            * ycoord: array of floats
+            * elevation: float array of dim (xcoord, ycoord)
+        * Group "catchments" with variables:
+            * catchments: int array of dim (xcoord, ycoord)
+            * catchment_indices: int array of possible indices
+        * Group "forest-fraction" with variables:
+            * forest-fraction: float array of dim (xcoord, ycoord)
+        * Group "lake-fraction" with variables:
+            * lake-fraction: float array of dim (xcoord, ycoord)
+        * Group "reservoir-fraction" with variables:
+            * reservoir-fraction: float array of dim (xcoord, ycoord)
+        * Group "glacier-fraction" with variables:
+            * glacier-fraction: float array of dim (xcoord, ycoord)
+    """
 
     def __init__(self, region_config, model_config):
         """
@@ -38,7 +59,12 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
     @property
     def mask(self):
-        """Get the mask for cells that have actual info."""
+        """
+        Get the mask for cells that have actual info.
+        Returns
+        -------
+            mask : np.array of type bool
+        """
         if self._mask is not None:
             return self._mask
         with Dataset(self._data_file) as dset:
@@ -48,18 +74,37 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         return mask
 
     def get_region_model(self, region_id, region_model, catchments=None):
+        """
+        Return a fully specified shyft api region_model for region_id, based on data found
+        in netcdf dataset.
+
+        Parameters
+        -----------
+        region_id: string
+            unique identifier of region in data
+        region_model: shyft.api type
+            model to construct. Has cell constructor and region/catchment
+            parameter constructor.
+        catchments: list of unique integers
+            catchment indices when extracting a region consisting of a subset
+            of the catchments
+        has attribs to construct  params and cells etc.
+
+        Returns
+        -------
+        region_model: shyft.api type
+        """
+
         with Dataset(self._data_file) as dset:
             grp = dset.groups['elevation']
             xcoord = grp.variables['xcoord'][:]
             ycoord = grp.variables['ycoord'][:]
             mesh2d = np.dstack(np.meshgrid(xcoord, ycoord)).reshape(-1, 2)
             elevation = grp.variables['elevation'][:]
-            coordinates = np.hstack((mesh2d,
-                                     elevation.reshape(-1, 1)))[self.mask]
+            coordinates = np.hstack((mesh2d, elevation.reshape(-1, 1)))[self.mask]
             areas = np.ones(len(xcoord)*len(ycoord),
                             dtype=xcoord.dtype)[self.mask]*(
-                                xcoord[1] - xcoord[0])*(
-                                ycoord[1] - ycoord[0])
+                                xcoord[1] - xcoord[0])*(ycoord[1] - ycoord[0])
             catchments = dset.groups['catchments'].variables[
                 "catchments"][:].reshape(-1)[self.mask]
             c_ids = dset.groups['catchments'].variables["catchment_indices"][:]
@@ -89,13 +134,10 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
         # Construct cells
         cell_vector = region_model.cell_t.vector_t()
-        for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments,
-                                               ff, lf, rf, gf):
+        for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments, ff, lf, rf, gf):
             cell = region_model.cell_t()
-            cell.geo = api.GeoCellData(api.GeoPoint(*pt),
-                                       a, c_id, radiation_slope_factor,
-                                       api.LandTypeFractions(gf, lf, rf,
-                                                             ff, 0.0))
+            cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, c_id, radiation_slope_factor,
+                                       api.LandTypeFractions(gf, lf, rf, ff, 0.0))
             cell_vector.append(cell)
 
         # Construct catchment overrides
@@ -111,5 +153,4 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param
-        return region_model(cell_vector, region_parameter,
-                            catchment_parameters)
+        return region_model(cell_vector, region_parameter, catchment_parameters)

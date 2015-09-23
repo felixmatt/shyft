@@ -18,12 +18,50 @@ class AromeDataRepositoryError(Exception):
 
 
 class AromeDataRepository(interfaces.GeoTsRepository):
+    """
+    Repository for geo located timeseries given as Arome(*) data in
+    netCDF files.
+
+    NetCDF dataset assumptions:
+        * Root group has variables:
+            * time: timestamp (int) array with seconds since epoc
+                    (1970.01.01 00:00, UTC) for each data point
+            * x: float array of latitudes
+            * y: float array of longitudes
+        * Root group has subset of variables:
+            * relative_humidity_2m: float array of dims (time, 1, y, x)
+            * air_temperature_2m: float array of dims (time, 1, y, x)
+            * altitude: float array of dims (y, x)
+            * precipitation_amount: float array of dims (time, y, x)
+            * x_wind_10m: float array of dims (time, y, x)
+            * y_wind_10m: float array of dims (time, y, x)
+            * integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time:
+              float array of dims (time, 1, y, x)
+            * All variables are assumed to have the attribute grid_mapping
+              which should be a reference to a variable in the root group 
+              that has an attribute named proj4. Example code: 
+                ds = netCDF4.Dataset(arome_file)
+                var = "precipitation_amount"
+                mapping = ds.variables[var].grid_mapping
+                proj = ds.variables[mapping].proj4
+
+
+    (*) Arome NWP model output is from:
+        http://thredds.met.no/thredds/catalog/arome25/catalog.html
+
+        Contact:
+            Name: met.no
+            Organization: met.no
+            Email: thredds@met.no
+            Phone: +47 22 96 30 00
+
+    """
 
     def __init__(self, epsg_id, utc_period, directory, filename=None, bounding_box=None,
                  x_padding=5000.0, y_padding=5000.0, elevation_file=None):
         """
-        Construct the netCDF4 dataset reader for data from Arome NWP
-        model, and initialize data retrieval.
+        Construct the netCDF4 dataset reader for data from Arome NWP model, 
+        and initialize data retrieval.
 
         Parameters
         ----------
@@ -53,20 +91,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Name of netcdf file of same dimensions in x and y, subject to
             constraints given by bounding box and padding, that contains
             elevation that should be used in stead of elevations in file.
-
-
-        Arome NWP model output is from:
-        http://thredds.met.no/thredds/catalog/arome25/catalog.html
-
-        Contact:
-            Name: met.no
-            Organization: met.no
-            Email: thredds@met.no
-            Phone: +47 22 96 30 00
         """
         # Make sure input makes sense, or raise exceptions
         self.directory = directory
-        self._filename = None # To be used by forecast and ensemble to read data
+        self._filename = None  # To be used by forecast and ensemble to read data
         if not path.isdir(self.directory):
             raise interfaces.InterfaceError("No such directory '{}'".format(self.directory))
         self.name_or_pattern = path.join(self.directory, filename)

@@ -22,7 +22,7 @@ repositories for
 * state         - for reading region model-state, cell-level (snapshot of
                   internal state variables of the models).
 
-* geo-located time-series  
+* geo-located time-series
                 - for input observations,forecasts, run-off time-series, that is
                  useful/related to the region model. E.g. precipitation,
                  temperature, radiation, wind-speed, relative humidity and even
@@ -57,7 +57,7 @@ class RegionModelRepository(object):
     @abstractmethod
     def get_region_model(self, region_id, region_model, catchments=None):
         """
-        Return a fully specified region_model for region_id.
+        Return a fully specified shyft api region_model for region_id.
 
         Parameters
         -----------
@@ -281,7 +281,7 @@ class GeoTsRepository(object):
         pass
 
     @abstractmethod
-    def get_forecast_ensemble(self, input_source_types, utc_period, 
+    def get_forecast_ensemble(self, input_source_types, utc_period,
                               t_c, geo_location_criteria=None):
         """
         Parameters

@@ -71,7 +71,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                     tseries = {}
                     tpath = station['time'].split('/')[1:]  # v1 time, the first one is empty
                     vpath = station['values'].split('/')[1:]
-                    times = dset.groups[tpath[0]].variables[tpath[1]][:]  # variables[station['time']][:]
+                    times = dset.groups[tpath[0]].variables[tpath[1]][:]
                     imin = times.searchsorted(period.start, side='left')
                     imax = times.searchsorted(period.end, side='right')
                     # Get the indices of the valid period
@@ -137,6 +137,6 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         raise NotImplementedError("get_forecast")
 
-    def get_forecast_ensemble(self, input_source_types, 
+    def get_forecast_ensemble(self, input_source_types,
                               geo_location_criteria, utc_period):
         raise NotImplementedError("get_forecast_ensemble")
