@@ -8,6 +8,7 @@ from os.path import dirname
 from os.path import pardir
 from os.path import join
 
+from shyft import shyftdata_dir
 from shyft import __file__ as shyft_file
 from shyft import api
 from shyft.api import pt_gs_k
@@ -119,28 +120,39 @@ class StateIOTestCase(unittest.TestCase):
         time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
                                  api.deltahours(1), 240)
         model_interpolation_parameter = api.InterpolationParameter()
-        model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005 # degC/m, so -0.5 degC/100m
-        model_interpolation_parameter.temperature_idw.max_members = 6 # max number of temperature sources used for one interpolation
-        model_interpolation_parameter.temperature_idw.max_distance = 20000 #20 km is max distance
-        model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0 # pure linear interpolation
-        model_interpolation_parameter.use_idw_for_temperature = True # this enables IDW with default temperature gradient.
-        model.run_interpolation(model_interpolation_parameter, time_axis,
+        # degC/m, so -0.5 degC/100m
+        model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
+        # Max number of temperature sources used for one interpolation
+        model_interpolation_parameter.temperature_idw.max_members = 6
+        # 20 km is max distance
+        model_interpolation_parameter.temperature_idw.max_distance = 20000
+        # Pure linear interpolation
+        model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
+        # This enables IDW with default temperature gradient.
+        model_interpolation_parameter.use_idw_for_temperature = True
+
+        model.run_interpolation(
+            model_interpolation_parameter, time_axis,
             self.create_dummy_region_environment(time_axis,
-            model.get_cells()[num_cells/2].geo.mid_point()))
+                                                 model.get_cells()[num_cells/2].geo.mid_point()))
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
+        self.assertIsNotNone(sum_discharge)
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)
+        self.assertIsNotNone(avg_precipitation)
         for time_step in xrange(time_axis.size()):
-            precip_raster = model.statistics.precipitation(cids, time_step)  # example for raster output
+            precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
             self.assertEquals(precip_raster.size(), num_cells)
         avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
-
-        avg_gs_albedo = model.gamma_snow_state.albedo(cids) # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-        self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
-
+        self.assertIsNotNone(avg_gs_sca)
+        # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+        avg_gs_albedo = model.gamma_snow_state.albedo(cids)
+        self.assertIsNotNone(avg_gs_albedo)
+        self.assertEqual(avg_temperature.size(), time_axis.size(),
+                         "expect results equal to time-axis size")
 
     def test_model_state_io(self):
         num_cells = 2
@@ -151,7 +163,9 @@ class StateIOTestCase(unittest.TestCase):
             for i in xrange(num_cells):
                 state_list.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             initial_states = x.join(state_list)
-            set_ptgsk_model_state(model, State(initial_states, datetime.strftime(datetime.utcnow(), "%Y-%m-%d-%M-%S")))
+            set_ptgsk_model_state(model, State(initial_states,
+                                               datetime.strftime(datetime.utcnow(),
+                                                                 "%Y-%m-%d-%M-%S")))
             retrieved_states = extract_ptgsk_model_state(model)
             self.assertEqual(initial_states, retrieved_states.state_list)
 
@@ -180,31 +194,34 @@ class StateIOTestCase(unittest.TestCase):
             statestr = x.join(states)
             self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
 
-    #def test_pthsk_state_io(self):
-    #    """ Just to verify it is pthsk and state io is working """
-    #    sio = api.pthsk_state_io()
-    #    s0 = api.PTHSKStat()
-    #    s0.hbv_snow.swe = 30.0
-    #    s0.hbv_snow.sca = 3.0
+#    def test_pthsk_state_io(self):
+#        """ Just to verify it is pthsk and state io is working """
+#        sio = api.pthsk_state_io()
+#        s0 = api.PTHSKStat()
+#        s0.hbv_snow.swe = 30.0
+#        s0.hbv_snow.sca = 3.0
 
-    #   str = sio.to_string(s0)
-    #   self.assertEqual(len(str), 35)
-    #    statev = api.PTHSKStateVector()
-    #    s1 = api.PTHSKStat()
-    #    s1.hbv_snow.sca = 3.0
-    #    s1.hbv_snow.swe = 40
+#       str = sio.to_string(s0)
+#       self.assertEqual(len(str), 35)
+#        statev = api.PTHSKStateVector()
+#        s1 = api.PTHSKStat()
+#        s1.hbv_snow.sca = 3.0
+#        s1.hbv_snow.swe = 40
 
-    #   statev.push_back(s0)
-    #   statev.push_back(s1)
-    #    sstr = sio.to_string(statev)
+#       statev.push_back(s0)
+#       statev.push_back(s1)
+#        sstr = sio.to_string(statev)
 
-    #    self.assertEqual(sstr, 'pthsk:3.000000 30.000000 0.000100 \npthsk:3.000000 40.000000 0.000100 \n')
+#        self.assertEqual(
+#            sstr, 'pthsk:3.000000 30.000000 0.000100 \npthsk:3.000000 40.000000 0.000100 \n')
 
-    #    stv = sio.vector_from_string(sstr)
-    #    self.assertAlmostEqual(stv[0].hbv_snow.sca, statev[0].hbv_snow.sca)
-    #    self.assertAlmostEqual(stv[1].hbv_snow.swe, statev[1].hbv_snow.swe)
+#        stv = sio.vector_from_string(sstr)
+#        self.assertAlmostEqual(stv[0].hbv_snow.sca, statev[0].hbv_snow.sca)
+#        self.assertAlmostEqual(stv[1].hbv_snow.swe, statev[1].hbv_snow.swe)
 
-#class MockRepositoryTestCase(unittest.TestCase):
+# class MockRepositoryTestCase(unittest.TestCase):
+
+
 class MockRepositoryTestCase():
 
     def test_put_entry(self):
@@ -235,13 +252,15 @@ class MockRepositoryTestCase():
         self.assertRaises(RuntimeError, repository.delete, "foo")
 
 
-#class MockStateRepositoryTestCase(unittest.TestCase):
+# class MockStateRepositoryTestCase(unittest.TestCase):
 class MockStateRepositoryTestCase():
 
     def setUp(self):
         repository = MockStateRepository()
-        repository.generate_mock_entry("ptgsk-state-0", "2014-09-30-0-0-0", tags=["unittest", "mock"])
-        repository.generate_mock_entry("ptgsk-state-1", "2014-10-04-0-0-0", tags=["unittest", "foo"])
+        repository.generate_mock_entry("ptgsk-state-0", "2014-09-30-0-0-0",
+                                       tags=["unittest", "mock"])
+        repository.generate_mock_entry("ptgsk-state-1", "2014-10-04-0-0-0",
+                                       tags=["unittest", "foo"])
         self.repository = repository
 
     def test_compare(self):
@@ -266,7 +285,8 @@ class MockStateRepositoryTestCase():
         self.assertTrue(condition(mock_state(5)))
         self.assertFalse(condition(mock_state(6)))
 
-        condition = combine_conditions(5 < TimeCondition(), TimeCondition() < 10)
+        condition = combine_conditions(5 < TimeCondition(),
+                                       TimeCondition() < 10)
         self.assertTrue(condition(mock_state(6)))
         self.assertFalse(condition(mock_state(5)))
         self.assertFalse(condition(mock_state(10)))
@@ -275,7 +295,6 @@ class MockStateRepositoryTestCase():
         self.assertTrue(condition(mock_state(6)))
         self.assertTrue(condition(mock_state(5)))
         self.assertFalse(condition(mock_state(10)))
-
 
     def test_find_all_entries(self):
         keys = self.repository.find()
@@ -294,7 +313,8 @@ class MockStateRepositoryTestCase():
         self.assertEqual(len(keys), 1)
 
     def test_find_with_combined_conditions(self):
-        condition = combine_conditions( "2014-10-01-0-0-0" < TimeCondition(), TimeCondition() < "2014-10-02-0-0-0")
+        condition = combine_conditions("2014-10-01-0-0-0" < TimeCondition(),
+                                       TimeCondition() < "2014-10-02-0-0-0")
         keys = self.repository.find(condition=condition)
         self.assertEqual(len(keys), 0)
 
@@ -314,7 +334,7 @@ class MockStateRepositoryTestCase():
         self.assertEqual(len(keys), 0)
 
 
-#class MockInputSourceRepositoryTestCase(unittest.TestCase):
+# class MockInputSourceRepositoryTestCase(unittest.TestCase):
 class MockInputSourceRepositoryTestCase():
 
     def test_create_mock_station_data(self):
@@ -328,7 +348,8 @@ class MockInputSourceRepositoryTestCase():
 
     def test_put_input_source(self):
         repository = MockInputSourceRepository()
-        station = InputSource([0.0, 0.0, 0.0], create_mock_station_data(0, 3600, 100), tags=["synthetic_data"])
+        station = InputSource([0.0, 0.0, 0.0], create_mock_station_data(0, 3600, 100),
+                              tags=["synthetic_data"])
         repository.put("Hylen", station)
         self.assertTrue("Hylen" in repository.find())
 
@@ -347,11 +368,10 @@ class CellReadOnlyRepositoryTestCase(unittest.TestCase):
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
         repository = CellReadOnlyRepository(**mock_cell_data(Config(**config)))
-
+        self.assertIsNotNone(repository)
 
     def test_raster_cell_repository_construction(self):
-        config_file = join(dirname(shyft_file), pardir, pardir, "shyft-data",
-                        "repository", "raster_cell_repository","region.yaml")
+        config_file = join(shyftdata_dir, "repository", "raster_cell_repository", "region.yaml")
         with open(config_file, "r") as cf:
             config = yaml.load(cf.read())
         r = config['repository']
@@ -365,7 +385,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         """
         Simple regression test of arome data respository.
         """
-
         EPSG = 32633
         upper_left_x = 436100.0
         upper_left_y = 7417800.0
@@ -385,37 +404,78 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
 
-        base_dir = join(dirname(shyft_file), pardir, pardir, "shyft-data",
-                        "repository", "arome_data_repository")
-        pth1 = join(base_dir, "arome_metcoop_red_default2_5km_{}.nc".format(date_str))
-        pth2 = join(base_dir, "arome_metcoop_red_test2_5km_{}.nc".format(date_str))
-        bounding_box = ([upper_left_x, upper_left_x + nx*dx,
-                         upper_left_x + nx*dx, upper_left_x],
-                        [upper_left_y, upper_left_y,
-                         upper_left_y - ny*dy, upper_left_y - ny*dy])
-        ar1 = AromeDataRepository(pth1, EPSG, period, bounding_box)
-        ar2 = AromeDataRepository(pth2, EPSG, period, elevation_file=pth1)
+        base_dir = join(shyftdata_dir, "repository", "arome_data_repository")
+        f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
+        f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
+        bbox = ([upper_left_x, upper_left_x + nx*dx,
+                 upper_left_x + nx*dx, upper_left_x],
+                [upper_left_y, upper_left_y,
+                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+        ar1 = AromeDataRepository(EPSG, period, base_dir, filename=f1, bounding_box=bbox)
+        ar2 = AromeDataRepository(EPSG, period, base_dir, filename=f2, elevation_file=f1)
         ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
         ar2_data_names = ("radiation",)
         sources = ar1.get_timeseries(ar1_data_names, period, None)
         self.assertTrue(len(sources) > 0)
-        sources2 = ar2.get_timeseries(ar2_data_names, period, geo_location_criteria=bounding_box)
+        sources2 = ar2.get_timeseries(ar2_data_names, period, geo_location_criteria=bbox)
 
         self.assertTrue(set(sources) == set(ar1_data_names))
         self.assertTrue(set(sources2) == set(ar2_data_names))
         self.assertTrue(sources["temperature"][0].ts.size() == n_hours + 1)
         r0 = sources2["radiation"][0].ts
         p0 = sources["precipitation"][0].ts
-        t0 = sources["temperature"][0].ts
+        temp0 = sources["temperature"][0].ts
         self.assertTrue(r0.size() == n_hours + 1)
         self.assertTrue(p0.size() == n_hours + 1)
-        self.assertTrue(r0.time(0) == t0.time(0))
-        self.assertTrue(p0.time(0) == t0.time(0))
-        self.assertTrue(r0.time(r0.size() - 1) == t0.time(t0.size() - 1))
-        self.assertTrue(p0.time(r0.size() - 1) == t0.time(t0.size() - 1))
+        self.assertTrue(r0.time(0) == temp0.time(0))
+        self.assertTrue(p0.time(0) == temp0.time(0))
+        self.assertTrue(r0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
+        self.assertTrue(p0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
 
+    def test_get_forecast(self):
+        EPSG = 32633
+        upper_left_x = 436100.0
+        upper_left_y = 7417800.0
+        nx = 74
+        ny = 94
+        dx = 1000.0
+        dy = 1000.0
 
-#class LocalStateRepositoryTestCase(unittest.TestCase):
+        # Period start
+        year = 2015
+        month = 8
+        day = 23
+        hour = 6
+        n_hours = 30
+        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = api.YMDhms(year, month, day, hour)
+        period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
+        t_c1 = utc.time(t0) + api.deltahours(1)
+        t_c2 = utc.time(t0) + api.deltahours(7)
+
+        base_dir = join(shyftdata_dir, "repository", "arome_data_repository")
+        pattern = "arome_metcoop_red_default2_5km_*.nc".format(date_str)
+        bbox = ([upper_left_x, upper_left_x + nx*dx,
+                 upper_left_x + nx*dx, upper_left_x],
+                [upper_left_y, upper_left_y,
+                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+        repos = AromeDataRepository(EPSG, period, base_dir, filename=pattern, bounding_box=bbox)
+        data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
+        tc1_sources = repos.get_forecast(data_names, period, t_c1, None)
+        tc2_sources = repos.get_forecast(data_names, period, t_c2, None)
+
+        self.assertTrue(len(tc1_sources) == len(tc2_sources))
+        self.assertTrue(set(tc1_sources) == set(data_names))
+        self.assertTrue(tc1_sources["temperature"][0].ts.size() == n_hours + 1)
+
+        tc1_precip = tc1_sources["precipitation"][0].ts
+        tc2_precip = tc2_sources["precipitation"][0].ts
+
+        self.assertTrue(tc1_precip.size() == n_hours + 1)
+        self.assertTrue(tc1_precip.time(0) != tc2_precip.time(0))
+
+# class LocalStateRepositoryTestCase(unittest.TestCase):
 class LocalStateRepositoryTestCase():
 
     def setUp(self):
@@ -425,21 +485,25 @@ class LocalStateRepositoryTestCase():
 
     def test_save(self):
         key = self.mock_state_repository.find()[0]
-        save_state_as_yaml_file(self.mock_state_repository.get(key), os.path.join(self.state_dir, self.state_file_name))
+        save_state_as_yaml_file(self.mock_state_repository.get(key),
+                                os.path.join(self.state_dir, self.state_file_name))
 
     def test_load(self):
         key = self.mock_state_repository.find()[0]
         d1 = self.mock_state_repository.get(key)
-        save_state_as_yaml_file(self.mock_state_repository.get(key), os.path.join(self.state_dir, self.state_file_name))
+        save_state_as_yaml_file(self.mock_state_repository.get(key),
+                                os.path.join(self.state_dir, self.state_file_name))
         state_repository = yaml_file_storage_factory({}, self.state_dir, "state_test.yaml")
         d2 = state_repository.get(state_repository.find()[0])
         self.assertDictEqual(d1.__dict__, d2.__dict__)
 
-    #def test_speed_convert(self):
-    #    state_repository = yaml_file_storage_factory({}, "D:/Users/sih/enki_config_for_test/states", "ptgsk_state.yaml")
-    #    k0=state_repository.find()[0]
-    #    s0=state_repository.get(k0)
-    #    self.assertTrue(len(s0)>0, "Assume we got some states")
+#    def test_speed_convert(self):
+#        state_repository = \
+#            yaml_file_storage_factory({}, "D:/Users/sih/enki_config_for_test/states",
+#                                      "ptgsk_state.yaml")
+#        k0=state_repository.find()[0]
+#        s0=state_repository.get(k0)
+#        self.assertTrue(len(s0)>0, "Assume we got some states")
 
 
 if __name__ == "__main__":

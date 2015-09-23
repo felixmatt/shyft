@@ -239,17 +239,16 @@ class GeoTsRepository(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_timeseries(self, input_source_types,
-                       geo_location_criteria, utc_period):
+    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """
         Parameters
         ----------
         input_source_types: list
             List of source types to retrieve (precipitation,temperature..)
-        geo_location_criteria: object
-            Some type (to be decided), extent (bbox + coord.ref)
         utc_period: api.UtcPeriod
             The utc time period that should (as a minimum) be covered.
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref)
 
         Returns
         -------
@@ -260,24 +259,42 @@ class GeoTsRepository(object):
         pass
 
     @abstractmethod
-    def get_forecast(self, input_source_types,
-                     geo_location_criteria, utc_period):
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
         """
         Parameters
         ----------
-        See get_timeseries
-            Semantics for utc_period: Get the forecast closest up to
-            utc_period.start
+        input_source_types: list
+            List of source types to retrieve (precipitation,temperature..)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+        t_c: long
+            Forecast specification; return newest forecast older than t_c.
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref).
+
         Returns
         -------
-        forecast: same layout/type as for get_timeseries
+        geo_loc_ts: dictionary
+            dictionary keyed by ts type, where values are api vectors of geo
+            located timeseries.
         """
         pass
 
     @abstractmethod
-    def get_forecast_ensemble(self, input_source_types,
-                              geo_location_criteria, utc_period):
+    def get_forecast_ensemble(self, input_source_types, utc_period, 
+                              t_c, geo_location_criteria=None):
         """
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve (precipitation,temperature..)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+        t_c: long
+            Forecast specification; return newest forecast older than t_c.
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref).
+
         Returns
         -------
         ensemble: list of same type as get_timeseries

@@ -1,23 +1,16 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import re
+from glob import glob
 from os import path
 from functools import partial
 import numpy as np
 from netCDF4 import Dataset
 from pyproj import Proj
 from pyproj import transform
-from shyft.api import Timeaxis
-from shyft.api import TsFactory
-from shyft.api import DoubleVector_FromNdArray
-from shyft.api import RelHumSource
-from shyft.api import TemperatureSource
-from shyft.api import PrecipitationSource
-from shyft.api import WindSpeedSource
-from shyft.api import RadiationSource
-from shyft.api import GeoPoint
+from shyft import api
 from .. import interfaces
-from shyft.api import UtcPeriod
 
 
 class AromeDataRepositoryError(Exception):
@@ -26,7 +19,7 @@ class AromeDataRepositoryError(Exception):
 
 class AromeDataRepository(interfaces.GeoTsRepository):
 
-    def __init__(self, filename, epsg_id, utc_period, bounding_box=None,
+    def __init__(self, epsg_id, utc_period, directory, filename=None, bounding_box=None,
                  x_padding=5000.0, y_padding=5000.0, elevation_file=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP
@@ -34,23 +27,27 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         Parameters
         ----------
-        filename: string
-            Name of netcdf file containing spatially distributed input
-            data.
         epsg_id: int
             Unique coordinate system id for result coordinates.
             Currently 32632 and 32633 are supperted.
-        bounding_box: list
+        utc_period: api.UtcPeriod
+            Period to fetch such that utc_period.start and utc_period.end are
+            both included in the interval, if possible
+        directory: string
+            Path to directory holding one or possibly more arome data files.
+            os.path.isdir(directory) should be true, or exception is raised.
+        filename: string, optional
+            Name of netcdf file in directory that contains spatially
+            distributed input data. Can be a glob pattern as well, in case
+            it is used for forecasts or ensambles.
+        bounding_box: list, optional
             A list on the form [[x_ul, x_ur, x_lr, x_ll],
             [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
             domain that shoud be extracted. Coordinates are given in epgs_id
             coordinate system.
-        utc_period: api.UtcPeriod
-            period to fetch such that utc_period.start and utc_period.end are 
-            both included in the interval, if possible
-        x_padding: float
+        x_padding: float, optional
             Longidutinal padding in meters, added both east and west
-        y_padding: float
+        y_padding: float, optional
             Latitudinal padding in meters, added both north and south
         elevation_file: string, optional
             Name of netcdf file of same dimensions in x and y, subject to
@@ -67,12 +64,20 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Email: thredds@met.no
             Phone: +47 22 96 30 00
         """
+        # Make sure input makes sense, or raise exceptions
+        self.directory = directory
+        self._filename = None # To be used by forecast and ensemble to read data
+        if not path.isdir(self.directory):
+            raise interfaces.InterfaceError("No such directory '{}'".format(self.directory))
+        self.name_or_pattern = path.join(self.directory, filename)
+        if elevation_file is not None:
+            self.elevation_file = path.join(self.directory, elevation_file)
+            if not path.isfile(self.elevation_file):
+                raise interfaces.InterfaceError(
+                    "Elevation file '{}' not found".format(self.elevation_file))
+        else:
+            self.elevation_file = None
 
-        if not path.isfile(filename):
-            raise interfaces.InterfaceError("No such file {}".format(filename))
-
-        self.filename = filename
-        self.elevation_file = elevation_file
         self.epsg_id = epsg_id
         self.shyft_cs = \
             "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
@@ -97,11 +102,23 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                               "y_wind",
                               "radiation"]
 
-        self.source_type_map = {"relative_humidity": RelHumSource,
-                                "temperature": TemperatureSource,
-                                "precipitation": PrecipitationSource,
-                                "radiation": RadiationSource,
-                                "wind_speed": WindSpeedSource}
+        self.source_type_map = {"relative_humidity": api.RelHumSource,
+                                "temperature": api.TemperatureSource,
+                                "precipitation": api.PrecipitationSource,
+                                "radiation": api.RadiationSource,
+                                "wind_speed": api.WindSpeedSource}
+
+    @property
+    def filename(self):
+        if self._filename is not None:
+            return self._filename
+        elif path.isfile(self.name_or_pattern):
+            return self.name_or_pattern
+        else:
+            match = glob(self.name_or_pattern)
+            if len(match) == 1:
+                return match[0]
+        raise interfaces.InterfaceError("Cannot resolve filename")
 
     @property
     def bounding_box(self):
@@ -147,11 +164,11 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Time series arrays keyed by type
         non_timeseries: dict
             Other data that can not be converted to time series
-            
+
         """
         time_series = {}
         non_time_series = {}
-        tsc = TsFactory().create_point_ts
+        tsc = api.TsFactory().create_point_ts
         for key, (data, ta) in extracted_data.iteritems():
             if ta is None:
                 non_time_series[key] = data
@@ -161,7 +178,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
             def construct(d):
                 return tsc(ta.size(), ta.start(), ta.delta(),
-                           DoubleVector_FromNdArray(d.flatten()), 0)
+                           api.DoubleVector_FromNdArray(d.flatten()), 0)
             time_series[key] = np.array([[construct(data[fslice + (i, j)])
                                          for j in xrange(J)] for i in xrange(I)])
         return time_series, non_time_series
@@ -188,8 +205,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         if geo_location_criteria is not None:
             self._bounding_box = geo_location_criteria
 
-        if not isinstance(utc_period, UtcPeriod):
-            utc_period = UtcPeriod(utc_period[0]. utc_period[1])
+        if not isinstance(utc_period, api.UtcPeriod):
+            utc_period = api.UtcPeriod(utc_period[0]. utc_period[1])
 
         if "wind_speed" in input_source_types:
             input_source_types = list(input_source_types)  # We change input list, so take a copy
@@ -198,6 +215,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             input_source_types.append("y_wind")
 
         # Open netcdf dataset. TODO: use with...
+        if not path.isfile(self.filename):
+            raise interfaces.InterfaceError("File '{}' not found".format(self.filename))
         dataset = Dataset(self.filename)
         data_vars = dataset.variables
 
@@ -210,7 +229,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         time_slice = slice(idx_min, idx_max)
         extract_subset = True if time[time_slice].shape != time.shape else False
         time = time[time_slice]
-
 
         # arome data and time conversions, ordered as _netcdf_fields
         def netcdf_data_convert(t):
@@ -227,32 +245,32 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             def t_to_ta(t, shift):
                 if extract_subset:
                     shift = 0
-                return Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
+                return api.Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
 
             def noop(d):
                 return d[time_slice]
-            
+
             def prec(d):
                 return d[1:][time_slice]
             t_to_ta_0 = partial(t_to_ta, t, 0)  # Full
             t_to_ta_1 = partial(t_to_ta, t, 1)
             return [(noop, t_to_ta_0),
                     (lambda air_temp: air_temp[time_slice] - 273.15, t_to_ta_0),
-                    (lambda x: x, lambda: None), # Altitude
+                    (lambda x: x, lambda: None),  # Altitude
                     (prec, t_to_ta_1),
                     (noop, t_to_ta_0),
                     (noop, t_to_ta_0),
-                    (lambda rad: np.clip(((rad[1:][time_slice] - rad[:-1][time_slice])/(dts[time_slice, np.newaxis, np.newaxis,
-                                          np.newaxis])), 0.0, 1000.0),
+                    (lambda rad: np.clip(((rad[1:][time_slice] -
+                                           rad[:-1][time_slice])/(dts[time_slice,
+                                                                      np.newaxis,
+                                                                      np.newaxis,
+                                                                      np.newaxis])), 0.0, 1000.0),
                      t_to_ta_1)]
 
         if input_source_types is None:
             input_source_types = self._shyft_fields
         else:
             assert set(input_source_types).issubset(self._shyft_fields)  # TODO: Check
-            #print(input_source_types)
-            #print(self._shyft_fields)
-            #assert all([field in self._shyft_fields for field in input_source_types])
 
         shyft_net_map = {s: n for n, s in zip(self._netcdf_fields, self._shyft_fields)}
         data_convert_map = {s: c for s, c in zip(self._shyft_fields, netcdf_data_convert(time))}
@@ -321,7 +339,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         if self.elevation_file is not None:
             ds2 = Dataset(self.elevation_file)
             data = ds2.variables["altitude"]
-            if not "altitude" in ds2.variables.keys():
+            if "altitude" not in ds2.variables.keys():
                 raise interfaces.InterfaceError(
                     "File '{}' does not contain altitudes".format(self.elevation_file))
             xx, yy, x_inds, y_inds = find_inds(ds2.variables, data)
@@ -331,7 +349,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             assert np.linalg.norm(self.xx - xx) < 1.0e-10
             assert np.linalg.norm(self.yy - yy) < 1.0e-10
             extracted_data["z"] = data[data_slice], None
-            
+
         self.time_series, self.other_data = self._convert_to_timeseries(extracted_data)
 
         if "geo_points" not in self.other_data:
@@ -340,17 +358,40 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         sources = {}
         all_ = slice(None)
         for key, ts in self.time_series.iteritems():
-            #ts = self.time_series[key]
             if key not in self.source_type_map:
                 continue
             tpe = self.source_type_map[key]
-            sources[key] = tpe.vector_t([tpe(GeoPoint(*pts[idx + (all_,)]),
+            sources[key] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx + (all_,)]),
                                          ts[idx]) for idx in
                                          np.ndindex(pts.shape[:-1])])
         return sources
 
-    def get_forecast(self, input_source_types, geo_location_criteria, utc_period):
-        raise interfaces.InterfaceError()
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
+        """
+        See base class
+        """
+        utc = api.Calendar()
+        file_names = glob(self.name_or_pattern)
+        match_files = []
+        match_times = []
+        for fn in file_names:
+            match = re.search("_(\d{8})_(\d{2}).nc$", fn)
+            if match:
+                datestr, hourstr = match.groups()
+                year, month, day = int(datestr[:4]), int(datestr[4:6]), int(datestr[6:8])
+                hour = int(hourstr)
+                t = utc.time(api.YMDhms(year, month, day, hour))
+                if t <= t_c:
+                    match_files.append(fn)
+                    match_times.append(t)
+        if match_files:
+            self._filename = match_files[np.argsort(match_times)[-1]]
+        res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
+        self._filename = None
+        return res
 
-    def get_forecast_ensemble(self, input_source_types, geo_location_criteria, utc_period):
+    def get_forecast_ensemble(self, input_source_types, utc_period, t_c,
+                              geo_location_criteria=None):
+        """
+        """
         raise interfaces.InterfaceError()
