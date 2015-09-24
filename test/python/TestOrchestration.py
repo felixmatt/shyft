@@ -2,33 +2,16 @@
 from numpy import random
 from datetime import datetime
 import unittest
-import os
 import yaml
-from os.path import dirname
-from os.path import pardir
-from os.path import join
+from os import path
 
 from shyft import shyftdata_dir
-from shyft import __file__ as shyft_file
 from shyft import api
 from shyft.api import pt_gs_k
 from shyft.orchestration.state import set_ptgsk_model_state
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
-from shyft.orchestration.state import save_state_as_yaml_file
-from shyft.orchestration.input_source import InputSource
-from shyft.repository.state_repository import TimeCondition
-from shyft.repository.state_repository import combine_conditions
-from shyft.repository.testsupport.mocks import MockRepository
-from shyft.repository.testsupport.mocks import MockStateRepository
-from shyft.repository.testsupport.mocks import MockInputSourceRepository
-from shyft.repository.testsupport.mocks import mock_cell_data
-from shyft.repository.testsupport.mocks import state_repository_factory
-from shyft.repository.testsupport.time_series import create_mock_station_data
-from shyft.repository.cell_read_only_repository import CellReadOnlyRepository
-from shyft.repository.cell_read_only_repository import FileCellRepository
 from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
-from shyft.repository.state_repository import yaml_file_storage_factory
 
 
 class StateIOTestCase(unittest.TestCase):
@@ -194,190 +177,6 @@ class StateIOTestCase(unittest.TestCase):
             statestr = x.join(states)
             self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
 
-#    def test_pthsk_state_io(self):
-#        """ Just to verify it is pthsk and state io is working """
-#        sio = api.pthsk_state_io()
-#        s0 = api.PTHSKStat()
-#        s0.hbv_snow.swe = 30.0
-#        s0.hbv_snow.sca = 3.0
-
-#       str = sio.to_string(s0)
-#       self.assertEqual(len(str), 35)
-#        statev = api.PTHSKStateVector()
-#        s1 = api.PTHSKStat()
-#        s1.hbv_snow.sca = 3.0
-#        s1.hbv_snow.swe = 40
-
-#       statev.push_back(s0)
-#       statev.push_back(s1)
-#        sstr = sio.to_string(statev)
-
-#        self.assertEqual(
-#            sstr, 'pthsk:3.000000 30.000000 0.000100 \npthsk:3.000000 40.000000 0.000100 \n')
-
-#        stv = sio.vector_from_string(sstr)
-#        self.assertAlmostEqual(stv[0].hbv_snow.sca, statev[0].hbv_snow.sca)
-#        self.assertAlmostEqual(stv[1].hbv_snow.swe, statev[1].hbv_snow.swe)
-
-# class MockRepositoryTestCase(unittest.TestCase):
-
-
-class MockRepositoryTestCase():
-
-    def test_put_entry(self):
-        repository = MockRepository()
-        repository.put("foobar", None)
-        keys = repository.find()
-        self.assertTrue("foobar" in keys)
-        self.assertEqual(len(keys), 1)
-
-    def test_get(self):
-        repository = MockRepository()
-        repository.put("foo", None)
-        repository.put("bar", None)
-        try:
-            repository.get("foo")
-            repository.get("bar")
-        except RuntimeError:
-            self.fail("Reading existing entry failed with RuntimeError")
-        self.assertRaises(RuntimeError, repository.get, "spam")
-
-    def test_delete(self):
-        repository = MockRepository()
-        entry = "Mockdata"
-        repository.put("foo", entry)
-        data = repository.delete("foo")
-        self.assertEqual(data, entry)
-        self.assertEqual(len(repository.find()), 0)
-        self.assertRaises(RuntimeError, repository.delete, "foo")
-
-
-# class MockStateRepositoryTestCase(unittest.TestCase):
-class MockStateRepositoryTestCase():
-
-    def setUp(self):
-        repository = MockStateRepository()
-        repository.generate_mock_entry("ptgsk-state-0", "2014-09-30-0-0-0",
-                                       tags=["unittest", "mock"])
-        repository.generate_mock_entry("ptgsk-state-1", "2014-10-04-0-0-0",
-                                       tags=["unittest", "foo"])
-        self.repository = repository
-
-    def test_compare(self):
-
-        class mock_state(object):
-            def __init__(self, utc_timestamp):
-                self.utc_timestamp = utc_timestamp
-
-        condition = 5 < TimeCondition()
-        self.assertTrue(condition(mock_state(6)))
-        self.assertFalse(condition(mock_state(5)))
-
-        condition = 5 <= TimeCondition()
-        self.assertTrue(condition(mock_state(5)))
-        self.assertFalse(condition(mock_state(4)))
-
-        condition = 5 > TimeCondition()
-        self.assertTrue(condition(mock_state(4)))
-        self.assertFalse(condition(mock_state(5)))
-
-        condition = 5 >= TimeCondition()
-        self.assertTrue(condition(mock_state(5)))
-        self.assertFalse(condition(mock_state(6)))
-
-        condition = combine_conditions(5 < TimeCondition(),
-                                       TimeCondition() < 10)
-        self.assertTrue(condition(mock_state(6)))
-        self.assertFalse(condition(mock_state(5)))
-        self.assertFalse(condition(mock_state(10)))
-
-        condition = combine_conditions(5 <= TimeCondition(), TimeCondition() < 10)
-        self.assertTrue(condition(mock_state(6)))
-        self.assertTrue(condition(mock_state(5)))
-        self.assertFalse(condition(mock_state(10)))
-
-    def test_find_all_entries(self):
-        keys = self.repository.find()
-        self.assertEqual(len(keys), 2)
-
-    def test_find_all_and_select_one_entry(self):
-        keys = self.repository.find()
-        try:
-            self.repository.get(keys[-1])
-        except RuntimeError:
-            self.fail("Reading existing entry failed with RuntimeError")
-
-    def test_find_with_simple_condition(self):
-        condition = TimeCondition() > "2014-10-01-0-0-0"
-        keys = self.repository.find(condition=condition)
-        self.assertEqual(len(keys), 1)
-
-    def test_find_with_combined_conditions(self):
-        condition = combine_conditions("2014-10-01-0-0-0" < TimeCondition(),
-                                       TimeCondition() < "2014-10-02-0-0-0")
-        keys = self.repository.find(condition=condition)
-        self.assertEqual(len(keys), 0)
-
-    def test_find_with_tags(self):
-        keys = self.repository.find(tags=["unittest"])
-        self.assertEqual(len(keys), 2)
-        keys = self.repository.find(tags=["foo"])
-        self.assertEqual(len(keys), 1)
-        keys = self.repository.find(tags=["bar"])
-        self.assertEqual(len(keys), 0)
-
-    def test_combine_condition_and_tags(self):
-        condition = TimeCondition() > "2014-10-01-0-0-0"
-        keys = self.repository.find(condition=condition, tags=["foo"])
-        self.assertEqual(len(keys), 1)
-        keys = self.repository.find(condition=condition, tags=["mock"])
-        self.assertEqual(len(keys), 0)
-
-
-# class MockInputSourceRepositoryTestCase(unittest.TestCase):
-class MockInputSourceRepositoryTestCase():
-
-    def test_create_mock_station_data(self):
-        data = create_mock_station_data(0, 3600, 24)
-        self.assertEqual(len(data), 5)
-        self.assertTrue("temperature" in data)
-        self.assertTrue("precipitation" in data)
-        self.assertTrue("wind_speed" in data)
-        self.assertTrue("relative_humidity" in data)
-        self.assertTrue("radiation" in data)
-
-    def test_put_input_source(self):
-        repository = MockInputSourceRepository()
-        station = InputSource([0.0, 0.0, 0.0], create_mock_station_data(0, 3600, 100),
-                              tags=["synthetic_data"])
-        repository.put("Hylen", station)
-        self.assertTrue("Hylen" in repository.find())
-
-
-class CellReadOnlyRepositoryTestCase(unittest.TestCase):
-
-    def test_create_mock_cell_read_only_repository(self):
-        config = {"x_min": 0,
-                  "y_min": 0,
-                  "dx": 1000,
-                  "dy": 1000,
-                  "n_x": 10,
-                  "n_y": 10}
-
-        class Config(object):
-            def __init__(self, **kwargs):
-                self.__dict__.update(kwargs)
-        repository = CellReadOnlyRepository(**mock_cell_data(Config(**config)))
-        self.assertIsNotNone(repository)
-
-    def test_raster_cell_repository_construction(self):
-        config_file = join(shyftdata_dir, "repository", "raster_cell_repository", "region.yaml")
-        with open(config_file, "r") as cf:
-            config = yaml.load(cf.read())
-        r = config['repository']
-        data = r['constructor'][0](None, *r['constructor'][1:])
-        self.assertTrue(isinstance(data, FileCellRepository))
-
 
 class AromeDataRepositoryTestCase(unittest.TestCase):
 
@@ -404,9 +203,10 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
 
-        base_dir = join(shyftdata_dir, "repository", "arome_data_repository")
+        base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
         f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
         f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
+
         bbox = ([upper_left_x, upper_left_x + nx*dx,
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,
@@ -454,7 +254,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t_c1 = utc.time(t0) + api.deltahours(1)
         t_c2 = utc.time(t0) + api.deltahours(7)
 
-        base_dir = join(shyftdata_dir, "repository", "arome_data_repository")
+        base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
         pattern = "arome_metcoop_red_default2_5km_*.nc".format(date_str)
         bbox = ([upper_left_x, upper_left_x + nx*dx,
                  upper_left_x + nx*dx, upper_left_x],
@@ -474,36 +274,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
 
         self.assertTrue(tc1_precip.size() == n_hours + 1)
         self.assertTrue(tc1_precip.time(0) != tc2_precip.time(0))
-
-# class LocalStateRepositoryTestCase(unittest.TestCase):
-class LocalStateRepositoryTestCase():
-
-    def setUp(self):
-        self.mock_state_repository = state_repository_factory({"t_start": 0, "num_cells": 10})
-        self.state_dir = "."
-        self.state_file_name = "state_test.yaml"
-
-    def test_save(self):
-        key = self.mock_state_repository.find()[0]
-        save_state_as_yaml_file(self.mock_state_repository.get(key),
-                                os.path.join(self.state_dir, self.state_file_name))
-
-    def test_load(self):
-        key = self.mock_state_repository.find()[0]
-        d1 = self.mock_state_repository.get(key)
-        save_state_as_yaml_file(self.mock_state_repository.get(key),
-                                os.path.join(self.state_dir, self.state_file_name))
-        state_repository = yaml_file_storage_factory({}, self.state_dir, "state_test.yaml")
-        d2 = state_repository.get(state_repository.find()[0])
-        self.assertDictEqual(d1.__dict__, d2.__dict__)
-
-#    def test_speed_convert(self):
-#        state_repository = \
-#            yaml_file_storage_factory({}, "D:/Users/sih/enki_config_for_test/states",
-#                                      "ptgsk_state.yaml")
-#        k0=state_repository.find()[0]
-#        s0=state_repository.get(k0)
-#        self.assertTrue(len(s0)>0, "Assume we got some states")
 
 
 if __name__ == "__main__":

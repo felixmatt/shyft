@@ -130,7 +130,6 @@ class StateInfo(object):
         self.region_model_id = region_model_id
         self.utc_timestamp = utc_timestamp
         self.tags = tags
-        
 
 
 class StateRepository(object):

@@ -38,8 +38,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             * integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time:
               float array of dims (time, 1, y, x)
             * All variables are assumed to have the attribute grid_mapping
-              which should be a reference to a variable in the root group 
-              that has an attribute named proj4. Example code: 
+              which should be a reference to a variable in the root group
+              that has an attribute named proj4. Example code:
                 ds = netCDF4.Dataset(arome_file)
                 var = "precipitation_amount"
                 mapping = ds.variables[var].grid_mapping
@@ -60,7 +60,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
     def __init__(self, epsg_id, utc_period, directory, filename=None, bounding_box=None,
                  x_padding=5000.0, y_padding=5000.0, elevation_file=None):
         """
-        Construct the netCDF4 dataset reader for data from Arome NWP model, 
+        Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
 
         Parameters
@@ -321,20 +321,28 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
             # Limit data
             x = data_vars["x"][:]
-            x1 = np.where(x >= x_min)[0]
-            x2 = np.where(x <= x_max)[0]
-            x_inds = np.intersect1d(x1, x2, assume_unique=True)
+            x_mask = (x >= x_min) == (x <= x_max)
 
             y = data_vars["y"][:]
-            y1 = np.where(y >= y_min)[0]
-            y2 = np.where(y <= y_max)[0]
-            y_inds = np.intersect1d(y1, y2, assume_unique=True)
+            y_mask = (y >= y_min) == (y <= y_max)
 
             # Transform from arome coordinates to shyft coordinates
-            self._ox, self._oy = np.meshgrid(x[x_inds], y[y_inds])
-            xx, yy = transform(data_proj, shyft_proj, *np.meshgrid(x[x_inds], y[y_inds]))
+            self._ox, self._oy = np.meshgrid(x[x_mask], y[y_mask])
+            xx, yy = transform(data_proj, shyft_proj, *np.meshgrid(x[x_mask], y[y_mask]))
 
-            return xx, yy, x_inds, y_inds
+            # TODO: Investigate why the lat/long WGS84 does not deliver same coords in
+            #       shyft coords as the data_proj with x/y in Carthesian coordinate system
+            gx, gy = shyft_proj(data_vars["longitude"][y_mask, x_mask].reshape(-1),
+                                data_vars["latitude"][y_mask, x_mask].reshape(-1))
+            """
+            # This difference should really be small
+            print(gx.shape)
+            print(np.linalg.norm(gx - xx.reshape(-1)))
+            print(np.linalg.norm(gy - yy.reshape(-1)))
+            print(xx.shape, yy.shape)
+            """
+
+            return xx, yy, x_mask, y_mask
 
         raw_data = {}
         inds_found = False
@@ -345,13 +353,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             data = data_vars[shyft_net_map[data_field]]
 
             if not inds_found:
-                self.xx, self.yy, x_inds, y_inds = find_inds(data_vars, data)
+                self.xx, self.yy, x_mask, y_mask = find_inds(data_vars, data)
                 inds_found = True
 
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]
-            data_slice[data.dimensions.index("x")] = x_inds
-            data_slice[data.dimensions.index("y")] = y_inds
+            data_slice[data.dimensions.index("x")] = x_mask
+            data_slice[data.dimensions.index("y")] = y_mask
 
             # Add extracted data and corresponding coordinates to class
             raw_data[data_field] = data[data_slice]
@@ -370,10 +378,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             if "altitude" not in ds2.variables.keys():
                 raise interfaces.InterfaceError(
                     "File '{}' does not contain altitudes".format(self.elevation_file))
-            xx, yy, x_inds, y_inds = find_inds(ds2.variables, data)
+            xx, yy, x_mask, y_mask = find_inds(ds2.variables, data)
             data_slice = len(data.dimensions)*[slice(None)]
-            data_slice[data.dimensions.index("x")] = x_inds
-            data_slice[data.dimensions.index("y")] = y_inds
+            data_slice[data.dimensions.index("x")] = x_mask
+            data_slice[data.dimensions.index("y")] = y_mask
             assert np.linalg.norm(self.xx - xx) < 1.0e-10
             assert np.linalg.norm(self.yy - yy) < 1.0e-10
             extracted_data["z"] = data[data_slice], None

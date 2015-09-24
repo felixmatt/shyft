@@ -1,17 +1,13 @@
 from __future__ import absolute_import
 from __future__ import print_function
-
-#import os
-#from abc import ABCMeta, abstractproperty, abstractmethod
-#import urlparse
-
 from . import interfaces
 import yaml
 
-# *** Ancillary config files ***
 
 class YamlContent(object):
-    """Base class for all other configuration ABC classes."""
+    """
+    Concrete class for yaml content.
+    """
 
     def __init__(self, config_file):
         self._config_file = config_file
@@ -28,6 +24,10 @@ class YamlContent(object):
 
 
 class RegionConfig(interfaces.RegionConfig):
+    """
+    Yaml based region configuration, using a YamlContent instance
+    for holding the content.
+    """
 
     def __init__(self, config_file):
         self._config = YamlContent(config_file)
@@ -43,6 +43,10 @@ class RegionConfig(interfaces.RegionConfig):
 
 
 class ModelConfig(interfaces.ModelConfig):
+    """
+    Yaml based model configuration, using a YamlContent instance
+    for holding the content.
+    """
 
     def __init__(self, config_file):
         self._config = YamlContent(config_file)
