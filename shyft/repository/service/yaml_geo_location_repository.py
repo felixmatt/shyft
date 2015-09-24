@@ -18,21 +18,21 @@ class YamlGeoLocationRepository(GeoLocationRepository):
         ----------
         yam_file_dir:string
             path to directory where files 
-            pt_locations-32632.yml (UTM32N) and
-            pt_locations-32633.yml (UTM33N)
-            pt_locations-<epgs_id>.yml
+            pt_locations-epsg_32632.yml (UTM32N) and
+            pt_locations-epsg_32633.yml (UTM33N)
+            pt_locations-<epsg_id>.yml
         """
         self.file_dir = yaml_file_dir
 
-    def _filename_of(self,epgs_id):
-        return "pt_locations-{}".format(epgs_id);
+    def _filename_of(self,epsg_id):
+        return "pt_locations-epsg_{}".format(epsg_id);
     
-    def read_location_dict(self,epgs_id):
-        full_name=path.join(self._file_dir,self._filename_of(epgs_id))
+    def read_location_dict(self,epsg_id):
+        full_name=path.join(self._file_dir,self._filename_of(epsg_id))
         with open(full_name, 'r') as f:
             return yaml.load(f)
 
-    def get_locations(self, location_id_list,epgs_id=32632):
+    def get_locations(self, location_id_list,epsg_id=32632):
         loc_dict = self.read_forecast_series_loc()
         locations = {}
         for index in self.indices:

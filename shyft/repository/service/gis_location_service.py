@@ -23,21 +23,21 @@ class GisLocationService(GeoLocationRepository):
 
         
 
-    def build_query(self,station_ids,epgs_id):
+    def build_query(self,station_ids,epsg_id):
         q = self.base_fetcher.get_query()
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
             q["where"] = self.where.format(", ".join([str(i) for i in station_ids]))
         q["outFields"] = self.outFields
-        q["outSR"] = epgs_id
+        q["outSR"] = epsg_id
         return q
     
-    def get_locations(self, location_id_list,epgs_id=32632):
+    def get_locations(self, location_id_list,epsg_id=32632):
         """ contract implementation """
-        return self.get_locations_and_info(location_id_list,epgs_id)[0]
+        return self.get_locations_and_info(location_id_list,epsg_id)[0]
 
-    def get_locations_and_info(self, location_id_list,epgs_id=32632):
+    def get_locations_and_info(self, location_id_list,epsg_id=32632):
         """ 
         might be useful for ui/debug etc. 
         Returns
@@ -45,8 +45,8 @@ class GisLocationService(GeoLocationRepository):
         tuple(location-dict(station:position),info-dict(station:info-dict))
 
         """
-        self.outSR = epgs_id
-        q = self.build_query(location_id_list,epgs_id)
+        self.outSR = epsg_id
+        q = self.build_query(location_id_list,epsg_id)
         response = requests.get(self.base_fetcher.url, params=q)
         locations = {}
         station_info={}

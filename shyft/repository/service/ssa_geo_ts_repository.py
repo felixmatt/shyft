@@ -51,7 +51,7 @@ class GeoLocationRepository(object):
     """
     __metaclass__ = ABCMeta
     @abstractmethod
-    def get_locations(self,location_id_list,epgs_id=32632):
+    def get_locations(self,location_id_list,epsg_id=32632):
         """
         Given that we know the location-id (typically an integer, could be string)
         provide the locations (x,y,z) in a specified coordinate system
@@ -59,7 +59,7 @@ class GeoLocationRepository(object):
         ----------
         location_id_list:list of type integer
             identifies the gis-locationns, uniquely
-        epgs_id: integer
+        epsg_id: integer
             identifies the coordinate system
 
         Returns
@@ -181,7 +181,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         # 1 get the station-> location map
         station_ids=[ x.gis_id for x in self.met_station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epgs_id=32632)
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632)
         # 2 read all the timeseries
         # create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         ts_to_geo_ts_info= dict()

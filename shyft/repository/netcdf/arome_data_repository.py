@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+﻿from __future__ import absolute_import
 from __future__ import print_function
 
 import re
@@ -81,7 +81,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         bounding_box: list, optional
             A list on the form [[x_ul, x_ur, x_lr, x_ll],
             [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
-            domain that shoud be extracted. Coordinates are given in epgs_id
+            domain that shoud be extracted. Coordinates are given in epsg_id
             coordinate system.
         x_padding: float, optional
             Longidutinal padding in meters, added both east and west
