@@ -30,7 +30,7 @@
     <Compile Include="netcdf\region_model.py" />
     <Compile Include="netcdf\__init__.py" />
     <Compile Include="service\cell_read_only_repository.py" />
-    <Compile Include="service\forecast_pt_location.py" />
+    <Compile Include="service\yaml_geo_location_repository.py" />
     <Compile Include="service\gis_data.py" />
     <Compile Include="service\gis_location_service.py" />
     <Compile Include="service\ssa_geo_ts_repository.py" />
