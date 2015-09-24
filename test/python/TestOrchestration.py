@@ -247,7 +247,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         day = 23
         hour = 6
         n_hours = 30
-        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
@@ -255,7 +254,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t_c2 = utc.time(t0) + api.deltahours(7)
 
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        pattern = "arome_metcoop_red_default2_5km_*.nc".format(date_str)
+        pattern = "arome_metcoop_red_default2_5km_*.nc"
         bbox = ([upper_left_x, upper_left_x + nx*dx,
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,
@@ -274,6 +273,38 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
 
         self.assertTrue(tc1_precip.size() == n_hours + 1)
         self.assertTrue(tc1_precip.time(0) != tc2_precip.time(0))
+
+    def test_get_ensemble(self):
+        EPSG = 32633
+        upper_left_x = 436100.0
+        upper_left_y = 7417800.0
+        nx = 74
+        ny = 94
+        dx = 1000.0
+        dy = 1000.0
+
+        # Period start
+        year = 2015
+        month = 7
+        day = 26
+        hour = 0
+        n_hours = 30
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = api.YMDhms(year, month, day, hour)
+        period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
+        t_c = utc.time(t0) + api.deltahours(1)
+
+        base_dir = path.join(shyftdata_dir, "netcdf", "arome")
+        pattern = "fc*.nc"
+        bbox = ([upper_left_x, upper_left_x + nx*dx,
+                 upper_left_x + nx*dx, upper_left_x],
+                [upper_left_y, upper_left_y,
+                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+        repos = AromeDataRepository(EPSG, period, base_dir, filename=pattern, bounding_box=bbox)
+        data_names = ("temperature", "wind_speed", "relative_humidity")
+        ensemble = repos.get_forecast_ensemble(data_names, period, t_c, None)
+        self.assertTrue(isinstance(ensemble, list))
+        self.assertEqual(len(ensemble), 10)
 
 
 if __name__ == "__main__":

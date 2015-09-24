@@ -135,6 +135,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
+        self._fetch_ensamble = False
 
     @property
     def filename(self):
@@ -178,7 +179,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             np.zeros(self.xx.shape, dtype='d')
         return pts
 
-    def _convert_to_timeseries(self, extracted_data):
+    def _convert_to_timeseries(self, extracted_data, ensemble_index=None):
         """Convert timeseries from numpy structures to shyft.api timeseries.
 
         We assume the time axis is regular, and that we can use a point time
@@ -194,6 +195,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Other data that can not be converted to time series
 
         """
+        if ensemble_index is not None:
+            ensembles = []
         time_series = {}
         non_time_series = {}
         tsc = api.TsFactory().create_point_ts
@@ -201,15 +204,27 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             if ta is None:
                 non_time_series[key] = data
                 continue
-            fslice = (len(data.shape) - 2)*(slice(None),)
+
+            fslice = (len(data.shape) - 2)*[slice(None)]
             I, J = data.shape[-2:]
 
             def construct(d):
                 return tsc(ta.size(), ta.start(), ta.delta(),
                            api.DoubleVector_FromNdArray(d.flatten()), 0)
-            time_series[key] = np.array([[construct(data[fslice + (i, j)])
-                                         for j in xrange(J)] for i in xrange(I)])
-        return time_series, non_time_series
+            if ensemble_index is not None:
+                if not ensembles:
+                    ensembles = data.shape[ensemble_index]*[{}]
+                for idx in xrange(data.shape[ensemble_index]):
+                    fslice[ensemble_index + 2] = idx
+                    ensembles[idx][key] = np.array([[construct(data[fslice + [i, j]])
+                                                    for j in xrange(J)] for i in xrange(I)])
+            else:
+                time_series[key] = np.array([[construct(data[fslice + [i, j]])
+                                              for j in xrange(J)] for i in xrange(I)])
+        if ensemble_index is None:
+            return time_series, non_time_series
+        else:
+            return ensembles, non_time_series
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
@@ -386,32 +401,41 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             assert np.linalg.norm(self.yy - yy) < 1.0e-10
             extracted_data["z"] = data[data_slice], None
 
-        self.time_series, self.other_data = self._convert_to_timeseries(extracted_data)
+        ensemble_idx = -3 if "ensemble_member" in data_vars else None
+
+        self.time_series, self.other_data = \
+            self._convert_to_timeseries(extracted_data, ensemble_index=ensemble_idx)
 
         if "geo_points" not in self.other_data:
             self.other_data["geo_points"] = self._geo_points()
         pts = self.other_data["geo_points"]
-        sources = {}
         all_ = slice(None)
-        for key, ts in self.time_series.iteritems():
-            if key not in self.source_type_map:
-                continue
-            tpe = self.source_type_map[key]
-            sources[key] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx + (all_,)]),
-                                         ts[idx]) for idx in
-                                         np.ndindex(pts.shape[:-1])])
-        return sources
+        if "ensemble_member" in data_vars:
+            sources = []
+            for run in self.time_series:
+                run_sources = {}
+                for key, ts in run.iteritems():
+                    tpe = self.source_type_map[key]
+                    run_sources[key] = \
+                        tpe.vector_t([tpe(api.GeoPoint(*pts[idx + (all_,)]),
+                                      ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+                sources.append(run_sources)
+            return sources
+        else:
+            sources = {}
+            for key, ts in self.time_series.iteritems():
+                tpe = self.source_type_map[key]
+                sources[key] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx + (all_,)]),
+                                             ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            return sources
 
-    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
-        """
-        See base class
-        """
+    def _get_files(self, t_c, date_pattern):
         utc = api.Calendar()
         file_names = glob(self.name_or_pattern)
         match_files = []
         match_times = []
         for fn in file_names:
-            match = re.search("_(\d{8})_(\d{2}).nc$", fn)
+            match = re.search(date_pattern, fn)
             if match:
                 datestr, hourstr = match.groups()
                 year, month, day = int(datestr[:4]), int(datestr[4:6]), int(datestr[6:8])
@@ -421,13 +445,28 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                     match_files.append(fn)
                     match_times.append(t)
         if match_files:
-            self._filename = match_files[np.argsort(match_times)[-1]]
-        res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
-        self._filename = None
-        return res
+            return match_files[np.argsort(match_times)[-1]]
+        return None
 
-    def get_forecast_ensemble(self, input_source_types, utc_period, t_c,
-                              geo_location_criteria=None):
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
         """
+        See base class
         """
-        raise interfaces.InterfaceError()
+        self._filename = self._get_files(t_c, "_(\d{8})_(\d{2}).nc$")
+        if self._filename is not None:
+            res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
+            self._filename = None
+            return res
+        raise interfaces.InterfaceError("No forecast found")
+
+    def get_forecast_ensemble(self, input_source_types, utc_period,
+                              t_c, geo_location_criteria=None):
+        """
+        See base class: ..interfaces.GeoTsRepository
+        """
+        self._filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
+        if self._filename:
+            res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
+            self._filename = None
+            return res
+        raise interfaces.InterfaceError("No ensemble found")
