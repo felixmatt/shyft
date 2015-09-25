@@ -180,7 +180,7 @@ class StateIOTestCase(unittest.TestCase):
 
 class AromeDataRepositoryTestCase(unittest.TestCase):
 
-    def test_read_time_interval(self):
+    def test_get_timeseries(self):
         """
         Simple regression test of arome data respository.
         """
