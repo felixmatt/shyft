@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 import yaml
 from .ssa_geo_ts_repository import GeoLocationRepository
+from os import path
 
 class YamlGeoLocationError(Exception): pass
 
@@ -22,10 +23,10 @@ class YamlGeoLocationRepository(GeoLocationRepository):
             pt_locations-epsg_32633.yml (UTM33N)
             pt_locations-<epsg_id>.yml
         """
-        self.file_dir = yaml_file_dir
+        self._file_dir = yaml_file_dir
 
     def _filename_of(self,epsg_id):
-        return "pt_locations-epsg_{}".format(epsg_id);
+        return "pt_locations-epsg_{}.yml".format(epsg_id);
     
     def read_location_dict(self,epsg_id):
         full_name=path.join(self._file_dir,self._filename_of(epsg_id))
@@ -33,9 +34,9 @@ class YamlGeoLocationRepository(GeoLocationRepository):
             return yaml.load(f)
 
     def get_locations(self, location_id_list,epsg_id=32632):
-        loc_dict = self.read_forecast_series_loc()
+        loc_dict = self.read_location_dict(epsg_id)
         locations = {}
-        for index in self.indices:
+        for index in location_id_list:
             if loc_dict.get(index) != None:
                 locations[index] = tuple(loc_dict[index])
             else:

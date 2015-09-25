@@ -36,7 +36,6 @@
     <Compile Include="service\ssa_geo_ts_repository.py" />
     <Compile Include="service\ssa_smg_db.py" />
     <Compile Include="service\__init__.py" />
-    <Compile Include="testsupport\mocks.py" />
     <Compile Include="testsupport\time_series.py" />
     <Compile Include="testsupport\__init__.py" />
     <Compile Include="yaml_config.py" />
