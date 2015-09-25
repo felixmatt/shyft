@@ -28,7 +28,8 @@ class TestYamlGeoLocationRepository(unittest.TestCase):
     def test_missing_file_throws_IOError(self):
         s=YamlGeoLocationRepository(self._test_state_directory)
         self.assertRaises(IOError,lambda : s.get_locations([123]) )
-    def test_missing_location(self):
+
+    def test_missing_and_existing_locations(self):
         s=YamlGeoLocationRepository(self._test_state_directory)
         geol={123:(1,2,3),456:(4,5,6)}
         with open(path.join(self._test_state_directory,"pt_locations-epsg_32632.yml"),"w") as f:
@@ -36,6 +37,9 @@ class TestYamlGeoLocationRepository(unittest.TestCase):
             f.write(yml)
 
         self.assertRaises(YamlGeoLocationError,lambda : s.get_locations([0]))
-        l123=s.get_locations([123])
-        self.assertIsNotNone(l123)
+        geop=s.get_locations([123,456])
+        self.assertIsNotNone(geop)
+        self.assertAlmostEqual(geop[123][0],1)
+        self.assertAlmostEqual(geop[123][1],2)
+        self.assertAlmostEqual(geop[123][2],3)
 
