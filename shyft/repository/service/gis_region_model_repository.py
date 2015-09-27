@@ -22,7 +22,7 @@ from shapely.prepared import prep
 import gdal
 import os
 from ..interfaces import RegionModelRepository
-
+from shyft import api
 
 class GisDataFetchError(Exception): pass
 
@@ -58,7 +58,7 @@ class GridSpecification(object):
             - a array[y,x] with elevations, layout is lower-to upper (opposite direction of the grid!)
         Return
         ------
-        a list of shapely box'es flat list for nx,ny
+        a list of (shapely box'es, elevation) flat list for nx,ny
         """
         r = []
         for i in xrange(self.nx):
@@ -420,7 +420,7 @@ class RegionModelConfig(object):
        * bounding box (with epsk_id)
 
     """
-    def __init__(self, name,epsg_id,grid_specification,catchment_regulated_type,service_id_field_name,id_list):
+    def __init__(self, name,epsg_id,grid_specification,catchment_regulated_type,service_id_field_name,id_list,region_parameters):
         """
         """
         self.name=name
@@ -429,6 +429,7 @@ class RegionModelConfig(object):
         self.catchment_regulated_type=catchment_regulated_type
         self.service_id_field_name=service_id_field_name
         self.id_list=id_list
+        self.region_parameters=region_parameters
 
 
 class GisRegionModelRepository(RegionModelRepository):
@@ -488,17 +489,26 @@ class GisRegionModelRepository(RegionModelRepository):
         return region_model(cells, region_parameter, catchment_parameters)
         ```
         """
-        # map region_id into catchment_type, identifier and indicies
-        # catchment_type = {regulated,unregulated} 
-        #  regulated: identifier={POWER_PLANT_ID,CATCH_ID}
-        #  unregulated: {FELTNR}
-        #  identifier list... []
-        #
-        rm= self._get_cell_data_info(region_id,catchments)
-        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list,rm.epsg_id)
 
-        result=cell_info_service.fetch()
-        return result
+        rm= self._get_cell_data_info(region_id,catchments)# fetch region model info needed to fetch efficiently
+        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list,rm.epsg_id)
+        result=cell_info_service.fetch() # clumsy result, we can adjust this..
+        cell_info=result['cell_data'] # this is the part we need here
+        cell_vector = region_model.cell_t.vector_t()
+        radiation_slope_factor=0.9 # todo: get it from service layer 
+        for c_id,c_info_list in cell_info.iteritems():
+            for c_info in c_info_list:
+                shape=c_info['cell'] # todo fetcher should return geopoint,area, ltf..
+                z=c_info['elevation']
+                geopoint=api.GeoPoint(shape.centroid.x,shape.centroid.y,z)
+                area=shape.area
+                ltf=api.LandTypeFractions()
+                ltf.set_fractions(c_info.get('glacier',0.0),c_info.get('lake',0.0),c_info.get('reservoir',0.0),c_info.get('forest',0.0))
+                cell = region_model.cell_t()
+                cell.geo = api.GeoCellData(geopoint, area, c_id, radiation_slope_factor,ltf)
+                cell_vector.append(cell)
+        return region_model(cell_vector,rm.region_parameters)
+
 
 def add_plot_polygons(ax, polygons, color):
     ps = []

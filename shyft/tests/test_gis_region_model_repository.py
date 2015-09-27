@@ -8,7 +8,7 @@ from shyft.repository.service.gis_region_model_repository import CellDataFetcher
 from shyft.repository.service.gis_region_model_repository import nea_nidelv_example,run_cell_example
 from shyft.repository.service.gis_region_model_repository import RegionModelConfig
 from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
-
+from shyft import api
 from shyft.api.pt_gs_k import PTGSKModel
 
 
@@ -96,7 +96,15 @@ class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         epsg_id=32632
         #run_cell_example('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, id_list,32632)
         self.assertIsNotNone(id_list)
-        rm_cfg=RegionModelConfig("tistel",epsg_id,GridSpecification(x0=x0,y0=y0,dx=dx,dy=dy,nx=nx,ny=ny),"unregulated","FELTNR",id_list)
+        #params = self.model_parameters_dict()
+        pt_params = api.PriestleyTaylorParameter()#*params["priestley_taylor"])
+        gs_params = api.GammaSnowParameter()#*params["gamma_snow"])
+        ae_params = api.ActualEvapotranspirationParameter()#*params["act_evap"])
+        k_params = api.KirchnerParameter()#*params["kirchner"])
+        p_params = api.PrecipitationCorrectionParameter() #TODO; default 1.0, is it used ??
+        rm_params= api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+
+        rm_cfg=RegionModelConfig("tistel",epsg_id,GridSpecification(x0=x0,y0=y0,dx=dx,dy=dy,nx=nx,ny=ny),"unregulated","FELTNR",id_list,rm_params)
         rm_cfg_dict= {rm_cfg.name:rm_cfg}
         rmr=GisRegionModelRepository(rm_cfg_dict)
         cm= rmr.get_region_model(rm_cfg.name,PTGSKModel)
