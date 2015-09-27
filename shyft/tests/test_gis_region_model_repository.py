@@ -5,7 +5,11 @@ from shyft.repository.service.gis_region_model_repository import DTMFetcher
 from shyft.repository.service.gis_region_model_repository import LandTypeFetcher
 from shyft.repository.service.gis_region_model_repository import ReservoirFetcher
 from shyft.repository.service.gis_region_model_repository import CellDataFetcher
-from shyft.repository.service.gis_region_model_repository import nea_nidelv_example
+from shyft.repository.service.gis_region_model_repository import nea_nidelv_example,run_cell_example
+from shyft.repository.service.gis_region_model_repository import RegionModelConfig
+from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
+
+from shyft.api.pt_gs_k import PTGSKModel
 
 
 class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
@@ -79,8 +83,25 @@ class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         self.assertIsNotNone(cd['cell_data'][pwrplants[0]])
         self.assertIsNotNone(cd['catchment_land_types'])
         self.assertIsNotNone(cd['elevation_raster'])
-    def test_example(self):
-        nea_nidelv_example(32633)
+
+    def test_region_model_repository(self):
+        #nea_nidelv_example(32633)
+        x0 = 362000.0
+        y0 = 6765000.0
+        dx = 1000
+        dy = 1000
+        nx = 8
+        ny = 8
+        id_list=[1225]
+        epsg_id=32632
+        #run_cell_example('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, id_list,32632)
+        self.assertIsNotNone(id_list)
+        rm_cfg=RegionModelConfig("tistel",epsg_id,GridSpecification(x0=x0,y0=y0,dx=dx,dy=dy,nx=nx,ny=ny),"unregulated","FELTNR",id_list)
+        rm_cfg_dict= {rm_cfg.name:rm_cfg}
+        rmr=GisRegionModelRepository(rm_cfg_dict)
+        cm= rmr.get_region_model(rm_cfg.name,PTGSKModel)
+        self.assertIsNotNone(cm)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -420,11 +420,12 @@ class RegionModelConfig(object):
        * bounding box (with epsk_id)
 
     """
-    def __init__(self, name,bounding_box,catchment_regulated_type,service_id_field_name,id_list):
+    def __init__(self, name,epsg_id,grid_specification,catchment_regulated_type,service_id_field_name,id_list):
         """
         """
         self.name=name
-        self.bounding_box=bounding_box
+        self.epsg_id=epsg_id
+        self.grid_specification=grid_specification
         self.catchment_regulated_type=catchment_regulated_type
         self.service_id_field_name=service_id_field_name
         self.id_list=id_list
@@ -434,22 +435,20 @@ class GisRegionModelRepository(RegionModelRepository):
     """
     Statkraft GIS service based version of repository for RegionModel objects.
     """
-    __metaclass__ = ABCMeta
-    
+     
     def __init__(self, region_id_config):
         """
         Parameters
         ----------
         region_id_config: dictionary(region_id:RegionModelConfig)
         """
-        self._region_id_config
+        self._region_id_config=region_id_config
 
     def _get_cell_data_info(self,region_id,catchments):
         # alternative parse out from region_id, like
         # neannidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
-        return _region_id_config[region_id] # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
+        return self._region_id_config[region_id] # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
 
-    @abstractmethod
     def get_region_model(self, region_id, region_model, catchments=None):
         """
         Return a fully specified shyft api region_model for region_id.
@@ -496,7 +495,7 @@ class GisRegionModelRepository(RegionModelRepository):
         #  identifier list... []
         #
         rm= self._get_cell_data_info(region_id,catchments)
-        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.bounding_box,rm.id_list)
+        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list,rm.epsg_id)
 
         result=cell_info_service.fetch()
         return result
