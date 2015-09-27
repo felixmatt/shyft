@@ -67,6 +67,23 @@ class GridSpecification(object):
         return r
 
 class BaseGisDataFetcher(object):
+    """
+    Statkraft GIS services are published on a set of servers, there is also a staging enviroment(preprod)
+    for testing new versions of the services before going into production environment (prod)
+
+    This class handles basic query/response, using an url-template for the query
+    arguments to the constructor helps building up this template by means of
+    server_name - the host of the server where GIS -services are published
+    server_port - the port-number for the service
+    service_index - arc-gis specific, we can publish several services at one url, the service_index selects
+                    which of those we adress
+    in addition, the arc-gis service request do have a set of standard parameters that are passed along
+    with the http-request.
+    This is represented as a dictinary (key-value)-pairs of named arguments.
+    The python request package is used to pass on the request, and get the response.
+    In general we try using json format wherever reasonable.
+
+    """
 
     def __init__(self, geometry=None, server_name=None, server_port=None, service_index=None, epsg_id=32633):
         self.server_name = server_name
@@ -106,10 +123,22 @@ class BaseGisDataFetcher(object):
 
     @property
     def url(self):
+        """
+        Returns
+        -------
+        A ready to use url based on
+        url-template,server-name,-port and service index 
+        """
         url = self.url_template.format(self.server_name, self.server_port, self.service_index)
         return url
 
     def get_query(self, geometry=None):
+        """
+        Parameters
+        ----------
+        geometry:list
+            - [x0,y0,x1,y1] the epsg_id ref. bounding box limiting the search
+        """
         q = copy.deepcopy(self.query)
         if geometry is None:
             geometry = self.geometry
@@ -195,7 +224,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 class CatchmentFetcher(BaseGisDataFetcher):
 
-    def __init__(self, catchment_type, identifier, epsg_id=32632):
+    def __init__(self, catchment_type, identifier, epsg_id=32633):
         if (catchment_type=='regulated'):
             service_index = 6
             #self.identifier = 'POWER_PLANT_ID'
@@ -328,7 +357,7 @@ class CellDataFetcher(object):
 
 class DTMFetcher(object):
 
-    def __init__(self,grid_specification, epsg_id=32632):
+    def __init__(self,grid_specification, epsg_id=32633):
         self.grid_specification=grid_specification
         self.epsg_id = epsg_id
         #self.server_name = "oslwvagi001q" #PREPROD
@@ -494,7 +523,7 @@ def run_cell_example(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_ind
     fig, ax = plt.subplots(1)
     color_map = {"forest": 'g', "lake": 'b', "glacier": 'r', "cell": "0.75", "reservoir": "purple"}
 
-    extent = cf.geometry[0], cf.geometry[2], cf.geometry[1], cf.geometry[3]
+    extent = grid_spec.geometry[0], grid_spec.geometry[2], grid_spec.geometry[1], grid_spec.geometry[3]
     ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
 
     for catchment_cells in cf.cell_data.itervalues():
@@ -503,7 +532,7 @@ def run_cell_example(catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_ind
         for k,v in catchment_land_type.iteritems():
             add_plot_polygons(ax, v, color=color_map[k])
 
-    geometry = cf.geometry
+    geometry = grid_spec.geometry
     ax.set_xlim(geometry[0], geometry[2])
     ax.set_ylim(geometry[1], geometry[3])
     plt.show()

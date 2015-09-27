@@ -5,7 +5,7 @@ from shyft.repository.service.gis_region_model_repository import DTMFetcher
 from shyft.repository.service.gis_region_model_repository import LandTypeFetcher
 from shyft.repository.service.gis_region_model_repository import ReservoirFetcher
 from shyft.repository.service.gis_region_model_repository import CellDataFetcher
-
+from shyft.repository.service.gis_region_model_repository import nea_nidelv_example
 
 
 class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
@@ -79,7 +79,8 @@ class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         self.assertIsNotNone(cd['cell_data'][pwrplants[0]])
         self.assertIsNotNone(cd['catchment_land_types'])
         self.assertIsNotNone(cd['elevation_raster'])
-
+    def test_example(self):
+        nea_nidelv_example(32633)
 
 if __name__ == '__main__':
     unittest.main()
