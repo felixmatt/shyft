@@ -325,7 +325,7 @@ class CellDataFetcher(object):
                 glacier_in_catchment=all_glaciers.intersection(catchment)
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
                     catchment_land_types[catchment_id]["glacier"]=glacier_in_catchment
-            #if prep_forest.intersects(catchment):
+            #if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
             #    forest_in_catchment= all_forest.intersection(catchment)
             #    if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
             #        catchment_land_types[catchment_id]["forest"]=forest_in_catchment
@@ -353,7 +353,7 @@ class CellDataFetcher(object):
 
     @property
     def geometry(self):
-        return [self.x0, self.y0, self.x0 + self.dx*self.nx , self.y0 + self.dy*self.ny]
+        return self.grid_specification.geometry
 
 class DTMFetcher(object):
 

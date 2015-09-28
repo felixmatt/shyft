@@ -9,7 +9,8 @@ from shyft.repository.service.gis_region_model_repository import nea_nidelv_exam
 from shyft.repository.service.gis_region_model_repository import RegionModelConfig
 from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
 from shyft import api
-from shyft.api.pt_gs_k import PTGSKModel
+from shyft.api.pt_gs_k import PTGSKModel,PTGSKOptModel
+from shyft.api.pt_ss_k import PTSSKModel,PTSSKOptModel
 
 
 class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
@@ -85,31 +86,36 @@ class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         self.assertIsNotNone(cd['elevation_raster'])
 
     def test_region_model_repository(self):
-        #nea_nidelv_example(32633)
-        x0 = 362000.0
-        y0 = 6765000.0
-        dx = 1000
-        dy = 1000
-        nx = 8
-        ny = 8
         id_list=[1225]
         epsg_id=32632
-        #run_cell_example('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, id_list,32632)
-        self.assertIsNotNone(id_list)
-        #params = self.model_parameters_dict()
+        #parameters can be loaded from yaml_config Model parameters..
         pt_params = api.PriestleyTaylorParameter()#*params["priestley_taylor"])
         gs_params = api.GammaSnowParameter()#*params["gamma_snow"])
+        ss_params= api.SkaugenParameter()
         ae_params = api.ActualEvapotranspirationParameter()#*params["act_evap"])
         k_params = api.KirchnerParameter()#*params["kirchner"])
         p_params = api.PrecipitationCorrectionParameter() #TODO; default 1.0, is it used ??
-        rm_params= api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+        ptgsk_rm_params= api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+        ptssk_rm_params= api.pt_ss_k.PTSSKParameter(pt_params,ss_params,ae_params,k_params,p_params)
+        # create the description for 4 models of tistel,ptgsk, ptssk, full and optimized
+        tistel_grid_spec=GridSpecification(x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
+        cfg_list=[
+            RegionModelConfig("tistel-ptgsk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptgsk_rm_params),
+            RegionModelConfig("tistel-ptssk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptssk_rm_params)
+        ]
+        rm_cfg_dict={ x.name:x for x in cfg_list}
+        rmr=GisRegionModelRepository(rm_cfg_dict) # ok, now we have a Gis RegionModelRepository that can handle all named entities we pass.
+        cm1= rmr.get_region_model("tistel-ptgsk",PTGSKModel) # pull out a PTGSKModel for tistel
+        cm2= rmr.get_region_model("tistel-ptgsk",PTGSKOptModel)
+        #Does not work, fail on ct. model: cm3= rmr.get_region_model(tistel_ptssk_rm_cfg.name,PTSSKModel) # pull out a PTGSKModel for tistel
+        #cm4=rmr.get_region_model(tistel_ptssk_rm_cfg.name,PTSSKOptModel)
+        
+        self.assertIsNotNone(cm1)
+        self.assertIsNotNone(cm2)
+        #self.assertIsNotNone(cm3)
+        #self.assertIsNotNone(cm4)
 
-        rm_cfg=RegionModelConfig("tistel",epsg_id,GridSpecification(x0=x0,y0=y0,dx=dx,dy=dy,nx=nx,ny=ny),"unregulated","FELTNR",id_list,rm_params)
-        rm_cfg_dict= {rm_cfg.name:rm_cfg}
-        rmr=GisRegionModelRepository(rm_cfg_dict)
-        cm= rmr.get_region_model(rm_cfg.name,PTGSKModel)
-        self.assertIsNotNone(cm)
-
+        #TODO: add more assertions,testing on features
 
 if __name__ == '__main__':
     unittest.main()
