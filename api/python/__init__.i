@@ -149,6 +149,8 @@
     %rename(SkaugenParameter)  shyft::core::skaugen::parameter;
     %rename(SkaugenState)      shyft::core::skaugen::state;
     %rename(SkaugenResponse)   shyft::core::skaugen::response;
+	%rename(SkaugenStatistics) shyft::core::skaugen::statistics;
+	%rename(SkaugenMassBalanceError) shyft::core::skaugen::mass_balance_error;
     %include "core/skaugen.h"
 
     %rename(KirchnerParameter)  shyft::core::kirchner::parameter;

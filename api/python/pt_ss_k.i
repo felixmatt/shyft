@@ -45,6 +45,9 @@
 %rename(PTSSKAllCollector)         shyft::core::pt_ss_k::all_response_collector;
 %include "core/pt_ss_k_cell_model.h"
 
+%rename (PTSSKStateIo) shyft::api::pt_ss_k_state_io;
+%include "pt_ss_k.h"
+
 namespace shyft {
   namespace core {
     namespace pt_ss_k {
@@ -95,7 +98,7 @@ namespace shyft {
 }
 %pythoncode %{
 PTSSKModel.cell_t = PTSSKCellAll
-PTSSKModel.map_t=PTSSKParameterMap
+PTSSKParameter.map_t=PTSSKParameterMap
 PTSSKModel.parameter_t = PTSSKParameter
 PTSSKModel.statistics = property(lambda self: PTSSKCellAllStatistics(self.get_cells()))
 PTSSKModel.skaugen_state = property(lambda self: PTSSKCellSkaugenStateStatistics(self.get_cells()))

@@ -489,7 +489,9 @@ class GisRegionModelRepository(RegionModelRepository):
                 cell = region_model.cell_t()
                 cell.geo = api.GeoCellData(geopoint, area, c_id, radiation_slope_factor,ltf)
                 cell_vector.append(cell)
-        return region_model(cell_vector,rm.region_parameters)
+        catchment_parameter_map=region_model.parameter_t.map_t()
+        #todo add catchment level parameters to map
+        return region_model(cell_vector,rm.region_parameters,catchment_parameter_map)
 
 
 def add_plot_polygons(ax, polygons, color):

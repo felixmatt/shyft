@@ -107,7 +107,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run pt_gs_k</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run </Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Update swig generated files pt_gs_k</Message>
@@ -137,7 +137,7 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run pt_gs_k</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run </Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Update swig generated files pt_gs_k</Message>
