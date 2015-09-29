@@ -24,7 +24,7 @@ namespace shyft {
 
         std::string to_string(const pt_ss_k_state_t& s) const {
             char r[500];
-            sprintf(r, "ptssk:%f %f %f %f %f %f %d %f\n",
+            sprintf(r, "ptssk:%f %f %f %f %f %f %ld %f\n",
 				s.snow.nu, s.snow.alpha, s.snow.sca,s.snow.swe,
 				s.snow.free_water, s.snow.residual, s.snow.num_units,
 				s.kirchner.q);
