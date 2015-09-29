@@ -15,7 +15,7 @@
 /// SHyFT, usually located under the SHyFT root directory in two files named COPYING.txt
 /// and COPYING_LESSER.txt.	If not, see <http://www.gnu.org/licenses/>.
 ///
-/// This implementation is a slightly improved and ported version of Skaugen's snow routine 
+/// This implementation is a slightly improved and ported version of Skaugen's snow routine
 /// implemented in R, see [ref].
 
 #include <math.h>
@@ -55,7 +55,7 @@ namespace shyft {
                     const gamma_dist g_m(nu_m, 1.0/alpha);
                     const gamma_dist g_a(nu_a, 1.0/alpha);
                     const double g_a_mean = boost::math::mean(g_a);
-                    auto zero_func = [&] (const double& x) { 
+                    auto zero_func = [&] (const double& x) {
                         return boost::math::pdf(g_m, x) - boost::math::pdf(g_a, x); } ;
 
                     double lower = boost::math::mean(g_m);
@@ -83,21 +83,22 @@ namespace shyft {
             };
 
             struct parameter {
-                double alpha_0;
-                double d_range;
-                double unit_size;
-                double max_water_fraction;
-                double tx;
-                double cx;
-                double ts;
-                double cfr;
-                parameter() {}
+                ///<note that the initialization is not the most elegant yet, due to diffs swig-python/ms-win/gcc
+                double alpha_0=40.77;
+                double d_range=113.0;
+                double unit_size=0.1;
+                double max_water_fraction=0.1;
+                double tx=0.16;
+                double cx=2.5;
+                double ts=0.14;
+                double cfr=0.01;
 
-                parameter(double alpha_0, double d_range, double unit_size, 
+                parameter(double alpha_0, double d_range, double unit_size,
                           double max_water_fraction, double tx, double cx, double ts, double cfr)
                  : alpha_0(alpha_0), d_range(d_range),
                    unit_size(unit_size), max_water_fraction(max_water_fraction),
                    tx(tx), cx(cx), ts(ts), cfr(cfr) { /* Do nothing */ }
+                parameter() {}
             };
 
 
@@ -165,7 +166,7 @@ namespace shyft {
                         // Set state and response and return
                         r.outflow = rain + s.sca*(s.swe + s.free_water) + s.residual;
                         r.total_stored_water = 0.0;
-                        s.residual = 0.0; 
+                        s.residual = 0.0;
                         if (r.outflow < 0.0) {
                             s.residual = r.outflow;
                             r.outflow = 0.0;
@@ -285,14 +286,14 @@ namespace shyft {
                         }
                     }
 
-                    // Eli and Ola, TODO: 
+                    // Eli and Ola, TODO:
                     // This section is quite hackish, but makes sure that we have control on the local mass balance that is constantly
                     // violated due to discrete melting/accumulation events. A trained person should rethink the logic and have a goal of
                     // minimizing the number of if-branches below. Its embarrasingly many of them...
-                    // The good news is that the residual is in the interval [-0.1, 0.1] for the cases we've investigated, and that 15 
+                    // The good news is that the residual is in the interval [-0.1, 0.1] for the cases we've investigated, and that 15
                     // years of simulation on real data gives a O(1.0e-11) accumulated mass balance violation (in mm).
 
-                    if (sca_old*s.swe > sca*swe) { // (Unconditional) melt 
+                    if (sca_old*s.swe > sca*swe) { // (Unconditional) melt
                         lwc += std::max(0.0, s.swe - swe); // Add melted water to free water in snow
                     }
                     lwc *= std::min(1.0, sca_old/sca); // Scale lwc (preserve total free water when sca increases)
@@ -331,12 +332,12 @@ namespace shyft {
                     }
 
                     // Negative discharge may come from roundoff due to discrete model, add to residual and get rid of it later
-                    if (discharge <= 0.0) { 
+                    if (discharge <= 0.0) {
                         s.residual += discharge;
                         discharge = 0.0;
                     } else { // Discharge is positive
                         // We have runoff, so get rid of as much residual as possible (without mass balance violation)
-                        if (discharge >= -s.residual) { 
+                        if (discharge >= -s.residual) {
                             discharge += s.residual;
                             s.residual = 0.0;
                         // More residual than discharge - get rid of as much as possible and zero out the runoff
@@ -398,7 +399,7 @@ namespace shyft {
                         nu = nu_0;
                         alpha = alpha_0;
                         return;
-                    } 
+                    }
                     nu = tot_mean*tot_mean/tot_var;
                     alpha = nu/(stat.unit_size*lrint(tot_mean/stat.unit_size));
                 }

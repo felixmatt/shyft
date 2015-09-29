@@ -3,7 +3,7 @@
 
 Generator=swig -c++ -python -w511 -I.. -I../..  -outdir ../../shyft/api
 #3.0
-api_dependencies = ../api.h ../../core/geo_point.h ../../core/geo_cell_data.h ../../core/timeseries.h ../../core/utctime_utilities.h
+api_dependencies = ../api.h ../../core/geo_point.h ../../core/geo_cell_data.h ../../core/timeseries.h ../../core/utctime_utilities.h ../../core/gamma_snow.h ../../core/skaugen.h
 model_dependencies = ../../core/region_model.h ../../core/cell_model.h ../../core/model_calibration.h ../../core/inverse_distance.h
 pt_gs_k_dependencies =  $(api_dependencies) $(model_dependencies) ../pt_gs_k.h  ../../core/priestley_taylor.h ../../core/gamma_snow.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_gs_k_cell_model.h ../../core/pt_gs_k.h
 pt_ss_k_dependencies =  $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/skaugen.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_ss_k_cell_model.h ../../core/pt_ss_k.h
