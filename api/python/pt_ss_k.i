@@ -10,6 +10,7 @@
 #include <numpy/arrayobject.h>
 
 #include "api/api.h"
+#include "api/pt_ss_k.h"
 #include "core/pt_ss_k.h"
 
 %}
@@ -94,6 +95,7 @@ namespace shyft {
 }
 %pythoncode %{
 PTSSKModel.cell_t = PTSSKCellAll
+PTSSKModel.map_t=PTSSKParameterMap
 PTSSKModel.parameter_t = PTSSKParameter
 PTSSKModel.statistics = property(lambda self: PTSSKCellAllStatistics(self.get_cells()))
 PTSSKModel.skaugen_state = property(lambda self: PTSSKCellSkaugenStateStatistics(self.get_cells()))

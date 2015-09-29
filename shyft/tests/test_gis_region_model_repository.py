@@ -108,8 +108,8 @@ class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         cm1= rmr.get_region_model("tistel-ptgsk",PTGSKModel) # pull out a PTGSKModel for tistel
         cm2= rmr.get_region_model("tistel-ptgsk",PTGSKOptModel)
         #Does not work, fail on ct. model: 
-        cm3= rmr.get_region_model(tistel_ptssk_rm_cfg.name,PTSSKModel) # pull out a PTGSKModel for tistel
-        cm4=rmr.get_region_model(tistel_ptssk_rm_cfg.name,PTSSKOptModel)
+        cm3= rmr.get_region_model("tistel-ptssk",PTSSKModel) # pull out a PTGSKModel for tistel
+        cm4=rmr.get_region_model("tistel-ptssk",PTSSKOptModel)
         
         self.assertIsNotNone(cm1)
         self.assertIsNotNone(cm2)
