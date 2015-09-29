@@ -17,6 +17,7 @@
 %include "numpy.i"
 %include <windows.i>
 %include <std_string.i>
+%include <std_map.i>
 %include <std_vector.i>
 %include <exception.i>
 #define SWIG_SHARED_PTR_NAMESPACE std
@@ -77,6 +78,7 @@ namespace std {
    %template(PTSSKCellAllVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> >;
     %template(PTSSKCellOptVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> >;
     %template(PTSSKStateVector) vector<shyft::core::pt_ss_k::state>;
+	%template(PTSSKParameterMap) map<size_t, shyft::core::pt_ss_k::parameter>;
 }
 
 namespace shyft {

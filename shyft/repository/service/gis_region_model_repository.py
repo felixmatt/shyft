@@ -469,25 +469,7 @@ class GisRegionModelRepository(RegionModelRepository):
         Returns
         -------
         region_model: shyft.api type
-
-        ```
-        # Pseudo code below
-        # Concrete implementation must construct cells, region_parameter
-        # and catchment_parameters and return a region_model
-
-        # Use data to create cells
-        cells = [region_model.cell_type(*args, **kwargs) for cell in region]
-
-         # Use data to create regional parameters
-        region_parameter = region_model.parameter_type(*args, **kwargs)
-
-        # Use data to override catchment parameters
-        catchment_parameters = {}
-        for all catchments in region:
-            catchment_parameters[c] = region_model.parameter_type(*args,
-                                                                  **kwargs)
-        return region_model(cells, region_parameter, catchment_parameters)
-        ```
+      
         """
 
         rm= self._get_cell_data_info(region_id,catchments)# fetch region model info needed to fetch efficiently
