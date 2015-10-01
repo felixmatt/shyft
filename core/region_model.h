@@ -57,20 +57,20 @@ namespace shyft {
             idw::parameter rel_hum;
 
             interpolation_parameter() {}
-            interpolation_parameter(const btk::parameter& temperature, 
+            interpolation_parameter(const btk::parameter& temperature,
                                     const idw::precipitation_parameter& precipitation,
                                     const idw::parameter& wind_speed,
                                     const idw::parameter& radiation,
                                     const idw::parameter& rel_hum)
-             : temperature(temperature), precipitation(precipitation), 
+             : temperature(temperature), precipitation(precipitation),
                wind_speed(wind_speed), radiation(radiation), rel_hum(rel_hum) {}
-            interpolation_parameter(const idw::temperature_parameter& temperature, 
+            interpolation_parameter(const idw::temperature_parameter& temperature,
                                     const idw::precipitation_parameter& precipitation,
                                     const idw::parameter& wind_speed,
                                     const idw::parameter& radiation,
                                     const idw::parameter& rel_hum)
-             : use_idw_for_temperature(true), temperature_idw(temperature), 
-               precipitation(precipitation), wind_speed(wind_speed), 
+             : use_idw_for_temperature(true), temperature_idw(temperature),
+               precipitation(precipitation), wind_speed(wind_speed),
                radiation(radiation), rel_hum(rel_hum) {}
         };
 
@@ -283,7 +283,7 @@ namespace shyft {
 				typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point, idw::temperature_default_gradient_scale_computer> idw_temperature_model_t;
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
 				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename IP::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
 				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_radiation_model_t;
 				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_windspeed_model_t;
