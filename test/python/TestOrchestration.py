@@ -8,6 +8,7 @@ from os import path
 from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
+from shyft.api import pt_ss_k
 from shyft.orchestration.state import set_ptgsk_model_state
 from shyft.orchestration.state import extract_ptgsk_model_state
 from shyft.orchestration.state import State
@@ -17,11 +18,11 @@ from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
 class StateIOTestCase(unittest.TestCase):
 
     @staticmethod
-    def build_model(model_t, model_size, num_catchments=1):
+    def build_model(model_t,parameter_t, model_size, num_catchments=1):
 
         cells = model_t.cell_t.vector_t()
         cell_area = 1000*1000
-        region_parameter = pt_gs_k.PTGSKParameter()
+        region_parameter = parameter_t()
         for i in xrange(model_size):
             loc = (10000*random.random(2)).tolist() + \
                 (500*random.random(1)).tolist()
@@ -93,11 +94,16 @@ class StateIOTestCase(unittest.TestCase):
         re.radiation.append(self._create_constant_geo_ts(
             api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
         return re
-
+    def test_pt_ss_k_model_init(self):
+        num_cells = 20
+        model_type = pt_ss_k.PTSSKModel
+        model = self.build_model(model_type,pt_ss_k.PTSSKParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        
     def test_model_initialize_and_run(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
-        model = self.build_model(model_type, num_cells)
+        model = self.build_model(model_type,pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         cal = api.Calendar()
         time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
@@ -140,7 +146,7 @@ class StateIOTestCase(unittest.TestCase):
     def test_model_state_io(self):
         num_cells = 2
         for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-            model = self.build_model(model_type, num_cells)
+            model = self.build_model(model_type,pt_gs_k.PTGSKParameter, num_cells)
             state_list = []
             x = ""
             for i in xrange(num_cells):
@@ -165,7 +171,7 @@ class StateIOTestCase(unittest.TestCase):
     def test_set_too_few_model_states(self):
         num_cells = 20
         for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-            model = self.build_model(model_type, num_cells)
+            model = self.build_model(model_type, pt_gs_k.PTGSKParameter,num_cells)
             states = []
             x = ""
             for i in xrange(num_cells - 1):
@@ -282,7 +288,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         ny = 94
         dx = 1000.0
         dy = 1000.0
-
+        return
         # Period start
         year = 2015
         month = 7
