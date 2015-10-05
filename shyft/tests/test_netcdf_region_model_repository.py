@@ -1,8 +1,12 @@
 import unittest
 from os import path
+import numpy as np
+from netCDF4 import Dataset
 from shyft import shyftdata_dir
 from shyft.repository.netcdf.region_model import RegionModelRepository
+from shyft.repository.netcdf.region_model import BoundingBoxRegion
 from shyft.repository import yaml_config
+from shyft import shyftdata_dir
 from shyft.api.pt_gs_k import PTGSKModel
 
 
@@ -31,3 +35,18 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
             "There is a catchment override in the region.yaml file")
         c1p = region_model.get_catchment_parameter(1)
         self.assertAlmostEquals(-2.539, c1p.kirchner.c1)
+
+    def test_bounding_box_region(self):
+        reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),
+                                            "netcdf", "region.yaml"))
+        dsf = path.join(shyftdata_dir, reg_conf.repository()["data_file"])
+        tmp = 10
+        with Dataset(dsf) as ds:
+            bbr = BoundingBoxRegion(ds, 32632) 
+            bbox = bbr.bounding_box(32632)
+            self.assertTrue(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
+            self.assertTrue(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
+            bbox = bbr.bounding_box(32633)
+            self.assertFalse(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
+            self.assertFalse(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
+

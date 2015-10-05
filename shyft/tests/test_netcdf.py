@@ -60,7 +60,7 @@ class Simulation():
                 np.testing.assert_allclose(np.float64(value), np.float64(expected_results[param][i]), rtol=1e-2)
 
 
-# Some examples of simulation.  Feel free to add more.
+# Some examples of simulation. Feel free to add more.
 class Simulation1(Simulation, unittest.TestCase):
     config_file = "configuration.yaml"
     section = "Himalayas"
@@ -108,7 +108,7 @@ class Calibration():
             np.testing.assert_allclose(np.float64(val), np.float64(expected_results[key]), rtol=1e-2)
 
 
-# Some examples of calibration.  Feel free to add more.
+# Some examples of calibration. Feel free to add more.
 class Calibration1(Calibration, unittest.TestCase):
     config_file = "calibration.yaml"
     section = "Himalayas"
