@@ -6,10 +6,10 @@
 # sigbjorn.helset@statkraft.com
 from __future__ import print_function
 
-from ssa.timeseriesrepository import TimeSeriesRepositorySmg as repository
-from ssa.environment import SMG_PREPROD as PREPROD
-from ssa.environment import SMG_PROD as PROD
-from ssa.environment import SmgEnvironment
+from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg as repository
+from statkraft.ssa.environment import SMG_PREPROD as PREPROD
+from statkraft.ssa.environment import SMG_PROD as PROD
+from statkraft.ssa.environment import SmgEnvironment,NetMetaInfoValidationSet
 from Statkraft import Time
 from Statkraft.Time import UtcTime,Period,Calendar
 #from datetime import datetime
@@ -20,7 +20,7 @@ import System
 import System.Collections.Generic
 from System import DateTime, TimeSpan
 from System.Collections.Generic import List,IList,Dictionary,IDictionary
-from Statkraft.XTimeSeries import MetaInfo, PointTimeStepConstraint, TsIdentity,ITimeSeries
+from Statkraft.XTimeSeries import MetaInfo, PointTimeStepConstraint, TsIdentity,ITimeSeries,TimeSeriesPointSegments,IPointSegment,PointSegment
 from Statkraft.ScriptApi import TsAsVector,TimeSystemReference,SsaTimeSeries
 from shyft import api
 from .ssa_geo_ts_repository import TsRepository
@@ -81,17 +81,23 @@ class SmGTsRepository(TsRepository):
                     mi= MetaInfo()
                     mi.Identity=tsid
                     mi.Description='Automatically created by shyft '
+                    mi.Type=9000 # just a general time-series
                     # Here we might fill in some properties to the created timeseries
                     # e.g. unit, if we could figure out that
                     missing_list.Add(mi)
             if missing_list.Count > 0 : # Yes, something was missing, create them
-                created_list=tss.repo.Create(missing_list)
+                created_list=tss.repo.Create(missing_list,True)
+                #todo verify we got them created
+            # fetch tsids from the names
+            ts_id_list= tss.repo.GetIdentities (tss.repo.FindMetaInfo(ListOf_TsIdentities))
+            name_to_ts_id={x.Name:x for x in ts_id_list}
             # 3. We store the datapoints (identity period, then  time,value)
-            ssa_timeseries_list= List[SsaTimeSeries]([]) # This is what Tss Xts eats
+            ssa_timeseries_list= List[TimeSeriesPointSegments]([]) # This is what Tss Xts eats
             for name,shyft_ts in timeseries_dict.iteritems():
-                ssa_ts=self._make_ssa_ts_from_shyft_ts(name,shyft_ts)
+                ssa_ts=self._make_ssa_tsps_from_shyft_ts(name_to_ts_id[name],shyft_ts)
                 ssa_timeseries_list.Add(ssa_ts)
-            ok=tss.repo.Write(ssa_timeseries_list) # Write into SmG!
+            error_list=tss.repo.Write(ssa_timeseries_list,False) # Write into SmG!
+            if error_list is None:ok=True
         return ok
 
     @staticmethod
@@ -117,7 +123,23 @@ class SmGTsRepository(TsRepository):
         tsv.SetVectors(p, t, v, q)
         tsv.Name = name
         return SsaTimeSeries(tsv)
-    
+    @staticmethod
+    def _make_ssa_tsps_from_shyft_ts(ts_id,shyft_ts):
+        ''' returns a TimeSeriesPointSegments from shyft_ts '''
+        t=np.array([shyft_ts.time(i) for i in xrange(shyft_ts.size()) ])
+        v=np.array([shyft_ts.value(i) for i in xrange(shyft_ts.size()) ])
+        q = np.zeros_like(t, dtype=np.int)
+        numPoints = shyft_ts.size();
+        tsv = TsAsVector(numPoints, TimeSystemReference.Unix1970Utc)
+        p = Period(UtcTime.CreateFromUnixTime(t[0]), UtcTime.CreateFromUnixTime(t[-1]+3600))
+        tsv.SetVectors(p, t, v, q)
+        tsps=TimeSeriesPointSegments()
+        tsps.Identity=ts_id
+        psl=List[IPointSegment]([])
+        psl.Add(PointSegment(p,tsv.Points))
+        tsps.PointSegments=psl
+        return tsps
+
     @staticmethod
     def _make_shyft_ts_from_ssa_ts(ssa_ts):
         if(not isinstance(ssa_ts,SsaTimeSeries)):
@@ -183,8 +205,9 @@ class TestSmgRepository(unittest.TestCase):
     #    self.assertTrue(isinstance(ds,BaseTimeSeriesRepository))
 
     def test_store(self):
-        ds=SmGTsRepository(PREPROD)
-        nl=[u'/ICC-test-v9.2',u'/enki/test/b2',u'/enki/test/c2']
+        cfg=SmgEnvironment('localhost','icctest',NetMetaInfoValidationSet.SmgHydrology)
+        ds=SmGTsRepository(cfg) #PREPROD)
+        nl=[u'/shyft/test/a',u'/shyft/test/b',u'/shyft/test/c'] #[u'/ICC-test-v9.2']
         t0=946684800 # time_t/unixtime 2000.01.01 00:00:00
         dt=3600 #one hour in seconds
         values=np.array([1.0,2.0,3.0])
