@@ -7,8 +7,10 @@
 from __future__ import print_function
 
 from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg as repository
+from statkraft.ssa.forecast import ForecastRepositorySmg
 from statkraft.ssa.environment import SMG_PREPROD as PREPROD
 from statkraft.ssa.environment import SMG_PROD as PROD
+from statkraft.ssa.environment import FORECAST_PREPROD as FC_PREPROD
 from statkraft.ssa.environment import SmgEnvironment,NetMetaInfoValidationSet
 from Statkraft import Time
 from Statkraft.Time import UtcTime,Period,Calendar
@@ -25,7 +27,7 @@ from Statkraft.ScriptApi import TsAsVector,TimeSystemReference,SsaTimeSeries
 from shyft import api
 from .ssa_geo_ts_repository import TsRepository
 import numpy as np
-
+from math import fabs
 import abc
 
 class SmgDataError(Exception):
@@ -34,8 +36,9 @@ class SmgDataError(Exception):
 
 
 class SmGTsRepository(TsRepository):
-    def __init__(self, env):
+    def __init__(self, env,fc_env=None):
         self.env=env
+        self.fc_env=fc_env
 
     def read(self,list_of_ts_id,period):
         """Open a connection to the SMG database and fetch all the time series given in list_of_ts_id.
@@ -56,6 +59,28 @@ class SmGTsRepository(TsRepository):
         for d in raw_data:
             key = d.Name #todo : if self.keys_are_names else d.Info.Id
             result[key] = self._make_shyft_ts_from_ssa_ts(d)
+        return result
+
+    def read_forecast(self,list_of_fc_id,period):
+        if(not isinstance(period,api.UtcPeriod)):
+           raise SmgDataError("period should be of type api.UtcPeriod")
+        result = {}
+        raw_data = []
+        ListOf_fc_identities=self._namelist_to_ListOf_TsIdentities(list_of_fc_id)
+        ts_id_list=[]
+
+        with repository(self.env) as tss:
+            ts_id_list= tss.repo.GetIdentities (tss.repo.FindMetaInfo(ListOf_fc_identities))
+        name_to_ts_id={x.Name:x for x in ts_id_list}
+
+        ssa_period=self._make_ssa_Period_from_shyft_period(period)
+        fcr= ForecastRepositorySmg(self.fc_env)
+        read_forecasts = fcr.repo.ReadForecast(ts_id_list,ssa_period)
+        if ts_id_list.Count != read_forecasts.Count:
+            print( "WARNING: Could only find {} out of {} requested timeseries".format(read_forecasts.Count, ts_id_list.Count))
+        for fc_ts in read_forecasts:
+            key=fc_ts.Name
+            result[key]=self._make_shyft_ts_from_ssa_ts(fc_ts)
         return result
 
     def store(self,timeseries_dict):
@@ -205,8 +230,8 @@ class TestSmgRepository(unittest.TestCase):
     #    self.assertTrue(isinstance(ds,BaseTimeSeriesRepository))
 
     def test_store(self):
-        cfg=SmgEnvironment('localhost','icctest',NetMetaInfoValidationSet.SmgHydrology)
-        ds=SmGTsRepository(cfg) #PREPROD)
+        #cfg=SmgEnvironment('localhost','iccpp',NetMetaInfoValidationSet.SmgHydrology)
+        ds=SmGTsRepository(PREPROD)
         nl=[u'/shyft/test/a',u'/shyft/test/b',u'/shyft/test/c'] #[u'/ICC-test-v9.2']
         t0=946684800 # time_t/unixtime 2000.01.01 00:00:00
         dt=3600 #one hour in seconds
@@ -225,6 +250,23 @@ class TestSmgRepository(unittest.TestCase):
         self.assertIsNotNone(rts_list)
         c2=rts_list[nl[-1]]
         [self.assertAlmostEqual(c2.value(i),values[i]) for i in xrange(len(values))]
+
+    def test_read_forecast(self):
+        utc=api.Calendar()
+        ds=SmGTsRepository(PREPROD,FC_PREPROD)
+        nl=[u'/LTMS-Abisko........-T0000A5P_EC00_ENS',u'/LTMS-Abisko........-T0000A5P_EC00_E04'] #[u'/ICC-test-v9.2']
+        t0=utc.time(api.YMDhms(2015,10,01,00,00,00))
+        t1=utc.time(api.YMDhms(2015,10,10,00,00,00))
+        p=api.UtcPeriod(t0,t1)
+        fclist=ds.read_forecast(nl,p)
+        self.assertIsNotNone(fclist)
+        fc1=fclist[u'/LTMS-Abisko........-T0000A5P_EC00_E04']
+        fc1_v=[fc1.value(i) for i in xrange(fc1.size())]
+        # test times here, left for manual inspection here fc1_t=[utc.to_string(fc1.time(i)) for i in xrange(fc1.size())]
+        self.assertIsNotNone(fc1_v)
+        #values as read from preprod smg:
+        fc1_v_expected=[0.00,0.33,0.33,0.33,0.33,0.33,0.33,0.08,0.08,0.08,0.08,0.08,0.08,0.16,0.16,0.16,0.16,0.16,0.16,0.11,0.11,0.11,0.11,0.11,0.11,0.47,0.47,0.47,0.47,0.47,0.47,0.15,0.15,0.15,0.15,0.15,0.15,0.12,0.12,0.12,0.12,0.12,0.12,0.20,0.20,0.20,0.20,0.20,0.20,0.14,0.14,0.14,0.14,0.14,0.14,0.02,0.02,0.02,0.02,0.02,0.02,0.01,0.01,0.01,0.01,0.01,0.01,0.00,0.00,0.00,0.00,0.00,0.00,0.09,0.09,0.09,0.09,0.09,0.09,0.10,0.10,0.10,0.10,0.10,0.10,0.08,0.08,0.08,0.08,0.08,0.08,0.11,0.11,0.11,0.11,0.11,0.11,0.23,0.23,0.23,0.23,0.23,0.23,0.03,0.03,0.03,0.03,0.03,0.03,0.01,0.01,0.01,0.01,0.01,0.01,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.03,0.03,0.03,0.03,0.03,0.03,0.06,0.06,0.06,0.06,0.06,0.06,0.14,0.14,0.14,0.14,0.14,0.14,0.13,0.13,0.13,0.13,0.13,0.13,0.10,0.10,0.10,0.10]
+        [ self.assertLess(fabs(fc1_v_expected[i]-fc1_v[i]),0.01 ,"{}:{} !={}".format(i,fc1_v_expected[i],fc1_v[i]) ) for i in xrange(len(fc1_v_expected)) ]
 
     def test_period(self):
         utc=api.Calendar()
