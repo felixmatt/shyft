@@ -301,6 +301,22 @@ class GeoTsRepository(object):
         pass
 
 
+class InterpolationParameterRepository(object):
+    """
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def get_parameters(self, interpolation_id):
+        """
+        Returns
+        -------
+        parameter: shyft.api type
+            Interpolation parameter object
+        """
+        pass
+
+
 class RegionConfig(object):
     __metaclass__ = ABCMeta
 

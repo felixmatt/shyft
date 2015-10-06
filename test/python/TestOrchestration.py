@@ -217,8 +217,8 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,
                  upper_left_y - ny*dy, upper_left_y - ny*dy])
-        ar1 = AromeDataRepository(EPSG, period, base_dir, filename=f1, bounding_box=bbox)
-        ar2 = AromeDataRepository(EPSG, period, base_dir, filename=f2, elevation_file=f1)
+        ar1 = AromeDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox)
+        ar2 = AromeDataRepository(EPSG, base_dir, filename=f2, elevation_file=f1)
         ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
         ar2_data_names = ("radiation",)
         sources = ar1.get_timeseries(ar1_data_names, period, None)
@@ -265,7 +265,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,
                  upper_left_y - ny*dy, upper_left_y - ny*dy])
-        repos = AromeDataRepository(EPSG, period, base_dir, filename=pattern, bounding_box=bbox)
+        repos = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
         data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
         tc1_sources = repos.get_forecast(data_names, period, t_c1, None)
         tc2_sources = repos.get_forecast(data_names, period, t_c2, None)

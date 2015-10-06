@@ -57,20 +57,17 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self, epsg_id, utc_period, directory, filename=None, bounding_box=None,
-                 x_padding=5000.0, y_padding=5000.0, elevation_file=None):
+    def __init__(self, epsg, directory, filename=None, bounding_box=None,
+                 x_padding=5000.0, y_padding=5000.0, elevation_file=None, allow_subset=False):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
 
         Parameters
         ----------
-        epsg_id: int
+        epsg: string
             Unique coordinate system id for result coordinates.
-            Currently 32632 and 32633 are supperted.
-        utc_period: api.UtcPeriod
-            Period to fetch such that utc_period.start and utc_period.end are
-            both included in the interval, if possible
+            Currently "32632" and "32633" are supperted.
         directory: string
             Path to directory holding one or possibly more arome data files.
             os.path.isdir(directory) should be true, or exception is raised.
@@ -81,7 +78,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         bounding_box: list, optional
             A list on the form [[x_ul, x_ur, x_lr, x_ll],
             [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
-            domain that shoud be extracted. Coordinates are given in epsg_id
+            domain that shoud be extracted. Coordinates are given in epsg
             coordinate system.
         x_padding: float, optional
             Longidutinal padding in meters, added both east and west
@@ -91,11 +88,15 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Name of netcdf file of same dimensions in x and y, subject to
             constraints given by bounding box and padding, that contains
             elevation that should be used in stead of elevations in file.
+        allow_subset: bool
+            Allow extraction of a subset of the given source fields 
+            instead of raising exception.
         """
         # Make sure input makes sense, or raise exceptions
         self.directory = directory
         self._filename = None  # To be used by forecast and ensemble to read data
         self._is_ensemble = False
+        self.allow_subset = allow_subset
         if not path.isdir(self.directory):
             raise interfaces.InterfaceError("No such directory '{}'".format(self.directory))
         self.name_or_pattern = path.join(self.directory, filename)
@@ -107,9 +108,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         else:
             self.elevation_file = None
 
-        self.epsg_id = epsg_id
+        self.epsg = int(epsg)
         self.shyft_cs = \
-            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg_id - 32600,
+            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(self.epsg - 32600,
                                                                               "WGS84", "WGS84")
         self._x_padding = x_padding
         self._y_padding = y_padding
@@ -302,7 +303,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         Returns
         -------
         geo_loc_ts: dictionary
-            dictionary keyed by ts type, where values are api vectors of geo
+            dictionary keyed by time series name, where values are api vectors of geo
             located timeseries.
         """
 
@@ -341,7 +342,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
         assert set(input_source_types).issubset(self._shyft_fields)
-        assert set([self.shyft_net_map[df] for df in input_source_types]).issubset(data_vars.keys())
+        if self.allow_subset:
+            input_source_types = [df for df in input_source_types if self.shyft_net_map[df] in data_vars]
+        else:
+            assert set([self.shyft_net_map[df] for df in input_source_types]).issubset(data_vars.keys())
 
         # Use first field to get sub region masks
         d = data_vars[self.shyft_net_map[input_source_types[0]]]

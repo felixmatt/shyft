@@ -21,7 +21,8 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
                                             "netcdf", "region.yaml"))
         mod_conf = yaml_config.ModelConfig(path.join(path.dirname(__file__),
                                            "netcdf", "model.yaml"))
-        region_model_repository = RegionModelRepository(reg_conf, mod_conf)
+        epsg = "32633"
+        region_model_repository = RegionModelRepository(reg_conf, mod_conf, epsg)
         self.assertIsNotNone(region_model_repository.mask)
         region_model = \
             region_model_repository.get_region_model("NeaNidelv_PTGSK",
@@ -42,11 +43,14 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
         dsf = path.join(shyftdata_dir, reg_conf.repository()["data_file"])
         tmp = 10
         with Dataset(dsf) as ds:
-            bbr = BoundingBoxRegion(ds, 32632) 
-            bbox = bbr.bounding_box(32632)
-            self.assertTrue(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
-            self.assertTrue(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
-            bbox = bbr.bounding_box(32633)
-            self.assertFalse(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
-            self.assertFalse(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
+            xcoords = ds.groups["elevation"].variables["xcoord"][:]
+            ycoords = ds.groups["elevation"].variables["ycoord"][:]
+            epsg = ds.groups["elevation"].epsg
+        bbr = BoundingBoxRegion(xcoords, ycoords, epsg) 
+        bbox = bbr.bounding_box(32632)
+        self.assertTrue(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
+        self.assertTrue(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
+        bbox = bbr.bounding_box(32633)
+        self.assertFalse(np.linalg.norm(bbr.x - bbox[0]) < 500000.0)
+        self.assertFalse(np.linalg.norm(bbr.y - bbox[1]) < 5000.0)
 

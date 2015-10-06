@@ -11,6 +11,7 @@ import numpy as np
 from netCDF4 import Dataset
 from pyproj import Proj
 from pyproj import transform
+from shapely.geometry import Polygon
 from .. import interfaces
 from shyft import api
 from shyft import shyftdata_dir
@@ -23,6 +24,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
     Netcdf dataset assumptions:
         * Group "elevation" with variables:
+            * epsg: string identifying the coordinate system
             * xcoord: array of floats
             * ycoord: array of floats
             * elevation: float array of dim (xcoord, ycoord)
@@ -39,7 +41,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             * glacier-fraction: float array of dim (xcoord, ycoord)
     """
 
-    def __init__(self, region_config, model_config):
+    def __init__(self, region_config, model_config, epsg):
         """
         Parameters
         ----------
@@ -50,6 +52,8 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             Object containing model information, i.e.
             information concerning interpolation and model
             parameters
+        epsg: string
+            Coordinate system for result region model
         """
         if not isinstance(region_config, interfaces.RegionConfig) or \
            not isinstance(model_config, interfaces.ModelConfig):
@@ -57,6 +61,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         self._rconf = region_config
         self._mconf = model_config
         self._mask = None
+        self._epsg = epsg
         self._data_file = path.join(shyftdata_dir, self._rconf.repository()["data_file"])
 
     @property
@@ -98,18 +103,48 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         """
 
         with Dataset(self._data_file) as dset:
-            grp = dset.groups['elevation']
-            xcoord = grp.variables['xcoord'][:]
-            ycoord = grp.variables['ycoord'][:]
-            mesh2d = np.dstack(np.meshgrid(xcoord, ycoord)).reshape(-1, 2)
-            elevation = grp.variables['elevation'][:]
+            grp = dset.groups["elevation"]
+            xcoord = grp.variables["xcoord"][:]
+            ycoord = grp.variables["ycoord"][:]
+            dataset_epsg = grp.epsg
+            if not hasattr(grp, "epsg"):
+                raise interfaces.InterfaceError("netcdf: epsg attr not found in group elevation")
+            if grp.epsg != self._epsg:
+                source_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                    int(self._epsg) - 32600, "WGS84", "WGS84")
+                target_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                    int(grp.epsg) - 32600, "WGS84", "WGS84")
+                source_proj = Proj(source_cs)
+                target_proj = Proj(target_cs)
+                mesh2d = np.dstack(transform(source_proj, target_proj,
+                                             *np.meshgrid(xcoord, ycoord))).reshape(-1, 2)
+                dx = xcoord[1] - xcoord[0]
+                dy = ycoord[1] - ycoord[0]
+                x_corners = np.empty(len(xcoord) + 1, dtype=xcoord.dtype)
+                y_corners = np.empty(len(ycoord) + 1, dtype=ycoord.dtype)
+                x_corners[1:] = xcoord + dx/2.0
+                x_corners[0] = xcoord[0] - dx/2.0
+                y_corners[1:] = ycoord + dy/2.0
+                y_corners[0] = ycoord[0] - dy/2.0
+                xc, yc = transform(source_proj, target_proj, *np.meshgrid(x_corners, y_corners))
+                areas = np.empty((len(xcoord),len(ycoord)), dtype=xcoord.dtype)
+                for i in xrange(len(xcoord)):
+                    for j in xrange(len(ycoord)):
+                        pts = [(xc[j, i],         yc[j, i]),
+                               (xc[j, i + 1],     yc[j, i + 1]),
+                               (xc[j + 1, i + 1], yc[j + 1, i + 1]),
+                               (xc[j + 1, i],     yc[j + 1, i])]
+                        areas[i, j] = Polygon(pts).area
+                areas = areas.flatten()[self.mask]
+            else:
+                mesh2d = np.dstack(np.meshgrid(xcoord, ycoord)).reshape(-1, 2)
+                areas = np.ones(len(xcoord)*len(ycoord), dtype=xcoord.dtype)[self.mask]*(
+                    xcoord[1] - xcoord[0])*(ycoord[1] - ycoord[0])
+            elevation = grp.variables["elevation"][:]
             coordinates = np.hstack((mesh2d, elevation.reshape(-1, 1)))[self.mask]
-            areas = np.ones(len(xcoord)*len(ycoord),
-                            dtype=xcoord.dtype)[self.mask]*(
-                                xcoord[1] - xcoord[0])*(ycoord[1] - ycoord[0])
-            catchments = dset.groups['catchments'].variables[
+            catchments = dset.groups["catchments"].variables[
                 "catchments"][:].reshape(-1)[self.mask]
-            c_ids = dset.groups['catchments'].variables["catchment_indices"][:]
+            c_ids = dset.groups["catchments"].variables["catchment_indices"][:]
 
             def frac_extract(name):
                 g = dset.groups  # Alias for readability
@@ -118,6 +153,21 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             lf = frac_extract("lake-fraction")
             rf = frac_extract("reservoir-fraction")
             gf = frac_extract("glacier-fraction")
+        # Construct bounding region
+        box_fields = set(("upper_left_x", "upper_left_y", "step_x", "step_y", "nx", "ny", "EPSG"))
+        if box_fields.issubset(self._rconf.domain()):
+            tmp = self._rconf.domain()
+            epsg = tmp["EPSG"]
+            x_min = tmp["upper_left_x"]
+            x_max = x_min + tmp["nx"]*tmp["step_x"]
+            y_max = tmp["upper_left_x"]
+            y_min = y_max - tmp["ny"]*tmp["step_y"]
+            bounding_region = BoundingBoxRegion(np.array([x_min, x_max]), 
+                                                np.array([y_min, y_max]), epsg)
+        else:
+            bounding_region = BoundingBoxRegion(xcoord, ycoord, dataset_epsg)
+
+
         # Construct region parameter:
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
@@ -155,30 +205,31 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param
-        return region_model(cell_vector, region_parameter, catchment_parameters)
+        region_model = region_model(cell_vector, region_parameter, catchment_parameters)
+        region_model.bounding_region = bounding_region
+        return region_model
 
 
 class BoundingBoxRegion(interfaces.BoundingRegion):
 
-    def __init__(self, dataset, epsg):
-        self._epsg = int(epsg)
-        grp = dataset.groups['elevation']
-        xcoord = grp.variables['xcoord'][:]
-        ycoord = grp.variables['ycoord'][:]
-        self.x = xcoord[0], xcoord[-1], xcoord[-1], xcoord[0]
-        self.y = ycoord[-1], ycoord[-1], ycoord[0], ycoord[0]
+    def __init__(self, x, y, epsg):
+        self._epsg = str(epsg)
+        x_min = x.ravel().min()
+        x_max= x.ravel().max()
+        y_min = y.ravel().min()
+        y_max= y.ravel().max()
+        self.x = x_min, x_max, x_max, x_min
+        self.y = y_max, y_max, y_min, y_min
 
     def bounding_box(self, epsg):
-        epsg = int(epsg)
+        epsg = str(epsg)
         if epsg == self.epsg():
             return np.array(self.x), np.array(self.y)
         else:
-            source_cs = \
-            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(self.epsg() - 32600,
-                                                                              "WGS84", "WGS84")
-            target_cs = \
-            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg - 32600,
-                                                                              "WGS84", "WGS84")
+            source_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                int(self.epsg()) - 32600, "WGS84", "WGS84")
+            target_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                int(epsg) - 32600, "WGS84", "WGS84")
             source_proj = Proj(source_cs)
             target_proj = Proj(target_cs)
             return [np.array(a) for a in transform(source_proj, target_proj, self.x, self.y)]
