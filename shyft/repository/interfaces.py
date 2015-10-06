@@ -363,5 +363,54 @@ class ModelConfig(object):
         pass
 
 
+class BoundingRegion(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def bounding_box(self, epsg):
+        """
+        Parameters
+        ----------
+        epsg: string
+            epsg id of the resulting coordinates
+        Returns
+        Returns
+        -------
+        x: np.ndarray
+           x coordinates of the four corners, numbered clockwise from 
+           upper left corner
+        y: np.ndarray
+           x coordinates of the four corners, numbered clockwise from 
+           upper left corner
+        """
+        pass
+
+    @abstractmethod
+    def bounding_polygon(self, epsg):
+        """
+        Parameters
+        ----------
+        epsg: string
+            epsg id of the resulting coordinates
+        Returns
+        -------
+        x: np.ndarray
+           x coordinates of the smallest bounding polygon of the region
+        y: np.ndarray
+           y coordinates of the smallest bounding polygon of the region
+        """
+        pass
+
+    @abstractmethod
+    def epsg(self):
+        """
+        Returns
+        -------
+        epsg: string
+            Epsg id of coordinate system
+        """
+        pass
+
+
 class InterfaceError(Exception):
     pass

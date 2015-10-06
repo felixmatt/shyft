@@ -9,6 +9,8 @@ from __future__ import absolute_import
 from os import path
 import numpy as np
 from netCDF4 import Dataset
+from pyproj import Proj
+from pyproj import transform
 from .. import interfaces
 from shyft import api
 from shyft import shyftdata_dir
@@ -154,3 +156,35 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param
         return region_model(cell_vector, region_parameter, catchment_parameters)
+
+
+class BoundingBoxRegion(interfaces.BoundingRegion):
+
+    def __init__(self, dataset, epsg):
+        self._epsg = int(epsg)
+        grp = dataset.groups['elevation']
+        xcoord = grp.variables['xcoord'][:]
+        ycoord = grp.variables['ycoord'][:]
+        self.x = xcoord[0], xcoord[-1], xcoord[-1], xcoord[0]
+        self.y = ycoord[-1], ycoord[-1], ycoord[0], ycoord[0]
+
+    def bounding_box(self, epsg):
+        epsg = int(epsg)
+        if epsg == self.epsg():
+            return np.array(self.x), np.array(self.y)
+        else:
+            source_cs = \
+            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(self.epsg() - 32600,
+                                                                              "WGS84", "WGS84")
+            target_cs = \
+            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(epsg - 32600,
+                                                                              "WGS84", "WGS84")
+            source_proj = Proj(source_cs)
+            target_proj = Proj(target_cs)
+            return [np.array(a) for a in transform(source_proj, target_proj, self.x, self.y)]
+
+    def bounding_polygon(self, epsg):
+        return self.bounding_box(epsg)
+    
+    def epsg(self):
+        return self._epsg
