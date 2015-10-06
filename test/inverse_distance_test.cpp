@@ -126,6 +126,13 @@ void inverse_distance_test::test_temperature_model() {
     gc.add(s1,t0);
     TS_ASSERT_DELTA(gc.compute(), p.default_gradient(), TEST_EPS);// should give default gradient if just one point
 
+    geo_point p1b(1000,1000,149);
+    Source   s1b(p1b,10-0.005*59);
+    gc.add(s1b,t0);
+
+    TS_ASSERT_DELTA(gc.compute(),p.default_gradient(),TEST_EPS);// mi-max z-distance less than 50 m., return default.
+
+
     geo_point p2(2000,2000,200);
     Source   s2(p2,9.5);
     gc.add(s2,t0);
@@ -140,6 +147,12 @@ void inverse_distance_test::test_temperature_model() {
     Source   s4(p4,8.0);
     gc.add(s4,t0);
     TS_ASSERT_DELTA(gc.compute(), -0.005, TEST_EPS);// should give -0.005 gradient for these 4 points
+
+    geo_point p5(4000,4000,600);
+    Source   s5(p5,10-0.006*(600-100));
+    gc.add(s5,t0);
+    TS_ASSERT_DELTA(gc.compute(), -0.006,TEST_EPS); // mi-max alg. should only consider high/low ..
+
 
     //
     // Verify the TestTemperatureModel::transform, should do temp.gradient computation based on height difference.
