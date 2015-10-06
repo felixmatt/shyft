@@ -1,7 +1,7 @@
 ﻿from __future__ import absolute_import
 import requests
 import unicodedata
-from .gis_data import BaseGisDataFetcher
+from .gis_region_model_repository import BaseGisDataFetcher
 from .ssa_geo_ts_repository import GeoLocationRepository
 
 class StationDataError(Exception):

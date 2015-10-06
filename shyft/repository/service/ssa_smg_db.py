@@ -10,6 +10,7 @@ from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg as reposi
 from statkraft.ssa.forecast import ForecastRepositorySmg
 from statkraft.ssa.environment import SMG_PREPROD as PREPROD
 from statkraft.ssa.environment import SMG_PROD as PROD
+from statkraft.ssa.environment import FORECAST_PREPROD as FC_PROD
 from statkraft.ssa.environment import FORECAST_PREPROD as FC_PREPROD
 from statkraft.ssa.environment import SmgEnvironment,NetMetaInfoValidationSet
 from Statkraft import Time
