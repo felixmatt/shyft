@@ -82,7 +82,10 @@ class TsRepository(object):
     
     @abstractmethod
     def read_forecast(self,list_of_fc_id,period):
-        """
+        """ 
+        read and return the newest forecast that have the biggest overlap with specified period
+        note that we should check that the semantic of this is reasonable
+
         """
         pass
 
@@ -214,6 +217,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
+        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
         geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
@@ -232,6 +236,8 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         forecast: same layout/type as for get_timeseries
         """
+        if t_c is not None: raise("t_c, time created spec is not yet implemented")
+        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
         geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
