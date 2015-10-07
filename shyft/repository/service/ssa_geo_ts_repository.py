@@ -79,6 +79,16 @@ class TsRepository(object):
         """
         """
         pass
+    
+    @abstractmethod
+    def read_forecast(self,list_of_fc_id,period):
+        """ 
+        read and return the newest forecast that have the biggest overlap with specified period
+        note that we should check that the semantic of this is reasonable
+
+        """
+        pass
+
     @abstractmethod
     def store(self,timeseries_dict):
         """ Store the supplied time-series to the underlying db-system.
@@ -161,6 +171,34 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
 
+    def _get_ts_to_geo_ts_result(self,input_source_types,geo_match):
+        """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
+        # 1 get the station-> location map
+        station_ids=[ x.gis_id for x in self.met_station_list ]
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632) #TODO use epsg for self
+        # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
+        #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
+        ts_to_geo_ts_info= dict()
+        result={}
+        for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
+            result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
+            ts_to_geo_ts_info.update(
+                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ) )] #this constructs a key,value list from the result below
+                         for x  in self.met_station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
+                 })
+        return ts_to_geo_ts_info,result
+
+    def _remap_to_result(self,read_ts_map,result,ts_to_geo_ts_info):
+        """ given read_ts_map, as a result from read,read_forecast
+            map it into correct vector in result,
+            using geo_ts_info
+        """
+        for tsn,ts in read_ts_map.iteritems():
+            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
+            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
+            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
+        return result
+
 
     def get_timeseries(self, input_source_types, utc_period,geo_location_criteria=None):
         """
@@ -179,30 +217,13 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
-        # 1 get the station-> location map
-        station_ids=[ x.gis_id for x in self.met_station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632)
-        # 2 read all the timeseries
-        # create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
-        ts_to_geo_ts_info= dict()
-        result={}
+        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
         geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
-        for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
-            result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
-            ts_to_geo_ts_info.update(
-                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ) )] #this constructs a key,value list from the result below
-                         for x  in self.met_station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
-                 })
+        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
-        
         read_ts_map=self.ts_repository.read(ts_list,utc_period)
-        # 3 map all returned series with geo-location, and fill in the
-        #   vectors of geo-located  TemperatureSource,PrecipitationSource etc.
-        for tsn,ts in read_ts_map.iteritems():
-            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
-            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
-            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
-        return result
+        return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
+
 
     def get_forecast(self, input_source_types,utc_period,t_c,geo_location_criteria):
         """
@@ -215,7 +236,13 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         forecast: same layout/type as for get_timeseries
         """
-        raise NotImplementedError("get_forecast will be implemented later")
+        if t_c is not None: raise("t_c, time created spec is not yet implemented")
+        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
+        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
+        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
+        read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
+        return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
 
     def get_forecast_ensemble(self, input_source_types,utc_period,t_c,geo_location_criteria):
         """
