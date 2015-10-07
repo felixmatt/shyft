@@ -33,12 +33,13 @@ class SimpleSimulator(object):
                 geo_ts_repositories = [geo_ts_repositories]
         self._geo_ts_repos = geo_ts_repositories
 
-    def run(self, time_axis):
+    def run(self, time_axis, state=None):
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self._geo_ts_repos[0].get_timeseries(self._geo_ts_names, period, geo_location_criteria=bbox)
         for gt in self._geo_ts_repos[1:]:
             sources.update(gt.get_timeseries(self._geo_ts_names, period, geo_location_criteria=bbox))
+        temp = sources["temperature"]
         region_env = api.ARegionEnvironment()
         region_env.temperature = sources["temperature"]
         region_env.precipitation = sources["precipitation"]
@@ -47,5 +48,6 @@ class SimpleSimulator(object):
         region_env.rel_hum = sources["relative_humidity"]
         interp_params = self.ip_repos.get_parameters(self.interpolation_id)
         self.region_model.run_interpolation(interp_params, time_axis, region_env)
-        return True
-
+        if state is not None:
+            self.region_model.set_states(state)
+        self.region_model.run_cells()

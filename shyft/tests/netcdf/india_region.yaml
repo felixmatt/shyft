@@ -4,14 +4,7 @@ repository:
   data_file: netcdf/orchestration-testdata/cell_info.nc
 
 domain:
-  EPSG: 32632
-  # for netcdf the domain info is inside the netcdf files
-  # nx: 122
-  # ny: 90
-  # step_x: 1000
-  # step_y: 1000
-  # upper_left_x: 557600.0
-  # upper_left_y: 7040000.0
+  EPSG: 32643
 
 parameter_overrides:
   1:

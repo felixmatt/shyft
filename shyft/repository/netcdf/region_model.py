@@ -163,9 +163,9 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             y_max = tmp["upper_left_x"]
             y_min = y_max - tmp["ny"]*tmp["step_y"]
             bounding_region = BoundingBoxRegion(np.array([x_min, x_max]), 
-                                                np.array([y_min, y_max]), epsg)
+                                                np.array([y_min, y_max]), epsg, self._epsg)
         else:
-            bounding_region = BoundingBoxRegion(xcoord, ycoord, dataset_epsg)
+            bounding_region = BoundingBoxRegion(xcoord, ycoord, dataset_epsg, self._epsg)
 
 
         # Construct region parameter:
@@ -212,14 +212,16 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
 class BoundingBoxRegion(interfaces.BoundingRegion):
 
-    def __init__(self, x, y, epsg):
-        self._epsg = str(epsg)
+    def __init__(self, x, y, point_epsg, target_epsg):
+        self._epsg = str(point_epsg)
         x_min = x.ravel().min()
-        x_max= x.ravel().max()
+        x_max = x.ravel().max()
         y_min = y.ravel().min()
-        y_max= y.ravel().max()
-        self.x = x_min, x_max, x_max, x_min
-        self.y = y_max, y_max, y_min, y_min
+        y_max = y.ravel().max()
+        self.x = np.array([x_min, x_max, x_max, x_min], dtype="d")
+        self.y = np.array([y_max, y_max, y_min, y_min], dtype="d")
+        self.x, self.y = self.bounding_box(target_epsg)
+        self._epsg = str(target_epsg)
 
     def bounding_box(self, epsg):
         epsg = str(epsg)

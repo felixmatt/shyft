@@ -12,6 +12,7 @@ from shyft.repository.netcdf import AromeDataRepository
 from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
 from shyft.repository.yaml_config import RegionConfig
 from shyft.repository.yaml_config import ModelConfig
+from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.api import pt_gs_k
 from shyft import api
 from shyft.orchestration.simulator import SimpleSimulator
@@ -22,7 +23,7 @@ class SimulationTestCase(unittest.TestCase):
 
     def setUp(self):
 
-        self.region_config_file = path.join(path.dirname(__file__), "netcdf", "region.yaml")
+        self.region_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def test_construct_simulator(self):
@@ -48,9 +49,10 @@ class SimulationTestCase(unittest.TestCase):
         region_model_repository = RegionModelRepository(region_config, model_config, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
-        base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
-        f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
+        #base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
+        base_dir = path.join(shyftdata_dir, "netcdf", "arome")
+        f1 = "arome_metcoop_default2_5km_{}.nc".format(date_str)
+        f2 = "arome_metcoop_test2_5km_{}.nc".format(date_str)
 
         ar1 = AromeDataRepository(epsg, base_dir, filename=f1, allow_subset=True)
         ar2 = AromeDataRepository(epsg, base_dir, filename=f2, elevation_file=f1, allow_subset=True)
@@ -62,5 +64,7 @@ class SimulationTestCase(unittest.TestCase):
                                     [ar1, ar2], 
                                     interp_repos, 
                                     None)
-        simulator.run(time_axis)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(pt_gs_k.PTGSKState, pt_gs_k.PTGSKStateVector, n_cells)
+        simulator.run(time_axis, state_repos.get_state(0))
 

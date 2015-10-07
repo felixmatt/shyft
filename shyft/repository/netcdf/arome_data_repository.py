@@ -76,10 +76,11 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             distributed input data. Can be a glob pattern as well, in case
             it is used for forecasts or ensambles.
         bounding_box: list, optional
-            A list on the form [[x_ul, x_ur, x_lr, x_ll],
-            [y_ul, y_ur, y_lr, y_ll]] describing the outer boundaries of the
-            domain that shoud be extracted. Coordinates are given in epsg
-            coordinate system.
+            A list on the form:
+            [[x_ul, x_ur, x_lr, x_ll],
+             [y_ul, y_ur, y_lr, y_ll]],
+            describing the outer boundaries of the domain that shoud be 
+            extracted. Coordinates are given in epsg coordinate system.
         x_padding: float, optional
             Longidutinal padding in meters, added both east and west
         y_padding: float, optional
@@ -98,12 +99,12 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self._is_ensemble = False
         self.allow_subset = allow_subset
         if not path.isdir(self.directory):
-            raise interfaces.InterfaceError("No such directory '{}'".format(self.directory))
+            raise AromeDataRepositoryError("No such directory '{}'".format(self.directory))
         self.name_or_pattern = path.join(self.directory, filename)
         if elevation_file is not None:
             self.elevation_file = path.join(self.directory, elevation_file)
             if not path.isfile(self.elevation_file):
-                raise interfaces.InterfaceError(
+                raise AromeDataRepositoryError(
                     "Elevation file '{}' not found".format(self.elevation_file))
         else:
             self.elevation_file = None
@@ -151,14 +152,14 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             match = glob(self.name_or_pattern)
             if len(match) == 1:
                 return match[0]
-        raise interfaces.InterfaceError("Cannot resolve filename")
+        raise AromeDataRepositoryError("Cannot resolve filename")
 
     @property
     def bounding_box(self):
         # Add a padding to the bounding box to make sure the computational
         # domain is fully enclosed in arome dataset
         if self._bounding_box is None:
-            raise interfaces.InterfaceError("A bounding box must be provided")
+            raise AromeDataRepositoryError("A bounding box must be provided")
         bounding_box = np.array(self._bounding_box)
         bounding_box[0][0] -= self._x_padding
         bounding_box[0][1] += self._x_padding
@@ -294,7 +295,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         Parameters
         ----------
         input_source_types: list
-            List of source types to retrieve (precipitation,temperature..)
+            List of source types to retrieve (precipitation, temperature..)
         geo_location_criteria: object, optional
             Some type (to be decided), extent (bbox + coord.ref)
         utc_period: api.UtcPeriod
@@ -318,7 +319,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         # Open netcdf dataset. TODO: use with...
         if not path.isfile(self.filename):
-            raise interfaces.InterfaceError("File '{}' not found".format(self.filename))
+            raise AromeDataRepositoryError("File '{}' not found".format(self.filename))
         dataset = Dataset(self.filename)
         data_vars = dataset.variables
 
@@ -347,13 +348,18 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         else:
             assert set([self.shyft_net_map[df] for df in input_source_types]).issubset(data_vars.keys())
 
+        additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks
         d = data_vars[self.shyft_net_map[input_source_types[0]]]
         self.xx, self.yy, x_mask, y_mask = \
             self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
+        if not x_mask.any():
+            raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
+        if not y_mask.any():
+            raise AromeDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
         raw_data = {}
-        for data_field in input_source_types:
+        for data_field in input_source_types + additional_extract:
             data = data_vars.pop(self.shyft_net_map[data_field])
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]

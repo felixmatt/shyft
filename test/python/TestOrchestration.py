@@ -213,10 +213,8 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
         f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
 
-        bbox = ([upper_left_x, upper_left_x + nx*dx,
-                 upper_left_x + nx*dx, upper_left_x],
-                [upper_left_y, upper_left_y,
-                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+        bbox = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
+                [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
         ar1 = AromeDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox)
         ar2 = AromeDataRepository(EPSG, base_dir, filename=f2, elevation_file=f1)
         ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
