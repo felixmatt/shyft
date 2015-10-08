@@ -268,8 +268,8 @@ namespace shyft {
                 size_t max_catchment_id = 0;
 				for_each(begin(*cells), end(*cells), [this, &time_axis,&max_catchment_id](cell_t& c) {
 					c.init_env_ts(time_axis);
-					if(c.geo.catchment_id()>max_catchment_id)
-                        max_catchment_id=c.geo.catchment_id();
+					if (c.geo.catchment_id() > max_catchment_id)
+                        max_catchment_id = c.geo.catchment_id();
 				});
                 n_catchments = max_catchment_id + 1;// keep this/assume invariant..
                 this->time_axis = time_axis;

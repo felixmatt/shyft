@@ -47,6 +47,11 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         self._params = params
         self._metstation_filepath = metstation_filepath
         self._discharge_filepath = discharge_filepath
+        self.source_type_map = {"relative_humidity": api.RelHumSource,
+                                "temperature": api.TemperatureSource,
+                                "precipitation": api.PrecipitationSource,
+                                "radiation": api.RadiationSource,
+                                "wind_speed": api.WindSpeedSource}
 
     @property
     def _stations_met(self):
@@ -86,13 +91,13 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         print(len(stations_ts), input_source, 'series found.')
         return stations_ts
 
-    def get_timeseries(self, input_source_types, geo_location_criteria, utc_period):
+    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Method for fetching the sources in NetCDF files.
 
         Parameters
         ----------
-        input_source_types : dict
-            A map between the data to be extracted and the data containers in shyft.api.
+        input_source_types: list
+            List of source types to retrieve (precipitation, temperature..)
         geo_location_criteria: bbox + proj.ref ?
         utc_period : of type UtcPeriod
 
@@ -103,10 +108,10 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             input_source_type.vector_t attribute.
 
         """
-        # self.__dict__.update(params)
         data = dict()
         # Fill the data with actual values
-        for input_source, source_api in input_source_types.iteritems():
+        for input_source in input_source_types:
+            api_source_type = self.source_type_map[input_source]
             ts = self._fetch_station_tseries(input_source,
                                              self._params['types'],
                                              utc_period)
@@ -123,13 +128,12 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                 values = station['values']
                 value_points = api.DoubleVector.FromNdArray(values)
                 api_ts = tsf.create_time_point_ts(total_period, time_points, value_points)
-                data_source = source_api(api.GeoPoint(*station['location']), api_ts)
+                data_source = api_source_type(api.GeoPoint(*station['location']), api_ts)
                 acc_data.append(data_source)
-            data[input_source] = source_api.vector_t(acc_data)
+            data[input_source] = api_source_type.vector_t(acc_data)
         return data
 
-    def get_forecast(self, input_source_types,
-                     geo_location_criteria, utc_period):
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria):
         """
         Parameters:
         see get_timeseries
@@ -137,6 +141,6 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         raise NotImplementedError("get_forecast")
 
-    def get_forecast_ensemble(self, input_source_types,
-                              geo_location_criteria, utc_period):
+    def get_forecast_ensemble(self, input_source_types, utc_period,
+                              t_c, geo_location_criteria=None):
         raise NotImplementedError("get_forecast_ensemble")
