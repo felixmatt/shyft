@@ -42,6 +42,34 @@ class MetStationConfig(object):
         self.wind_speed=wind_speed
         self.radiation=radiation
         self.relative_humidity=relative_humidity
+
+def create_forecast_ensemble_config(gis_id,temperature_name_format,precipitation_name_format,n_ensembles):
+    """
+    Create MetStationConfig for ensembles.
+    In SmG they are aranged by naming convention
+    EC00 forecast ensemble members is like this:
+      LTM1-Nore.1........-T0000A5P_EC00_Exx (precipitation member xx)
+      LTM1-Nore.1........-T0017A3P_EC00_Exx (temperature member xx)
+    then use
+      temperature_name_format  = LTM1-Nore.1........-T0017A3P_EC00_E{0:02}
+      precipitation_name_format= LTM1-Nore.1........-T0000A5P_EC00_E{0:02}
+    Parameters
+    ----------
+    gis_id:string|int
+     - identifier passed to the gis-service to get the real position (x,y,z) of the ensemble 
+    temperature_name_format:string
+     - a string format for the temperature members that we apply .format(i) for i in 0..n-ensembles
+    precipitiation_name_format:string
+     - a string format for the precipitation members that we apply .format(i) for i in 0..n-ensembles
+    n_ensembles:int
+     - number of ensembles, in Statrkraft this is 52 for the ECxx forecasts
+
+    Returns
+    -------
+    list of MetStationConfig, with gis_id and temperature, precipitation pairs.
+
+    """
+    return [ MetStationConfig(gis_id,temperature=temperature.format(i),precipitation=precipitation.format(i)) for i in xrange(n_ensembles)]
     
     
 class GeoLocationRepository(object):
@@ -145,19 +173,19 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         Parameters
         ----------
-            geo_location_repository: GeoLocationRepository
-                server like oslwvagi001p, to be passed to the gis_station_data fetcher service
+        geo_location_repository: GeoLocationRepository
+            -server like oslwvagi001p, to be passed to the gis_station_data fetcher service
 
-            ts_repository: TsRepository
-                the SMG_PROD or SMG_PREPROD environment configuration (user,db-service)
+        ts_repository: TsRepository
+            -the SMG_PROD or SMG_PREPROD environment configuration (user,db-service)
 
-            met_station_list: list of type MetStationConfig
-                list that identifies met_stations in the scope of this repository
-                e.g. 
-                [ 
-                MetStation(gis_id='123',temperature='/Vossevangen/temperature',precipitation='/Vossevangen/precipitation')
-                MetStation(gis_id='244', wind_speed='/Hestvollan/wind_speed')
-                ]
+        met_station_list: list of type MetStationConfig
+            -list that identifies met_stations in the scope of this repository
+            e.g. 
+            [ 
+            MetStation(gis_id='123',temperature='/Vossevangen/temperature',precipitation='/Vossevangen/precipitation')
+            MetStation(gis_id='244', wind_speed='/Hestvollan/wind_speed')
+            ]
 
         """
         if not isinstance(geo_location_repository,GeoLocationRepository): raise GeoTsRepositoryError("geo_location_repository should be an implementation of GeoLocationRepository")
@@ -246,6 +274,20 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     def get_forecast_ensemble(self, input_source_types,utc_period,t_c,geo_location_criteria):
         """
+        alg:
+        Using ensemble-generators? based on name rules passed to constructor.
+        result= [], type is list of  dictionary of input_source_type:input_source_type_vector_of_geo_ts
+        this will have n_ensemble dictionaries,
+        for each of them
+           create the ts_to_geo_ts_info,result
+        
+        for each ensemble that matches geo_location_criteria
+           add ts to read-list
+        read all the ts
+        remap tsid -> to the  _remap_to_result (kept within the result[] list)
+
+        Parameters
+        ----------
         Returns
         -------
         ensemble: list of same type as get_timeseries
