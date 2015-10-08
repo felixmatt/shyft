@@ -21,6 +21,11 @@ add its own code to tailor the calibration/simulation.  This chapter
 explains how the user can customize the orchestration process so that
 she can better adapt it to read her own data in any format she want.
 
+    ..WARNING::
+        The repository and orchestration are undergoing a refactorization
+        and some of the following may not be completely relevant or updated.
+
+
 
 Repositories
 ------------
@@ -30,7 +35,7 @@ SHyFT.  A repository is just a collection of data in some arbitrary
 format, but in SHyFT, it has the particular meaning of the **Python
 code** that can read this data and feed it to the SHyFT core.
 
-The `shyft.orchestration` package offers interfaces (via Python ABC
+The `shyft.repository` package offers interfaces (via Python ABC
 classes) so that the user can provide concrete implementations of his
 own repositories.  In this approach users can provide their own
 repositories customized to their own configuration files (typically
@@ -53,7 +58,7 @@ For example, in order to choose this repository you have to indicate
 this in you 'configuration.yaml' file::
 
   repository:
-    class: shyft.orchestration2.generic.Config
+    class: shyft.repository.generic.Config
     params:         # add your own params here to initialize repository
 
 As you can see, you can specify *any* class that is accessible in your
@@ -79,7 +84,7 @@ Let's see an example extracted from the 'datasets.yaml' for the
 
   sources:
     - repository: source_repo1
-      class: shyft.orchestration2.netcdf.SourceDataset
+      class: shyft.repository.netcdf.SourceDataset
       params:
         stations_met: stations_met.nc
         types:
@@ -121,7 +126,7 @@ Of course, the same applies to the 'destinations' section of the
 
   destinations:
     - repository:  dest_repo1
-      class: shyft.orchestration2.netcdf.DestinationDataset
+      class: shyft.repository.netcdf.DestinationDataset
       params:
         simulated_Q: netcdf://simulation.nc/Q
         simulated_SWE: netcdf://simulation.nc/SWE
@@ -143,7 +148,7 @@ Here we have an example of the main *bootstrap* way for specifying a
 repository in the main 'configuration.yaml' file::
 
   repository:
-    class: shyft.orchestration2.netcdf.Config
+    class: shyft.repository.netcdf.Config
     params:         # add your own params here to initialize repository
 
 Please note that we have replaced the standard `generic` repository
@@ -156,7 +161,7 @@ constructor (`__init__()` method).  In this case, we see that the
 orchestration code is then responsible to import the class
 appropriately, and in this case it does that as::
 
-  from shyft.orchestration2.netcdf import Config
+  from shyft.repository.netcdf import Config
 
 so that means that literally any class installed in your computer can
 be imported and used inside the `generic` orchestration

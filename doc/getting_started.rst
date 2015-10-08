@@ -4,11 +4,9 @@ Getting Started
 Compiling
 ---------
 
-You can compile SHyFT by using the typical procedure for Python packages::
+Instructions for building and compiling Shyft are available on the github wiki:
 
-  $ python setup.py build_ext --inplace
-
-from the root directory.
+`Shyft Wiki <http://github.com/statkraft/shyft/wiki/>`_
 
 
 Testing
@@ -34,10 +32,4 @@ Once you tested you SHyFT package you can install it in your system via::
 Running a small example
 -----------------------
 
-Once everything is setup, you can run a small example with::
-
-  $ shyft_runner -c doc/example/netcdf/configuration.yaml -s Himalayas
-
-
-If you get the result of a simulation, you are done with setting up SHyFT!  Please proceed with the next chapter
-so as to see how to calibrate SHyFT and setup your own configurations.
+To be completed ...
