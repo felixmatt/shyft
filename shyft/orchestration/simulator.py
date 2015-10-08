@@ -74,14 +74,21 @@ class SimpleSimulator(object):
         region_env.rel_hum = sources["relative_humidity"]
         return region_env
 
-    def _run_internal(self, state, time_axis, sources, region_env):
-        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-        self.region_model.run_interpolation(interp_params, time_axis, region_env)
-        if state is not None:
-            self.region_model.set_states(state)
-        self.region_model.run_cells()
+    def simulate(self):
+        runnable = all((self.state is not None, self.time_axis is not None,
+                        self.region_env is not None))
+        if runnable:
+            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
+            self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
+            self.region_model.set_states(self.state)
+            self.region_model.run_cells()
+            self.state = None
+            self.time_axis = None
+            self.region_env = None
+        else:
+            raise SimulatorError("Model not runnable.")
 
-    def run(self, time_axis, state=None):
+    def run(self, time_axis, state):
         """
         Forward simulation over time axis
 
@@ -99,10 +106,12 @@ class SimpleSimulator(object):
         for gt in self._geo_ts_repos[1:]:
             sources.update(gt.get_timeseries(self._geo_ts_names, period,
                                              geo_location_criteria=bbox))
-        region_env = self._get_region_environment(sources)
-        self._run_internal(state, time_axis, sources, region_env)
+        self.region_env = self._get_region_environment(sources)
+        self.state = state
+        self.time_axis = time_axis
+        self.simulate()
 
-    def run_forecast(self, time_axis, t_c, state=None):
+    def run_forecast(self, time_axis, t_c, state):
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self._geo_ts_repos[0].get_forecast(self._geo_ts_names, period, t_c,
@@ -110,5 +119,21 @@ class SimpleSimulator(object):
         for gt in self._geo_ts_repos[1:]:
             sources.update(gt.get_forecast(self._geo_ts_names, period, t_c,
                                            geo_location_criteria=bbox))
-        region_env = self._get_region_environment(sources)
-        self._run_internal(state, time_axis, sources, region_env)
+        self.region_env = self._get_region_environment(sources)
+        self.state = state
+        self.time_axis = time_axis
+        self.simulate()
+
+    def create_ensembles(self, time_axis, t_c, state=None):
+        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
+        period = time_axis.total_period()
+        sources = self._geo_ts_repos[0].get_ensemble_forecast(self._geo_ts_names, period, t_c,
+                                                     geo_location_criteria=bbox)
+        runnables = []
+        for source in sources:
+            simulator = self.copy()
+            simulator.state = state
+            simulator.time_axis = time_axis
+            simulator.region_env = self._get_region_environment(source)
+            runnables.append(simulator)
+        return runnables

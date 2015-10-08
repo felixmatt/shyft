@@ -44,6 +44,9 @@ class SimulationTestCase(unittest.TestCase):
         # Simulation coordinate system
         epsg = "32633"
 
+        # Model
+        model_t = pt_gs_k.PTGSKModel
+
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
@@ -57,7 +60,7 @@ class SimulationTestCase(unittest.TestCase):
         ar1 = AromeDataRepository(epsg, base_dir, filename=f1, allow_subset=True)
         ar2 = AromeDataRepository(epsg, base_dir, filename=f2, elevation_file=f1, allow_subset=True)
 
-        simulator = SimpleSimulator(pt_gs_k.PTGSKModel, 
+        simulator = SimpleSimulator(model_t,
                                     region_id, 
                                     interpolation_id, 
                                     region_model_repository, 
@@ -65,7 +68,7 @@ class SimulationTestCase(unittest.TestCase):
                                     interp_repos, 
                                     None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(pt_gs_k.PTGSKState, pt_gs_k.PTGSKStateVector, n_cells)
+        state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
     def test_construct_geo_ts_data_simulator(self):
@@ -84,6 +87,9 @@ class SimulationTestCase(unittest.TestCase):
         # Simulation coordinate system
         epsg = "32633"
 
+        # Model
+        model_t = pt_gs_k.PTGSKModel
+
         # Configs and repositories
         dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
         region_config = RegionConfig(self.region_config_file)
@@ -96,7 +102,7 @@ class SimulationTestCase(unittest.TestCase):
             station_file = source["params"]["stations_met"]
             geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
 
-        simulator = SimpleSimulator(pt_gs_k.PTGSKModel, 
+        simulator = SimpleSimulator(model_t, 
                                     region_id, 
                                     interpolation_id, 
                                     region_model_repository, 
@@ -104,7 +110,7 @@ class SimulationTestCase(unittest.TestCase):
                                     interp_repos, 
                                     None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(pt_gs_k.PTGSKState, pt_gs_k.PTGSKStateVector, n_cells)
+        state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
 

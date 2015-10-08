@@ -3,9 +3,9 @@ import interfaces
 
 class DefaultStateRepository(interfaces.StateRepository):
 
-    def __init__(self, state_t, state_vec_t, n):
-        self.state_t = state_t
-        self.state_vec_t = state_vec_t
+    def __init__(self, model, n):
+        self.state_t = model.state_t
+        self.state_vec_t = model.state_t.vector_t
         self.n = n
 
     def find_state(self, region_model_od_criteria=None, utc_period_criteria=None,
