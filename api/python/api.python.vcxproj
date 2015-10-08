@@ -83,6 +83,7 @@
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\api\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -101,6 +102,7 @@
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\api\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,7 +154,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run api</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run __init___wrap.cpp</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Update swig generated files api</Message>
@@ -212,7 +214,7 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run api</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run __init___wrap.cpp</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Update swig generated files api</Message>

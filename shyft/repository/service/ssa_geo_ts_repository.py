@@ -4,8 +4,8 @@ PLEASE NOTE: This module relies on services specific to Statkraft, for other par
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import ABCMeta,abstractmethod,abstractproperty
-import os
+from abc import ABCMeta,abstractmethod
+
 from shyft import api
 from shyft.repository import interfaces
 
@@ -23,17 +23,17 @@ class MetStationConfig(object):
         Parameters
         ----------
         gis_id: int
-            mandatory immutable unique identifier that can be passed to the gis-service to retrieve xyz
+            - mandatory immutable unique identifier that can be passed to the gis-service to retrieve xyz
         temperature: string
-            identifier for temperature[degC] time-series in SSA ts service (SMG)
+            - identifier for temperature[degC] time-series in SSA ts service (SMG)
         precipitation: string
-            identifier for temperature[mm/h] time-series in SSA ts service (SMG)
+            - identifier for temperature[mm/h] time-series in SSA ts service (SMG)
         wind_speed: string
-            identifier for wind_speed[m/s] time-series in SSA ts service (SMG)
+            - identifier for wind_speed[m/s] time-series in SSA ts service (SMG)
         radiation: string
-            identifier for radiation[W/m2] time-series in SSA ts service (SMG)
+            - identifier for radiation[W/m2] time-series in SSA ts service (SMG)
         relative_humidity: string
-            identifier for relative humidity [%] time-series in SSA ts service (SMG)
+            - identifier for relative humidity [%] time-series in SSA ts service (SMG)
 
         """
         self.gis_id=gis_id
@@ -43,34 +43,62 @@ class MetStationConfig(object):
         self.radiation=radiation
         self.relative_humidity=relative_humidity
 
-def create_forecast_ensemble_config(gis_id,temperature_name_format,precipitation_name_format,n_ensembles):
+class EnsembleStation(object):
     """
-    Create MetStationConfig for ensembles.
-    In SmG they are aranged by naming convention
-    EC00 forecast ensemble members is like this:
-      LTM1-Nore.1........-T0000A5P_EC00_Exx (precipitation member xx)
-      LTM1-Nore.1........-T0017A3P_EC00_Exx (temperature member xx)
-    then use
-      temperature_name_format  = LTM1-Nore.1........-T0017A3P_EC00_E{0:02}
-      precipitation_name_format= LTM1-Nore.1........-T0000A5P_EC00_E{0:02}
-    Parameters
-    ----------
-    gis_id:string|int
-     - identifier passed to the gis-service to get the real position (x,y,z) of the ensemble 
-    temperature_name_format:string
-     - a string format for the temperature members that we apply .format(i) for i in 0..n-ensembles
-    precipitiation_name_format:string
-     - a string format for the precipitation members that we apply .format(i) for i in 0..n-ensembles
-    n_ensembles:int
-     - number of ensembles, in Statrkraft this is 52 for the ECxx forecasts
-
-    Returns
-    -------
-    list of MetStationConfig, with gis_id and temperature, precipitation pairs.
+    Provides an easy way to describe a 'station', location, where we have 
+    ensemble of temperature/precipitation etc.
+    The name of these properties are described by a callable that takes 
+    the i'th ensemble idx as argument and returns the name of it.
 
     """
-    return [ MetStationConfig(gis_id,temperature=temperature.format(i),precipitation=precipitation.format(i)) for i in xrange(n_ensembles)]
-    
+    def __init__(self,gis_id,n_ensembles,temperature_ens=None,precipitation_ens=None,wind_speed_ens=None,radiation_ens=None,relative_humidity_ens=None):
+        """
+        Parameters
+        ----------
+        gis_id: int
+            - mandatory immutable unique identifier that can be passed to the gis-service to retrieve xyz
+        temperature_ens: callable(ensemble_id) -> string
+            - callable that given ensemble_id returns identifier for temperature[degC] time-series in SSA ts service (SMG)
+        precipitation_ens: callable(ensemble_id) -> string
+            - callable that given ensemble_id returns identifier for temperature[mm/h] time-series in SSA ts service (SMG)
+        wind_speed_ens: callable(ensemble_id) -> string
+            - callable that given ensemble_id returns identifier for wind_speed[m/s] time-series in SSA ts service (SMG)
+        radiation_ens: callable(ensemble_id) -> string
+            - callable that given ensemble_id returns identifier for radiation[W/m2] time-series in SSA ts service (SMG)
+        relative_humidity_ens: callable(ensemble_id) -> string
+            - callable that given ensemble_id returns identifier for relative humidity [%] time-series in SSA ts service (SMG)
+
+        """
+        self.gis_id=gis_id
+        self.n_ensembles=n_ensembles
+        self.temperature=temperature_ens 
+        self.precipitation=precipitation_ens
+        self.wind_speed=wind_speed_ens
+        self.radiation=radiation_ens
+        self.relative_humidity=relative_humidity_ens
+
+class EnsembleConfig(object):
+    """
+    Describes a forecast ensemble,
+    there is a fixed number of ensembles
+    there is a number of "stations"/locations where we have
+    ensemble_forecast for n_ensembles of type
+    (temperature,preciptiation etc...)
+    """
+    def __init__(self,n_ensembles,list_of_ens_station_cfg):
+        """
+        Parameters
+        ----------
+        n_ensembles:int
+            - number of ensembles, in SMG, from met.no, typically 52 for precip/temp.
+        list_of_ens_station_cfg:list of EnsembleStation
+            - a list of ensemble stations, each of them should have n_ensembles for each property they support.
+        """
+        self.n_ensembles=n_ensembles
+        self.station_list=list_of_ens_station_cfg
+        #TODO: verify n_ensembles>0, and verify that each ens_station.n_ensembles are >0
+
+
     
 class GeoLocationRepository(object):
     """
@@ -169,7 +197,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self, geo_location_repository,ts_repository,met_station_list):
+    def __init__(self, geo_location_repository,ts_repository,met_station_list,ens_config):
         """
         Parameters
         ----------
@@ -193,6 +221,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         self.geo_location_repository=geo_location_repository
         self.ts_repository= ts_repository # we pass this to the ssa smg db interface
         self.met_station_list=met_station_list # this defines the scope of the service, and glue together consistent positions and time-series
+        self.ens_config=ens_config # defines ensemble stations, similar to met_station_list, except, each station have n_ensemble members for each property
         self.source_type_map = {"relative_humidity": api.RelHumSource, #we need this map to provide shyft.api types back to the orchestrator
                                 "temperature": api.TemperatureSource,
                                 "precipitation": api.PrecipitationSource,
@@ -216,6 +245,31 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                  })
         return ts_to_geo_ts_info,result
 
+    def _get_ts_to_geo_ts_ensemble_result(self,input_source_types,geo_match):
+        """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
+        # 1 get the station-> location map
+        station_ids=[ x.gis_id for x in self.ens_config.station_list ]
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632) #TODO use epsg for self
+        # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
+        #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
+        ts_to_geo_ts_info= dict()
+        ens_result=[] #when done, it's filled with n_ensembles of 'result' dictionaries, one for each ensemble-member
+        # get out the dimension of the ensemble from ens_station_list, .. each station needs the same number of ens.members.., otherwise in trouble..
+        # because we need correlated temperature/precipitation/radiation (each of them belong to a certain ens.member).
+        for i in xrange(self.ens_config.n_ensembles):
+            result={}
+            for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
+                result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
+                ts_to_geo_ts_info.update(
+                    { k:v for k,v in
+                           #    ts-name             , (temperature, geopoint , ens result 
+                         ([ getattr(x,attr_name)(i) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ), result )] #this constructs a key,value list from the result below
+                             for x  in self.ens_config.station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
+                     })
+            ens_result.append(result) # add this ens to the result.
+        return ts_to_geo_ts_info,ens_result
+
+
     def _remap_to_result(self,read_ts_map,result,ts_to_geo_ts_info):
         """ given read_ts_map, as a result from read,read_forecast
             map it into correct vector in result,
@@ -226,6 +280,18 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
             result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
         return result
+
+    def _remap_to_ensemble_result(self,read_ts_map,ens_result,ts_to_geo_ts_info):
+        """ given read_ts_map, as a result from read,read_forecast
+            map it into correct result in ens_result,
+            using geo_ts_info
+        """
+        for tsn,ts in read_ts_map.iteritems():
+            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint(), and plain result )
+            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
+            result=geo_ts_info[2] # this should be the result dictionary of 'type':vector_t where this ts belongs to (ensembleset)
+            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
+        return ens_result
 
 
     def get_timeseries(self, input_source_types, utc_period,geo_location_criteria=None):
@@ -292,8 +358,15 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         ensemble: list of same type as get_timeseries
         """
-        raise NotImplementedError("get_forecast will be implemented later")
-
+        if t_c is not None: raise("t_c, time created spec is not yet implemented")
+        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
+        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        # get the remap back to result[i], and the empty, but initialized result list.
+        ts_to_geo_ts_info,ens_result= self._get_ts_to_geo_ts_ensemble_result(input_source_types,geo_match)
+        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
+        read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
+        return self._remap_to_ensemble_result(read_ts_map,ens_result,ts_to_geo_ts_info) # map back to result
+        
 
 
 
