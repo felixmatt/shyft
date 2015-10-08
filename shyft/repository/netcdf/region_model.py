@@ -127,7 +127,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                 y_corners[1:] = ycoord + dy/2.0
                 y_corners[0] = ycoord[0] - dy/2.0
                 xc, yc = transform(source_proj, target_proj, *np.meshgrid(x_corners, y_corners))
-                areas = np.empty((len(xcoord),len(ycoord)), dtype=xcoord.dtype)
+                areas = np.empty((len(xcoord), len(ycoord)), dtype=xcoord.dtype)
                 for i in xrange(len(xcoord)):
                     for j in xrange(len(ycoord)):
                         pts = [(xc[j, i],         yc[j, i]),
@@ -162,11 +162,10 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             x_max = x_min + tmp["nx"]*tmp["step_x"]
             y_max = tmp["upper_left_x"]
             y_min = y_max - tmp["ny"]*tmp["step_y"]
-            bounding_region = BoundingBoxRegion(np.array([x_min, x_max]), 
+            bounding_region = BoundingBoxRegion(np.array([x_min, x_max]),
                                                 np.array([y_min, y_max]), epsg, self._epsg)
         else:
             bounding_region = BoundingBoxRegion(xcoord, ycoord, dataset_epsg, self._epsg)
-
 
         # Construct region parameter:
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
@@ -238,6 +237,6 @@ class BoundingBoxRegion(interfaces.BoundingRegion):
 
     def bounding_polygon(self, epsg):
         return self.bounding_box(epsg)
-    
+
     def epsg(self):
         return self._epsg

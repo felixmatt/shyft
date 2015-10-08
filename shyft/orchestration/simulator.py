@@ -18,6 +18,33 @@ class SimpleSimulator(object):
 
     def __init__(self, model, region_id, interpolation_id, region_model_repository,
                  geo_ts_repositories, interpolation_parameter_repository, catchments=None):
+        """
+        Create a simple simulator.
+
+        Repositories below as referred to as relative to the shyft.repository package
+
+        Parameters
+        ----------
+        model: shyft.api class
+            The api class, like shyft.api.pt_gs_k.PTGSKModel.
+        region_id: string
+            Region identifyer to be used with the region model repository
+            to qualify what region to use.
+        interpolation_id: string
+            Identifier to use with the interpolation parameter
+            repository.
+        region_model_repostiory: interfaces.RegionModelRepository subclass
+            Repository that can deliver a model with initialized cells
+        geo_ts_repositories: list of interfaces.GeoTsRepository subclasses
+            List of repositories that can deliver time series data to drive simulator.
+            If same source is present in several of the repositories, the last in the list
+            has presedence.
+        interpolation_parameter_repository: interfaces.InterpolationParameterRepository subclass
+            Repository that can deliver interpolation parameters
+        catchments: list of identifies, optional
+            List of catchment identifiers to extract from region through
+            the region_model_repository.
+        """
         self.region_model_repository = region_model_repository
         self.interpolation_id = interpolation_id
         self.ip_repos = interpolation_parameter_repository
@@ -31,6 +58,9 @@ class SimpleSimulator(object):
         self.epsg = self.region_model.bounding_region.epsg()
 
     def set_geo_ts_repositories(self, geo_ts_repositories):
+        """
+        Set new geo located timeseries repositories.
+        """
         if not isinstance(geo_ts_repositories, (list, tuple)):
                 geo_ts_repositories = [geo_ts_repositories]
         self._geo_ts_repos = geo_ts_repositories
@@ -52,6 +82,16 @@ class SimpleSimulator(object):
         self.region_model.run_cells()
 
     def run(self, time_axis, state=None):
+        """
+        Forward simulation over time axis
+
+        Parameters
+        ----------
+        time_axis: shyft.api.TimeAxis
+            Time axis defining the simulation period, and step sizes.
+        state: shyft.api state
+            
+        """
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self._geo_ts_repos[0].get_timeseries(self._geo_ts_names, period,

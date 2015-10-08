@@ -79,7 +79,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             A list on the form:
             [[x_ul, x_ur, x_lr, x_ll],
              [y_ul, y_ur, y_lr, y_ll]],
-            describing the outer boundaries of the domain that shoud be 
+            describing the outer boundaries of the domain that shoud be
             extracted. Coordinates are given in epsg coordinate system.
         x_padding: float, optional
             Longidutinal padding in meters, added both east and west
@@ -90,7 +90,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             constraints given by bounding box and padding, that contains
             elevation that should be used in stead of elevations in file.
         allow_subset: bool
-            Allow extraction of a subset of the given source fields 
+            Allow extraction of a subset of the given source fields
             instead of raising exception.
         """
         # Make sure input makes sense, or raise exceptions
@@ -264,8 +264,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         # Find bounding box in arome projection
         bbox = self.bounding_box
-        bb_proj = transform(target_proj, data_proj,
-                            bbox[0], bbox[1])
+        bb_proj = transform(target_proj, data_proj, bbox[0], bbox[1])
         x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
         y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
@@ -344,9 +343,11 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         # Make sure requested fields are valid, and that dataset contains the requested data.
         assert set(input_source_types).issubset(self._shyft_fields)
         if self.allow_subset:
-            input_source_types = [df for df in input_source_types if self.shyft_net_map[df] in data_vars]
+            input_source_types = [df for df in input_source_types
+                                  if self.shyft_net_map[df] in data_vars]
         else:
-            assert set([self.shyft_net_map[df] for df in input_source_types]).issubset(data_vars.keys())
+            assert set([self.shyft_net_map[df]
+                        for df in input_source_types]).issubset(data_vars.keys())
 
         additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks

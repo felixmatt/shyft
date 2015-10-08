@@ -393,11 +393,11 @@ class BoundingRegion(object):
         Returns
         -------
         x: np.ndarray
-           x coordinates of the four corners, numbered clockwise from 
-           upper left corner
+           x coordinates of the four corners, numbered clockwise from
+           upper left corner.
         y: np.ndarray
-           x coordinates of the four corners, numbered clockwise from 
-           upper left corner
+           x coordinates of the four corners, numbered clockwise from
+           upper left corner.
         """
         pass
 

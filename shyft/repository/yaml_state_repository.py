@@ -93,7 +93,8 @@ class YamlStateRepository(StateRepository):
                 full_path = os.path.realpath(
                     os.path.join(os.path.realpath(__file__, state_directory)))
             else:
-                raise StateRepositoryError("Can not find directory {}, please check your configuration setup.".format(state_directory))
+                raise StateRepositoryError("Can not find directory {}, please check "
+                                           "your configuration setup.".format(state_directory))
 
         if glob_pattern is None:
             glob_pattern = "*.yaml"
@@ -122,7 +123,8 @@ class YamlStateRepository(StateRepository):
             unique id
         """
         if self._filename_item_separator in region_model_id:
-            raise StateRepositoryError("{} is illegal character in region_model_id ".format(self._filename_item_separator))
+            raise StateRepositoryError("{} is illegal character in region_model_id"
+                                       "".format(self._filename_item_separator))
         version = 0
         state_id = ""
         # ms does not tolerate : in filenames
@@ -186,7 +188,8 @@ class YamlStateRepository(StateRepository):
                 List of StateInfo objects that match the specified criteria.
         """
         if utc_timestamp_criteria is not None and region_model_id_criteria is None:
-            raise StateRepositoryError("You have to specify a region_model_id AND a utc_timestamp_critera")
+            raise StateRepositoryError("You have to specify both a region_model_id "
+                                       "and a utc_timestamp_critera")
 
         file_list = self._get_state_file_list(self._directory_path, self._file_pattern)
         res = []

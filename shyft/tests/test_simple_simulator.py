@@ -29,8 +29,6 @@ class SimulationTestCase(unittest.TestCase):
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def test_construct_arome_data_simulator(self):
-        return
-
         # Simulation time axis
         year, month, day, hour = 2015, 8, 23, 6
         n_hours = 30
@@ -52,10 +50,9 @@ class SimulationTestCase(unittest.TestCase):
         region_model_repository = RegionModelRepository(region_config, model_config, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
-        #base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        base_dir = path.join(shyftdata_dir, "netcdf", "arome")
-        f1 = "arome_metcoop_default2_5km_{}.nc".format(date_str)
-        f2 = "arome_metcoop_test2_5km_{}.nc".format(date_str)
+        base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
+        f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
+        f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
 
         ar1 = AromeDataRepository(epsg, base_dir, filename=f1, allow_subset=True)
         ar2 = AromeDataRepository(epsg, base_dir, filename=f2, elevation_file=f1, allow_subset=True)
