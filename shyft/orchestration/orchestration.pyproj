@@ -5,7 +5,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3d94cbf1-d487-44a9-b865-82546e1a3cff}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>RunConfiguration.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>..\..\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -21,39 +22,11 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="cell.py" />
-    <Compile Include="input_source.py" />
-    <Compile Include="RunConfiguration.py" />
-    <Compile Include="scripts\MasterScheduler.py" />
-    <Compile Include="scripts\ScheduledTokkeRun.py" />
-    <Compile Include="state.py" />
-    <Compile Include="utils\CellBuilder.py" />
-    <Compile Include="utils\ShyftConfig.py" />
-    <Compile Include="utils\ShyftRunner.py" />
-    <Compile Include="utils\yaml_file_io.py" />
-    <Compile Include="utils\__init__.py" />
+    <Compile Include="simulator.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="scripts\" />
-    <Folder Include="utils\" />
-    <Folder Include="utils\config\" />
-  </ItemGroup>
-  <ItemGroup>
     <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\2.7" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="utils\config\NeaNidelva_calibration.yaml" />
-    <Content Include="utils\config\nn_datasets.yaml" />
-    <Content Include="utils\config\nn_model.yaml" />
-    <Content Include="utils\config\nn_region.yaml" />
-    <Content Include="utils\config\rl_datasets.yaml" />
-    <Content Include="utils\config\rl_model.yaml" />
-    <Content Include="utils\config\rl_region.yaml" />
-    <Content Include="utils\config\runner_configurations.yaml" />
-    <Content Include="utils\mock_calibration.yaml" />
-    <Content Include="utils\mock_config.yaml" />
-    <Content Include="utils\mock_reduced_config.yaml" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

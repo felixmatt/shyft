@@ -34,11 +34,11 @@ void sceua_test::test_basic(){
     double x[2]={-1.0, 2.5};
     double x_min[2]= {-10,-10};
     double x_max[2]= { 10, 10.0};
-    const double eps=1e-7;
+    const double eps=1e-6;
     double x_eps[2]= {eps,eps};
     double y=-1;
     x2_fx f_basic;
-    const size_t max_iterations=10000;
+    const size_t max_iterations=20000;
     auto r=opt.find_min(n,x_min,x_max,x,y,f_basic,eps, -1,-2,x_eps,max_iterations);
     TS_ASSERT_LESS_THAN(f_basic.n_eval,max_iterations)
     TS_ASSERT_EQUALS(r,OptimizerState::FinishedXconvergence);
@@ -54,14 +54,14 @@ void sceua_test::test_complex() {
     double x[2]={-4.01, -7.5};
     double x_min[2]= {-10,-10};
     double x_max[2]= { 10, 10.0};
-    const double eps=1e-6;
+    const double eps=1e-5;
     double x_eps[2]= {eps,eps};
     double y=-1;
-    double y_eps=1e-4;
+    double y_eps=1e-3;
     fx_complex f_complex;
-    const size_t max_iterations=10000;
+    const size_t max_iterations=150000;
     auto r=opt.find_min(n,x_min,x_max,x,y,f_complex,y_eps, -1,-2,x_eps,max_iterations);
-    TS_ASSERT_LESS_THAN(f_complex.n_eval,max_iterations)
+	TS_ASSERT_LESS_THAN(f_complex.n_eval, max_iterations + 1000);
     TS_ASSERT_EQUALS(r,OptimizerState::FinishedFxConvergence);
     TS_ASSERT_DELTA(y,0.7028,1e-3);
     double rr=sqrt(x[0]*x[0]+x[1]*x[1]);
