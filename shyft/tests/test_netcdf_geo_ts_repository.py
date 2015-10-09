@@ -36,3 +36,6 @@ class NetCDFGeoTsRepositoryTestCase(unittest.TestCase):
                                              geo_location_criteria=None,
                                              utc_period=utc_period)
         self.assertIsNotNone(geo_ts_dict)
+
+if __name__ == '__main__':
+    unittest.main()

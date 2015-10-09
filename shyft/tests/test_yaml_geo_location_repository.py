@@ -43,3 +43,5 @@ class TestYamlGeoLocationRepository(unittest.TestCase):
         self.assertAlmostEqual(geop[123][1],2)
         self.assertAlmostEqual(geop[123][2],3)
 
+if __name__ == '__main__':
+    unittest.main()

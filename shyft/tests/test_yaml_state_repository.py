@@ -118,4 +118,5 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         self.assertEquals(0,len(state_repository.find_state(region_model_id,cal.time(YMDhms(2000,12,31,23,59,59)))))
         self.assertEquals(state_id_2,state_repository.find_state(region_model_id,cal.time(YMDhms(2002,1,1,0,0,0)))[0].state_id)
         
-        
+if __name__ == '__main__':
+    unittest.main()

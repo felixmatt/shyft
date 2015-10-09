@@ -18,7 +18,7 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
     """
     def test_construct_repository(self):
         reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),
-                                            "netcdf", "region.yaml"))
+                                            "netcdf", "india_region.yaml"))
         mod_conf = yaml_config.ModelConfig(path.join(path.dirname(__file__),
                                            "netcdf", "model.yaml"))
         epsg = "32633"
@@ -39,14 +39,14 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
 
     def test_bounding_box_region(self):
         reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),
-                                            "netcdf", "region.yaml"))
+                                            "netcdf", "atnasjoen_region.yaml"))
         dsf = path.join(shyftdata_dir, reg_conf.repository()["data_file"])
         tmp = 10
         with Dataset(dsf) as ds:
             xcoords = ds.groups["elevation"].variables["xcoord"][:]
             ycoords = ds.groups["elevation"].variables["ycoord"][:]
             epsg = ds.groups["elevation"].epsg
-        bbr = BoundingBoxRegion(xcoords, ycoords, epsg) 
+        bbr = BoundingBoxRegion(xcoords, ycoords, epsg,32632) 
         bbox = bbr.bounding_box(32632)
         self.assertTrue(np.linalg.norm(bbr.x - bbox[0]) < 1.0e-14)
         self.assertTrue(np.linalg.norm(bbr.y - bbox[1]) < 1.0e-14)
@@ -54,3 +54,5 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
         self.assertFalse(np.linalg.norm(bbr.x - bbox[0]) < 500000.0)
         self.assertFalse(np.linalg.norm(bbr.y - bbox[1]) < 5000.0)
 
+if __name__ == '__main__':
+    unittest.main()
