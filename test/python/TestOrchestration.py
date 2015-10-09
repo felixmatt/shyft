@@ -9,9 +9,9 @@ from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
-from shyft.orchestration.state import set_ptgsk_model_state
-from shyft.orchestration.state import extract_ptgsk_model_state
-from shyft.orchestration.state import State
+#from shyft.orchestration.state import set_ptgsk_model_state
+#from shyft.orchestration.state import extract_ptgsk_model_state
+#from shyft.orchestration.state import State
 from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
 
 
@@ -152,21 +152,13 @@ class StateIOTestCase(unittest.TestCase):
             for i in xrange(num_cells):
                 state_list.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             initial_states = x.join(state_list)
-            set_ptgsk_model_state(model, State(initial_states,
-                                               datetime.strftime(datetime.utcnow(),
-                                                                 "%Y-%m-%d-%M-%S")))
-            retrieved_states = extract_ptgsk_model_state(model)
-            self.assertEqual(initial_states, retrieved_states.state_list)
-
-            # Test that the state can be serialized and de-serialized:
-            serialized_states = yaml.dump(retrieved_states, default_flow_style=False)
-            self.assertTrue(isinstance(serialized_states, str))
-            deserialized_states = yaml.load(serialized_states)
-
-            self.assertEqual(retrieved_states.state_list, deserialized_states.state_list)
-
-            # Finally, set the deserialized states into the model:
-            set_ptgsk_model_state(model, deserialized_states)
+            sio=model_type.state_t.serializer_t()
+            state_vector=sio.vector_from_string(initial_states)
+            model.set_states(state_vector)
+            m_state_vector=model_type.state_t.vector_t()
+            model.get_states(m_state_vector)
+            retrieved_states=sio.to_string(m_state_vector)
+            self.assertEqual(initial_states,retrieved_states)
 
     def test_set_too_few_model_states(self):
         num_cells = 20

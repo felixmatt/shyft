@@ -114,6 +114,7 @@ PTGSKOptModel.statistics = property(lambda self:PTGSKCellOptStatistics(self.get_
 PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
+PTGSKState.serializer_t= PTGSKStateIo
 %}
 
 %exception {

@@ -260,13 +260,13 @@ namespace shyft {
                 ncore = thread::hardware_concurrency()*4;
             }
             region_model(const region_model& model) { clone(model); }
-
-            region_model& operator=(const region_model& c) {
+			#ifndef SWIG
+			region_model& operator=(const region_model& c) {
                 if (&c != this)
                     clone(c);
                 return *this;
             }
-
+			#endif
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
             /** \brief run_interpolation interpolates region_environment temp,precip,rad.. point sources
