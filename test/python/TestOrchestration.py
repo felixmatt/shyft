@@ -9,13 +9,10 @@ from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
-#from shyft.orchestration.state import set_ptgsk_model_state
-#from shyft.orchestration.state import extract_ptgsk_model_state
-#from shyft.orchestration.state import State
 from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
 
 
-class StateIOTestCase(unittest.TestCase):
+class BasicModelCreateAndRun(unittest.TestCase):
 
     @staticmethod
     def build_model(model_t,parameter_t, model_size, num_catchments=1):
@@ -169,11 +166,16 @@ class StateIOTestCase(unittest.TestCase):
             for i in xrange(num_cells - 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             statestr = x.join(states)
-            self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
+            sio=model_type.state_t.serializer_t()
+            state_vector=sio.vector_from_string(statestr)
+
+            self.assertRaises(RuntimeError, model.set_states,state_vector)
             for i in xrange(num_cells + 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             statestr = x.join(states)
-            self.assertRaises(RuntimeError, set_ptgsk_model_state, model, State(statestr))
+            state_vector=sio.vector_from_string(statestr)
+
+            self.assertRaises(RuntimeError, model.set_states,state_vector)
 
 
 class AromeDataRepositoryTestCase(unittest.TestCase):
