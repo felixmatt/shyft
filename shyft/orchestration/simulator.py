@@ -57,6 +57,9 @@ class SimpleSimulator(object):
                                                                      catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
 
+    def copy(self):
+        return self.region_model.__class__(self)
+
     def set_geo_ts_repositories(self, geo_ts_repositories):
         """
         Set new geo located timeseries repositories.

@@ -7,7 +7,7 @@ tf="+%s.%N"
 cd api/python 
 echo "Generating Python interface using swig:"
 tic=`date ${tf}` 
-make -f Makefile.swig_run
+make -j 4 -f Makefile.swig_run
 usecs=`echo $(date $tf) - $tic | bc`
 echo "Time spent: $usecs seconds"
 t_secs=$usecs

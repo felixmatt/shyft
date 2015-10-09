@@ -272,6 +272,11 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         x_mask = (x >= x_min) == (x <= x_max)
         y_mask = (y >= y_min) == (y <= y_max)
 
+        if not x_mask.any():
+            raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
+        if not y_mask.any():
+            raise AromeDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
+
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, *np.meshgrid(x[x_mask], y[y_mask]))
 
@@ -355,10 +360,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self.xx, self.yy, x_mask, y_mask = \
             self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
-        if not x_mask.any():
-            raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-        if not y_mask.any():
-            raise AromeDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
         raw_data = {}
         for data_field in input_source_types + additional_extract:
             data = data_vars.pop(self.shyft_net_map[data_field])
