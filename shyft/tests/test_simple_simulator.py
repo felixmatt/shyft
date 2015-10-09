@@ -8,6 +8,7 @@ from os import path
 
 import unittest
 from shyft.repository.netcdf import RegionModelRepository
+from shyft.repository.collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository
 from shyft.repository.netcdf import GeoTsRepository
 from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
@@ -25,10 +26,11 @@ class SimulationTestCase(unittest.TestCase):
 
     def setUp(self):
 
-        self.region_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_region.yaml")
+        self.region_config_file = path.join(path.dirname(__file__), "netcdf",
+                                            "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
-    def test_construct_arome_data_simulator(self):
+    def test_run_arome_data_simulator(self):
         # Simulation time axis
         year, month, day, hour = 2015, 8, 23, 6
         n_hours = 30
@@ -37,10 +39,10 @@ class SimulationTestCase(unittest.TestCase):
         t0 = utc.time(api.YMDhms(year, month, day, hour))
         time_axis = api.Timeaxis(t0, dt, n_hours)
 
-        # Some fake ids
+        # Some dummy ids not needed for the netcdf based repositories
         region_id = 0
         interpolation_id = 0
-        
+
         # Simulation coordinate system
         epsg = "32633"
 
@@ -60,18 +62,20 @@ class SimulationTestCase(unittest.TestCase):
         ar1 = AromeDataRepository(epsg, base_dir, filename=f1, allow_subset=True)
         ar2 = AromeDataRepository(epsg, base_dir, filename=f2, elevation_file=f1, allow_subset=True)
 
+        geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
+
         simulator = SimpleSimulator(model_t,
-                                    region_id, 
-                                    interpolation_id, 
-                                    region_model_repository, 
-                                    [ar1, ar2], 
-                                    interp_repos, 
+                                    region_id,
+                                    interpolation_id,
+                                    region_model_repository,
+                                    geo_ts_repository,
+                                    interp_repos,
                                     None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
-    def test_construct_geo_ts_data_simulator(self):
+    def test_run_geo_ts_data_simulator(self):
         # Simulation time axis
         year, month, day, hour = 2010, 1, 1, 0
         dt = 24*api.deltahours(1)
@@ -83,7 +87,7 @@ class SimulationTestCase(unittest.TestCase):
         # Some fake ids
         region_id = 0
         interpolation_id = 0
-        
+
         # Simulation coordinate system
         epsg = "32633"
 
@@ -97,20 +101,53 @@ class SimulationTestCase(unittest.TestCase):
         dataset_config = YamlContent(dataset_config_file)
         region_model_repository = RegionModelRepository(region_config, model_config, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
-        geo_ts_repos = []
+        netcdf_geo_ts_repos = []
         for source in dataset_config.sources:
             station_file = source["params"]["stations_met"]
-            geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-
-        simulator = SimpleSimulator(model_t, 
-                                    region_id, 
-                                    interpolation_id, 
-                                    region_model_repository, 
-                                    geo_ts_repos, 
-                                    interp_repos, 
-                                    None)
+            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
+        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
+        simulator = SimpleSimulator(model_t, region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
+    def test_run_arome_ensemble(self):
+        # Simulation time axis
+        year, month, day, hour = 2015, 8, 23, 6
+        n_hours = 30
+        dt = api.deltahours(1)
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        time_axis = api.Timeaxis(t0, dt, n_hours)
 
+        # Some dummy ids not needed for the netcdf based repositories
+        region_id = 0
+        interpolation_id = 0
+
+        # Simulation coordinate system
+        epsg = "32633"
+
+        # Model
+        model_t = pt_gs_k.PTGSKModel
+
+        # Configs and repositories
+        region_config = RegionConfig(self.region_config_file)
+        model_config = ModelConfig(self.model_config_file)
+        region_model_repository = RegionModelRepository(region_config, model_config, epsg)
+        interp_repos = InterpolationParameterRepository(model_config)
+        base_dir = path.join(shyftdata_dir, "netcdf", "arome")
+        pattern = "fc*.nc"
+
+        geo_ts_repository = AromeDataRepository(epsg, base_dir, filename=pattern, allow_subset=True)
+
+        simulator = SimpleSimulator(model_t,
+                                    region_id,
+                                    interpolation_id,
+                                    region_model_repository,
+                                    geo_ts_repository,
+                                    interp_repos,
+                                    None)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(model_t, n_cells)
+        simulators = simulator.create_ensembles(time_axis, t0, state_repos.get_state(0))

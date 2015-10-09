@@ -497,6 +497,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         See base class: ..interfaces.GeoTsRepository
         """
         self._filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
+        print(self._filename)
         if self._filename:
             self._is_ensemble = True
             res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
