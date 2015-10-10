@@ -311,27 +311,28 @@ namespace shyft {
 
 
                 typedef idw_compliant_geo_point_ts< typename RE::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
-                typedef idw_compliant_geo_point_ts< typename RE::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
-                typedef idw_compliant_geo_point_ts< typename RE::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
-                typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
-                typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-                typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point, idw::temperature_default_gradient_scale_computer> idw_temperature_model_t;
-                typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename IP::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
-                typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_radiation_model_t;
-                typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_windspeed_model_t;
-                typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_relhum_model_t;
+				typedef idw_compliant_geo_point_ts< typename RE::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
+				typedef idw_compliant_geo_point_ts< typename RE::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
+				typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
+				typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-                typedef  shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename IP::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
+				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_radiation_model_t;
+				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_windspeed_model_t;
+				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_relhum_model_t;
 
-                // Allocate memory for the source_destinations, put in the reference to the parameters:
-                // Run one thread for each optional interpolation
-                //  notice that if a source is nullptr, then we leave the allocated cell.level signal to fillvalue 0.0
-                //  the intention is that the orchestrator at the outside could provide it's own ready-made
-                //  interpolated/distributed signal, e.g. temperature input from arome-data
+				typedef  shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 
-                auto btkx = async(launch::async, [&]() {
-                    if (env.temperature != nullptr) {
+				// Allocate memory for the source_destinations, put in the reference to the parameters:
+				// Run one thread for each optional interpolation
+				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fillvalue 0.0
+				//  the intention is that the orchestrator at the outside could provide it's own ready-made
+				//  interpolated/distributed signal, e.g. temperature input from arome-data
+
+				auto btkx = async(launch::async, [&]() {
+					if (env.temperature != nullptr) {
                         if(env.temperature->size()>1) {
                             if(interpolation_parameter.use_idw_for_temperature) {
                                 idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>(

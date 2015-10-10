@@ -8,7 +8,7 @@
 
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
-
+#include "geo_point.h"
 /** \file
  * Contains all IDW related stuff, parameters, the IDW algorithm, IDW Models, and IDW Runner
  */
@@ -208,7 +208,7 @@ namespace shyft {
 									   gc.add(*(sw.source), period_i);
 								}
 							);
-							destination_scale.emplace_back(gc.compute());
+							destination_scale.emplace_back(gc.compute());//could pass (destination_begin +j)->mid_point(), so we know the dest position ?
 							first_time_scale_calc=false;// all models except temperature(due to gradient) are one time only,
 						}
 					}
@@ -244,26 +244,50 @@ namespace shyft {
 			* see http://mathworld.wolfram.com/LastSqueresFitting.html
 			*/
 			struct temperature_gradient_scale_computer {
+			    struct temp_point{
+			        temp_point(const geo_point p,double t):point(p),temperature(t){}
+			        geo_point point;
+			        double temperature;
+                };
 				static bool is_source_based() { return true; }
 				template <typename P>
 				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()) { clear(); }
 				template<typename T,typename S> void add(const S &s, T tx) {
-					++n;
-					double h = s.mid_point().z;  // we could keep heights, and filter same heights,or to close heights ?
-					double t = s.value(tx);
-					s_h += h; s_ht += h*t; s_t += t; s_hh += h*h;
+				    pt.emplace_back(s.mid_point(),s.value(tx));
 				}
 				double compute() const {
-					return n > 1 ? (n*s_ht - s_h*s_t) / (n*s_hh - s_h*s_h) : default_gradient;
+				    if(pt.size()>1) {
+                        double s_h=0;
+                        double s_ht=0;
+                        double s_t=0;
+                        double s_hh=0;
+                        size_t n=pt.size();
+                        size_t mx_i=0;size_t mn_i=0;
+                        for(size_t i=0;i<n;++i) {
+                            double t=pt[i].temperature;
+                            double h=pt[i].point.z;
+                            s_h += h; s_ht += h*t; s_t += t; s_hh += h*h;
+                            if(h<pt[mn_i].point.z)mn_i=i;
+                            else if(h>pt[mx_i].point.z)mx_i=i;
+                        }
+                        double mi_mx_dz=pt[mx_i].point.z - pt[mn_i].point.z;
+                        const double minimum_z_distance=50.0;
+                        if(mi_mx_dz > minimum_z_distance) {
+                            //double linear_best_fit= (n*s_ht - s_h*s_t) / (n*s_hh - s_h*s_h) ;
+                            // min -max z ?
+                            //double mi_mx_grad=
+                            return ( pt[mx_i].temperature - pt[mn_i].temperature)/(mi_mx_dz);
+                            //return linear_best_fit;
+                        }
+                        return default_gradient;
+				    } else {
+                        return default_gradient;
+				    }
 				}
-				void clear() { s_h = s_ht = s_t = s_hh = 0.0; n = 0; }
+				void clear() { pt.clear(); }
 			private:
 				double default_gradient;
-				double s_h;
-				double s_ht;
-				double s_t;
-				double s_hh;
-				size_t n;
+				std::vector<temp_point> pt;
 			};
 
 			/** \brief temperature_gradient_scale_computer that always returns default gradient
