@@ -14,6 +14,11 @@ from shyft.api import UtcPeriod
 
 class SSAGeoTsRepositoryTestCase(unittest.TestCase):
     """
+    NOTE: These tests are Statkraft specific in the sense that they require
+          statkraft script api (SSA) components (relying on Powel Tss services) 
+          and
+          statkraft gis (esri type) of published geo-services.
+          
     Verify that we correctly can read geo-located timeseries from a the SSA service based
     location and ts-store.
     """
@@ -110,6 +115,8 @@ class SSAGeoTsRepositoryTestCase(unittest.TestCase):
             for ts_type in ts_types:
                 self.assertTrue(ens_geo_ts_dict[i].has_key(ts_type),"we ecpect to find an entry for each requested type (it could be empty list though")
                 self.assertTrue(ens_geo_ts_dict[i][ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
+
+
 
 if __name__ == '__main__':
     unittest.main()

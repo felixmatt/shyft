@@ -5,12 +5,11 @@ from shyft.repository.service.gis_region_model_repository import DTMFetcher
 from shyft.repository.service.gis_region_model_repository import LandTypeFetcher
 from shyft.repository.service.gis_region_model_repository import ReservoirFetcher
 from shyft.repository.service.gis_region_model_repository import CellDataFetcher
-from shyft.repository.service.gis_region_model_repository import nea_nidelv_example,run_cell_example
 from shyft.repository.service.gis_region_model_repository import RegionModelConfig
 from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
 from shyft import api
 from shyft.api.pt_gs_k import PTGSKModel,PTGSKOptModel
-from shyft.api.pt_ss_k import PTSSKModel,PTSSKOptModel
+from shyft.api.pt_ss_k import PTSSKModel
 
 
 class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
