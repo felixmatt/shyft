@@ -1,4 +1,4 @@
-"""
+﻿"""
 Module for reading netcdf dataset with a specific layout needed for a
 SHyFT run.
 """
@@ -85,7 +85,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                     coords = []
                     for loc in station['location'].split(","):
                         grname, axis = loc.split(".")
-                        coords.append(getattr(dset.groups[grname.split('/')[1]], axis))
+                        coords.append(float(getattr(dset.groups[grname.split('/')[1]], axis))) #enforce double type to coord
                     tseries['location'] = tuple(coords)
                     stations_ts.append(tseries)
         print(len(stations_ts), input_source, 'series found.')

@@ -80,10 +80,13 @@ class EnsembleStation(object):
 class EnsembleConfig(object):
     """
     Describes a forecast ensemble,
-    there is a fixed number of ensembles
-    there is a number of "stations"/locations where we have
-    ensemble_forecast for n_ensembles of type
-    (temperature,preciptiation etc...)
+    Members
+    -------
+    n_ensembles: int
+     - number of ensembles in this configurations
+    station_list: list of type EnsembleStations
+     - describes each station, by location and property references (temperature,preciptiation etc...) it keeps.
+    
     """
     def __init__(self,n_ensembles,list_of_ens_station_cfg):
         """
@@ -102,7 +105,10 @@ class EnsembleConfig(object):
     
 class GeoLocationRepository(object):
     """
-    Responsible for providing locations for specified gis-identifiers
+    Responsible for providing geo-locations for specified gis-identifiers
+    It plays a similar role as TsRepository, but this one just
+    provides geo-location information, given a specific id.
+
     A candidate for interfaces
     """
     __metaclass__ = ABCMeta
@@ -128,6 +134,12 @@ class TsRepository(object):
     """
     Defines the contract of a time-series repository for this specific use
     The responsibility is to read and store time-series,forecasts, ensembles
+    Notice that this TsRepository do not have geo-location associated with
+    the time-series (forecast or ensembles) that it stores.
+    The correlation between location/area and time-series are stored elsewhere,
+    so this interface  mereyly provide methods to retrieve/store
+    timeseries/forecast/ensembles.
+
     A candidate for interfaces
     """
     @abstractmethod
