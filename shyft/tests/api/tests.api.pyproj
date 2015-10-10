@@ -28,12 +28,11 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="model.py" />
-    <Compile Include="TestApi.py" />
+    <Compile Include="TestCalibrationTypes.py" />
     <Compile Include="TestCalendarAndTime.py" />
     <Compile Include="TestGeoCellData.py" />
     <Compile Include="TestGeoPoint.py" />
-    <Compile Include="TestOrchestration.py" />
+    <Compile Include="TestRegionModelStacks.py" />
     <Compile Include="TestTimeAxis.py" />
     <Compile Include="TestTimeSeries.py" />
     <Compile Include="__init__.py" />

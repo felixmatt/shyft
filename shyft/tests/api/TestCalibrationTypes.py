@@ -1,4 +1,4 @@
-from shyft import api 
+﻿from shyft import api 
 from shyft.api import pt_gs_k
 import unittest
 import numpy as np
@@ -46,14 +46,6 @@ class ShyftApiTestCase(unittest.TestCase):
             m = c.mid_point()
             self.assertTrue( m != None)
             c.set_state_collection(True)
-
-#    def test_create_pthsk_grid_cells(self):
-#        pass
-#         geo_cell_data = self._create_std_geo_cell_data()
-#         #param = self._create_std_pthsk_param()
-#         cell_ts = [api.CollectingPTHSKCell, api.OptimizingPTHSKCell]
-#         for cell_t in cell_ts:
-#             cell_t(geo_cell_data, api.DoubleVector(np.array([1.0, 1.0, 1.0])), api.DoubleVector(np.array([0.0, 0.5, 1.0])) )
 
     def test_create_region_environment(self):
         region_env = api.ARegionEnvironment()
