@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests for the simple simulator.
 """
 
@@ -26,8 +26,7 @@ class SimulationTestCase(unittest.TestCase):
 
     def setUp(self):
 
-        self.region_config_file = path.join(path.dirname(__file__), "netcdf",
-                                            "atnasjoen_region.yaml")
+        self.region_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def test_run_arome_data_simulator(self):
