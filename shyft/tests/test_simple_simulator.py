@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from os import path
 
 import unittest
+
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository

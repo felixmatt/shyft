@@ -85,8 +85,8 @@
 			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
-			<Add option="-Wall" />
 			<Add option="-std=c++1y" />
+			<Add option="-Wall" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory="/usr/include/python2.7" />
@@ -103,7 +103,7 @@
 			<Add directory="/usr/local/lib64" />
 		</Linker>
 		<ExtraCommands>
-			<Add before="make -f Makefile.swig_run" />
+			<Add before="make -f Makefile.swig_run -j 8" />
 		</ExtraCommands>
 		<Unit filename="Makefile.swig_run" />
 		<Unit filename="__init__.i">

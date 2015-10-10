@@ -1,15 +1,11 @@
 from __future__ import print_function
-from numpy import random
-from datetime import datetime
 import unittest
-import yaml
 from os import path
 
 from shyft import shyftdata_dir
 from shyft import api
-from shyft.api import pt_gs_k
-from shyft.api import pt_ss_k
 from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
+from shyft.repository.netcdf.arome_data_repository import AromeDataRepositoryError
 
 class AromeDataRepositoryTestCase(unittest.TestCase):
 
@@ -132,11 +128,14 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,
                  upper_left_y - ny*dy, upper_left_y - ny*dy])
-        repos = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
-        data_names = ("temperature", "wind_speed", "relative_humidity")
-        ensemble = repos.get_forecast_ensemble(data_names, period, t_c, None)
-        self.assertTrue(isinstance(ensemble, list))
-        self.assertEqual(len(ensemble), 10)
+        try:
+            repos = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
+            data_names = ("temperature", "wind_speed", "relative_humidity")
+            ensemble = repos.get_forecast_ensemble(data_names, period, t_c, None)
+            self.assertTrue(isinstance(ensemble, list))
+            self.assertEqual(len(ensemble), 10)
+        except AromeDataRepositoryError as adre:
+            self.skipTest( "(test inconclusive- missing arome-data {0})".format(adre))
 
 
 if __name__ == "__main__":
