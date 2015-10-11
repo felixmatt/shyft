@@ -66,13 +66,11 @@ class SmGTsRepository(TsRepository):
         if not period.valid():
            raise SmgDataError("period should be valid()  of type api.UtcPeriod")
         result = {}
-        raw_data = []
         ListOf_fc_identities=self._namelist_to_ListOf_TsIdentities(list_of_fc_id)
         ts_id_list=[]
 
         with repository(self.env) as tss:
             ts_id_list= tss.repo.GetIdentities (tss.repo.FindMetaInfo(ListOf_fc_identities))
-        name_to_ts_id={x.Name:x for x in ts_id_list}
 
         ssa_period=self._make_ssa_Period_from_shyft_period(period)
         fcr= ForecastRepositorySmg(self.fc_env)
@@ -113,7 +111,7 @@ class SmGTsRepository(TsRepository):
                     missing_list.Add(mi)
             if missing_list.Count > 0 : # Yes, something was missing, create them
                 created_list=tss.repo.Create(missing_list,True)
-                #todo verify we got them created
+                #TODO verify we got them created
             # fetch tsids from the names
             ts_id_list= tss.repo.GetIdentities (tss.repo.FindMetaInfo(ListOf_TsIdentities))
             name_to_ts_id={x.Name:x for x in ts_id_list}
@@ -185,109 +183,4 @@ class SmGTsRepository(TsRepository):
             raise SmgDataError("shyft_period must be of type api.UtcPeriod")
         return Period(UtcTime.CreateFromUnixTime(shyft_period.start),UtcTime.CreateFromUnixTime(shyft_period.end))
 
-import unittest
 
-class TestSmgRepository(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def test_namelist_to_ListOf_TsIdentities(self):
-        ds=SmGTsRepository(PREPROD)
-        nl=[u'/ICC-test-v9.2',u'/test/b2',u'/test/c2']
-        r=ds._namelist_to_ListOf_TsIdentities(nl)
-        self.assertEqual(len(nl),r.Count)
-        [ (self.assertEqual(nl[i],r[i].Name) and self.assertEqual(0,r[i].Id)) for i in xrange(len(nl))]
-
-    def _create_shyft_ts(self):
-        b=946684800 # 2000.01.01 00:00:00
-        h=3600 #one hour in seconds
-        values=np.array([1.0,2.0,3.0])
-        shyft_ts_factory=api.TsFactory()
-        return shyft_ts_factory.create_point_ts(len(values),b,h,api.DoubleVector(values))
-
-    def test_make_ssa_ts_from_shyft_ts(self):
-        ds=SmGTsRepository(PREPROD)
-        ts_name=u'/abc'
-        
-        shyft_ts=self._create_shyft_ts()
-        r=SmGTsRepository._make_ssa_ts_from_shyft_ts(ts_name,shyft_ts)
-        self.assertEqual(r.Count,shyft_ts.size())
-        self.assertEqual(r.Name,ts_name)
-        [self.assertAlmostEquals(shyft_ts.value(i),r.Value(i).V) for i in xrange(shyft_ts.size())]
-        [self.assertAlmostEquals(0,r.Value(i).Q) for i in xrange(shyft_ts.size())]
-        [self.assertAlmostEquals(shyft_ts.time(i),r.Time(i).ToUnixTime()) for i in xrange(shyft_ts.size())]
-    
-    def test_make_shyft_ts_from_ssa_ts(self):
-        shyft_ts1=self._create_shyft_ts()
-        ssa_ts=SmGTsRepository._make_ssa_ts_from_shyft_ts(u'/just_a_test',shyft_ts1)
-        shyft_ts=SmGTsRepository._make_shyft_ts_from_ssa_ts(ssa_ts)
-        [self.assertAlmostEqual(shyft_ts.value(i),ssa_ts.Value(i).V) for i in xrange(shyft_ts.size())]
-        [self.assertAlmostEqual(shyft_ts.time(i),ssa_ts.Time(i).ToUnixTime()) for i in xrange(shyft_ts.size())]
-        
-    
-    #def test_is_type_of_BaseTimeSerieRepository(self):
-    #    ds=SmGTsRepository(PREPROD)
-    #    self.assertTrue(issubclass(SmGTsRepository,BaseTimeSeriesRepository))
-    #    self.assertTrue(isinstance(ds,BaseTimeSeriesRepository))
-
-    def test_store(self):
-        #cfg=SmgEnvironment('localhost','iccpp',NetMetaInfoValidationSet.SmgHydrology)
-        ds=SmGTsRepository(PREPROD)
-        nl=[u'/shyft/test/a',u'/shyft/test/b',u'/shyft/test/c'] #[u'/ICC-test-v9.2']
-        t0=946684800 # time_t/unixtime 2000.01.01 00:00:00
-        dt=3600 #one hour in seconds
-        values=np.array([1.0,2.0,3.0])
-        shyft_ts_factory=api.TsFactory()
-        shyft_result_ts=shyft_ts_factory.create_point_ts(len(values),t0,dt,api.DoubleVector(values))
-        shyft_catchment_result=dict()
-        shyft_catchment_result[nl[0]]=shyft_result_ts
-        shyft_catchment_result[nl[1]]=shyft_result_ts
-        shyft_catchment_result[nl[2]]=shyft_result_ts
-        r=ds.store(shyft_catchment_result) 
-        self.assertEquals(r,True)
-        # now read back the ts.. and verify it's there..
-        read_period=api.UtcPeriod(t0,t0+3*dt)
-        rts_list=ds.read(nl,read_period)
-        self.assertIsNotNone(rts_list)
-        c2=rts_list[nl[-1]]
-        [self.assertAlmostEqual(c2.value(i),values[i]) for i in xrange(len(values))]
-
-    def test_read_forecast(self):
-        utc=api.Calendar()
-        ds=SmGTsRepository(PREPROD,FC_PREPROD)
-        nl=[u'/LTMS-Abisko........-T0000A5P_EC00_ENS',u'/LTMS-Abisko........-T0000A5P_EC00_E04'] #[u'/ICC-test-v9.2']
-        t0=utc.time(api.YMDhms(2015,10,01,00,00,00))
-        t1=utc.time(api.YMDhms(2015,10,10,00,00,00))
-        p=api.UtcPeriod(t0,t1)
-        fclist=ds.read_forecast(nl,p)
-        self.assertIsNotNone(fclist)
-        fc1=fclist[u'/LTMS-Abisko........-T0000A5P_EC00_E04']
-        fc1_v=[fc1.value(i) for i in xrange(fc1.size())]
-        # test times here, left for manual inspection here fc1_t=[utc.to_string(fc1.time(i)) for i in xrange(fc1.size())]
-        self.assertIsNotNone(fc1_v)
-        #values as read from preprod smg:
-        fc1_v_expected=[0.00,0.33,0.33,0.33,0.33,0.33,0.33,0.08,0.08,0.08,0.08,0.08,0.08,0.16,0.16,0.16,0.16,0.16,0.16,0.11,0.11,0.11,0.11,0.11,0.11,0.47,0.47,0.47,0.47,0.47,0.47,0.15,0.15,0.15,0.15,0.15,0.15,0.12,0.12,0.12,0.12,0.12,0.12,0.20,0.20,0.20,0.20,0.20,0.20,0.14,0.14,0.14,0.14,0.14,0.14,0.02,0.02,0.02,0.02,0.02,0.02,0.01,0.01,0.01,0.01,0.01,0.01,0.00,0.00,0.00,0.00,0.00,0.00,0.09,0.09,0.09,0.09,0.09,0.09,0.10,0.10,0.10,0.10,0.10,0.10,0.08,0.08,0.08,0.08,0.08,0.08,0.11,0.11,0.11,0.11,0.11,0.11,0.23,0.23,0.23,0.23,0.23,0.23,0.03,0.03,0.03,0.03,0.03,0.03,0.01,0.01,0.01,0.01,0.01,0.01,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.03,0.03,0.03,0.03,0.03,0.03,0.06,0.06,0.06,0.06,0.06,0.06,0.14,0.14,0.14,0.14,0.14,0.14,0.13,0.13,0.13,0.13,0.13,0.13,0.10,0.10,0.10,0.10]
-        [ self.assertLess(fabs(fc1_v_expected[i]-fc1_v[i]),0.01 ,"{}:{} !={}".format(i,fc1_v_expected[i],fc1_v[i]) ) for i in xrange(len(fc1_v_expected)) ]
-
-    def test_period(self):
-        utc=api.Calendar()
-        t0=utc.time(api.YMDhms(2014,01,01,00,00,00))
-        t1=utc.time(api.YMDhms(2014,03,01,00,00,00))
-        p=api.UtcPeriod(t0,t1)
-        self.assertEqual(p.start,t0)
-        self.assertEqual(p.end,t1)
-        #self.assertTrue(isinstance(t0, api.utctime))
-        self.assertTrue(isinstance(p,api.UtcPeriod))
-        ssa_period=SmGTsRepository._make_ssa_Period_from_shyft_period(p)
-        t0ssa=ssa_period.Start.ToUnixTime()
-        t1ssa=ssa_period.End.ToUnixTime()
-        self.assertEqual(t0ssa,t0)
-        self.assertEqual(t1ssa,t1)
-
-if __name__ == "__main__":
-    unittest.main()
-    #t_start = datetime(2014, 3, 25)
-    #t_end = datetime(2014, 3, 30)
-    #df = SmgDataFetcher(PREPROD, t_start, t_end, names=[u"/ENKI/VTS/Tokke/Tokk-Bitdalen......-T1050S3BT0108"])
-    #result=df.fetch()
-    #print "Got result:",len(result)

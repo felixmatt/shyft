@@ -2,8 +2,8 @@
 
 import unittest
 try:
-    #just to verify we are at statkraft
-    import statkraft.ssa.environment
+    #just to verify we are at statkraft, leave this one inside
+    from statkraft.ssa.environment import SMG_PREPROD as PREPROD
 
     from shyft.repository.service.gis_region_model_repository import CatchmentFetcher
     from shyft.repository.service.gis_region_model_repository import GridSpecification
@@ -17,7 +17,9 @@ try:
     from shyft.api.pt_gs_k import PTGSKModel,PTGSKOptModel
     from shyft.api.pt_ss_k import PTSSKModel
     
-    
+    def import_check():
+        return PREPROD# just to silence the module unused  
+        
     class GisRegionModelRepositoryUsingKnownServiceResults(unittest.TestCase):
         """
         Note that all testcases are in order of building up from basic
@@ -33,6 +35,8 @@ try:
         Reservoir --> giving the mid-point of all lakes that are regulated, (precipitation is immediate inflow)
     
         """
+        
+            
     
         def test_catchment_fetcher_using_regulated_power_plant_id(self):
             id_list=[236] #RanaLangvatn power_plant_id
@@ -123,6 +127,10 @@ try:
             #self.assertIsNotNone(cm4)
     
             #TODO: add more assertions,testing on features
+
+
+
+
 
 except ImportError as ie:
     if 'statkraft.ssa' in ie.message:

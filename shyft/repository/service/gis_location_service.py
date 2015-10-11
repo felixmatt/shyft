@@ -69,7 +69,7 @@ class GisLocationService(GeoLocationRepository):
 def _main():
 
     station_ids = [7] #,678,506,217,503,421,489,574,598,610,121,423
-    sf = StationDataFetcher(epsg_id=32632)
+    sf = GisLocationService(epsg_id=32632)
     stations = sf.get_locations(location_id_list=station_ids)
     assert len(stations) == len(station_ids)
     for i in station_ids:
