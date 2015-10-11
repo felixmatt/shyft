@@ -101,7 +101,8 @@ try:
                                  temperature   =u'/Vikf-Tistel........-T0017A3KI0114',
                                  precipitation =None,
                                  radiation     =None,
-                                 wind_speed    =None),
+                                 wind_speed    =None,
+                                 relative_humidity=u'/ENKI/STS/Humidity/Soda-Vinje.........-T0002V3B-0103'),
     
                 MetStationConfig(gis_id=684, #2 Vossevangen
                                  temperature   =None,#u'/Dnmi-Vossevangen...-T0017V3K-A51530-1337'
@@ -168,7 +169,24 @@ try:
            
             simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
             simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
-            
+            print("Done simulation, testing that we can extract data from model")
+            cids = api.IntVector() # we pull out for all the catchments-id if it's empty
+            model=simulator_ptgsk.region_model
+            sum_discharge=model.statistics.discharge(cids)
+            self.assertIsNotNone(sum_discharge)
+            avg_temperature = model.statistics.temperature(cids)
+            avg_precipitation = model.statistics.precipitation(cids)
+            self.assertIsNotNone(avg_precipitation)
+            self.assertIsNotNone(avg_temperature)
+            for time_step in xrange(time_axis.size()):
+                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
+                self.assertEquals(precip_raster.size(), n_cells)
+            avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
+            self.assertIsNotNone(avg_gs_sca)
+            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+            avg_gs_albedo = model.gamma_snow_state.albedo(cids)
+            self.assertIsNotNone(avg_gs_albedo)
+            print("done.")
             
             
 
