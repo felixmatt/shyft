@@ -46,8 +46,8 @@ class SmGTsRepository(TsRepository):
         ts_id is currently the full unique name of the smg-ts. We could/should also support using
         unique number/keys instead. -more efficient, and more robust to namechanges.
         Return the result as a dictionary of shyft_ts."""
-        if(not isinstance(period,api.UtcPeriod)):
-           raise SmgDataError("period should be of type api.UtcPeriod")
+        if not period.valid():
+           raise SmgDataError("period should be valid()  of type api.UtcPeriod")
 
         result = {}
         raw_data = []
@@ -63,8 +63,8 @@ class SmGTsRepository(TsRepository):
         return result
 
     def read_forecast(self,list_of_fc_id,period):
-        if(not isinstance(period,api.UtcPeriod)):
-           raise SmgDataError("period should be of type api.UtcPeriod")
+        if not period.valid():
+           raise SmgDataError("period should be valid()  of type api.UtcPeriod")
         result = {}
         raw_data = []
         ListOf_fc_identities=self._namelist_to_ListOf_TsIdentities(list_of_fc_id)
@@ -181,7 +181,7 @@ class SmGTsRepository(TsRepository):
 
     @staticmethod
     def _make_ssa_Period_from_shyft_period(shyft_period):
-        if(not isinstance(shyft_period,api.UtcPeriod)):
+        if not shyft_period.valid():
             raise SmgDataError("shyft_period must be of type api.UtcPeriod")
         return Period(UtcTime.CreateFromUnixTime(shyft_period.start),UtcTime.CreateFromUnixTime(shyft_period.end))
 

@@ -56,7 +56,7 @@ try:
             self.assertIsNotNone(r[id_list[0]])
     
         def test_dtm_fetcher(self):
-            gs=GridSpecification(x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
+            gs=GridSpecification(32632,x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
             dtmf=DTMFetcher(gs)
             r=dtmf.fetch()
             self.assertIsNotNone(r)
@@ -65,14 +65,14 @@ try:
             self.assertEquals(shape[1],gs.nx)
     
         def test_land_type_fetcher(self):
-            gs=GridSpecification(x0=557600,y0=7040000,dx=1000,dy=1000,nx=10,ny=10)
+            gs=GridSpecification(32632,x0=557600,y0=7040000,dx=1000,dy=1000,nx=10,ny=10)
             ltf=LandTypeFetcher(geometry=gs.geometry,epsg_id=32632)
             for lt_name in ltf.en_field_names:
                 lt=ltf.fetch(name=lt_name)
                 self.assertIsNotNone(lt)
     
         def test_reservoir_fetcher(self):
-            gs=GridSpecification(x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
+            gs=GridSpecification(32632,x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
             rf=ReservoirFetcher(gs.geometry,epsg_id=32632)
             rpts=rf.fetch()
             self.assertIsNotNone(rpts)
@@ -80,7 +80,7 @@ try:
     
     
         def test_cell_data_fetcher_ranalangvatn(self):
-            gs=GridSpecification(x0=704000,y0=7431000,dx=1000,dy=1000,nx=98,ny=105)
+            gs=GridSpecification(32632,x0=704000,y0=7431000,dx=1000,dy=1000,nx=98,ny=105)
             pwrplants=[236]
             cdf=CellDataFetcher(catchment_type="regulated",identifier="POWER_PLANT_ID",grid_specification=gs,id_list=pwrplants,epsg_id=32632)
             cd=cdf.fetch()
@@ -103,17 +103,18 @@ try:
             ptgsk_rm_params= api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
             ptssk_rm_params= api.pt_ss_k.PTSSKParameter(pt_params,ss_params,ae_params,k_params,p_params)
             # create the description for 4 models of tistel,ptgsk, ptssk, full and optimized
-            tistel_grid_spec=GridSpecification(x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
+            tistel_grid_spec=GridSpecification(epsg_id=epsg_id,x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
             cfg_list=[
-                RegionModelConfig("tistel-ptgsk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptgsk_rm_params),
-                RegionModelConfig("tistel-ptssk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptssk_rm_params)
+                RegionModelConfig("tistel-ptgsk"    ,PTGSKModel   ,ptgsk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list),
+                RegionModelConfig("tistel-ptgsk-opt",PTGSKOptModel,ptgsk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list),
+                RegionModelConfig("tistel-ptssk"    ,PTSSKModel   ,ptssk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list)
             ]
             rm_cfg_dict={ x.name:x for x in cfg_list}
             rmr=GisRegionModelRepository(rm_cfg_dict) # ok, now we have a Gis RegionModelRepository that can handle all named entities we pass.
-            cm1= rmr.get_region_model("tistel-ptgsk",PTGSKModel) # pull out a PTGSKModel for tistel
-            cm2= rmr.get_region_model("tistel-ptgsk",PTGSKOptModel)
+            cm1= rmr.get_region_model("tistel-ptgsk") # pull out a PTGSKModel for tistel
+            cm2= rmr.get_region_model("tistel-ptgsk-opt")
             #Does not work, fail on ct. model: 
-            cm3= rmr.get_region_model("tistel-ptssk",PTSSKModel) # pull out a PTGSKModel for tistel
+            cm3= rmr.get_region_model("tistel-ptssk") # pull out a PTGSKModel for tistel
             #cm4= rmr.get_region_model("tistel-ptssk",PTSSKOptModel)
             self.assertIsNotNone(cm3)
             self.assertIsNotNone(cm1)

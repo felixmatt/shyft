@@ -4,18 +4,16 @@ from __future__ import absolute_import, print_function
 import unittest
 
 try:
-    #basic stuff from api
-    from shyft import api
-    from shyft.api import Calendar
-    from shyft.api import YMDhms
-    from shyft.api import deltahours
-    from shyft.api import Timeaxis
     
-    #from shyft.api import UtcPeriod
-    # we need state
-    #from shyft.repository.interfaces import StateInfo
-    #from shyft.repository.yaml_state_repository import YamlStateRepository
-    #from shyft.api.pt_gs_k import PTGSKState,PTGSKStateVector
+    from shyft import api
+    from shyft.api import Calendar,YMDhms,Timeaxis,deltahours
+    from shyft.api import pt_gs_k 
+    from shyft.api import pt_ss_k
+    
+    # If we need state from repository 
+    # from shyft.repository.interfaces import StateInfo
+    # from shyft.repository.yaml_state_repository import YamlStateRepository
+    # from shyft.api.pt_gs_k import PTGSKState,PTGSKStateVector
     # but we can do it easy with the defaults for now
     from shyft.repository.default_state_repository import DefaultStateRepository
     
@@ -25,8 +23,6 @@ try:
     from shyft.repository.service.gis_region_model_repository import GridSpecification
     from shyft.repository.service.gis_region_model_repository import RegionModelConfig
     from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
-    
-    from shyft.api.pt_gs_k import PTGSKModel #,PTGSKOptModel
     
     from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
     
@@ -39,6 +35,7 @@ try:
     from shyft.orchestration.simulator import SimpleSimulator
     
     class InterpolationConfig(object):
+        """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
         def interpolation_parameters(self): 
             return {    
                 'btk': {
@@ -75,13 +72,13 @@ try:
             ae_params = api.ActualEvapotranspirationParameter()#*params["act_evap"])
             k_params = api.KirchnerParameter()#*params["kirchner"])
             p_params = api.PrecipitationCorrectionParameter() #TODO; default 1.0, is it used ??
-            ptgsk_rm_params= api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
-            ptssk_rm_params= api.pt_ss_k.PTSSKParameter(pt_params,ss_params,ae_params,k_params,p_params)
+            ptgsk_rm_params= pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+            ptssk_rm_params= pt_ss_k.PTSSKParameter(pt_params,ss_params,ae_params,k_params,p_params)
             # create the description for 2 models of tistel,ptgsk, ptssk
-            tistel_grid_spec=GridSpecification(x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
+            tistel_grid_spec=GridSpecification(epsg_id=epsg_id,x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
             cfg_list=[
-                RegionModelConfig("Tistel-ptgsk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptgsk_rm_params),
-                RegionModelConfig("Tistel-ptssk",epsg_id,tistel_grid_spec,"unregulated","FELTNR",id_list,ptssk_rm_params)
+                RegionModelConfig("Tistel-ptgsk",pt_gs_k.PTGSKModel,ptgsk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list),
+                RegionModelConfig("Tistel-ptssk",pt_ss_k.PTSSKModel,ptssk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list)
             ]
             rm_cfg_dict={ x.name:x for x in cfg_list}
             return GisRegionModelRepository(rm_cfg_dict)
@@ -141,8 +138,8 @@ try:
             gis_location_repository=GisLocationService() # this provides the gis locations for my stations
             smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
     
-            return GeoTsRepository(
-                geo_location_repository=gis_location_repository,
+            return GeoTsRepository( #together, the location provider, ts-provider, and the station, we have
+                geo_location_repository=gis_location_repository,# a complete geo_ts-repository
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,
                 ens_config=None) #pass service info and met_stations       
@@ -151,45 +148,35 @@ try:
             return InterpolationParameterRepository(InterpolationConfig())
             
         def test_Tistel_run(self):
-            # create needed repositories for the Tistel  catchment
-            # geo-ts-repository providing observed geo-located time-series for Tistel
-            # gis-region-model-repository with suitable parameters for Tistel, pt_gs_k
-            # state-repository, that provide suitable state
-            # The Simulator needs some repositories to work, and we construct those
-            
-            # RegionModelRepository: We get those from the GIS-system, given correct config
-            #region_model_repository=GisRegionModelRepository(self.gis_region_model_config)
-                    # Simulation time axis
             
             utc = Calendar()  # No offset gives Utc
             time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
-            region_id = "Tistel-ptgsk"
             interpolation_id = 0
-    
-            # Simulation coordinate system
-            #epsg = "32633"
-    
-            # Model
-            model_t = PTGSKModel
-    
-            # Configs and repositories
-            #dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-            #region_config = RegionConfig(self.region_config_file)
-            #model_config = ModelConfig(self.model_config_file)
-            #dataset_config = YamlContent(dataset_config_file)
+            simulator_ptgsk = SimpleSimulator("Tistel-ptgsk", 
+                                        interpolation_id, 
+                                        self.region_model_repository,
+                                        self.geo_ts_repository, 
+                                        self.interpolation_repository, None)
+            simulator_ptssk = SimpleSimulator("Tistel-ptssk", 
+                                        interpolation_id, 
+                                        self.region_model_repository,
+                                        self.geo_ts_repository, 
+                                        self.interpolation_repository, None)
+            n_cells = simulator_ptgsk.region_model.size()
+            state_repos_ptgsk = DefaultStateRepository(simulator_ptgsk.region_model.__class__, n_cells)
+            state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
+           
+            simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
+            simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
             
             
-            simulator = SimpleSimulator(model_t, region_id, interpolation_id, self.region_model_repository,
-                                        self.geo_ts_repository, self.interpolation_repository, None)
-            n_cells = simulator.region_model.size()
-            state_repos = DefaultStateRepository(model_t, n_cells)
-            simulator.run(time_axis, state_repos.get_state(0))
             
-            
-            pass
 
 except ImportError as ie:
     if 'statkraft.ssa' in ie.message:
         print("(Test require statkraft.script environment to run: {})".format(ie.message))
     else:
         print("ImportError: {}".format(ie.message))
+
+if __name__ == '__main__':
+    unittest.main()

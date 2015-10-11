@@ -172,6 +172,7 @@ class TsRepository(object):
 class GeoTsRepositoryError(Exception):
     pass
 
+
 class GeoTsRepository(interfaces.GeoTsRepository):
     """
     Statkraft Script Api version of  for GeoTsRepository (Geo Located Timeseries) objects.
@@ -323,8 +324,9 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
-        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
-        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        #if geo_location_criteria is not None:
+        #    raise GeoTsRepositoryError("geo_location_criteria is not yet implemented")
+        geo_match= lambda location: True #geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         read_ts_map=self.ts_repository.read(ts_list,utc_period)
@@ -343,8 +345,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         forecast: same layout/type as for get_timeseries
         """
         if t_c is not None: raise("t_c, time created spec is not yet implemented")
-        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
-        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
@@ -371,8 +372,8 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         ensemble: list of same type as get_timeseries
         """
         if t_c is not None: raise("t_c, time created spec is not yet implemented")
-        if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
-        geo_match= lambda location: geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        #if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
+        geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         # get the remap back to result[i], and the empty, but initialized result list.
         ts_to_geo_ts_info,ens_result= self._get_ts_to_geo_ts_ensemble_result(input_source_types,geo_match)
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read

@@ -1,7 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import print_function
-from abc import ABCMeta, abstractmethod
+#from abc import ABCMeta, abstractmethod
 
 import requests
 import copy
@@ -10,28 +10,33 @@ from descartes import PolygonPatch
 from matplotlib.collections import PatchCollection
 from matplotlib import cm
 from itertools import imap
-import re
-import time
-import shutil
+from pyproj import Proj
+from pyproj import transform
+#import re
+#import time
+#import shutil
 import numpy as np
 import tempfile
 
-from shapely.geometry import Polygon, MultiPolygon, box, LineString, Point
+from shapely.geometry import Polygon, MultiPolygon, box, Point
 from shapely.ops import cascaded_union
 from shapely.prepared import prep
 import gdal
 import os
 from ..interfaces import RegionModelRepository
+from ..interfaces import BoundingRegion
 from shyft import api
 
 class GisDataFetchError(Exception): pass
 
-class GridSpecification(object):
+class GridSpecification(BoundingRegion):
     """
     Defines a grid, as upper left x0,y0, dx,dy,nx,ny
+    in the specified epsg_id coordinate system
 
     """
-    def __init__(self,x0,y0,dx,dy,nx,ny):
+    def __init__(self,epsg_id,x0,y0,dx,dy,nx,ny):
+        self.epsg_id=epsg_id
         self.x0 = x0
         self.y0 = y0
         self.dx = dx
@@ -65,6 +70,32 @@ class GridSpecification(object):
             for j in xrange(self.ny):
                 r.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[self.ny-j-1,i]))) 
         return r
+
+    def bounding_box(self, epsg):
+        """ implementation of interface.BoundingRegion  """
+        epsg = str(epsg)
+        x=np.array([self.x0,self.x0+self.dx*self.nx,self.x0+self.dx*self.nx,self.x0],dtype="d")
+        y=np.array([self.y0,self.y0,self.y0+self.dy*self.ny,self.y0+self.dy*self.ny],dtype="d")
+        if epsg == self.epsg():
+            return np.array(x), np.array(y)
+        else:
+            source_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                int(self.epsg()) - 32600, "WGS84", "WGS84")
+            target_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
+                int(epsg) - 32600, "WGS84", "WGS84")
+            source_proj = Proj(source_cs)
+            target_proj = Proj(target_cs)
+            return [np.array(a) for a in transform(source_proj, target_proj, x, y)]
+
+    def bounding_polygon(self, epsg):
+        """ implementation of interface.BoundingRegion  """
+        return self.bounding_box(epsg)
+    
+    def epsg(self):
+        """ implementation of interface.BoundingRegion  """        
+        return str(self.epsg_id)    
+
+      
 
 class BaseGisDataFetcher(object):
     """
@@ -295,8 +326,8 @@ class CellDataFetcher(object):
         prep_glaciers=prep(all_glaciers)
         all_lakes   =ltf.fetch(name="lake")
         prep_lakes= prep(all_lakes)
-        all_forest  =ltf.fetch(name="forest")
-        prep_forest=prep(all_forest)
+        #all_forest  =ltf.fetch(name="forest")
+        #prep_forest=prep(all_forest)
         print ("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
         for catchment_id, catchment in catchments.iteritems():
             if not catchment_id in catchment_land_types: # SiH: default landtype, plus the special ones fetched below
@@ -418,18 +449,45 @@ class RegionModelConfig(object):
 
     and the DTM etc..: 
        * bounding box (with epsk_id)
+       
+    This class is used to configure the GisRegionModelRepository,
+    so that it have a list of known RegionModels,identified by names
 
     """
-    def __init__(self, name,epsg_id,grid_specification,catchment_regulated_type,service_id_field_name,id_list,region_parameters):
+    def __init__(self, name,region_model_type,region_parameters,grid_specification,catchment_regulated_type,service_id_field_name,id_list):
         """
+        Parameters
+        ----------
+        name:string
+         - name of the Region-model, like Tistel-ptgsk, Tistel-ptgsk-opt etc.
+        region_model_type: shyft api type
+         - like pt_gs_k.PTGSKModel
+        region_parameters: region_model_type.parameter_t()
+         - specifies the concrete parameters at region-level that should be used
+        grid_specifiction: GridSpecification
+         - specifies the grid, provides boundingbox and means of creating the cells
+        catchment_regulated_type: string
+         - 'REGULATED'|'UNREGULATED' - type of catchments used in statkraft
+        service_id_field_name:string
+         - specifies the service- where clause field, that is matched up against the id_list
+        id_list:list of identifiers, int
+         - specifies the identifiers that should be retreived (matched against the service_id_field_name) 
+         
+        TODO: consider also to add catchment level parameters
+        
         """
         self.name=name
-        self.epsg_id=epsg_id
+        self.region_model_type=region_model_type
+        self.region_parameters=region_parameters
         self.grid_specification=grid_specification
         self.catchment_regulated_type=catchment_regulated_type
         self.service_id_field_name=service_id_field_name
         self.id_list=id_list
-        self.region_parameters=region_parameters
+        
+    @property
+    def epsg_id(self):
+        return self.grid_specification.epsg_id
+
 
 
 class GisRegionModelRepository(RegionModelRepository):
@@ -450,7 +508,7 @@ class GisRegionModelRepository(RegionModelRepository):
         # neannidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
         return self._region_id_config[region_id] # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
 
-    def get_region_model(self, region_id, region_model, catchments=None):
+    def get_region_model(self, region_id,  catchments=None):
         """
         Return a fully specified shyft api region_model for region_id.
 
@@ -458,9 +516,7 @@ class GisRegionModelRepository(RegionModelRepository):
         -----------
         region_id: string
             unique identifier of region in data
-        region_model: shyft.api type
-            model to construct. Has cell constructor and region/catchment
-            parameter constructor.
+       
         catchments: list of unique integers
             catchment id_list when extracting a region consisting of a subset
             of the catchments
@@ -476,7 +532,7 @@ class GisRegionModelRepository(RegionModelRepository):
         cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list,rm.epsg_id)
         result=cell_info_service.fetch() # clumsy result, we can adjust this..
         cell_info=result['cell_data'] # this is the part we need here
-        cell_vector = region_model.cell_t.vector_t()
+        cell_vector = rm.region_model_type.cell_t.vector_t()
         radiation_slope_factor=0.9 # todo: get it from service layer 
         for c_id,c_info_list in cell_info.iteritems():
             for c_info in c_info_list:
@@ -486,12 +542,14 @@ class GisRegionModelRepository(RegionModelRepository):
                 area=shape.area
                 ltf=api.LandTypeFractions()
                 ltf.set_fractions(c_info.get('glacier',0.0),c_info.get('lake',0.0),c_info.get('reservoir',0.0),c_info.get('forest',0.0))
-                cell = region_model.cell_t()
+                cell = rm.region_model_type.cell_t()
                 cell.geo = api.GeoCellData(geopoint, area, c_id, radiation_slope_factor,ltf)
                 cell_vector.append(cell)
-        catchment_parameter_map=region_model.parameter_t.map_t()
+        catchment_parameter_map=rm.region_model_type.parameter_t.map_t()
         #todo add catchment level parameters to map
-        return region_model(cell_vector,rm.region_parameters,catchment_parameter_map)
+        region_model= rm.region_model_type(cell_vector,rm.region_parameters,catchment_parameter_map)
+        region_model.bounding_region=rm.grid_specification 
+        return region_model
 
 
 def add_plot_polygons(ax, polygons, color):
