@@ -22,7 +22,7 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
         mod_conf = yaml_config.ModelConfig(path.join(path.dirname(__file__),
                                            "netcdf", "model.yaml"))
         epsg = "32633"
-        region_model_repository = RegionModelRepository(reg_conf, mod_conf, epsg)
+        region_model_repository = RegionModelRepository(reg_conf, mod_conf,PTGSKModel, epsg)
         self.assertIsNotNone(region_model_repository.mask)
         region_model = \
             region_model_repository.get_region_model("NeaNidelv_PTGSK",

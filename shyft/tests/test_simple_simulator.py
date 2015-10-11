@@ -52,7 +52,7 @@ class SimulationTestCase(unittest.TestCase):
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
@@ -64,8 +64,7 @@ class SimulationTestCase(unittest.TestCase):
 
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
-        simulator = SimpleSimulator(model_t,
-                                    region_id,
+        simulator = SimpleSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
                                     geo_ts_repository,
@@ -99,14 +98,14 @@ class SimulationTestCase(unittest.TestCase):
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
         dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         netcdf_geo_ts_repos = []
         for source in dataset_config.sources:
             station_file = source["params"]["stations_met"]
             netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-        simulator = SimpleSimulator(model_t, region_id, interpolation_id, region_model_repository,
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -134,7 +133,7 @@ class SimulationTestCase(unittest.TestCase):
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         base_dir = path.join(shyftdata_dir, "netcdf", "arome")
         pattern = "fc*.nc"
@@ -144,8 +143,7 @@ class SimulationTestCase(unittest.TestCase):
             print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive *****")
             return
             
-        simulator = SimpleSimulator(model_t,
-                                    region_id,
+        simulator = SimpleSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
                                     geo_ts_repository,

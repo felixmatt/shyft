@@ -41,7 +41,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             * glacier-fraction: float array of dim (xcoord, ycoord)
     """
 
-    def __init__(self, region_config, model_config, epsg):
+    def __init__(self, region_config, model_config,region_model, epsg):
         """
         Parameters
         ----------
@@ -52,6 +52,9 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             Object containing model information, i.e.
             information concerning interpolation and model
             parameters
+        region_model: shyft.api type
+            model to construct. Has cell constructor and region/catchment
+            parameter constructor.
         epsg: string
             Coordinate system for result region model
         """
@@ -60,6 +63,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             raise interfaces.InterfaceError()
         self._rconf = region_config
         self._mconf = model_config
+        self._region_model=region_model
         self._mask = None
         self._epsg = epsg
         self._data_file = path.join(shyftdata_dir, self._rconf.repository()["data_file"])
@@ -80,7 +84,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         self._mask = mask
         return mask
 
-    def get_region_model(self, region_id, region_model, catchments=None):
+    def get_region_model(self, region_id, catchments=None):
         """
         Return a fully specified shyft api region_model for region_id, based on data found
         in netcdf dataset.
@@ -89,9 +93,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         -----------
         region_id: string
             unique identifier of region in data
-        region_model: shyft.api type
-            model to construct. Has cell constructor and region/catchment
-            parameter constructor.
+        
         catchments: list of unique integers
             catchment indices when extracting a region consisting of a subset
             of the catchments
@@ -171,7 +173,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
                     "skaugen": "skaugen"}
-        region_parameter = region_model.parameter_t()
+        region_parameter = self._region_model.parameter_t()
         for p_type_name, value_ in self._mconf.model_parameters().iteritems():
             if p_type_name in name_map:
                 sub_param = getattr(region_parameter, name_map[p_type_name])
@@ -184,18 +186,18 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         radiation_slope_factor = 0.9
 
         # Construct cells
-        cell_vector = region_model.cell_t.vector_t()
+        cell_vector = self._region_model.cell_t.vector_t()
         for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments, ff, lf, rf, gf):
-            cell = region_model.cell_t()
+            cell = self._region_model.cell_t()
             cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, c_id, radiation_slope_factor,
                                        api.LandTypeFractions(gf, lf, rf, ff, 0.0))
             cell_vector.append(cell)
 
         # Construct catchment overrides
-        catchment_parameters = region_model.parameter_t.map_t()
+        catchment_parameters = self._region_model.parameter_t.map_t()
         for k, v in self._rconf.parameter_overrides().iteritems():
             if k in c_ids:
-                param = region_model.parameter_t(region_parameter)
+                param = self._region_model.parameter_t(region_parameter)
                 for p_type_name, value_ in v.iteritems():
                     if p_type_name in name_map:
                         sub_param = getattr(param, name_map[p_type_name])
@@ -204,7 +206,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param
-        region_model = region_model(cell_vector, region_parameter, catchment_parameters)
+        region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
         region_model.bounding_region = bounding_region
         return region_model
 

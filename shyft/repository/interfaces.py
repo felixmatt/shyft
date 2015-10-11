@@ -55,21 +55,20 @@ class RegionModelRepository(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_region_model(self, region_id, region_model, catchments=None):
+    def get_region_model(self, region_id, catchments=None):
         """
         Return a fully specified shyft api region_model for region_id.
 
         Parameters
         -----------
         region_id: string
-            unique identifier of region in data
-        region_model: shyft.api type
-            model to construct. Has cell constructor and region/catchment
-            parameter constructor.
+            unique identifier of region in data, helps
+            repository to identify which model, *including model type*
+            and other stuff needed in order to return a fully
+            operational model.
         catchments: list of unique integers
             catchment indices when extracting a region consisting of a subset
             of the catchments
-        has attribs to construct  params and cells etc.
 
         Returns
         -------

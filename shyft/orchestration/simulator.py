@@ -16,7 +16,7 @@ class SimpleSimulator(object):
     given as input.
     """
 
-    def __init__(self, model, region_id, interpolation_id, region_model_repository,
+    def __init__(self, region_id, interpolation_id, region_model_repository,
                  geo_ts_repository, interpolation_parameter_repository, catchments=None):
         """
         Create a simple simulator.
@@ -25,8 +25,6 @@ class SimpleSimulator(object):
 
         Parameters
         ----------
-        model: shyft.api class
-            The api class, like shyft.api.pt_gs_k.PTGSKModel.
         region_id: string
             Region identifyer to be used with the region model repository
             to qualify what region to use.
@@ -49,8 +47,7 @@ class SimpleSimulator(object):
         self._geo_ts_names = ("temperature", "wind_speed", "precipitation",
                               "relative_humidity", "radiation")
         self.geo_ts_repository = geo_ts_repository
-        self.region_model = region_model_repository.get_region_model(region_id, model,
-                                                                     catchments=catchments)
+        self.region_model = region_model_repository.get_region_model(region_id, catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
 
     def copy(self):
