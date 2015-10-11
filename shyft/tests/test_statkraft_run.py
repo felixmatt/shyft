@@ -166,12 +166,12 @@ try:
             n_cells = simulator_ptgsk.region_model.size()
             state_repos_ptgsk = DefaultStateRepository(simulator_ptgsk.region_model.__class__, n_cells)
             state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
-           
+            simulator_ptssk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
             simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
             simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
             print("Done simulation, testing that we can extract data from model")
             cids = api.IntVector() # we pull out for all the catchments-id if it's empty
-            model=simulator_ptgsk.region_model
+            model=simulator_ptssk.region_model # fetch out skaugen snow
             sum_discharge=model.statistics.discharge(cids)
             self.assertIsNotNone(sum_discharge)
             avg_temperature = model.statistics.temperature(cids)
@@ -181,11 +181,11 @@ try:
             for time_step in xrange(time_axis.size()):
                 precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
                 self.assertEquals(precip_raster.size(), n_cells)
-            avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
+            avg_gs_sca = model.skaugen_state.sca(cids)  # sca skaugen|gamma
             self.assertIsNotNone(avg_gs_sca)
             # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-            avg_gs_albedo = model.gamma_snow_state.albedo(cids)
-            self.assertIsNotNone(avg_gs_albedo)
+            avg_total_stored_water = model.skaugen_response.total_stored_water(cids)
+            self.assertIsNotNone(avg_total_stored_water)
             print("done.")
             
             
