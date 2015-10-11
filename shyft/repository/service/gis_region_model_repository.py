@@ -1,20 +1,11 @@
 ﻿# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import print_function
-#from abc import ABCMeta, abstractmethod
 
 import requests
 import copy
-import matplotlib.pylab as plt
-from descartes import PolygonPatch
-from matplotlib.collections import PatchCollection
-from matplotlib import cm
-from itertools import imap
 from pyproj import Proj
 from pyproj import transform
-#import re
-#import time
-#import shutil
 import numpy as np
 import tempfile
 
