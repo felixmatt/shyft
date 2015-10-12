@@ -90,6 +90,7 @@ try:
             -------
              - geo_ts_repository that have met-station-config relevant for tistel
             """
+
             met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
                 MetStationConfig(gis_id=129, #0 Fjærland Bremu  
                                  temperature   =None,

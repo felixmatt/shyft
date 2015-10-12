@@ -30,7 +30,7 @@ class GisRegionModelDemo(object):
     
     def plot_region_model(self,catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,epsg_id):
         grid_spec=GridSpecification(epsg_id,x0, y0, dx, dy, nx, ny)
-        cf = CellDataFetcher(catchment_type,identifier,grid_spec, id_list=catch_indicies,epsg_id=epsg_id)
+        cf = CellDataFetcher(catchment_type,identifier,grid_spec, id_list=catch_indicies)
         print( "Start fetching data")
         cf.fetch()
         print ("Done, now preparing plot")

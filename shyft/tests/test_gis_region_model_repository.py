@@ -86,7 +86,7 @@ try:
         def test_cell_data_fetcher_ranalangvatn(self):
             gs=GridSpecification(32632,x0=704000,y0=7431000,dx=1000,dy=1000,nx=98,ny=105)
             pwrplants=[236]
-            cdf=CellDataFetcher(catchment_type="regulated",identifier="POWER_PLANT_ID",grid_specification=gs,id_list=pwrplants,epsg_id=32632)
+            cdf=CellDataFetcher(catchment_type="regulated",identifier="POWER_PLANT_ID",grid_specification=gs,id_list=pwrplants)
             cd=cdf.fetch()
             self.assertIsNotNone(cd)
             self.assertIsNotNone(cd['cell_data'])

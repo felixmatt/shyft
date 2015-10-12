@@ -287,15 +287,18 @@ class CatchmentFetcher(BaseGisDataFetcher):
 
 class CellDataFetcher(object):
 
-    def __init__(self, catchment_type, identifier, grid_specification, id_list, epsg_id=32633):
+    def __init__(self, catchment_type, identifier, grid_specification, id_list):
         self.catchment_type=catchment_type
         self.identifier=identifier
         self.grid_specification=grid_specification
         self.id_list = id_list
         self.cell_data = {}
         self.catchment_land_types = {}
-        self.epsg_id = epsg_id
-    
+
+    @property
+    def epsg_id(self):
+        return self.grid_specification.epsg_id
+        
     def fetch(self):
         
         catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier,self.epsg_id)
@@ -303,15 +306,15 @@ class CellDataFetcher(object):
         catchments = catchment_fetcher.fetch(id_list=self.id_list)
 
         # Construct cells and populate with elevations from tdm
-        dtm_fetcher = DTMFetcher(self.grid_specification, self.epsg_id)
+        dtm_fetcher = DTMFetcher(self.grid_specification)
         elevations = dtm_fetcher.fetch()
         cells = self.grid_specification.cells(elevations)
         catchment_land_types = {}
         catchment_cells = {}
 
         # Filter all data with each catchment
-        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry,epsg_id=self.epsg_id)
-        rf = ReservoirFetcher(epsg_id=self.epsg_id)
+        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry,epsg_id=self.grid_specification.epsg_id)
+        rf = ReservoirFetcher(epsg_id=self.grid_specification.epsg_id)
         all_reservoir_coords=rf.fetch(geometry=self.grid_specification.geometry);
         all_glaciers=ltf.fetch(name="glacier")
         prep_glaciers=prep(all_glaciers)
@@ -379,19 +382,17 @@ class CellDataFetcher(object):
 
 class DTMFetcher(object):
 
-    def __init__(self,grid_specification, epsg_id=32633):
+    def __init__(self,grid_specification):
         self.grid_specification=grid_specification
-        self.epsg_id = epsg_id
-        #self.server_name = "oslwvagi001q" #PREPROD
         self.server_name = "oslwvagi001p" #PROD
         self.server_port = "6080"
         self.url_template = "http://{}:{}/arcgis/rest/services/Enki/Norway_DTM_1000m/ImageServer/exportImage" #PROD
         
         self.query = dict(
-                          bboxSR=self.epsg_id,
+                          bboxSR=self.grid_specification.epsg_id,
                           size= "{},{}".format(self.grid_specification.nx, self.grid_specification.ny),
                           bbox=",".join([str(c) for c in self.grid_specification.geometry]),
-                          imageSR=self.epsg_id,
+                          imageSR=self.grid_specification.epsg_id,
                           time="",
                           format="tiff", 
                           pixelType="F32",
@@ -520,7 +521,7 @@ class GisRegionModelRepository(RegionModelRepository):
         """
 
         rm= self._get_cell_data_info(region_id,catchments)# fetch region model info needed to fetch efficiently
-        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list,rm.epsg_id)
+        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list)
         result=cell_info_service.fetch() # clumsy result, we can adjust this..
         cell_info=result['cell_data'] # this is the part we need here
         cell_vector = rm.region_model_type.cell_t.vector_t()
