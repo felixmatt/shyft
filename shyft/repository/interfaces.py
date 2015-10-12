@@ -316,66 +316,7 @@ class InterpolationParameterRepository(object):
         pass
 
 
-class RegionConfig(object):
-    __metaclass__ = ABCMeta
 
-    @abstractmethod
-    def parameter_overrides(self):
-        """
-        Returns
-        -------
-        overrides: dict
-            Dictionary with parameter overrides for catchments:
-            {catchmend_id: parameter_overrides}
-        """
-        pass
-
-    @abstractmethod
-    def domain(self):
-        """
-        Returns
-        -------
-        domain: dict
-            Dictionary with region specification, or None.
-        """
-        pass
-
-    @abstractmethod
-    def repository(self):
-        """
-        Returns
-        -------
-        repository: dict
-            dict with key "class" and value subclass of
-            shyft.repository.interfaces.RegionModelRepository
-            Additional key/value pairs can be found, and are typically used
-            as arguments to the repository constructor.
-        """
-        pass
-
-
-class ModelConfig(object):
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def interpolation_parameters(self):
-        """
-        Returns
-        -------
-        parameters: dict
-            Parameters for the various interpolation routines
-        """
-        pass
-
-    @abstractmethod
-    def model_parameters(self):
-        """
-        Returns
-        -------
-        parameters: dict
-            Parameters for the method stack
-        """
-        pass
 
 
 class BoundingRegion(object):

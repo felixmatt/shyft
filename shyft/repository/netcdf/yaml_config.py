@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
-from . import interfaces
+from . import region_model
 import yaml
 
 
@@ -23,7 +23,7 @@ class YamlContent(object):
         return srepr + ")"
 
 
-class RegionConfig(interfaces.RegionConfig):
+class RegionConfig(region_model.RegionConfig):
     """
     Yaml based region configuration, using a YamlContent instance
     for holding the content.
@@ -42,7 +42,7 @@ class RegionConfig(interfaces.RegionConfig):
         return self._config.repository
 
 
-class ModelConfig(interfaces.ModelConfig):
+class ModelConfig(region_model.ModelConfig):
     """
     Yaml based model configuration, using a YamlContent instance
     for holding the content.

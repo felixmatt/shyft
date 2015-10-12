@@ -2,7 +2,26 @@ from __future__ import print_function
 from __future__ import absolute_import
 from . import interfaces
 
+class GeoTsRepositoryCollectionError(Exception):
+    pass
+
 class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
+    """
+    In many situations we need to to combine geo-located time-series from
+    different sources, - usually represented as already existing
+    GeoTsRepository implementations.
+    
+    This class does exactly that, it keeps a collection of GeoTsRepository
+    - when asked for time_series/forecast/ensembles,
+     - it returns the combination of time-series found in the respective
+       repository.
+    We have started out providing to simple hopefully useful ways of combining
+    the results:
+    add: - the result will be the union of the data provided by the geo-ts-repositories
+    replace: the geo-ts from the last geo-ts-repository will replace
+             the one preceeding in the list.
+             
+    """
 
     def __init__(self, geo_ts_repositories, reduce_type="replace"):
         if reduce_type not in ("replace", "add"):

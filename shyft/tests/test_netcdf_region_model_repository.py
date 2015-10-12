@@ -5,8 +5,7 @@ from netCDF4 import Dataset
 from shyft import shyftdata_dir
 from shyft.repository.netcdf.region_model import RegionModelRepository
 from shyft.repository.netcdf.region_model import BoundingBoxRegion
-from shyft.repository import yaml_config
-from shyft import shyftdata_dir
+from shyft.repository.netcdf import yaml_config
 from shyft.api.pt_gs_k import PTGSKModel
 
 

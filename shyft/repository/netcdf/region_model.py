@@ -5,6 +5,7 @@ Note: It does require a specific content/layout of the supplied netcdf files
 """
 
 from __future__ import absolute_import
+from abc import ABCMeta, abstractmethod
 
 from os import path
 import numpy as np
@@ -16,6 +17,68 @@ from .. import interfaces
 from shyft import api
 from shyft import shyftdata_dir
 
+
+class RegionConfig(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def parameter_overrides(self):
+        """
+        Returns
+        -------
+        overrides: dict
+            Dictionary with parameter overrides for catchments:
+            {catchmend_id: parameter_overrides}
+        """
+        pass
+
+    @abstractmethod
+    def domain(self):
+        """
+        Returns
+        -------
+        domain: dict
+            Dictionary with region specification, or None.
+        """
+        pass
+
+    @abstractmethod
+    def repository(self):
+        """
+        Returns
+        -------
+        repository: dict
+            dict with key "class" and value subclass of
+            shyft.repository.interfaces.RegionModelRepository
+            Additional key/value pairs can be found, and are typically used
+            as arguments to the repository constructor.
+        """
+        pass
+
+
+class ModelConfig(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def interpolation_parameters(self):
+        """
+        Returns
+        -------
+        parameters: dict
+            Parameters for the various interpolation routines
+        """
+        pass
+
+    @abstractmethod
+    def model_parameters(self):
+        """
+        Returns
+        -------
+        parameters: dict
+            Parameters for the method stack
+        """
+        pass
+    
 
 class RegionModelRepository(interfaces.RegionModelRepository):
     """
@@ -45,10 +108,10 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         """
         Parameters
         ----------
-        region_config: subclass of interfaces.RegionConfig
+        region_config: subclass of interface RegionConfig
             Object containing regional information, like
             catchment overrides, and which netcdf file to read
-        model_config: subclass of interfaces.ModelConfig
+        model_config: subclass of interface ModelConfig
             Object containing model information, i.e.
             information concerning interpolation and model
             parameters
@@ -58,8 +121,8 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         epsg: string
             Coordinate system for result region model
         """
-        if not isinstance(region_config, interfaces.RegionConfig) or \
-           not isinstance(model_config, interfaces.ModelConfig):
+        if not isinstance(region_config, RegionConfig) or \
+           not isinstance(model_config,ModelConfig):
             raise interfaces.InterfaceError()
         self._rconf = region_config
         self._mconf = model_config

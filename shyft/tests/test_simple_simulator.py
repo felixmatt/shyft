@@ -13,9 +13,9 @@ from shyft.repository.collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository
 from shyft.repository.netcdf import GeoTsRepository
 from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
-from shyft.repository.yaml_config import YamlContent
-from shyft.repository.yaml_config import RegionConfig
-from shyft.repository.yaml_config import ModelConfig
+from shyft.repository.netcdf.yaml_config import YamlContent
+from shyft.repository.netcdf.yaml_config import RegionConfig
+from shyft.repository.netcdf.yaml_config import ModelConfig
 from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.api import pt_gs_k
 from shyft import api
