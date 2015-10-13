@@ -45,11 +45,63 @@ try:
                     'precipitation_gradient': 2.0
                 }
             }
-            
-    class StatkraftSimpleRunTestCase(unittest.TestCase):
     
-        def test_Tistel_run(self):
+    class TsStoreItem(object):
+        def __init(self,destination_id, cids, extract_method):
+            self.destination_id=destination_id;
+            self.cids=cids
+            self.extract_method=extract_method
             
+    class TimeseriesStore(object):
+        
+        def __init__(self,ts_store, time_axis,ts_item_map):
+            self.ts_store=ts_store
+            self.time_axis=time_axis
+            self.ts_item_map=ts_item_map
+        
+        def store_ts(self,region_model):
+            """
+            """
+            pass
+            
+    class StatkraftTistelTest(unittest.TestCase):
+    
+        def test_run(self):
+            
+            utc = Calendar()  # No offset gives Utc
+            time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
+            interpolation_id = 0
+            ptgsk = SimpleSimulator("Tistel-ptgsk", 
+                                        interpolation_id, 
+                                        self.region_model_repository,
+                                        self.geo_ts_repository, 
+                                        self.interpolation_repository, None)
+            n_cells = ptgsk.region_model.size()
+            ptgsk_state = DefaultStateRepository(ptgsk.region_model.__class__, n_cells)
+
+            ptgsk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
+            ptgsk.run(time_axis, ptgsk_state.get_state(0))
+            print("Done simulation, testing that we can extract data from model")
+            cids = api.IntVector() # we pull out for all the catchments-id if it's empty
+            model=ptgsk.region_model # fetch out  the model 
+            sum_discharge=model.statistics.discharge(cids)
+            self.assertIsNotNone(sum_discharge)
+            avg_temperature = model.statistics.temperature(cids)
+            avg_precipitation = model.statistics.precipitation(cids)
+            self.assertIsNotNone(avg_precipitation)
+            self.assertIsNotNone(avg_temperature)
+            for time_step in xrange(time_axis.size()):
+                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
+                self.assertEquals(precip_raster.size(), n_cells)
+            avg_gs_lwc = model.gamma_snow_state.lwc(cids)  # sca skaugen|gamma
+            self.assertIsNotNone(avg_gs_lwc)
+            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+            avg_gs_output = model.gamma_snow_response.output(cids)
+            self.assertIsNotNone(avg_gs_output)
+            print("done.")
+            
+        def test_ptssk_run(self):
+            return # just ignore for now
             utc = Calendar()  # No offset gives Utc
             time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
             interpolation_id = 0

@@ -518,6 +518,7 @@ class GisRegionModelRepository(RegionModelRepository):
         -------
         region_model: shyft.api type with
            .bounding_region = grid_specification - as fetched from the rm.config
+           .catchment_id_map = array, where i'th item is the external catchment'id 
            .gis_info = result from CellDataFetcher - used to fetch the grid spec (to help plot etc)
            {
              'cell_data': {catchment_id:[{'cell':shapely-shapes,'elevation':moh,'glacier':area,'lake':area,'reservoir':area,'forest':area}]}
@@ -533,21 +534,29 @@ class GisRegionModelRepository(RegionModelRepository):
         cell_info=result['cell_data'] # this is the part we need here
         cell_vector = rm.region_model_type.cell_t.vector_t()
         radiation_slope_factor=0.9 # todo: get it from service layer 
+        catchment_id_map = [] # needed to build up the external c-id to shyft core internal 0-based c-ids
         for c_id,c_info_list in cell_info.iteritems():
-            for c_info in c_info_list:
-                shape=c_info['cell'] # todo fetcher should return geopoint,area, ltf..
-                z=c_info['elevation']
-                geopoint=api.GeoPoint(shape.centroid.x,shape.centroid.y,z)
-                area=shape.area
-                ltf=api.LandTypeFractions()
-                ltf.set_fractions(c_info.get('glacier',0.0),c_info.get('lake',0.0),c_info.get('reservoir',0.0),c_info.get('forest',0.0))
-                cell = rm.region_model_type.cell_t()
-                cell.geo = api.GeoCellData(geopoint, area, c_id, radiation_slope_factor,ltf)
-                cell_vector.append(cell)
+            if not c_id == 0: # only cells with c_id different from 0
+                if not c_id in catchment_id_map:
+                    catchment_id_map.append(c_id)
+                    c_id_0=len(catchment_id_map)-1
+                else:
+                    c_id_0=catchment_id_map.index(c_id)
+                for c_info in c_info_list:
+                    shape=c_info['cell'] # todo fetcher should return geopoint,area, ltf..
+                    z=c_info['elevation']
+                    geopoint=api.GeoPoint(shape.centroid.x,shape.centroid.y,z)
+                    area=shape.area
+                    ltf=api.LandTypeFractions()
+                    ltf.set_fractions(c_info.get('glacier',0.0),c_info.get('lake',0.0),c_info.get('reservoir',0.0),c_info.get('forest',0.0))
+                    cell = rm.region_model_type.cell_t()
+                    cell.geo = api.GeoCellData(geopoint, area, c_id_0, radiation_slope_factor,ltf)
+                    cell_vector.append(cell)
         catchment_parameter_map=rm.region_model_type.parameter_t.map_t()
         #todo add catchment level parameters to map
         region_model= rm.region_model_type(cell_vector,rm.region_parameters,catchment_parameter_map)
         region_model.bounding_region=rm.grid_specification  # mandatory for orchestration
+        region_model.catchment_id_map=catchment_id_map #needed to map from externa c_id to 0-based c_id used internally in
         region_model.gis_info=result # opt:needed for internal statkraft use/presentation
         return region_model
 

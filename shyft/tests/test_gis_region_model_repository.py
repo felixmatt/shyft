@@ -123,12 +123,34 @@ try:
             self.assertIsNotNone(cm3)
             self.assertIsNotNone(cm1)
             self.assertIsNotNone(cm2)
-            
+            self.assertIsNotNone(cm2.catchment_id_map)
+            self.assertEquals(cm2.catchment_id_map[0],id_list[0])            
             #self.assertIsNotNone(cm4)
     
             #TODO: add more assertions,testing on features
-
-
+        @property
+        def std_ptgsk_parameters(self):
+            pt_params = api.PriestleyTaylorParameter()#*params["priestley_taylor"])
+            gs_params = api.GammaSnowParameter()#*params["gamma_snow"]
+            ae_params = api.ActualEvapotranspirationParameter()#*params["act_evap"])
+            k_params = api.KirchnerParameter()#*params["kirchner"])
+            p_params = api.PrecipitationCorrectionParameter() #TODO; default 1.0, is it used ??
+            return api.pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
+            
+        def test_region_model_nea_nidelv(self):
+            nea_nidelv_grid_spec=GridSpecification(epsg_id=32633,x0=270000.0,y0=7035000.0,dx=1000,dy=1000,nx=105,ny=75)
+            catch_ids=[1228,1308,1394,1443,1726,1867,1996,2041,2129,2195,2198,2277,2402,2446,2465,2545,2640,2718,3002,3536,3630,1000010,1000011]
+            ptgsk_params=self.std_ptgsk_parameters
+            cfg_list=[
+                RegionModelConfig("nea-nidelv-ptgsk",PTGSKModel,ptgsk_params,nea_nidelv_grid_spec,"regulated","CATCH_ID",catch_ids)            
+            ]
+            rm_cfg_dict={ x.name:x for x in cfg_list}
+            rmr=GisRegionModelRepository(rm_cfg_dict)
+            nea_nidelv=rmr.get_region_model("nea-nidelv-ptgsk")
+            self.assertIsNotNone(nea_nidelv)
+            self.assertEqual(len(nea_nidelv.catchment_id_map),len(catch_ids))
+            print("nea-nidelv:{0}".format(nea_nidelv.catchment_id_map))
+            
 
 
 
