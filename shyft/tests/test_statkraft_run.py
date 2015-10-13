@@ -9,17 +9,9 @@ try:
     from shyft.api import Calendar,YMDhms,Timeaxis,deltahours
     from shyft.api import pt_gs_k 
     from shyft.api import pt_ss_k
-    
-    # If we need state from repository 
-    # from shyft.repository.interfaces import StateInfo
-    # from shyft.repository.yaml_state_repository import YamlStateRepository
-    # from shyft.api.pt_gs_k import PTGSKState,PTGSKStateVector
-    # but we can do it easy with the defaults for now
+ 
     from shyft.repository.default_state_repository import DefaultStateRepository
     
-    # some yaml-based location repositories
-    #from shyft.repository.service.yaml_geo_location_repository import YamlGeoLocationRepository
-    # GIS service based region-model
     from shyft.repository.service.gis_region_model_repository import GridSpecification
     from shyft.repository.service.gis_region_model_repository import RegionModelConfig
     from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
@@ -55,6 +47,46 @@ try:
             }
             
     class StatkraftSimpleRunTestCase(unittest.TestCase):
+    
+        def test_Tistel_run(self):
+            
+            utc = Calendar()  # No offset gives Utc
+            time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
+            interpolation_id = 0
+            simulator_ptgsk = SimpleSimulator("Tistel-ptgsk", 
+                                        interpolation_id, 
+                                        self.region_model_repository,
+                                        self.geo_ts_repository, 
+                                        self.interpolation_repository, None)
+            simulator_ptssk = SimpleSimulator("Tistel-ptssk", 
+                                        interpolation_id, 
+                                        self.region_model_repository,
+                                        self.geo_ts_repository, 
+                                        self.interpolation_repository, None)
+            n_cells = simulator_ptgsk.region_model.size()
+            state_repos_ptgsk = DefaultStateRepository(simulator_ptgsk.region_model.__class__, n_cells)
+            state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
+            simulator_ptssk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
+            simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
+            simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
+            print("Done simulation, testing that we can extract data from model")
+            cids = api.IntVector() # we pull out for all the catchments-id if it's empty
+            model=simulator_ptssk.region_model # fetch out skaugen snow
+            sum_discharge=model.statistics.discharge(cids)
+            self.assertIsNotNone(sum_discharge)
+            avg_temperature = model.statistics.temperature(cids)
+            avg_precipitation = model.statistics.precipitation(cids)
+            self.assertIsNotNone(avg_precipitation)
+            self.assertIsNotNone(avg_temperature)
+            for time_step in xrange(time_axis.size()):
+                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
+                self.assertEquals(precip_raster.size(), n_cells)
+            avg_gs_sca = model.skaugen_state.sca(cids)  # sca skaugen|gamma
+            self.assertIsNotNone(avg_gs_sca)
+            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+            avg_total_stored_water = model.skaugen_response.total_stored_water(cids)
+            self.assertIsNotNone(avg_total_stored_water)
+            print("done.")    
     
         @property
         def region_model_repository(self):
@@ -149,45 +181,7 @@ try:
         def interpolation_repository(self):
             return InterpolationParameterRepository(InterpolationConfig())
             
-        def test_Tistel_run(self):
-            
-            utc = Calendar()  # No offset gives Utc
-            time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
-            interpolation_id = 0
-            simulator_ptgsk = SimpleSimulator("Tistel-ptgsk", 
-                                        interpolation_id, 
-                                        self.region_model_repository,
-                                        self.geo_ts_repository, 
-                                        self.interpolation_repository, None)
-            simulator_ptssk = SimpleSimulator("Tistel-ptssk", 
-                                        interpolation_id, 
-                                        self.region_model_repository,
-                                        self.geo_ts_repository, 
-                                        self.interpolation_repository, None)
-            n_cells = simulator_ptgsk.region_model.size()
-            state_repos_ptgsk = DefaultStateRepository(simulator_ptgsk.region_model.__class__, n_cells)
-            state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
-            simulator_ptssk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
-            simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
-            simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
-            print("Done simulation, testing that we can extract data from model")
-            cids = api.IntVector() # we pull out for all the catchments-id if it's empty
-            model=simulator_ptssk.region_model # fetch out skaugen snow
-            sum_discharge=model.statistics.discharge(cids)
-            self.assertIsNotNone(sum_discharge)
-            avg_temperature = model.statistics.temperature(cids)
-            avg_precipitation = model.statistics.precipitation(cids)
-            self.assertIsNotNone(avg_precipitation)
-            self.assertIsNotNone(avg_temperature)
-            for time_step in xrange(time_axis.size()):
-                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
-                self.assertEquals(precip_raster.size(), n_cells)
-            avg_gs_sca = model.skaugen_state.sca(cids)  # sca skaugen|gamma
-            self.assertIsNotNone(avg_gs_sca)
-            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-            avg_total_stored_water = model.skaugen_response.total_stored_water(cids)
-            self.assertIsNotNone(avg_total_stored_water)
-            print("done.")
+
             
             
 

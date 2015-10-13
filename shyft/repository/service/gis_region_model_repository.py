@@ -516,7 +516,14 @@ class GisRegionModelRepository(RegionModelRepository):
 
         Returns
         -------
-        region_model: shyft.api type
+        region_model: shyft.api type with
+           .bounding_region = grid_specification - as fetched from the rm.config
+           .gis_info = result from CellDataFetcher - used to fetch the grid spec (to help plot etc)
+           {
+             'cell_data': {catchment_id:[{'cell':shapely-shapes,'elevation':moh,'glacier':area,'lake':area,'reservoir':area,'forest':area}]}
+             'catchment_land_types':{catchment_id:{'glacier':[shapelys..],'forest':[shapelys..],'lake':[shapelys..],'reservoir':[shapelys..]}}
+             'elevation_raster': np.array(dtype.float64)
+           }
       
         """
 
@@ -540,7 +547,8 @@ class GisRegionModelRepository(RegionModelRepository):
         catchment_parameter_map=rm.region_model_type.parameter_t.map_t()
         #todo add catchment level parameters to map
         region_model= rm.region_model_type(cell_vector,rm.region_parameters,catchment_parameter_map)
-        region_model.bounding_region=rm.grid_specification 
+        region_model.bounding_region=rm.grid_specification  # mandatory for orchestration
+        region_model.gis_info=result # opt:needed for internal statkraft use/presentation
         return region_model
 
 
