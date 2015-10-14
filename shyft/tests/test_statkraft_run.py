@@ -6,7 +6,7 @@ import unittest
 try:
     
     from shyft import api
-    from shyft.api import Calendar,YMDhms,Timeaxis,deltahours
+    from shyft.api import Calendar,YMDhms,Timeaxis,deltahours,TsTransform
     from shyft.api import pt_gs_k 
     from shyft.api import pt_ss_k
  
@@ -23,8 +23,10 @@ try:
     #from shyft.repository.service.ssa_geo_ts_repository import EnsembleStation
     #from shyft.repository.service.ssa_geo_ts_repository import EnsembleConfig
     from shyft.repository.service.gis_location_service import GisLocationService
-    from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD,FC_PROD
+    from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD,FC_PROD,PREPROD,FC_PREPROD
     from shyft.orchestration.simulator import SimpleSimulator
+    from shyft.repository.interfaces import TsStoreItem
+    from shyft.repository.interfaces import TimeseriesStore
     
     class InterpolationConfig(object):
         """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
@@ -46,23 +48,8 @@ try:
                 }
             }
     
-    class TsStoreItem(object):
-        def __init(self,destination_id, cids, extract_method):
-            self.destination_id=destination_id;
-            self.cids=cids
-            self.extract_method=extract_method
+
             
-    class TimeseriesStore(object):
-        
-        def __init__(self,ts_store, time_axis,ts_item_map):
-            self.ts_store=ts_store
-            self.time_axis=time_axis
-            self.ts_item_map=ts_item_map
-        
-        def store_ts(self,region_model):
-            """
-            """
-            pass
             
     class StatkraftTistelTest(unittest.TestCase):
     
@@ -98,28 +85,31 @@ try:
             # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
             avg_gs_output = model.gamma_snow_response.output(cids)
             self.assertIsNotNone(avg_gs_output)
-            print("done.")
+            print("done. now save to db")
+            #SmGTsRepository(PROD,FC_PROD)
+            save_list=[
+                TsStoreItem(u'/test/sih/shyft/tistel/discharge_m3s',lambda m: TsTransform().to_average(time_axis.start(),deltahours(24),time_axis.size()/24, m.statistics.discharge(cids))),
+                TsStoreItem(u'/test/sih/shyft/tistel/temperature',lambda m: m.statistics.temperature(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/precipitation',lambda m: m.statistics.precipitation(cids)),
+            ]
+            tss=TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),save_list)
+            
+            self.assertTrue(tss.store_ts(ptgsk.region_model))
+            print("Done save to db")
             
         def test_ptssk_run(self):
             return # just ignore for now
             utc = Calendar()  # No offset gives Utc
             time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
             interpolation_id = 0
-            simulator_ptgsk = SimpleSimulator("Tistel-ptgsk", 
-                                        interpolation_id, 
-                                        self.region_model_repository,
-                                        self.geo_ts_repository, 
-                                        self.interpolation_repository, None)
             simulator_ptssk = SimpleSimulator("Tistel-ptssk", 
                                         interpolation_id, 
                                         self.region_model_repository,
                                         self.geo_ts_repository, 
                                         self.interpolation_repository, None)
-            n_cells = simulator_ptgsk.region_model.size()
-            state_repos_ptgsk = DefaultStateRepository(simulator_ptgsk.region_model.__class__, n_cells)
+            n_cells = simulator_ptssk.region_model.size()
             state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
             simulator_ptssk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
-            simulator_ptgsk.run(time_axis, state_repos_ptgsk.get_state(0))
             simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
             print("Done simulation, testing that we can extract data from model")
             cids = api.IntVector() # we pull out for all the catchments-id if it's empty

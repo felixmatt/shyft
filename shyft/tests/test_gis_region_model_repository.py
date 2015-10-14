@@ -123,7 +123,7 @@ try:
             self.assertIsNotNone(cm3)
             self.assertIsNotNone(cm1)
             self.assertIsNotNone(cm2)
-            self.assertIsNotNone(cm2.catchment_id_map)
+            self.assertIsNotNone(cm2.catchment_id_map) #This one is needed in order to properly map catchment-id to internal id
             self.assertEquals(cm2.catchment_id_map[0],id_list[0])            
             #self.assertIsNotNone(cm4)
     
