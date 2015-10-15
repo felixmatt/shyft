@@ -113,7 +113,7 @@ class SimulationTestCase(unittest.TestCase):
 
     def test_run_arome_ensemble(self):
         # Simulation time axis
-        year, month, day, hour = 2015, 8, 23, 6
+        year, month, day, hour = 2015, 7, 26, 0
         n_hours = 30
         dt = api.deltahours(1)
         utc = api.Calendar()  # No offset gives Utc
@@ -139,8 +139,9 @@ class SimulationTestCase(unittest.TestCase):
         pattern = "fc*.nc"
         try:
             geo_ts_repository = AromeDataRepository(epsg, base_dir, filename=pattern, allow_subset=True)
-        except:
-            print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive *****")
+        except Exception as e:
+            print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****")
+            print("****{:^73}****".format(e.message))
             return
             
         simulator = SimpleSimulator(region_id,
@@ -152,6 +153,8 @@ class SimulationTestCase(unittest.TestCase):
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulators = simulator.create_ensembles(time_axis, t0, state_repos.get_state(0))
+        for s in simulators:
+            s.simulate()
 
 if __name__ == '__main__':
     unittest.main()

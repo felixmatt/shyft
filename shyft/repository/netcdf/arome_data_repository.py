@@ -117,13 +117,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self._y_padding = y_padding
         self._bounding_box = bounding_box
         # Field names and mappings
-        netcdf_fields = ["relative_humidity_2m",
-                         "air_temperature_2m",
-                         "altitude",
-                         "precipitation_amount",
-                         "x_wind_10m",
-                         "y_wind_10m",
-                         "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
+        #netcdf_fields = ["relative_humidity_2m",
+        #                 "air_temperature_2m",
+        #                 "altitude",
+        #                 "precipitation_amount",
+        #                 "x_wind_10m",
+        #                 "y_wind_10m",
+        #                 "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
 
         self._shyft_fields = ["relative_humidity",
                               "temperature",
@@ -133,12 +133,32 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                               "y_wind",
                               "radiation"]
 
+        self._net_fields = ["relative_humidity_2m",
+                            "air_temperature_2m",
+                            "altitude",
+                            "precipitation_amount",
+                            "precipitation_amount_acc",
+                            "x_wind_10m",
+                            "y_wind_10m",
+                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
+
+
+        self.net_shyft_map = {"relative_humidity_2m": "relative_humidity",
+                              "air_temperature_2m": "temperature",
+                              "altitude": "z",
+                              "precipitation_amount": "precipitation",
+                              "precipitation_amount_acc": "precipitation",
+                              "x_wind_10m": "x_wind",
+                              "y_wind_10m": "y_wind",
+                              "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
+
+
         self.source_type_map = {"relative_humidity": api.RelHumSource,
                                 "temperature": api.TemperatureSource,
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
-        self.shyft_net_map = {s: n for n, s in zip(netcdf_fields, self._shyft_fields)}
+        #self.shyft_net_map = {s: n for n, s in zip(netcdf_fields, self._shyft_fields)}
         self._fetch_ensamble = False
         self.xx = self.yy = self.extracted_data = None
 
@@ -214,6 +234,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             I, J = data.shape[-2:]
 
             def construct(d):
+                if ta.size() != d.size:
+                    raise AromeDataRepositoryError("Time axis size {} not equal to the number of "
+                                                   "data points ({}) for {}"
+                                                   "".format(ta.size(), d.size, key))
                 return tsc(ta.size(), ta.start(), ta.delta(),
                            api.DoubleVector_FromNdArray(d.flatten()), 0)
             if ensemble_index is not None:
@@ -342,34 +366,54 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         idx_min = time.searchsorted(utc_period.start, side='left')
         idx_max = time.searchsorted(utc_period.end, side='right')
         time_slice = slice(idx_min, idx_max)
-        data_convert_map = {s: c for s, c in
-                            zip(self._shyft_fields, self._netcdf_data_convert(time, time_slice))}
+        data_convert_map = {n: c for n, c in
+                            zip(self._net_fields, self._netcdf_data_convert(time, time_slice))}
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
         assert set(input_source_types).issubset(self._shyft_fields)
+        possible_data_vars = [x for (x, y) in self.net_shyft_map.items() if y in input_source_types]
         if self.allow_subset:
-            input_source_types = [df for df in input_source_types
-                                  if self.shyft_net_map[df] in data_vars]
+            input_source_types = list(set([self.net_shyft_map[y] for y in possible_data_vars]))
+            #input_source_types = [df for df in input_source_types
+            #                      if self.shyft_net_map[df] in data_vars]
         else:
+            dv = data_vars.keys()
+            if "precipitation_amount" in dv:
+                dv.append("precipitation_amount_acc")
+            elif "precipitation_amount_acc" in dv:
+                dv.append("precipitation_amount")
             assert set([self.shyft_net_map[df]
-                        for df in input_source_types]).issubset(data_vars.keys())
+                        for df in input_source_types]).issubset(set(dv))
 
         additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks
-        d = data_vars[self.shyft_net_map[input_source_types[0]]]
+        dv_name = [x for x,y in self.net_shyft_map.items() if y == input_source_types[0]][0]
+        d = data_vars[dv_name]
         self.xx, self.yy, x_mask, y_mask = \
             self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
         raw_data = {}
         for data_field in input_source_types + additional_extract:
-            data = data_vars.pop(self.shyft_net_map[data_field])
+            data_names = [x for x,y in self.net_shyft_map.items() if y == data_field]
+            if len(data_names) == 1:
+                data_name = data_names[0]
+                data = data_vars.pop(data_name)
+            else:  # variable can be either accumulated or not, choose the one that is not acced
+                data = None
+                for data_name in data_names:
+                    if data_name in data_vars:
+                        data = data_vars.pop(data_name)
+                        break
+                #data = data_vars.pop([x for x in data_names if "acc" not in x][0])
+                if data is None:
+                    raise AromeDataRepositoryError("Data for {} not found".format(data_field))
             # Construct slice
             data_slice = len(data.dimensions)*[slice(None)]
             data_slice[data.dimensions.index("x")] = x_mask
             data_slice[data.dimensions.index("y")] = y_mask
             # Add extracted data and corresponding coordinates to class
-            raw_data[data_field] = data[data_slice]
-        extracted_data = {key: (data_convert_map[key][0](raw_data[key]),
+            raw_data[data_name] = data[data_slice]
+        extracted_data = {self.net_shyft_map[key]: (data_convert_map[key][0](raw_data[key]),
                                 data_convert_map[key][1]()) for key in raw_data}
         # Compute wind speed from (x,y) components
         if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
@@ -437,10 +481,12 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         def prec_conv(p):
             return p[1:][time_slice]
 
+        def prec_acc_conv(p):
+            return np.clip(p[1:][time_slice] - p[:-1][time_slice], 0.0, 1000.0)
+
         def rad_conv(rad):
-            na = np.newaxis
             delta_rad = rad[1:][time_slice] - rad[:-1][time_slice]
-            dts = (t[1:] - t[:-1])[time_slice, na, na, na]
+            dts = (t[1:] - t[:-1])[[time_slice] + (len(rad.shape) - 1)*[np.newaxis]]
             return np.clip(delta_rad/dts, 0.0, 1000.0)
 
         t_to_ta_0 = partial(t_to_ta, t[time_slice], 0)  # Full
@@ -449,6 +495,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 (air_temp_conv, t_to_ta_0),
                 (lambda x: x, lambda: None),  # Altitude
                 (prec_conv, t_to_ta_1),
+                (prec_acc_conv, t_to_ta_1),
                 (noop, t_to_ta_0),
                 (noop, t_to_ta_0),
                 (rad_conv, t_to_ta_1)]
@@ -497,7 +544,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         See base class: ..interfaces.GeoTsRepository
         """
         self._filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
-        print(self._filename)
         if self._filename:
             self._is_ensemble = True
             res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)

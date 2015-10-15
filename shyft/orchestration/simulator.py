@@ -16,8 +16,38 @@ class SimpleSimulator(object):
     given as input.
     """
 
-    def __init__(self, region_id, interpolation_id, region_model_repository,
-                 geo_ts_repository, interpolation_parameter_repository, catchments=None):
+    def __init__(self, *args, **kwargs):
+        """
+        Create a simple simulator.
+
+        Repositories below as referred to as relative to the shyft.repository package
+
+        Parameters
+        ----------
+        region_id: string
+            Region identifyer to be used with the region model repository
+            to qualify what region to use.
+        interpolation_id: string
+            Identifier to use with the interpolation parameter
+            repository.
+        region_model_repostiory: interfaces.RegionModelRepository subclass
+            Repository that can deliver a model with initialized cells
+        geo_ts_repository: interfaces.GeoTsRepository subclass
+            Repository that can deliver time series data to drive simulator.
+        interpolation_parameter_repository: interfaces.InterpolationParameterRepository subclass
+            Repository that can deliver interpolation parameters
+        catchments: list of identifies, optional
+            List of catchment identifiers to extract from region through
+            the region_model_repository.
+        """
+        if len(args) == 1:
+            self._copy_construct(*args)
+        else:
+            self._construct_from_repositories(*args, **kwargs)
+
+    def _construct_from_repositories(self, region_id, interpolation_id, region_model_repository,
+                                     geo_ts_repository, interpolation_parameter_repository,
+                                     catchments=None):
         """
         Create a simple simulator.
 
@@ -49,9 +79,24 @@ class SimpleSimulator(object):
         self.geo_ts_repository = geo_ts_repository
         self.region_model = region_model_repository.get_region_model(region_id, catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
+        self.state = None
+        self.time_axis = None
+        self.region_env = None
+
+    def _copy_construct(self, other):
+        self.region_model_repository = other.region_model_repository
+        self.interpolation_id = other.interpolation_id
+        self.ip_repos = other.ip_repos
+        self._geo_ts_names = other._geo_ts_names
+        self.geo_ts_repository = other.geo_ts_repository
+        self.region_model = other.region_model.__class__(other.region_model)
+        self.epsg = other.epsg
+        self.state = other.state
+        self.time_axis = other.time_axis
+        self.region_env = other.region_env
 
     def copy(self):
-        return self.region_model.__class__(self)
+        return self.__class__(self)
 
     def _get_region_environment(self, sources):
         region_env = api.ARegionEnvironment()
@@ -115,6 +160,6 @@ class SimpleSimulator(object):
             simulator = self.copy()
             simulator.state = state
             simulator.time_axis = time_axis
-            simulator.region_env = self._get_region_environment(source)
+            simulator.region_env = simulator._get_region_environment(source)
             runnables.append(simulator)
         return runnables
