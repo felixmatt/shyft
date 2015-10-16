@@ -77,8 +77,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             it is used for forecasts or ensambles.
         bounding_box: list, optional
             A list on the form:
-            [[x_ul, x_ur, x_lr, x_ll],
-             [y_ul, y_ur, y_lr, y_ll]],
+            [[x_ll, x_lr, x_ur, x_ul],
+             [y_ll, y_lr, y_ur, y_ul]],
             describing the outer boundaries of the domain that shoud be
             extracted. Coordinates are given in epsg coordinate system.
         x_padding: float, optional
@@ -185,10 +185,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         bounding_box[0][1] += self._x_padding
         bounding_box[0][2] += self._x_padding
         bounding_box[0][3] -= self._x_padding
-        bounding_box[1][0] += self._y_padding
-        bounding_box[1][1] += self._y_padding
-        bounding_box[1][2] -= self._y_padding
-        bounding_box[1][3] -= self._y_padding
+        bounding_box[1][0] -= self._y_padding
+        bounding_box[1][1] -= self._y_padding
+        bounding_box[1][2] += self._y_padding
+        bounding_box[1][3] += self._y_padding
         return bounding_box
 
     def _geo_points(self):
@@ -387,14 +387,17 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks
-        dv_name = [x for x,y in self.net_shyft_map.items() if y == input_source_types[0]][0]
-        d = data_vars[dv_name]
+        dv_names = [x for x,y in self.net_shyft_map.items() ]
+        intersect= set(dv_names).intersection(data_vars)
+        d = data_vars[list(intersect)[0]]
         self.xx, self.yy, x_mask, y_mask = \
             self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
         raw_data = {}
         for data_field in input_source_types + additional_extract:
             data_names = [x for x,y in self.net_shyft_map.items() if y == data_field]
+            if not set(data_names).intersection(data_vars):
+                continue
             if len(data_names) == 1:
                 data_name = data_names[0]
                 data = data_vars.pop(data_name)
