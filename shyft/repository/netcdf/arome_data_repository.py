@@ -506,8 +506,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in data.iteritems():
-            tpe = self.source_type_map[name]
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx + (slice(None),)]),
+            tpe = self.source_type_map[name] # TODO: SIH: this hack is to ensure arome coordinates gets right.
+                                             # by comparing the z, x-coordiate is 2 km to high, and y-coordinate 17km..
+            res[name] = tpe.vector_t([tpe(api.GeoPoint(pts[idx][0]-2000,pts[idx][1]-17000.0,pts[idx][2]),
                                       ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
         return res
 
