@@ -22,8 +22,9 @@ class GisDataFetchError(Exception): pass
 
 class GridSpecification(BoundingRegion):
     """
-    Defines a grid, as upper left x0,y0, dx,dy,nx,ny
+    Defines a grid, as lower left x0,y0, dx,dy,nx,ny
     in the specified epsg_id coordinate system
+    given a coordindate system with y-axis positive upwards.
 
     """
     def __init__(self,epsg_id,x0,y0,dx,dy,nx,ny):
@@ -41,7 +42,7 @@ class GridSpecification(BoundingRegion):
         Return
         ------
         returns a list describing the bounding box of the gridspec
-        upperleft x0,y0 and lower right x1,y1
+        lower left x0,y0 and upper right x1,y1
          [x0,y0,x1,y1]
         """
         return [self.x0, self.y0, self.x0 + self.dx*self.nx , self.y0 + self.dy*self.ny]
@@ -51,7 +52,7 @@ class GridSpecification(BoundingRegion):
         Parameters
         ----------
         elevations:array[y,x]
-            - a array[y,x] with elevations, layout is lower-to upper (opposite direction of the grid!)
+            - a array[y,x] with elevations, layout is lower-to upper
         Return
         ------
         a list of (shapely box'es, elevation) flat list for nx,ny
@@ -59,7 +60,7 @@ class GridSpecification(BoundingRegion):
         r = []
         for i in xrange(self.nx):
             for j in xrange(self.ny):
-                r.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[self.ny-j-1,i]))) 
+                r.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[j,i]))) 
         return r
 
     def bounding_box(self, epsg):
@@ -107,7 +108,7 @@ class BaseGisDataFetcher(object):
 
     """
 
-    def __init__(self, geometry=None, server_name=None, server_port=None, service_index=None, epsg_id=32633):
+    def __init__(self, epsg_id,geometry=None, server_name=None, server_port=None, service_index=None):
         self.server_name = server_name
         self.server_port = server_port
         self.service_index = service_index
@@ -173,7 +174,7 @@ class BaseGisDataFetcher(object):
 
 class LandTypeFetcher(BaseGisDataFetcher):
 
-    def __init__(self, geometry=None, epsg_id=32633):
+    def __init__(self,  epsg_id,geometry=None):
         super(LandTypeFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=0, epsg_id=epsg_id)
         self.name_to_layer_map = {"glacier":0,"forest":1,"lake":2}
         self.query["outFields"]="OBJECTID"
@@ -224,7 +225,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
 
 class ReservoirFetcher(BaseGisDataFetcher):
 
-    def __init__(self, geometry=None, epsg_id=32633):
+    def __init__(self, epsg_id, geometry=None):
         super(ReservoirFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=5, epsg_id=epsg_id)
         self.query["where"]="1 = 1"
         self.query["outFields"]="OBJECTID"
@@ -246,7 +247,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 class CatchmentFetcher(BaseGisDataFetcher):
 
-    def __init__(self, catchment_type, identifier, epsg_id=32633):
+    def __init__(self, catchment_type, identifier, epsg_id):
         if (catchment_type=='regulated'):
             service_index = 6
             #self.identifier = 'POWER_PLANT_ID'

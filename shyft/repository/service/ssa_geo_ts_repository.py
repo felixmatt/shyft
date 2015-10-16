@@ -210,10 +210,12 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self, geo_location_repository,ts_repository,met_station_list,ens_config):
+    def __init__(self,epsg_id, geo_location_repository,ts_repository,met_station_list,ens_config):
         """
         Parameters
         ----------
+        epsg_id: int
+            - epsg_id that defines this geo-ts-repository coordinates, like UTM33N, epsg_id 32633
         geo_location_repository: GeoLocationRepository
             -server like oslwvagi001p, to be passed to the gis_station_data fetcher service
 
@@ -231,6 +233,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         if not isinstance(geo_location_repository,GeoLocationRepository): raise GeoTsRepositoryError("geo_location_repository should be an implementation of GeoLocationRepository")
         if not isinstance(ts_repository,TsRepository):raise GeoTsRepositoryError("ts_repository should be an implementation of TsRepository")
+        self.epsg_id=epsg_id;
         self.geo_location_repository=geo_location_repository
         self.ts_repository= ts_repository # we pass this to the ssa smg db interface
         self.met_station_list=met_station_list # this defines the scope of the service, and glue together consistent positions and time-series
@@ -245,7 +248,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
         # 1 get the station-> location map
         station_ids=[ x.gis_id for x in self.met_station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632) #TODO use epsg for self
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=self.epsg_id) 
         # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
         ts_to_geo_ts_info= dict()
@@ -262,7 +265,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
         # 1 get the station-> location map
         station_ids=[ x.gis_id for x in self.ens_config.station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=32632) #TODO use epsg for self
+        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=self.epsg_id)
         # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
         ts_to_geo_ts_info= dict()

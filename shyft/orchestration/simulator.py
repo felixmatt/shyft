@@ -1,4 +1,4 @@
-"""
+﻿"""
 Simulator classes for running SHyFT forward simulations.
 """
 from __future__ import print_function
@@ -117,7 +117,7 @@ class SimpleSimulator(object):
             self.region_model.run_cells()
             self.state = None
             self.time_axis = None
-            self.region_env = None
+            #self.region_env = None
         else:
             raise SimulatorError("Model not runnable.")
 

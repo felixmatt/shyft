@@ -1,11 +1,12 @@
-import matplotlib.pylab as plt
+﻿import matplotlib.pylab as plt
 from descartes import PolygonPatch
 from matplotlib.collections import PatchCollection
 from matplotlib import cm
 from itertools import imap
+from shyft.repository.service.gis_location_service import GisLocationService
 
 
-from shapely.geometry import MultiPolygon #Polygon, MultiPolygon, box, Point
+from shapely.geometry import MultiPolygon,Polygon #, MultiPolygon, box, Point
 
 from shyft.repository.service.gis_region_model_repository import CellDataFetcher,GridSpecification
 
@@ -28,7 +29,7 @@ class GisRegionModelDemo(object):
         patches = imap(PolygonPatch, [p for p in ps])
         ax.add_collection(PatchCollection(patches, facecolors=(color,), linewidths=0.1, alpha=0.3))
     
-    def plot_region_model(self,catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,epsg_id):
+    def plot_region_model(self,catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,station_ids,epsg_id):
         grid_spec=GridSpecification(epsg_id,x0, y0, dx, dy, nx, ny)
         cf = CellDataFetcher(catchment_type,identifier,grid_spec, id_list=catch_indicies)
         print( "Start fetching data")
@@ -48,6 +49,21 @@ class GisRegionModelDemo(object):
                 self.add_plot_polygons(ax, v, color=color_map[k])
     
         geometry = grid_spec.geometry
+        if station_ids is not None:
+            glr=GisLocationService()
+            stations=glr.get_locations(station_ids,epsg_id)
+            if stations:
+                points=stations.values()
+                ax.scatter( [pt[0] for pt in points],[pt[1] for pt in points],alpha=0.5)
+                station_min_x = min([ v[0] for v in points]) - 1000
+                station_max_x = max([ v[0] for v in points]) + 1000
+                station_min_y = min([ v[1] for v in points]) - 1000
+                station_max_y = max([ v[1] for v in points]) + 1000
+                geometry[0]=min(station_min_x,geometry[0])
+                geometry[1]=min(station_min_y,geometry[1])
+                geometry[2]=max(station_max_x,geometry[2])
+                geometry[3]=max(station_max_y,geometry[3])
+        
         ax.set_xlim(geometry[0], geometry[2])
         ax.set_ylim(geometry[1], geometry[3])
         plt.show()
@@ -75,20 +91,24 @@ class GisRegionModelDemo(object):
         self.plot_region_model('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, id_list,32633)
         
         
-    def tistel(self):
-        x0 = 350000.0
-        y0 = 6751000.0
-        dx = 1000
-        dy = 1000
-        nx = 32
-        ny = 24
-        #id_list = [163,287,332]
-        #run_cell_example2('regulated','POWER_PLANT_ID',x0, y0, dx, dy, nx, ny, id_list)
-        id_list = [1225,1226]
-        self.plot_region_model('unregulated','FELTNR',x0, y0, dx, dy, nx, ny, id_list,32632)
+    def tistel_33(self):
+        id_list = [1225]
+        s_list=[619,684,129,654,218,542,650]
+        self.plot_region_model( 'unregulated','FELTNR',
+                               35000.0,6788000, 
+                               1000.0, 1000.0, 
+                               16, 17, id_list,s_list,32633)
+    def tistel_32(self):
+        id_list = [1225]
+        s_list=[619,684,129,654,218,542,650]
+        self.plot_region_model( 'unregulated','FELTNR',
+                               360000.0,6761000, 
+                               1000.0, 1000.0, 
+                               16, 17, id_list,s_list,32632)
 
 if __name__ == '__main__':
     demo=GisRegionModelDemo()
-    demo.tistel()
-    demo.nea_nidelv()
-    demo.vinjevatn()
+    demo.tistel_32()
+    demo.tistel_33()
+    #demo.nea_nidelv()
+    #demo.vinjevatn()

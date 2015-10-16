@@ -61,7 +61,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(p0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
 
     def test_get_forecast(self):
-        return
         EPSG = 32633
         upper_left_x = 436100.0
         upper_left_y = 7417800.0
@@ -72,10 +71,10 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
 
         # Period start
         year = 2015
-        month = 8
-        day = 23
-        hour = 6
-        n_hours = 30
+        month = 10
+        day = 1
+        hour = 0
+        n_hours = 65
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
@@ -83,7 +82,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t_c2 = utc.time(t0) + api.deltahours(7)
 
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        pattern = "arome_metcoop_red_default2_5km_*.nc"
+        pattern = "arome_metcoop_default2_5km_*.nc"
         bbox = ([upper_left_x, upper_left_x + nx*dx,
                  upper_left_x + nx*dx, upper_left_x],
                 [upper_left_y, upper_left_y,

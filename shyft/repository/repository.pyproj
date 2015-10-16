@@ -24,12 +24,13 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="default_state_repository.py" />
+    <Compile Include="geo_ts_repository_collection.py" />
     <Compile Include="interfaces.py" />
     <Compile Include="netcdf\arome_data_repository.py" />
     <Compile Include="netcdf\geo_ts_repository.py" />
     <Compile Include="netcdf\region_model.py" />
     <Compile Include="netcdf\__init__.py" />
-    <Compile Include="service\cell_read_only_repository.py" />
     <Compile Include="service\yaml_geo_location_repository.py" />
     <Compile Include="service\gis_region_model_repository.py" />
     <Compile Include="service\gis_location_service.py" />
@@ -38,7 +39,6 @@
     <Compile Include="service\__init__.py" />
     <Compile Include="testsupport\time_series.py" />
     <Compile Include="testsupport\__init__.py" />
-    <Compile Include="yaml_config.py" />
     <Compile Include="yaml_state_repository.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>

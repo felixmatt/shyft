@@ -17,27 +17,25 @@ class GisLocationService(GeoLocationRepository):
 
     def __init__(self, server_name="oslwvagi001p", server_port="6080", service_index=4 ):
         super(GeoLocationRepository, self).__init__()
-        self.base_fetcher= BaseGisDataFetcher(geometry=None, server_name=server_name, server_port=server_port, service_index=service_index)
-        self.where = "OBJECTID IN ({})"
-        self.outFields = "MOH, OBJECTID, EIER, ST_NAVN"
+        self.server_name=server_name
+        self.server_port=server_port
+        self.service_index=service_index
 
-        
-
-    def build_query(self,station_ids,epsg_id):
-        q = self.base_fetcher.get_query()
+    def build_query(self,base_fetcher,station_ids,epsg_id):
+        q = base_fetcher.get_query()
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
-            q["where"] = self.where.format(", ".join([str(i) for i in station_ids]))
-        q["outFields"] = self.outFields
+            q["where"] = "OBJECTID IN ({})".format(", ".join([str(i) for i in station_ids]))
+        q["outFields"] = "MOH, OBJECTID, EIER, ST_NAVN"
         q["outSR"] = epsg_id
         return q
     
-    def get_locations(self, location_id_list,epsg_id=32632):
+    def get_locations(self, location_id_list,epsg_id):
         """ contract implementation """
         return self.get_locations_and_info(location_id_list,epsg_id)[0]
 
-    def get_locations_and_info(self, location_id_list,epsg_id=32632):
+    def get_locations_and_info(self, location_id_list,epsg_id):
         """ 
         might be useful for ui/debug etc. 
         Returns
@@ -45,9 +43,9 @@ class GisLocationService(GeoLocationRepository):
         tuple(location-dict(station:position),info-dict(station:info-dict))
 
         """
-        self.outSR = epsg_id
-        q = self.build_query(location_id_list,epsg_id)
-        response = requests.get(self.base_fetcher.url, params=q)
+        base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=None, server_name=self.server_name, server_port=self.server_port, service_index=self.service_index)
+        q = self.build_query(base_fetcher,location_id_list,epsg_id)
+        response = requests.get(base_fetcher.url, params=q)
         locations = {}
         station_info={}
         if response.status_code == 200:

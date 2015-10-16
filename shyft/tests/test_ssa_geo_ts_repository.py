@@ -10,6 +10,7 @@ try:
     from shyft.api import Calendar
     from shyft.api import YMDhms
     from shyft.api import UtcPeriod
+    from math import fabs
     
     
     class SSAGeoTsRepositoryTestCase(unittest.TestCase):
@@ -22,7 +23,22 @@ try:
         Verify that we correctly can read geo-located timeseries from a the SSA service based
         location and ts-store.
         """
-    
+
+        def test_gis_location_service(self):
+            glr=GisLocationService()
+            nea_nid=[598,574]
+            #we test that for the same point, different projections, we get same heights
+            #and approx. different positions
+            utm32_loc=glr.get_locations(nea_nid,32632)
+            utm33_loc=glr.get_locations(nea_nid,32633);
+            self.assertIsNotNone(utm32_loc)
+            self.assertIsNotNone(utm33_loc)
+            for p in nea_nid:
+                self.assertAlmostEqual(utm32_loc[p][2],utm33_loc[p][2])
+                self.assertLess(fabs(utm32_loc[p][1]-utm33_loc[p][1]),10*1000,"expect y same")
+                self.assertGreater(fabs(utm32_loc[p][0]-utm33_loc[p][0]),30*1000,"expect x diff same")
+            #print("Done gis location service testing")
+
         def test_get_timeseries_using_known_service_and_db_content(self):
             utc = Calendar() # always use Calendar() stuff
             met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
@@ -33,7 +49,7 @@ try:
             gis_location_repository=GisLocationService() # this provides the gis locations for my stations
             smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
     
-            geo_ts_repository = GeoTsRepository(
+            geo_ts_repository = GeoTsRepository(epsg_id=32633,
                 geo_location_repository=gis_location_repository,
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,
@@ -58,6 +74,7 @@ try:
             smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
     
             geo_ts_repository = GeoTsRepository(
+                epsg_id=32633,
                 geo_location_repository=gis_location_repository,
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,
@@ -100,6 +117,7 @@ try:
             ]
             ens_config=EnsembleConfig(n_ensembles,ens_station_list)
             geo_ts_repository = GeoTsRepository(
+                epsg_id=32633,
                 geo_location_repository=gis_location_repository,
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,

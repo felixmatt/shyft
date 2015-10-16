@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 import unittest
 
 try:
-    
+    from os import path
     from shyft import api
     from shyft.api import Calendar,YMDhms,Timeaxis,deltahours,TsTransform
     from shyft.api import pt_gs_k 
@@ -27,6 +27,9 @@ try:
     from shyft.orchestration.simulator import SimpleSimulator
     from shyft.repository.interfaces import TsStoreItem
     from shyft.repository.interfaces import TimeseriesStore
+    from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
+    from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
+    from shyft import shyftdata_dir
     
     class InterpolationConfig(object):
         """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
@@ -36,13 +39,13 @@ try:
                     'gradient': -0.6,
                     'gradient_sd': 0.25,
                     'nugget': 0.5,
-                    'range': 200000.0,
+                    'range': 2000000.0,
                     'sill': 25.0,
                     'zscale': 20.0,
                 },
           
                 'idw':{
-                    'max_distance': 200000.0,
+                    'max_distance': 2000000.0,
                     'max_members': 10,
                     'precipitation_gradient': 2.0
                 }
@@ -56,7 +59,9 @@ try:
         def test_run(self):
             
             utc = Calendar()  # No offset gives Utc
-            time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
+            time_axis = Timeaxis(utc.time(YMDhms(2015,10,1, 0)), deltahours(1), 10*24)
+            fc_time_axis = Timeaxis(utc.time(YMDhms(2015,10,1, 0)), deltahours(1), 65)
+            
             interpolation_id = 0
             ptgsk = SimpleSimulator("Tistel-ptgsk", 
                                         interpolation_id, 
@@ -68,7 +73,9 @@ try:
 
             ptgsk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
             ptgsk.run(time_axis, ptgsk_state.get_state(0))
+            
             print("Done simulation, testing that we can extract data from model")
+            
             cids = api.IntVector() # we pull out for all the catchments-id if it's empty
             model=ptgsk.region_model # fetch out  the model 
             sum_discharge=model.statistics.discharge(cids)
@@ -88,13 +95,31 @@ try:
             print("done. now save to db")
             #SmGTsRepository(PROD,FC_PROD)
             save_list=[
-                TsStoreItem(u'/test/sih/shyft/tistel/discharge_m3s',lambda m: TsTransform().to_average(time_axis.start(),deltahours(24),time_axis.size()/24, m.statistics.discharge(cids))),
+                TsStoreItem(u'/test/sih/shyft/tistel/discharge_m3s',lambda m:  m.statistics.discharge(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/temperature',lambda m: m.statistics.temperature(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/precipitation',lambda m: m.statistics.precipitation(cids)),
             ]
+
             tss=TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),save_list)
             
             self.assertTrue(tss.store_ts(ptgsk.region_model))
+
+            print("Run forecast arome")
+            endstate=ptgsk.region_model.state_t.vector_t()
+            ptgsk.region_model.get_states(endstate)
+            ptgsk.geo_ts_repository=self.arome_repository
+            
+            ptgsk.run_forecast(fc_time_axis,fc_time_axis.start(),endstate)
+            fc_save_list=[
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_discharge_m3s',lambda m:  m.statistics.discharge(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_temperature',lambda m: m.statistics.temperature(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_precipitation',lambda m: m.statistics.precipitation(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_radiation',lambda m: m.statistics.radiation(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_rel_hum',lambda m: m.statistics.rel_hum(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_wind_speed',lambda m: m.statistics.wind_speed(cids)),
+                
+            ]
+            TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),fc_save_list).store_ts(ptgsk.region_model)
             print("Done save to db")
             
         def test_ptssk_run(self):
@@ -138,7 +163,6 @@ try:
              - RegionModelRepository - configured with 'Tistel-ptgsk' etc.
             """
             id_list=[1225]
-            epsg_id=32632
             #parameters can be loaded from yaml_config Model parameters..
             pt_params = api.PriestleyTaylorParameter()#*params["priestley_taylor"])
             gs_params = api.GammaSnowParameter()#*params["gamma_snow"])
@@ -149,13 +173,65 @@ try:
             ptgsk_rm_params= pt_gs_k.PTGSKParameter(pt_params, gs_params, ae_params, k_params, p_params)
             ptssk_rm_params= pt_ss_k.PTSSKParameter(pt_params,ss_params,ae_params,k_params,p_params)
             # create the description for 2 models of tistel,ptgsk, ptssk
-            tistel_grid_spec=GridSpecification(epsg_id=epsg_id,x0=362000.0,y0=6765000.0,dx=1000,dy=1000,nx=8,ny=8)
+            tistel_grid_spec=self.grid_spec#
             cfg_list=[
                 RegionModelConfig("Tistel-ptgsk",pt_gs_k.PTGSKModel,ptgsk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list),
                 RegionModelConfig("Tistel-ptssk",pt_ss_k.PTSSKModel,ptssk_rm_params,tistel_grid_spec,"unregulated","FELTNR",id_list)
             ]
             rm_cfg_dict={ x.name:x for x in cfg_list}
             return GisRegionModelRepository(rm_cfg_dict)
+        @property
+        def fc_geo_ts_repository(self):
+            """
+            Returns
+            -------
+             - geo_ts_repository that have met-station-config relevant for tistel
+            """
+
+            met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
+                MetStationConfig(gis_id=218, #0 midtpunkt  
+                                 temperature   =u'/Vikf-Tistel........-T0017A3P_MAN',
+                                 precipitation =u'/Vikf-Tistel........-T0000A5P_MAN',
+                                 radiation     =u'/ENKI/STS/Radiation/Sim.-Hestvollan....-T0006V0B-0119-0.8',
+                                 wind_speed    =u'/Dnmi-Fjærland.Bremu-T0016V3K-A55820-332',
+                                 relative_humidity=u'/SHFT-rel-hum-dummy.-T0002A3R-0103')
+            ]
+            
+            gis_location_repository=GisLocationService() # yaml... geo_location service..this provides the gis locations for my stations
+            smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
+    
+            return GeoTsRepository( #together, the location provider, ts-provider, and the station, we have
+                epsg_id=self.epsg_id,
+                geo_location_repository=gis_location_repository,# a complete geo_ts-repository
+                ts_repository=smg_ts_repository,
+                met_station_list=met_stations,
+                ens_config=None) #pass service info and met_stations 
+
+        @property
+        def epsg_id(self):
+            return self.grid_spec.epsg_id
+
+        @property
+        def grid_spec(self):
+             return GridSpecification(epsg_id=32633,x0=35000.0,y0=6788000.0,dx=1000,dy=1000,nx=16,ny=17)  
+
+        @property
+        def arome_repository(self):
+            """ """
+            base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
+ 
+            EPSG=self.grid_spec.epsg_id
+            bbox=self.grid_spec.bounding_box(EPSG)
+            arome_4 = AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_default2_5km_*.nc", bounding_box=bbox,allow_subset=True)
+            data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity","radiation")
+            arome_rad=AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_test2_5km_*.nc", bounding_box=bbox,allow_subset=True)
+            arome_total=GeoTsRepositoryCollection([arome_4,arome_rad])
+            return arome_total
+            #utc = Calendar()  # No offset gives Utc
+            #time_axis = Timeaxis(utc.time(YMDhms(2015,10, 1, 0)), deltahours(1),65)
+            #arome_tistel=arome_total.get_timeseries(data_names,time_axis.total_period())
+            #print("Got {} time-series types".fomrat(len(arome_tistel)))
+            
             
         @property
         def geo_ts_repository(self):
@@ -177,7 +253,7 @@ try:
                                  precipitation =None,
                                  radiation     =None,
                                  wind_speed    =None,
-                                 relative_humidity=u'/ENKI/STS/Humidity/Soda-Vinje.........-T0002V3B-0103'),
+                                 relative_humidity=u'/SHFT-rel-hum-dummy.-T0002A3R-0103'),
     
                 MetStationConfig(gis_id=684, #2 Vossevangen
                                  temperature   =None,#u'/Dnmi-Vossevangen...-T0017V3K-A51530-1337'
@@ -215,6 +291,7 @@ try:
             smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
     
             return GeoTsRepository( #together, the location provider, ts-provider, and the station, we have
+                epsg_id=self.epsg_id,
                 geo_location_repository=gis_location_repository,# a complete geo_ts-repository
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,

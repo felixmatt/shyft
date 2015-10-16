@@ -4,6 +4,9 @@ import unittest
 try: # we fail with a message on the import, to reduce noise outside statkraft environments
     from statkraft.ssa.environment import SMG_PREPROD as PREPROD
     from statkraft.ssa.environment import FORECAST_PREPROD as FC_PREPROD
+    from statkraft.ssa.environment import SMG_PROD as PROD
+    from statkraft.ssa.environment import FORECAST_PROD as FC_PROD
+    
     from shyft import api
     from shyft.repository.service.ssa_smg_db import SmGTsRepository
     
@@ -81,8 +84,8 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
     
         def test_read_forecast(self):
             utc=api.Calendar()
-            ds=SmGTsRepository(PREPROD,FC_PREPROD)
-            nl=[u'/LTMS-Abisko........-T0000A5P_EC00_ENS',u'/LTMS-Abisko........-T0000A5P_EC00_E04'] #[u'/ICC-test-v9.2']
+            ds=SmGTsRepository(PROD,FC_PROD)
+            nl=[u'/LTMS-Abisko........-T0000A5P_EC00_ENS',u'/LTMS-Abisko........-T0000A5P_EC00_E04',u'/Vikf-Tistel........-T0017A3P_MAN',u'/Vikf-Tistel........-T0000A5P_MAN' ] #[u'/ICC-test-v9.2']
             t0=utc.time(api.YMDhms(2015,10,01,00,00,00))
             t1=utc.time(api.YMDhms(2015,10,10,00,00,00))
             p=api.UtcPeriod(t0,t1)
