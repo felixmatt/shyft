@@ -55,11 +55,23 @@ try:
             
             
     class StatkraftTistelTest(unittest.TestCase):
-    
-        def test_run(self):
-            
+        """
+        This is a test/demo class, showing how we could run catchment Tistel (vik in sogn)
+        using statkraft repositories (incl gis and db-services),
+        and the orchestator SimpleSimulator to do the work.
+
+        """
+        def test_run_observed_then_arome_and_store(self):
+            """
+              Start Tistel 2015.09.01, dummy state with some kirchner water
+               use observations around Tistel (geo_ts_repository)
+               and simulate forwared to 2015.10.01 (store discharge and catchment level precip/temp)
+               then use arome forecast for 65 hours (needs arome for this period in arome-directory)
+               finally store the arome results.
+
+            """
             utc = Calendar()  # No offset gives Utc
-            time_axis = Timeaxis(utc.time(YMDhms(2015,10,1, 0)), deltahours(1), 10*24)
+            time_axis = Timeaxis(utc.time(YMDhms(2015, 9,1, 0)), deltahours(1), 30*24)
             fc_time_axis = Timeaxis(utc.time(YMDhms(2015,10,1, 0)), deltahours(1), 65)
             
             interpolation_id = 0
@@ -72,7 +84,11 @@ try:
             ptgsk_state = DefaultStateRepository(ptgsk.region_model.__class__, n_cells)
 
             ptgsk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
-            ptgsk.run(time_axis, ptgsk_state.get_state(0))
+            s0=ptgsk_state.get_state(0)
+            for i in xrange(s0.size()): #add some juice to get started
+                s0[i].kirchner.q=0.5
+
+            ptgsk.run(time_axis,s0 )
             
             print("Done simulation, testing that we can extract data from model")
             
@@ -106,10 +122,10 @@ try:
 
             print("Run forecast arome")
             endstate=ptgsk.region_model.state_t.vector_t()
-            ptgsk.region_model.get_states(endstate)
-            ptgsk.geo_ts_repository=self.arome_repository
-            
-            ptgsk.run_forecast(fc_time_axis,fc_time_axis.start(),endstate)
+            ptgsk.region_model.get_states(endstate) # get the state at end of obs
+            ptgsk.geo_ts_repository=self.arome_repository #switch to arome here
+            ptgsk.run_forecast(fc_time_axis,fc_time_axis.start(),endstate) # now forecast
+            print("Done forecast")
             fc_save_list=[
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_discharge_m3s',lambda m:  m.statistics.discharge(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_temperature',lambda m: m.statistics.temperature(cids)),
@@ -122,38 +138,6 @@ try:
             TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),fc_save_list).store_ts(ptgsk.region_model)
             print("Done save to db")
             
-        def test_ptssk_run(self):
-            return # just ignore for now
-            utc = Calendar()  # No offset gives Utc
-            time_axis = Timeaxis(utc.time(YMDhms(2015,1, 1, 0)), deltahours(1), 240)
-            interpolation_id = 0
-            simulator_ptssk = SimpleSimulator("Tistel-ptssk", 
-                                        interpolation_id, 
-                                        self.region_model_repository,
-                                        self.geo_ts_repository, 
-                                        self.interpolation_repository, None)
-            n_cells = simulator_ptssk.region_model.size()
-            state_repos_ptssk = DefaultStateRepository(simulator_ptssk.region_model.__class__, n_cells)
-            simulator_ptssk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
-            simulator_ptssk.run(time_axis, state_repos_ptssk.get_state(0))
-            print("Done simulation, testing that we can extract data from model")
-            cids = api.IntVector() # we pull out for all the catchments-id if it's empty
-            model=simulator_ptssk.region_model # fetch out skaugen snow
-            sum_discharge=model.statistics.discharge(cids)
-            self.assertIsNotNone(sum_discharge)
-            avg_temperature = model.statistics.temperature(cids)
-            avg_precipitation = model.statistics.precipitation(cids)
-            self.assertIsNotNone(avg_precipitation)
-            self.assertIsNotNone(avg_temperature)
-            for time_step in xrange(time_axis.size()):
-                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
-                self.assertEquals(precip_raster.size(), n_cells)
-            avg_gs_sca = model.skaugen_state.sca(cids)  # sca skaugen|gamma
-            self.assertIsNotNone(avg_gs_sca)
-            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-            avg_total_stored_water = model.skaugen_response.total_stored_water(cids)
-            self.assertIsNotNone(avg_total_stored_water)
-            print("done.")    
     
         @property
         def region_model_repository(self):
@@ -217,20 +201,27 @@ try:
 
         @property
         def arome_repository(self):
-            """ """
+            """ 
+            This shows how we
+            join together two arome repositories to a repository that gives us all the variabes that we need.
+             arome_4: all except radiation
+             arome_rad: ratiation
+            Return
+            ------
+            Arome repository (inside a GeoTsRepositoryCollection), with all datafiles that matches
+            the filepattrns we currently use for arome downloads.
+
+            """
             base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
  
             EPSG=self.grid_spec.epsg_id
             bbox=self.grid_spec.bounding_box(EPSG)
             arome_4 = AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_default2_5km_*.nc", bounding_box=bbox,allow_subset=True)
-            data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity","radiation")
+            #data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity","radiation")
             arome_rad=AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_test2_5km_*.nc", bounding_box=bbox,allow_subset=True)
             arome_total=GeoTsRepositoryCollection([arome_4,arome_rad])
             return arome_total
-            #utc = Calendar()  # No offset gives Utc
-            #time_axis = Timeaxis(utc.time(YMDhms(2015,10, 1, 0)), deltahours(1),65)
-            #arome_tistel=arome_total.get_timeseries(data_names,time_axis.total_period())
-            #print("Got {} time-series types".fomrat(len(arome_tistel)))
+
             
             
         @property
@@ -238,7 +229,7 @@ try:
             """
             Returns
             -------
-             - geo_ts_repository that have met-station-config relevant for tistel
+             - geo_ts_repository with observed values, that have met-station-config relevant for tistel
             """
 
             met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
