@@ -13,14 +13,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         """
         Simple regression test of arome data respository.
         """
-        return
-        EPSG = 32633
-        upper_left_x = 436100.0
-        upper_left_y = 7417800.0
-        nx = 74
-        ny = 94
-        dx = 1000.0
-        dy = 1000.0
+        EPSG,bbox= self.arome_epsg_bbox()
 
         # Period start
         year = 2015
@@ -37,8 +30,6 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
         f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
 
-        bbox = ([upper_left_x, upper_left_x + nx*dx, upper_left_x + nx*dx, upper_left_x],
-                [upper_left_y, upper_left_y, upper_left_y - ny*dy, upper_left_y - ny*dy])
         ar1 = AromeDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox)
         ar2 = AromeDataRepository(EPSG, base_dir, filename=f2, elevation_file=f1)
         ar1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
@@ -60,20 +51,23 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(r0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
         self.assertTrue(p0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
 
-    def test_get_forecast(self):
-        EPSG = 32633
-        upper_left_x = 436100.0
-        upper_left_y = 7417800.0
+    def arome_epsg_bbox(self):
+        """ this should cut a slice out of test-data located in shyft-data repository/arome  """
+        EPSG = 32632
+        x0 = 436100.0 # lower left
+        y0 = 6823000.0 #lower right
         nx = 74
-        ny = 94
+        ny = 24
         dx = 1000.0
         dy = 1000.0
+        return EPSG,([x0, x0 + nx*dx,x0 + nx*dx,x0], [y0, y0,y0 + ny*dy,y0 + ny*dy])
 
+    def test_get_forecast(self):
         # Period start
         year = 2015
-        month = 10
-        day = 1
-        hour = 0
+        month = 8
+        day = 23
+        hour = 6
         n_hours = 65
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
@@ -82,11 +76,9 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         t_c2 = utc.time(t0) + api.deltahours(7)
 
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        pattern = "arome_metcoop_default2_5km_*.nc"
-        bbox = ([upper_left_x, upper_left_x + nx*dx,
-                 upper_left_x + nx*dx, upper_left_x],
-                [upper_left_y, upper_left_y,
-                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+        pattern = "arome_metcoop*default2_5km_*.nc"
+        EPSG,bbox = self.arome_epsg_bbox()
+        
         repos = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
         data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity")
         tc1_sources = repos.get_forecast(data_names, period, t_c1, None)

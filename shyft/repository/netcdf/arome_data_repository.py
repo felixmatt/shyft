@@ -393,7 +393,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
         raw_data = {}
-        for data_field in input_source_types + additional_extract:
+        for data_field in list(input_source_types) + additional_extract:
             data_names = [x for x,y in self.net_shyft_map.items() if y == data_field]
             if not set(data_names).intersection(data_vars):
                 continue
