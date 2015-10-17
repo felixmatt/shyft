@@ -382,8 +382,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 dv.append("precipitation_amount_acc")
             elif "precipitation_amount_acc" in dv:
                 dv.append("precipitation_amount")
-            assert set([self.shyft_net_map[df]
-                        for df in input_source_types]).issubset(set(dv))
+            assert set(possible_data_vars).issubset(set(dv)) # fail if this netcdf file does not contain what we are looking for
 
         additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks

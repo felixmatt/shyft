@@ -36,24 +36,26 @@ try:
     
         """
         
-            
+        @property
+        def epsg_id(self):
+            return 32633   
     
         def test_catchment_fetcher_using_regulated_power_plant_id(self):
             id_list=[236] #RanaLangvatn power_plant_id
-            cf=CatchmentFetcher("regulated","POWER_PLANT_ID")
+            cf=CatchmentFetcher("regulated","POWER_PLANT_ID",self.epsg_id)
             r=cf.fetch(id_list=id_list);
             self.assertIsNotNone(r)
             self.assertIsNotNone(r[id_list[0]])
     
         def test_catchment_fetcher_using_regulated_catch_id(self):
             id_list=[2402] #stuggusjøen catch_id
-            cf=CatchmentFetcher("regulated","CATCH_ID")
+            cf=CatchmentFetcher("regulated","CATCH_ID",self.epsg_id)
             r=cf.fetch(id_list=id_list);
             self.assertIsNotNone(r)
             self.assertIsNotNone(r[id_list[0]])
     
         def test_catchment_fetcher_using_unregulated_feld_nr(self):
-            cf=CatchmentFetcher("unregulated","FELTNR")
+            cf=CatchmentFetcher("unregulated","FELTNR",self.epsg_id)
             id_list=[1225]
             r=cf.fetch(id_list=id_list)
             self.assertIsNotNone(r)
@@ -77,7 +79,7 @@ try:
     
         def test_reservoir_fetcher(self):
             gs=GridSpecification(32632,x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
-            rf=ReservoirFetcher(gs.geometry,epsg_id=32632)
+            rf=ReservoirFetcher(epsg_id=gs.epsg_id,geometry=gs.geometry)
             rpts=rf.fetch()
             self.assertIsNotNone(rpts)
             self.assertEquals(22,len(rpts)) 
