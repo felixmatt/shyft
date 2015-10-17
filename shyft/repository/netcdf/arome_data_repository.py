@@ -282,7 +282,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Boolean index array
         """
         # Get coordinate system for arome data
-        data_cs = "{} +towgs84=0,0,0".format(data_cs)  # Add missing field
+        data_cs = "{}".format(data_cs)  # Add missing field +towgs84=0,0,0
         data_proj = Proj(data_cs)
         target_proj = Proj(target_cs)
 
@@ -506,9 +506,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in data.iteritems():
-            tpe = self.source_type_map[name] # TODO: SIH: this hack is to ensure arome coordinates gets right.
-                                             # by comparing the z, x-coordiate is 2 km to high, and y-coordinate 17km..
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(pts[idx][0]-2000,pts[idx][1]-17000.0,pts[idx][2]),
+            tpe = self.source_type_map[name] 
+            res[name] = tpe.vector_t([tpe(api.GeoPoint(pts[idx][0],pts[idx][1],pts[idx][2]),
                                       ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
         return res
 

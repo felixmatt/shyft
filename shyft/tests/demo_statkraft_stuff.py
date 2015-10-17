@@ -44,7 +44,7 @@ class GisRegionModelDemo(object):
         color_map = {"forest": 'g', "lake": 'b', "glacier": 'r', "cell": "0.75", "reservoir": "purple"}
     
         extent = grid_spec.geometry[0], grid_spec.geometry[2], grid_spec.geometry[1], grid_spec.geometry[3]
-        ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
+        #ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
     
         for catchment_cells in cf.cell_data.itervalues():
             self.add_plot_polygons(ax, [cell["cell"] for cell in catchment_cells], color=color_map["cell"])
@@ -79,7 +79,7 @@ class GisRegionModelDemo(object):
 
                 arome_ts=arome4.get_timeseries(["temperature"],utc_period)
                 arome_points=[gts.mid_point() for gts in arome_ts['temperature']]
-                #ax.scatter( [pt.x for pt in arome_points ],[pt.y for pt in arome_points],c=[pt.z for pt in arome_points],alpha=0.5,cmap='gray',s=100)#, facecolors=('r'))
+                ax.scatter( [pt.x for pt in arome_points ],[pt.y for pt in arome_points],c=[pt.z for pt in arome_points],alpha=0.5,cmap='gray',s=100)#, facecolors=('r'))
 
 
         
