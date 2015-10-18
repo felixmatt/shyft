@@ -1,7 +1,7 @@
 #pragma once
 
 /// Windows portability stuff goes here
-#ifdef WIN32
+#ifdef _MSC_VER
 #if _MSC_VER < 1800
 namespace std {
 	static inline bool isfinite(double x) {return _finite(x)!=0;}
@@ -10,5 +10,4 @@ namespace std {
 }
 
 #endif
-#define not !
 #endif
