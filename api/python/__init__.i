@@ -64,6 +64,7 @@
     %include <windows.i>
     %include <std_string.i>
     %include <std_vector.i>
+    %include <stl.i>
     %include <exception.i>
 
 
@@ -91,6 +92,21 @@
 // Since we have include swig-mapping for std types, plus our declared shared_ptr, this is a walk in the park :-)
 //
 
+//
+// Exception handling mapping std::exception to Python
+%exception {
+  try {
+    $action
+  } catch (const std::runtime_error& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch ( const std::invalid_argument& e){
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (const std::exception& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (...) {
+    SWIG_exception(SWIG_UnknownError,"c++ unknown exception");
+  }
+}
 
 ///
 // In python, we need CamelCase for class-names.
@@ -324,17 +340,7 @@ RelHumSource.vector_t = RelHumSourceVector
 WindSpeedSource.vector_t = WindSpeedSourceVector
 %}
 
-//
-// Exception handling mapping std::exception to Python
-%exception {
-  try {
-    $action
-  } catch (const std::runtime_error& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  } catch (const std::exception& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  }
-}
+
 
 %init %{
     import_array();
