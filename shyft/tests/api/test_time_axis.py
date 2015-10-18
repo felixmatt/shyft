@@ -2,7 +2,7 @@ from shyft import api
 import unittest
 
 
-class TimeAxisTestCase(unittest.TestCase):
+class TimeAxis(unittest.TestCase):
     """Verify and illustrate Timeaxis
        defined as n periods non-overlapping ascending
         
@@ -35,6 +35,17 @@ class TimeAxisTestCase(unittest.TestCase):
         s=str(self.ta)
         self.assertTrue(len(s)>10)
     
+    def test_point_timeaxis_(self):
+        """ 
+        A point time axis takes n+1 points do describe n-periods, where
+        each period is defined as [ point_i .. point_i+1 >
+        """
+        tap=api.PointTimeaxis(api.UtcTimeVector([t for t in xrange(self.t,self.t+(self.n+1)*self.d,self.d)]))
+        self.assertEquals(tap.size(),self.ta.size())
+        for i in xrange(self.ta.size()):
+            self.assertEquals(tap(i),self.ta(i))
+        s=str(tap)
+        self.assertTrue(len(s)>0)
         
 if __name__ == "__main__":
     unittest.main()

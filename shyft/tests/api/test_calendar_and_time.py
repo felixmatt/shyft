@@ -3,7 +3,7 @@ import unittest
 import datetime as dt
 
 
-class CalendarTestCase(unittest.TestCase):
+class Calendar(unittest.TestCase):
     """Verify and illustrate the Calendar & utctime from the api core, using
     pyunit. Note that the Calendar not yet support local/dst semantics (but
     plan to do so) Nevertheless, keeping it here allow users of api-Core to
