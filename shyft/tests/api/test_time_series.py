@@ -4,7 +4,7 @@ import numpy as np
 import unittest
 
 
-class TimeSeriesTestCase(unittest.TestCase):
+class TimeSeries(unittest.TestCase):
     """Verify and illustrate TimeSeries
      
      a) point time-series:

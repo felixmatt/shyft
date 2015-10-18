@@ -3,7 +3,7 @@ from shyft.api import pt_gs_k
 import unittest
 import numpy as np
 
-class ShyftApiTestCase(unittest.TestCase):
+class ShyftApi(unittest.TestCase):
 
 
     def _create_std_ptgsk_param(self):

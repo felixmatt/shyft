@@ -7,7 +7,7 @@ from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
 
 
-class BasicModelCreateAndRun(unittest.TestCase):
+class RegionModel(unittest.TestCase):
 
     @staticmethod
     def build_model(model_t,parameter_t, model_size, num_catchments=1):

@@ -34,6 +34,22 @@
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state, shyft::core::pt_gs_k::state_collector, shyft::core::pt_gs_k::all_response_collector> > )
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_gs_k::parameter, shyft::core::environment_t, shyft::core::pt_gs_k::state, shyft::core::pt_gs_k::null_collector, shyft::core::pt_gs_k::discharge_collector> > )
 
+
+// exceptions need to go here:
+%exception {
+  try {
+    $action
+  } catch (const std::runtime_error& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch ( const std::invalid_argument& e){
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (const std::exception& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (...) {
+    SWIG_exception(SWIG_UnknownError,"c++ unknown exception");
+  }
+}
+
 %rename(PTGSKResponse)    shyft::core::pt_gs_k::response;
 %rename(PTGSKState)       shyft::core::pt_gs_k::state;
 %rename(PTGSKParameter)   shyft::core::pt_gs_k::parameter;
@@ -116,16 +132,6 @@ PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
 PTGSKState.serializer_t= PTGSKStateIo
 %}
-
-%exception {
-  try {
-    $action
-  } catch (const std::runtime_error& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  } catch (const std::exception& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  }
-}
 
 
 %init %{

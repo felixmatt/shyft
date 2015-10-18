@@ -34,6 +34,21 @@
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> > )
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> > )
 
+// exceptions need to go here:
+%exception {
+  try {
+    $action
+  } catch (const std::runtime_error& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch ( const std::invalid_argument& e){
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (const std::exception& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (...) {
+    SWIG_exception(SWIG_UnknownError,"c++ unknown exception");
+  }
+}
+
 %rename(PTSSKResponse)    shyft::core::pt_ss_k::response;
 %rename(PTSSKState)       shyft::core::pt_ss_k::state;
 %rename(PTSSKParameter)   shyft::core::pt_ss_k::parameter;
@@ -118,15 +133,7 @@ PTSSKState.serializer_t = PTSSKStateIo
 
 %}
 
-%exception {
-  try {
-    $action
-  } catch (const std::runtime_error& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  } catch (const std::exception& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  }
-}
+
 
 
 %init %{
