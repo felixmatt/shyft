@@ -9,7 +9,7 @@ from os import path
 import unittest
 
 from shyft.repository.netcdf import RegionModelRepository
-from shyft.repository.collection import GeoTsRepositoryCollection
+from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository
 from shyft.repository.netcdf import GeoTsRepository
 from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
@@ -142,6 +142,7 @@ class SimulationTestCase(unittest.TestCase):
         except Exception as e:
             print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****")
             print("****{:^73}****".format(e.message))
+            self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****\n\t exception:{}".format(e.message))
             return
             
         simulator = SimpleSimulator(region_id,

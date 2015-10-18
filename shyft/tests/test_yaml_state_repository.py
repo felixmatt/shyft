@@ -1,13 +1,9 @@
 import unittest
 from os import path
-from os import makedirs
 from os import remove
 import glob
-#from shyft import shyftdata_dir
 from shyft.api import Calendar,YMDhms
-#from shyft.api import UtcPeriod
 from shyft.api import GammaSnowState,KirchnerState
-from shyft.repository.interfaces import StateInfo
 from shyft.repository.yaml_state_repository import YamlStateRepository
 from shyft.api.pt_gs_k import PTGSKState,PTGSKStateVector
 
