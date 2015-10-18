@@ -1,11 +1,7 @@
 ﻿from __future__ import print_function
 from numpy import random
-from datetime import datetime
 import unittest
-import yaml
-from os import path
 
-from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
