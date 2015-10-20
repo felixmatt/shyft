@@ -1,7 +1,6 @@
 ﻿from __future__ import absolute_import
 import unittest
 from os import path
-from os import makedirs
 from os import remove
 import glob
 from shyft.repository.service.yaml_geo_location_repository import YamlGeoLocationRepository,YamlGeoLocationError
