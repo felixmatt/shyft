@@ -1,6 +1,5 @@
 from shyft import api
 import unittest
-from astropy.units import TRy
 
 
 class GeoCellData(unittest.TestCase):
