@@ -1,3 +1,4 @@
+from builtins import range
 from shyft import api
 import unittest
 
@@ -40,9 +41,9 @@ class TimeAxis(unittest.TestCase):
         A point time axis takes n+1 points do describe n-periods, where
         each period is defined as [ point_i .. point_i+1 >
         """
-        tap=api.PointTimeaxis(api.UtcTimeVector([t for t in xrange(self.t,self.t+(self.n+1)*self.d,self.d)]))
+        tap=api.PointTimeaxis(api.UtcTimeVector([t for t in range(self.t,self.t+(self.n+1)*self.d,self.d)]))
         self.assertEquals(tap.size(),self.ta.size())
-        for i in xrange(self.ta.size()):
+        for i in range(self.ta.size()):
             self.assertEquals(tap(i),self.ta(i))
         s=str(tap)
         self.assertTrue(len(s)>0)
