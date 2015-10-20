@@ -1,4 +1,6 @@
 ﻿from __future__ import print_function
+from six import iteritems
+
 from numpy import random
 import unittest
 
@@ -6,7 +8,11 @@ from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
 
-
+try:
+    xrange
+except NameError:
+    xrange = range
+    
 class RegionModel(unittest.TestCase):
 
     @staticmethod
@@ -38,10 +44,9 @@ class RegionModel(unittest.TestCase):
               "iso_pot_energy": 0.0,
               "temp_swe": 0.0}
         kirchner = {"q": 0.25}
-        pt.update({(k, v) for k, v in kwargs.iteritems() if k in pt})
-        gs.update({(k, v) for k, v in kwargs.iteritems() if k in gs})
-        kirchner.update({(k, v) for k, v in kwargs.iteritems()
-                         if k in kirchner})
+        pt.update({(k, v) for k, v in iteritems(kwargs) if k in pt})
+        gs.update({(k, v) for k, v in iteritems(kwargs) if k in gs})
+        kirchner.update({(k, v) for k, v in iteritems( kwargs) if k in kirchner})
         state = pt_gs_k.PTGSKState()
         state.gs.albedo = gs["albedo"]
         state.gs.lwc = gs["lwc"]
@@ -115,7 +120,7 @@ class RegionModel(unittest.TestCase):
         model.run_interpolation(
             model_interpolation_parameter, time_axis,
             self.create_dummy_region_environment(time_axis,
-                                                 model.get_cells()[num_cells/2].geo.mid_point()))
+                                                 model.get_cells()[int(num_cells/2)].geo.mid_point()))
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
