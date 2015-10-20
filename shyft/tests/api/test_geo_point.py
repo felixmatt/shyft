@@ -26,7 +26,7 @@ class GeoPoint(unittest.TestCase):
         a=api.GeoPoint(1,2,3)
         b=api.GeoPoint(3,4,8)
         d=api.GeoPoint_difference(b,a)
-        self.assertAlmostEquals(d.x,b.x-a.x)
+        self.assertAlmostEqual(d.x,b.x-a.x)
         
     def test_xy_distance(self):
         a=api.GeoPoint(1,2,3)
