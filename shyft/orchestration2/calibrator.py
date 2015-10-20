@@ -98,7 +98,7 @@ class Calibrator(object):
         }
 
         # Existing model parameters structure
-        model_file = self._model_config._config_file
+        model_file = self._model_config.model_config_file
         model_dict = yaml.load(open(model_file))
         model = model_dict['parameters']['model']
         # Overwrite overlapping params

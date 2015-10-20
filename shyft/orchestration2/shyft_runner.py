@@ -49,8 +49,8 @@ def main_calibration_runner(config_file, section):
     calibrator.init(time_axis)
     calibr_results = calibrator.calibrate(tol=1.0e-5)
     print("Calibration result:", calibr_results)
-    if hasattr(config, "calibrated_model"):
-        calibrator.save_calibrated_model(config.calibrated_model, calibr_results)
+    if hasattr(config, "calibrated_model_file"):
+        calibrator.save_calibrated_model(config.calibrated_model_file, calibr_results)
     return calibrator
 
 
