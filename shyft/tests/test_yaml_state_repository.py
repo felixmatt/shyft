@@ -1,3 +1,5 @@
+from builtins import range
+
 import unittest
 from os import path
 from os import remove
@@ -26,7 +28,7 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
 
     def _create_state_vector(self,n):
         r=PTGSKStateVector()
-        for i in xrange(n):
+        for i in range(n):
             r.push_back(PTGSKState(GammaSnowState(albedo=0.1*i,lwc=0.1*i),KirchnerState(q=0.3+i)))
         return r;
     
@@ -64,7 +66,7 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         # extra test, verify that we really stored the state (using kirchner q)
         state_1=state_repository.get_state(state_id_1)
         self.assertEquals(n_cells,state_1.size(),"expect to get back state with same number of cells")
-        for i in xrange(n_cells):
+        for i in range(n_cells):
             self.assertAlmostEqual(state_1[i].kirchner.q, state_vector[i].kirchner.q, 3, "state repository should preserve state...")
         #now remove state
         state_repository.delete_state(state_id_1)
