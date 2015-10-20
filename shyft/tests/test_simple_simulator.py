@@ -141,10 +141,8 @@ class SimulationTestCase(unittest.TestCase):
             geo_ts_repository = AromeDataRepository(epsg, base_dir, filename=pattern, allow_subset=True)
         except Exception as e:
             print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****")
-            print("****{:^73}****".format(e.message))
-            self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****\n\t exception:{}".format(e.message))
-            return
-            
+            print("****{}****".format(e))
+            self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****\n\t exception:{}".format(e))
         simulator = SimpleSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
