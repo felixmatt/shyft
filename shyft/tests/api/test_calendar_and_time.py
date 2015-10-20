@@ -30,7 +30,7 @@ class Calendar(unittest.TestCase):
         self.assertEqual(a.day, c.day, 'should leave same day')
 
     def test_conversion_roundtrip(self):
-        c1 = api.YMDhms(2000, 01, 02, 03, 04, 05)
+        c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
         t1 = self.std.time(c1)
         c2 = self.std.calendar_units(t1)
         self.assertEqual(c1.year, c2.year, 'roundtrip should keep year')
@@ -47,13 +47,13 @@ class Calendar(unittest.TestCase):
         self.assertLess(abs(a - b), 2, 'Should be less than 2 seconds')
 
     def test_utc_time_to_string(self):
-        c1 = api.YMDhms(2000, 01, 02, 03, 04, 05)
+        c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
         t = self.std.time(c1)
         s = self.std.to_string(t)
         self.assertEqual(s, "2000.01.02T03:04:05")
 
     def test_UtcPeriod_to_string(self):
-        c1 = api.YMDhms(2000, 01, 02, 03, 04, 05)
+        c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
         t = self.utc.time(c1)
         p = api.UtcPeriod(t, t + api.deltahours(1))
         s = p.to_string()
@@ -62,7 +62,7 @@ class Calendar(unittest.TestCase):
         self.assertEqual(s2, "[2000.01.02T03:04:05,2000.01.02T04:04:05>")
 
     def test_UtcPeriod_str(self):
-        c1 = api.YMDhms(2000, 01, 02, 03, 04, 05)
+        c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
         t = self.utc.time(c1)
         p = api.UtcPeriod(t, t + api.deltahours(1))
         s = str(p)
