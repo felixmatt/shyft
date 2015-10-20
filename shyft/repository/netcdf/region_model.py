@@ -5,6 +5,9 @@ Note: It does require a specific content/layout of the supplied netcdf files
 """
 
 from __future__ import absolute_import
+from builtins import range
+from six import iteritems
+
 from abc import ABCMeta, abstractmethod
 
 from os import path
@@ -193,8 +196,8 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                 y_corners[0] = ycoord[0] - dy/2.0
                 xc, yc = transform(source_proj, target_proj, *np.meshgrid(x_corners, y_corners))
                 areas = np.empty((len(xcoord), len(ycoord)), dtype=xcoord.dtype)
-                for i in xrange(len(xcoord)):
-                    for j in xrange(len(ycoord)):
+                for i in range(len(xcoord)):
+                    for j in range(len(ycoord)):
                         pts = [(xc[j, i],         yc[j, i]),
                                (xc[j, i + 1],     yc[j, i + 1]),
                                (xc[j + 1, i + 1], yc[j + 1, i + 1]),
@@ -237,10 +240,10 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
                     "skaugen": "skaugen"}
         region_parameter = self._region_model.parameter_t()
-        for p_type_name, value_ in self._mconf.model_parameters().iteritems():
+        for p_type_name, value_ in iteritems( self._mconf.model_parameters()):
             if p_type_name in name_map:
                 sub_param = getattr(region_parameter, name_map[p_type_name])
-                for p, v in value_.iteritems():
+                for p, v in iteritems(value_):
                     setattr(sub_param, p, v)
             elif p_type_name == "p_corr_scale_factor":
                 region_parameter.p_corr.scale_factor = value_
@@ -258,13 +261,13 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
         # Construct catchment overrides
         catchment_parameters = self._region_model.parameter_t.map_t()
-        for k, v in self._rconf.parameter_overrides().iteritems():
+        for k, v in iteritems(self._rconf.parameter_overrides()):
             if k in c_ids:
                 param = self._region_model.parameter_t(region_parameter)
-                for p_type_name, value_ in v.iteritems():
+                for p_type_name, value_ in iteritems(v):
                     if p_type_name in name_map:
                         sub_param = getattr(param, name_map[p_type_name])
-                        for p, v in value_.iteritems():
+                        for p, v in iteritems(value_):
                             setattr(sub_param, p, v)
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
