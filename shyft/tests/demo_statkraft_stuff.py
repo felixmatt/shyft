@@ -2,7 +2,7 @@
 from descartes import PolygonPatch
 from matplotlib.collections import PatchCollection
 from matplotlib import cm
-from itertools import imap
+
 from os import path
 from shyft.repository.service.gis_location_service import GisLocationService
 from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
@@ -30,7 +30,7 @@ class GisRegionModelDemo(object):
                 ps.extend([p for p in polygon])
             else:
                 ps.append(polygon)
-        patches = imap(PolygonPatch, [p for p in ps])
+        patches = map(PolygonPatch, [p for p in ps])
         ax.add_collection(PatchCollection(patches, facecolors=(color,), linewidths=0.1, alpha=0.3))
     
     def plot_region_model(self,catchment_type,identifier,x0, y0, dx, dy, nx, ny, catch_indicies,station_ids,epsg_id):
@@ -44,11 +44,11 @@ class GisRegionModelDemo(object):
         color_map = {"forest": 'g', "lake": 'b', "glacier": 'r', "cell": "0.75", "reservoir": "purple"}
     
         extent = grid_spec.geometry[0], grid_spec.geometry[2], grid_spec.geometry[1], grid_spec.geometry[3]
-        #ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
+        ax.imshow(cf.elevation_raster, origin='upper', extent=extent, cmap=cm.gray)
     
-        for catchment_cells in cf.cell_data.itervalues():
+        for catchment_cells in iter(cf.cell_data.values()):
             self.add_plot_polygons(ax, [cell["cell"] for cell in catchment_cells], color=color_map["cell"])
-        for catchment_land_type in cf.catchment_land_types.itervalues():
+        for catchment_land_type in iter(cf.catchment_land_types.values()):
             for k,v in iter(catchment_land_type.items()):
                 self.add_plot_polygons(ax, v, color=color_map[k])
     
@@ -77,9 +77,9 @@ class GisRegionModelDemo(object):
                     api.Calendar().time(api.YMDhms(2015,10,2,0,0,0)) 
                 )
 
-                arome_ts=arome4.get_timeseries(["temperature"],utc_period)
-                arome_points=[gts.mid_point() for gts in arome_ts['temperature']]
-                ax.scatter( [pt.x for pt in arome_points ],[pt.y for pt in arome_points],c=[pt.z for pt in arome_points],alpha=0.5,cmap='gray',s=100)#, facecolors=('r'))
+                #arome_ts=arome4.get_timeseries(["temperature"],utc_period)
+                #arome_points=[gts.mid_point() for gts in arome_ts['temperature']]
+                #ax.scatter( [pt.x for pt in arome_points ],[pt.y for pt in arome_points],c=[pt.z for pt in arome_points],alpha=0.5,cmap='gray',s=100)#, facecolors=('r'))
 
 
         
