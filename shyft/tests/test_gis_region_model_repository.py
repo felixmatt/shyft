@@ -157,10 +157,10 @@ try:
 
 
 except ImportError as ie:
-    if 'statkraft.ssa' in ie.message:
-        print("(Test require statkraft.script environment to run: {})".format(ie.message))
+    if 'statkraft' in str(ie):
+        print("(Test require statkraft.script environment to run: {})".format(ie))
     else:
-        print("ImportError: {}".format(ie.message))
+        print("ImportError: {}".format(ie))
 
 
 if __name__ == '__main__':

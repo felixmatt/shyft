@@ -115,10 +115,10 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
             self.assertEqual(t1ssa,t1)
 
 except ImportError as ie:
-    if 'statkraft.ssa' in ie.message:
-        print("(Test require statkraft.script environment to run: {})".format(ie.message))
+    if 'statkraft' in str(ie):
+        print("(Test require statkraft.script environment to run: {})".format(ie))
     else:
-        print("ImportError: {}".format(ie.message))
+        print("ImportError: {}".format(ie))
         
 if __name__ == '__main__':
     unittest.main()
