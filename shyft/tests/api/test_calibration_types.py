@@ -4,9 +4,9 @@ import unittest
 import numpy as np
 
 try:
-    xrange
+    range
 except NameError:
-    xrange = range
+    range = range
     
 class ShyftApi(unittest.TestCase):
 
@@ -104,14 +104,14 @@ class ShyftApi(unittest.TestCase):
 
     def test_IntVector(self):
         v1 = api.IntVector() # empy
-        v2 = api.IntVector([i for i in xrange(10)]) # by list
+        v2 = api.IntVector([i for i in range(10)]) # by list
         v3 = api.IntVector([1,2,3]) # simple list
         self.assertEqual(v2.size(),10)
         self.assertEqual(v1.size(),0)
         self.assertEqual(len(v3),3)
     
     def test_DoubleVector(self):
-        v1 = api.DoubleVector([i for i in xrange(10)]) # empy
+        v1 = api.DoubleVector([i for i in range(10)]) # empy
         v2 = api.DoubleVector.FromNdArray(np.arange(0,10.0,0.5))
         v3 = api.DoubleVector(np.arange(0,10.0,0.5))
         self.assertEqual(len(v1),10)

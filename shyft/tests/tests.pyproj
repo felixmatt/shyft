@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9d4b92c2-21e7-4de4-8295-fe87cb43cda3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>demo_statkraft_stuff.py</StartupFile>
+    <StartupFile>test_ssa_smg_db.py</StartupFile>
     <SearchPath>..\..\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

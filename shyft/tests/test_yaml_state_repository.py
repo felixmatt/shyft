@@ -35,7 +35,7 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
     def test_create_empty_gives_no_state(self):
         state_repository= YamlStateRepository(self._test_state_directory)
         self.assertIsNotNone(state_repository)
-        self.assertEquals(len(state_repository.find_state()),0,"We expect 0 states for empty repository")
+        self.assertEqual(len(state_repository.find_state()),0,"We expect 0 states for empty repository")
         
     def test_crudf_cycle(self):
         """
@@ -62,20 +62,20 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         self.assertNotEquals(state_id_1,state_id_2,"storing two state, same model, same time, each state should be stored with a unique id")
         # now we should have two states in the repository
         state_infos=state_repository.find_state()
-        self.assertEquals(2,len(state_infos),"We just stored two, expect two back..")
+        self.assertEqual(2,len(state_infos),"We just stored two, expect two back..")
         # extra test, verify that we really stored the state (using kirchner q)
         state_1=state_repository.get_state(state_id_1)
-        self.assertEquals(n_cells,state_1.size(),"expect to get back state with same number of cells")
+        self.assertEqual(n_cells,state_1.size(),"expect to get back state with same number of cells")
         for i in range(n_cells):
             self.assertAlmostEqual(state_1[i].kirchner.q, state_vector[i].kirchner.q, 3, "state repository should preserve state...")
         #now remove state
         state_repository.delete_state(state_id_1)
         # check that we got just one left, and that it is the correct one..
         state_list=state_repository.find_state()
-        self.assertEquals(1,len(state_list))
-        self.assertEquals(state_list[0].region_model_id,region_model_id)
-        self.assertEquals(state_list[0].utc_timestamp,utc_timestamp)
-        self.assertEquals(state_list[0].state_id,state_id_2)
+        self.assertEqual(1,len(state_list))
+        self.assertEqual(state_list[0].region_model_id,region_model_id)
+        self.assertEqual(state_list[0].utc_timestamp,utc_timestamp)
+        self.assertEqual(state_list[0].state_id,state_id_2)
         
     def test_find_with_region_model_filter(self):
         cal=Calendar()
@@ -91,9 +91,9 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         state_repository.put_state("tokke-ptgsk", utc_timestamp, state_vector, tags)
         all_states= state_repository.find_state()
         neanidelv_states=state_repository.find_state(region_model_id)
-        self.assertEquals(2,len(all_states))
-        self.assertEquals(1,len(neanidelv_states))
-        self.assertEquals(neanidelv_states[0].region_model_id,region_model_id)
+        self.assertEqual(2,len(all_states))
+        self.assertEqual(1,len(neanidelv_states))
+        self.assertEqual(neanidelv_states[0].region_model_id,region_model_id)
         
     def test_find_with_region_model_and_time_filter(self):
         cal=Calendar()
@@ -108,13 +108,13 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         state_id_2=state_repository.put_state(region_model_id, cal.time(YMDhms(2001,1,2,0,0,0)), state_vector, tags)
         all_states= state_repository.find_state()
         neanidelv_states=state_repository.find_state(region_model_id)
-        self.assertEquals(2,len(all_states))
-        self.assertEquals(2,len(neanidelv_states))
+        self.assertEqual(2,len(all_states))
+        self.assertEqual(2,len(neanidelv_states))
         most_recent_state_before_time=state_repository.find_state(region_model_id,cal.time(YMDhms(2001,1,1,0,0,0)))
-        self.assertEquals(1,len(most_recent_state_before_time))
-        self.assertEquals(state_id_1,most_recent_state_before_time[0].state_id)
-        self.assertEquals(0,len(state_repository.find_state(region_model_id,cal.time(YMDhms(2000,12,31,23,59,59)))))
-        self.assertEquals(state_id_2,state_repository.find_state(region_model_id,cal.time(YMDhms(2002,1,1,0,0,0)))[0].state_id)
+        self.assertEqual(1,len(most_recent_state_before_time))
+        self.assertEqual(state_id_1,most_recent_state_before_time[0].state_id)
+        self.assertEqual(0,len(state_repository.find_state(region_model_id,cal.time(YMDhms(2000,12,31,23,59,59)))))
+        self.assertEqual(state_id_2,state_repository.find_state(region_model_id,cal.time(YMDhms(2002,1,1,0,0,0)))[0].state_id)
         
 if __name__ == '__main__':
     unittest.main()

@@ -128,8 +128,8 @@ try:
             ts_types= ['temperature','precipitation']
             ens_geo_ts_dict = geo_ts_repository.get_forecast_ensemble(ts_types,utc_period=utc_period,t_c=None,geo_location_criteria=None)
             self.assertIsNotNone(ens_geo_ts_dict)
-            self.assertEquals(ens_config.n_ensembles,len(ens_geo_ts_dict))
-            for i in xrange(ens_config.n_ensembles):
+            self.assertEqual(ens_config.n_ensembles,len(ens_geo_ts_dict))
+            for i in range(ens_config.n_ensembles):
                 for ts_type in ts_types:
                     self.assertTrue(ens_geo_ts_dict[i].has_key(ts_type),"we ecpect to find an entry for each requested type (it could be empty list though")
                     self.assertTrue(ens_geo_ts_dict[i][ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")

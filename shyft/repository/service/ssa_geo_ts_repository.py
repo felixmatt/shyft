@@ -272,7 +272,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         ens_result=[] #when done, it's filled with n_ensembles of 'result' dictionaries, one for each ensemble-member
         # get out the dimension of the ensemble from ens_station_list, .. each station needs the same number of ens.members.., otherwise in trouble..
         # because we need correlated temperature/precipitation/radiation (each of them belong to a certain ens.member).
-        for i in xrange(self.ens_config.n_ensembles):
+        for i in range(self.ens_config.n_ensembles):
             result={}
             for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
                 result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading

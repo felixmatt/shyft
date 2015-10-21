@@ -58,8 +58,8 @@ class GridSpecification(BoundingRegion):
         a list of (shapely box'es, elevation) flat list for nx,ny
         """
         r = []
-        for i in xrange(self.nx):
-            for j in xrange(self.ny):
+        for i in range(self.nx):
+            for j in range(self.ny):
                 r.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[j,i]))) 
         return r
 

@@ -102,7 +102,7 @@ class TimeSeries(unittest.TestCase):
         ts2=tsf.create_time_point_ts(self.ta.total_period(),t,v)
         tax=api.Timeaxis(self.ta.start()+api.deltaminutes(30),api.deltahours(1),self.ta.size())
         avg1=api.AverageAccessorTs(ts1,tax)
-        self.assertEquals(avg1.size(),tax.size())
+        self.assertEqual(avg1.size(),tax.size())
         self.assertIsNotNone(ts2)
 
     def test_ts_transform(self):
