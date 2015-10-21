@@ -1,4 +1,4 @@
-from builtins import range
+﻿from builtins import range
 
 import unittest
 from os import path
@@ -59,7 +59,7 @@ class YamlStateRepositoryTestCase(unittest.TestCase):
         # assert that we got two unique state_id
         self.assertIsNotNone(state_id_1,"We expect back a unique id")
         self.assertIsNotNone(state_id_2,"We expect back a unique id")
-        self.assertNotEquals(state_id_1,state_id_2,"storing two state, same model, same time, each state should be stored with a unique id")
+        self.assertNotEqual(state_id_1,state_id_2,"storing two state, same model, same time, each state should be stored with a unique id")
         # now we should have two states in the repository
         state_infos=state_repository.find_state()
         self.assertEqual(2,len(state_infos),"We just stored two, expect two back..")

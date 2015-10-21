@@ -324,7 +324,7 @@ class CellDataFetcher(object):
         #all_forest  =ltf.fetch(name="forest")
         #prep_forest=prep(all_forest)
         print ("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
-        for catchment_id, catchment in catchments.iteritems():
+        for catchment_id, catchment in iter(catchments.items()):
             if not catchment_id in catchment_land_types: # SiH: default landtype, plus the special ones fetched below
                 catchment_land_types[catchment_id] = {}
             if prep_lakes.intersects(catchment):
@@ -365,11 +365,11 @@ class CellDataFetcher(object):
         # Gather cells on a per catchment basis, and compute the area fraction for each landtype
         print ("Done with catchment cell loop, calc fractions")
         cell_data = {}
-        for catchment_id in catchments.iterkeys():
+        for catchment_id in catchments.keys():
             cell_data[catchment_id] = []
             for cell, elevation in catchment_cells[catchment_id]:
                 data = {"cell": cell, "elevation": elevation}
-                for land_type_name, land_type_shape in catchment_land_types[catchment_id].iteritems():
+                for land_type_name, land_type_shape in iter(catchment_land_types[catchment_id].items()):
                     data[land_type_name] = cell.intersection(land_type_shape).area/cell.area
                 cell_data[catchment_id].append(data)
         self.cell_data = cell_data
@@ -536,7 +536,7 @@ class GisRegionModelRepository(RegionModelRepository):
         cell_vector = rm.region_model_type.cell_t.vector_t()
         radiation_slope_factor=0.9 # todo: get it from service layer 
         catchment_id_map = [] # needed to build up the external c-id to shyft core internal 0-based c-ids
-        for c_id,c_info_list in cell_info.iteritems():
+        for c_id,c_info_list in iter(cell_info.items()):
             if not c_id == 0: # only cells with c_id different from 0
                 if not c_id in catchment_id_map:
                     catchment_id_map.append(c_id)
