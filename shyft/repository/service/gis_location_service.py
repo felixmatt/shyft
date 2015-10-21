@@ -55,7 +55,7 @@ class GisLocationService(GeoLocationRepository):
                 y = feature["geometry"]["y"]
                 z = feature["attributes"]["MOH"]
                 name = unicodedata.normalize('NFKC', feature["attributes"]["ST_NAVN"])
-                name = str(unicode(name).encode("ascii", errors="replace"))
+                name = str(str(name).encode("ascii", errors="replace"))
 
                 locations[index] = (x,y,z)
                 station_info[index]= {"owner": feature["attributes"]["EIER"],"name": name}

@@ -49,7 +49,7 @@ class GisRegionModelDemo(object):
         for catchment_cells in cf.cell_data.itervalues():
             self.add_plot_polygons(ax, [cell["cell"] for cell in catchment_cells], color=color_map["cell"])
         for catchment_land_type in cf.catchment_land_types.itervalues():
-            for k,v in catchment_land_type.iteritems():
+            for k,v in iter(catchment_land_type.items()):
                 self.add_plot_polygons(ax, v, color=color_map[k])
     
         geometry = grid_spec.geometry
