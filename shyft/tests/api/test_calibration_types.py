@@ -3,10 +3,7 @@ from shyft.api import pt_gs_k
 import unittest
 import numpy as np
 
-try:
-    range
-except NameError:
-    range = range
+
     
 class ShyftApi(unittest.TestCase):
 
@@ -89,11 +86,13 @@ class ShyftApi(unittest.TestCase):
         #tsa_staircase = tst.to_average_staircase(start,dt,24,tsp,False) # nans infects the complete interval to nan
         #tsa_staircase2 = tst.to_average_staircase(start,dt,24,tsp,True) # skip nans, nans are 0
         # stuff it into the target spec.
+        t2=api.TargetSpecificationPts(tsa,api.IntVector([0,2,3]),0.7,api.KLING_GUPTA)
         t.ts = tsa
         tv = api.TargetSpecificationVector()
         tv.push_back(t)
+        tv.push_back(t2)
         # now verify we got something ok
-        self.assertAlmostEqual(1,tv.size())
+        self.assertAlmostEqual(2,tv.size())
         self.assertAlmostEqual(tv[0].ts.value(1),1.5) # average value 0..1 ->0.5
         self.assertAlmostEqual(tv[0].ts.value(2),2.5) # average value 0..1 ->0.5
         self.assertAlmostEqual(tv[0].ts.value(3),3.0) # average value 0..1 ->0.5
