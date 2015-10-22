@@ -48,8 +48,15 @@ namespace shyft {
 			double forest() const { return forest_; }
 			double unspecified() const { return 1.0 - glacier_ - lake_ - reservoir_ - forest_; }
             void set_fractions(double glacier, double lake, double reservoir, double forest) {
-                if (glacier + lake + reservoir + forest > 1.0  || 
-                    (glacier < 0.0 || lake < 0.0 || reservoir < 0.0 || forest < 0.0))
+                const double tol = 1.0e-3; // Allow small round off errors
+                const double sum = glacier + lake + reservoir + forest;
+                if (sum > 1.0 && sum < 1.0 + tol) {
+                    glacier /= sum;
+                    lake /= sum;
+                    reservoir /= sum;
+                    forest /= sum;
+                } else if (sum > 1.0  || 
+                          (glacier < 0.0 || lake < 0.0 || reservoir < 0.0 || forest < 0.0))
                    throw std::invalid_argument("LandTypeFractions:: must be >=0.0 and sum <= 1.0");
                 glacier_ = glacier; lake_ = lake; reservoir_ = reservoir; forest_ = forest;
             }
