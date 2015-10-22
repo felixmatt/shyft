@@ -52,6 +52,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         self.epsg = epsg
         self.shyft_cs = "+init=EPSG:32632"
         self.dem_file = dem_file
+        self.ensemble_idx = 0
         self.base_url = "http://nomads.ncep.noaa.gov:9090/dods/gens"
         if utc is not None:
             ens = 0  # Choose zero ensemble by default
@@ -101,6 +102,12 @@ class GFSDataRepository(interfaces.GeoTsRepository):
             raise GFSDataRepositoryError("Repository not initialized properly "
                                          "to call get_timeseries directly.")
 
+        with Dataset(self.gfs_url) as dataset:
+            return self._get_ensemble_data_from_dataset(dataset, input_source_types,
+                                                        utc_period, geo_location_criteria)
+
+    def _get_ensemble_data_from_dataset(self, dataset, input_source_types,
+                                        utc_period, geo_location_criteria): 
         if geo_location_criteria is not None:
             self.bounding_box = geo_location_criteria
 
@@ -109,32 +116,30 @@ class GFSDataRepository(interfaces.GeoTsRepository):
             input_source_types.remove("wind_speed")
             input_source_types.extend(["x_wind", "y_wind"])
 
-        #other_data = ["altitude"]  # TODO: Figure out how to treat altitude properly!!!
-
         raw_data = {}
-        with Dataset(self.gfs_url) as dataset:
-            lon = dataset.variables.pop("lon", None)
-            lat = dataset.variables.pop("lat", None)
-            time = dataset.variables.pop("time", None)
-            if not all([lon, lat, time]):
-                raise GFSDataRepositoryError("Something is wrong with the dataset."
-                                             " lat/lon coords or time not found.")
-            time = self.ad_to_utc(time)  # Fetch all times
-            idx_min = time.searchsorted(utc_period.start, side='left')
-            idx_max = time.searchsorted(utc_period.end, side='right')
-            time_slice = slice(idx_min, idx_max)
-            time = time[time_slice]
+        lon = dataset.variables.get("lon", None)
+        lat = dataset.variables.get("lat", None)
+        time = dataset.variables.get("time", None)
+        if not all([lon, lat, time]):
+            raise GFSDataRepositoryError("Something is wrong with the dataset."
+                                         " lat/lon coords or time not found.")
+        time = self.ad_to_utc(time)  # Fetch all times
+        idx_min = time.searchsorted(utc_period.start, side='left')
+        idx_max = time.searchsorted(utc_period.end, side='right')
+        time_slice = slice(idx_min, idx_max)
+        time = time[time_slice]
 
-            x, y, _, m_lon, m_lat = self._limit(lon[:], lat[:], self.shyft_cs)
+        x, y, _, m_lon, m_lat = self._limit(lon[:], lat[:], self.shyft_cs)
 
-            for k in dataset.variables.keys():
-                if self._gfs_shyft_map.get(k, None) in input_source_types:
-                    data = dataset.variables[k]
-                    data_slice = len(data.dimensions)*[slice(None)]
-                    data_slice[data.dimensions.index("lon")] = m_lon
-                    data_slice[data.dimensions.index("lat")] = m_lat
-                    data_slice[data.dimensions.index("time")] = time_slice
-                    raw_data[self._gfs_shyft_map[k]] = data[data_slice]
+        for k in dataset.variables.keys():
+            if self._gfs_shyft_map.get(k, None) in input_source_types:
+                data = dataset.variables[k]
+                data_slice = len(data.dimensions)*[slice(None)]
+                data_slice[data.dimensions.index("ens")] = self.ensemble_idx
+                data_slice[data.dimensions.index("lon")] = m_lon
+                data_slice[data.dimensions.index("lat")] = m_lat
+                data_slice[data.dimensions.index("time")] = time_slice
+                raw_data[self._gfs_shyft_map[k]] = data[data_slice]
         with Dataset(self.dem_file) as dataset:
             alts = dataset.variables["altitude"]
             lats = dataset.variables["latitude"][:]
@@ -171,17 +176,16 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         cal = api.Calendar()
         ymd = cal.calendar_units(t_c)
         res = []
-        for ens in range(21):
-            dset_base = "ge"
-            self.gfs_url = ("{}/gens{:04d}{:02d}"
-                            "{:02d}/ge{}{:02d}_{:02d}z".format(self.base_url,
-                                                               ymd.year,
-                                                               ymd.month,
-                                                               ymd.day,
-                                                               "c" if ens == 0 else "p",
-                                                               ens,
-                                                               ymd.hour//6*6))
-            res.append(self.get_timeseries(input_source_types, utc_period, geo_location_criteria))
+        gfs_url = ("{}/gens{:04d}{:02d}"
+                   "{:02d}/gep_all_{:02d}z".format(self.base_url,
+                                                   ymd.year,
+                                                   ymd.month,
+                                                   ymd.day,
+                                                   ymd.hour//6*6))
+        with Dataset(gfs_url) as dataset:
+            for ens in range(21):
+                self.ensemble_idx = ens
+                res.append(self._get_ensemble_data_from_dataset(dataset, input_source_types, utc_period, geo_location_criteria))
         return res
 
         
