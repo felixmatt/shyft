@@ -116,15 +116,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self._x_padding = x_padding
         self._y_padding = y_padding
         self._bounding_box = bounding_box
-        # Field names and mappings
-        #netcdf_fields = ["relative_humidity_2m",
-        #                 "air_temperature_2m",
-        #                 "altitude",
-        #                 "precipitation_amount",
-        #                 "x_wind_10m",
-        #                 "y_wind_10m",
-        #                 "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
 
+        # Field names and mappings
         self._shyft_fields = ["relative_humidity",
                               "temperature",
                               "z",
@@ -133,7 +126,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                               "y_wind",
                               "radiation"]
 
-        self._net_fields = ["relative_humidity_2m",
+        self._arome_fields = ["relative_humidity_2m",
                             "air_temperature_2m",
                             "altitude",
                             "precipitation_amount",
@@ -143,7 +136,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                             "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
 
 
-        self.net_shyft_map = {"relative_humidity_2m": "relative_humidity",
+        self.arome_shyft_map = {"relative_humidity_2m": "relative_humidity",
                               "air_temperature_2m": "temperature",
                               "altitude": "z",
                               "precipitation_amount": "precipitation",
@@ -282,7 +275,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Boolean index array
         """
         # Get coordinate system for arome data
-        data_cs = "{}".format(data_cs)  # Add missing field +towgs84=0,0,0
+        #data_cs = "{}".format(data_cs)  # Add missing field +towgs84=0,0,0
         data_proj = Proj(data_cs)
         target_proj = Proj(target_cs)
 
@@ -367,13 +360,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         idx_max = time.searchsorted(utc_period.end, side='right')
         time_slice = slice(idx_min, idx_max)
         data_convert_map = {n: c for n, c in
-                            zip(self._net_fields, self._netcdf_data_convert(time, time_slice))}
+                            zip(self._arome_fields, self._arome_data_convert(time, time_slice))}
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
         assert set(input_source_types).issubset(self._shyft_fields)
-        possible_data_vars = [x for (x, y) in self.net_shyft_map.items() if y in input_source_types]
+        possible_data_vars = [x for (x, y) in self.arome_shyft_map.items() if y in input_source_types]
         if self.allow_subset:
-            input_source_types = list(set([self.net_shyft_map[y] for y in possible_data_vars]))
+            input_source_types = list(set([self.arome_shyft_map[y] for y in possible_data_vars]))
             #input_source_types = [df for df in input_source_types
             #                      if self.shyft_net_map[df] in data_vars]
         else:
@@ -386,7 +379,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         additional_extract = ["z"] if "altitude" in data_vars.keys() else []
         # Use first field to get sub region masks
-        dv_names = [x for x,y in self.net_shyft_map.items() ]
+        dv_names = [x for x,y in self.arome_shyft_map.items() ]
         intersect= set(dv_names).intersection(data_vars)
         d = data_vars[list(intersect)[0]]
         self.xx, self.yy, x_mask, y_mask = \
@@ -394,7 +387,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                         data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
         raw_data = {}
         for data_field in list(input_source_types) + additional_extract:
-            data_names = [x for x,y in self.net_shyft_map.items() if y == data_field]
+            data_names = [x for x,y in self.arome_shyft_map.items() if y == data_field]
             if not set(data_names).intersection(data_vars):
                 continue
             if len(data_names) == 1:
@@ -415,10 +408,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             data_slice[data.dimensions.index("y")] = y_mask
             # Add extracted data and corresponding coordinates to class
             raw_data[data_name] = data[data_slice]
-        extracted_data = {self.net_shyft_map[key]: (data_convert_map[key][0](raw_data[key]),
+        extracted_data = {self.arome_shyft_map[key]: (data_convert_map[key][0](raw_data[key]),
                                 data_convert_map[key][1]()) for key in raw_data}
         # Compute wind speed from (x,y) components
-        if "x_wind" in extracted_data.keys() and "y_wind" in extracted_data.keys():
+        if set(("x_wind", "y_wind")).issubset(extracted_data):
             x_wind, _ = extracted_data.pop("x_wind")
             y_wind, t = extracted_data.pop("y_wind")
             extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), t
@@ -449,7 +442,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             return self._geo_ts_to_vec(self.time_series, pts)
 
     # arome data and time conversions, ordered as _netcdf_fields
-    def _netcdf_data_convert(self, t, time_slice):
+    def _arome_data_convert(self, t, time_slice):
         """
         For a given utc time list t, return a list of callable tuples to
         convert from arome data to shyft data. For radiation we calculate:
@@ -506,7 +499,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         res = {}
         for name, ts in data.iteritems():
             tpe = self.source_type_map[name] 
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(pts[idx][0],pts[idx][1],pts[idx][2]),
+            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
                                       ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
         return res
 

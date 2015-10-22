@@ -13,7 +13,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         """
         Simple regression test of arome data respository.
         """
-        EPSG,bbox= self.arome_epsg_bbox()
+        EPSG, bbox= self.arome_epsg_bbox()
 
         # Period start
         year = 2015
@@ -60,7 +60,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         ny = 24
         dx = 1000.0
         dy = 1000.0
-        return EPSG,([x0, x0 + nx*dx,x0 + nx*dx,x0], [y0, y0,y0 + ny*dy,y0 + ny*dy])
+        return EPSG, ([x0, x0 + nx*dx, x0 + nx*dx, x0], [y0, y0, y0 + ny*dy, y0 + ny*dy])
 
     def test_get_forecast(self):
         # Period start
