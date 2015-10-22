@@ -12,7 +12,8 @@ Atnsjoen:
       uid: discharge
       start_datetime: 2005-01-01T00:00:00
       run_time_step: 86400
-      number_of_steps: 3652   # 10 years
+      # number_of_steps: 3652  # 10 years, but for 2013 and 2014 radiation is NaN
+      number_of_steps: 730  # 2 years
       weight: 1.0
       obj_func:
         name: NSE  # Nash–Sutcliffe efficiency (NSE) or Kling–Gupta efficiency (KGE)
