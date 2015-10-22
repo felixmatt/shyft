@@ -30,7 +30,7 @@ class Simulation():
 
     def test_simulation(self):
         cells = self.simulator.model.get_cells()
-        assert len(cells) == 4
+        assert len(cells) == 40
         expected_results = {
             "total_discharge": [0.00844, 0.00586, 0.00836, 0.00824],
             "discharge": [0.0431, 0.0444, 0.0429, 0.0423],
@@ -56,14 +56,14 @@ class Simulation():
                     assert len(np.where(value != value)[0]) == 0
                     # Take the mean value as a gross estimator
                     value = value.sum() / len(value)
-                #print("param, cell, value:", param, i, value)
+                print("param, cell, value:", param, i, value)
                 np.testing.assert_allclose(np.float64(value), np.float64(expected_results[param][i]), rtol=1e-2)
 
 
 # Some examples of simulation.  Feel free to add more.
 class Simulation1(Simulation, unittest.TestCase):
     config_file = "configuration.yaml"
-    section = "Himalayas"
+    section = "Atnsjoen"
 
 
 class Calibration():
@@ -111,4 +111,4 @@ class Calibration():
 # Some examples of calibration.  Feel free to add more.
 class Calibration1(Calibration, unittest.TestCase):
     config_file = "calibration.yaml"
-    section = "Himalayas"
+    section = "Atnsjoen"
