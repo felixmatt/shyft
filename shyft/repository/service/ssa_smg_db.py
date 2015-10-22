@@ -117,7 +117,7 @@ class SmGTsRepository(TsRepository):
             name_to_ts_id={x.Name:x for x in ts_id_list}
             # 3. We store the datapoints (identity period, then  time,value)
             ssa_timeseries_list= List[TimeSeriesPointSegments]([]) # This is what Tss Xts eats
-            for name,shyft_ts in timeseries_dict.iteritems():
+            for name,shyft_ts in iter(timeseries_dict.items()):
                 ssa_ts=self._make_ssa_tsps_from_shyft_ts(name_to_ts_id[name],shyft_ts)
                 ssa_timeseries_list.Add(ssa_ts)
             error_list=tss.repo.Write(ssa_timeseries_list,False) # Write into SmG!
@@ -137,8 +137,8 @@ class SmGTsRepository(TsRepository):
     @staticmethod
     def _make_ssa_ts_from_shyft_ts(name,shyft_ts):
         ''' Geturns a SSaTimeSeries from shyft_ts '''
-        t=np.array([shyft_ts.time(i) for i in xrange(shyft_ts.size()) ])
-        v=np.array([shyft_ts.value(i) for i in xrange(shyft_ts.size()) ])
+        t=np.array([shyft_ts.time(i) for i in range(shyft_ts.size()) ])
+        v=np.array([shyft_ts.value(i) for i in range(shyft_ts.size()) ])
         q = np.zeros_like(t, dtype=np.int)
 
         numPoints = shyft_ts.size();
@@ -150,8 +150,8 @@ class SmGTsRepository(TsRepository):
     @staticmethod
     def _make_ssa_tsps_from_shyft_ts(ts_id,shyft_ts):
         ''' returns a TimeSeriesPointSegments from shyft_ts '''
-        t=np.array([shyft_ts.time(i) for i in xrange(shyft_ts.size()) ])
-        v=np.array([shyft_ts.value(i) for i in xrange(shyft_ts.size()) ])
+        t=np.array([shyft_ts.time(i) for i in range(shyft_ts.size()) ])
+        v=np.array([shyft_ts.value(i) for i in range(shyft_ts.size()) ])
         q = np.zeros_like(t, dtype=np.int)
         numPoints = shyft_ts.size();
         tsv = TsAsVector(numPoints, TimeSystemReference.Unix1970Utc)

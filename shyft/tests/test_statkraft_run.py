@@ -85,7 +85,7 @@ try:
 
             ptgsk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
             s0=ptgsk_state.get_state(0)
-            for i in xrange(s0.size()): #add some juice to get started
+            for i in range(s0.size()): #add some juice to get started
                 s0[i].kirchner.q=0.5
 
             ptgsk.run(time_axis,s0 )
@@ -100,9 +100,9 @@ try:
             avg_precipitation = model.statistics.precipitation(cids)
             self.assertIsNotNone(avg_precipitation)
             self.assertIsNotNone(avg_temperature)
-            for time_step in xrange(time_axis.size()):
+            for time_step in range(time_axis.size()):
                 precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
-                self.assertEquals(precip_raster.size(), n_cells)
+                self.assertEqual(precip_raster.size(), n_cells)
             avg_gs_lwc = model.gamma_snow_state.lwc(cids)  # sca skaugen|gamma
             self.assertIsNotNone(avg_gs_lwc)
             # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
@@ -296,10 +296,10 @@ try:
             
 
 except ImportError as ie:
-    if 'statkraft.ssa' in ie.message:
-        print("(Test require statkraft.script environment to run: {})".format(ie.message))
+    if 'statkraft' in str(ie):
+        print("(Test require statkraft.script environment to run: {})".format(ie))
     else:
-        print("ImportError: {}".format(ie.message))
+        print("ImportError: {}".format(ie))
 
 if __name__ == '__main__':
     unittest.main()

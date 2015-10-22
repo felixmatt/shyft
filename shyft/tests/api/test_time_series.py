@@ -1,4 +1,6 @@
-﻿from shyft import api
+﻿from builtins import range
+
+from shyft import api
 import numpy as np
 
 import unittest
@@ -31,17 +33,17 @@ class TimeSeries(unittest.TestCase):
         tsa=api.TsFixed(self.ta,v)
         # assert its contains time and values as expected.
         self.assertEqual(self.ta.total_period(),tsa.total_period())
-        [self.assertAlmostEqual(tsa.value(i),v[i]) for i in xrange(self.ta.size())]
-        [self.assertEqual(tsa.time(i),self.ta(i).start) for i in xrange(self.ta.size())]
-        [self.assertAlmostEqual(tsa.get(i).v,v[i]) for i in xrange(self.ta.size())]
+        [self.assertAlmostEqual(tsa.value(i),v[i]) for i in range(self.ta.size())]
+        [self.assertEqual(tsa.time(i),self.ta(i).start) for i in range(self.ta.size())]
+        [self.assertAlmostEqual(tsa.get(i).v,v[i]) for i in range(self.ta.size())]
         # set one value
         v[0]=122
         tsa.set(0, v[0])
         self.assertAlmostEqual(v[0],tsa.value(0))
         # test fill with values
-        for i in xrange(len(v)):v[i]=123
+        for i in range(len(v)):v[i]=123
         tsa.fill(v[0])
-        [self.assertAlmostEqual(tsa.get(i).v,v[i]) for i in xrange(self.ta.size())]
+        [self.assertAlmostEqual(tsa.get(i).v,v[i]) for i in range(self.ta.size())]
         
     def test_vector_of_timeseries(self):
         dv=np.arange(self.ta.size())
@@ -64,7 +66,7 @@ class TimeSeries(unittest.TestCase):
         dv=np.arange(self.ta.size())
         v=api.DoubleVector.FromNdArray(dv)
         t=api.UtcTimeVector();
-        for i in xrange(self.ta.size()):
+        for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(self.ta(self.ta.size()-1).end)
         ta=api.PointTimeaxis(t)
@@ -77,7 +79,7 @@ class TimeSeries(unittest.TestCase):
         dv=np.arange(self.ta.size())
         v=api.DoubleVector.FromNdArray(dv)
         t=api.UtcTimeVector();
-        for i in xrange(self.ta.size()):
+        for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(self.ta(self.ta.size()-1).end)
         tsf=api.TsFactory()
@@ -92,7 +94,7 @@ class TimeSeries(unittest.TestCase):
         dv=np.arange(self.ta.size())
         v=api.DoubleVector.FromNdArray(dv)
         t=api.UtcTimeVector();
-        for i in xrange(self.ta.size()):
+        for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(self.ta(self.ta.size()-1).end) #important! needs n+1 points to determine n periods in the timeaxis
         tsf=api.TsFactory()
@@ -100,13 +102,14 @@ class TimeSeries(unittest.TestCase):
         ts2=tsf.create_time_point_ts(self.ta.total_period(),t,v)
         tax=api.Timeaxis(self.ta.start()+api.deltaminutes(30),api.deltahours(1),self.ta.size())
         avg1=api.AverageAccessorTs(ts1,tax)
-        self.assertEquals(avg1.size(),tax.size())
+        self.assertEqual(avg1.size(),tax.size())
+        self.assertIsNotNone(ts2)
 
     def test_ts_transform(self):
         dv=np.arange(self.ta.size())
         v=api.DoubleVector.FromNdArray(dv)
         t=api.UtcTimeVector();
-        for i in xrange(self.ta.size()):
+        for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         #t.push_back(self.ta(self.ta.size()-1).end) #important! needs n+1 points to determine n periods in the timeaxis
         tax=api.Timeaxis(self.ta.start()+api.deltaminutes(30),api.deltahours(1),self.ta.size())

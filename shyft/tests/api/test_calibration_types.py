@@ -3,6 +3,11 @@ from shyft.api import pt_gs_k
 import unittest
 import numpy as np
 
+try:
+    range
+except NameError:
+    range = range
+    
 class ShyftApi(unittest.TestCase):
 
 
@@ -64,7 +69,7 @@ class ShyftApi(unittest.TestCase):
         self.assertAlmostEqual(t.scale_factor,1.0)
         # create a ts with some points
         cal = api.Calendar();
-        start = cal.time(api.YMDhms(2015,01,01,00,00,00))
+        start = cal.time(api.YMDhms(2015,1,1,0,0,0))
         dt = api.deltahours(1)
         tsf = api.TsFactory();
         times = api.UtcTimeVector()
@@ -99,19 +104,19 @@ class ShyftApi(unittest.TestCase):
 
     def test_IntVector(self):
         v1 = api.IntVector() # empy
-        v2 = api.IntVector([i for i in xrange(10)]) # by list
+        v2 = api.IntVector([i for i in range(10)]) # by list
         v3 = api.IntVector([1,2,3]) # simple list
-        self.assertEquals(v2.size(),10)
-        self.assertEquals(v1.size(),0)
-        self.assertEquals(len(v3),3)
+        self.assertEqual(v2.size(),10)
+        self.assertEqual(v1.size(),0)
+        self.assertEqual(len(v3),3)
     
     def test_DoubleVector(self):
-        v1 = api.DoubleVector([i for i in xrange(10)]) # empy
+        v1 = api.DoubleVector([i for i in range(10)]) # empy
         v2 = api.DoubleVector.FromNdArray(np.arange(0,10.0,0.5))
         v3 = api.DoubleVector(np.arange(0,10.0,0.5))
-        self.assertEquals(len(v1),10)
-        self.assertEquals(len(v2),20)
-        self.assertEquals(len(v3),20)
+        self.assertEqual(len(v1),10)
+        self.assertEqual(len(v2),20)
+        self.assertEqual(len(v3),20)
         self.assertAlmostEqual(v2[3],1.5)
         
     

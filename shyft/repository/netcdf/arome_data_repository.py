@@ -1,5 +1,7 @@
 ﻿from __future__ import absolute_import
 from __future__ import print_function
+from six import iteritems
+from builtins import range
 
 import re
 from glob import glob
@@ -218,7 +220,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         time_series = {}
         non_time_series = {}
         tsc = api.TsFactory().create_point_ts
-        for key, (data, ta) in extracted_data.iteritems():
+        for key, (data, ta) in iteritems(extracted_data):
             if ta is None:
                 non_time_series[key] = data
                 continue
@@ -236,13 +238,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             if ensemble_index is not None:
                 if not ensembles:
                     ensembles = data.shape[ensemble_index]*[{}]
-                for idx in xrange(data.shape[ensemble_index]):
+                for idx in range(data.shape[ensemble_index]):
                     fslice[ensemble_index + 2] = idx
                     ensembles[idx][key] = np.array([[construct(data[fslice + [i, j]])
-                                                    for j in xrange(J)] for i in xrange(I)])
+                                                    for j in range(J)] for i in range(I)])
             else:
                 time_series[key] = np.array([[construct(data[fslice + [i, j]])
-                                              for j in xrange(J)] for i in xrange(I)])
+                                              for j in range(J)] for i in range(I)])
         if ensemble_index is None:
             return time_series, non_time_series
         else:
@@ -370,7 +372,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             #input_source_types = [df for df in input_source_types
             #                      if self.shyft_net_map[df] in data_vars]
         else:
-            dv = data_vars.keys()
+            dv = list(data_vars) # py3 compat instead of .keys()
             if "precipitation_amount" in dv:
                 dv.append("precipitation_amount_acc")
             elif "precipitation_amount_acc" in dv:
@@ -497,7 +499,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
     def _geo_ts_to_vec(self, data, pts):
         res = {}
-        for name, ts in data.iteritems():
+        for name, ts in iteritems(data):
             tpe = self.source_type_map[name] 
             res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
                                       ts[idx]) for idx in np.ndindex(pts.shape[:-1])])

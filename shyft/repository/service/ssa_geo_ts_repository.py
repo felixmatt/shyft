@@ -272,7 +272,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         ens_result=[] #when done, it's filled with n_ensembles of 'result' dictionaries, one for each ensemble-member
         # get out the dimension of the ensemble from ens_station_list, .. each station needs the same number of ens.members.., otherwise in trouble..
         # because we need correlated temperature/precipitation/radiation (each of them belong to a certain ens.member).
-        for i in xrange(self.ens_config.n_ensembles):
+        for i in range(self.ens_config.n_ensembles):
             result={}
             for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
                 result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
@@ -291,7 +291,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             map it into correct vector in result,
             using geo_ts_info
         """
-        for tsn,ts in read_ts_map.iteritems():
+        for tsn,ts in iter(read_ts_map.items()):
             geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
             attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
             result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
@@ -302,7 +302,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             map it into correct result in ens_result,
             using geo_ts_info
         """
-        for tsn,ts in read_ts_map.iteritems():
+        for tsn,ts in iter(read_ts_map.items()):
             geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint(), and plain result )
             attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
             result=geo_ts_info[2] # this should be the result dictionary of 'type':vector_t where this ts belongs to (ensembleset)

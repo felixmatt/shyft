@@ -80,8 +80,8 @@
 				</Linker>
 			</Target>
 			<Environment>
-				<Variable name="numpy_include" value="/opt/anaconda/lib/python2.7/site-packages/numpy/core/include" />
-				<Variable name="py_include" value="/opt/anaconda/include/python2.7" />
+				<Variable name="numpy_include" value="/opt/anaconda/lib/python3.4/site-packages/numpy/core/include" />
+				<Variable name="py_include" value="/opt/anaconda/include/python3.4m" />
 				<Variable name="py_lib" value="/opt/anaconda/lib" />
 			</Environment>
 		</Build>
@@ -90,8 +90,8 @@
 			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
-			<Add option="-std=c++1y" />
 			<Add option="-Wall" />
+			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory="$(py_include)" />

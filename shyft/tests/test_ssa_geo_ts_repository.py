@@ -61,7 +61,7 @@ try:
             geo_ts_dict = geo_ts_repository.get_timeseries(ts_types,utc_period=utc_period,geo_location_criteria=None)
             self.assertIsNotNone(geo_ts_dict)
             for ts_type in ts_types:
-                self.assertTrue(geo_ts_dict.has_key(ts_type),"we ecpect to find an entry for each requested type (it could be empty list though")
+                self.assertTrue(ts_type in geo_ts_dict.keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
                 self.assertTrue(geo_ts_dict[ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
         def test_get_forecast_using_known_service_and_db_content(self):
@@ -86,7 +86,7 @@ try:
             geo_ts_dict = geo_ts_repository.get_forecast(ts_types,utc_period=utc_period,t_c=None,geo_location_criteria=None)
             self.assertIsNotNone(geo_ts_dict)
             for ts_type in ts_types:
-                self.assertTrue(geo_ts_dict.has_key(ts_type),"we ecpect to find an entry for each requested type (it could be empty list though")
+                self.assertTrue(ts_type in geo_ts_dict.keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
                 self.assertTrue(geo_ts_dict[ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
         def test_get_ensemble_forecast_using_known_service_and_db_content(self):
@@ -128,18 +128,18 @@ try:
             ts_types= ['temperature','precipitation']
             ens_geo_ts_dict = geo_ts_repository.get_forecast_ensemble(ts_types,utc_period=utc_period,t_c=None,geo_location_criteria=None)
             self.assertIsNotNone(ens_geo_ts_dict)
-            self.assertEquals(ens_config.n_ensembles,len(ens_geo_ts_dict))
-            for i in xrange(ens_config.n_ensembles):
+            self.assertEqual(ens_config.n_ensembles,len(ens_geo_ts_dict))
+            for i in range(ens_config.n_ensembles):
                 for ts_type in ts_types:
-                    self.assertTrue(ens_geo_ts_dict[i].has_key(ts_type),"we ecpect to find an entry for each requested type (it could be empty list though")
+                    self.assertTrue(ts_type in ens_geo_ts_dict[i].keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
                     self.assertTrue(ens_geo_ts_dict[i][ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
 
 except ImportError as ie:
-    if 'statkraft.ssa' in ie.message:
-        print("(Test require statkraft.script environment to run: {})".format(ie.message))
+    if 'statkraft' in str(ie):
+        print("(Test require statkraft.script environment to run: {})".format(ie))
     else:
-        print("ImportError: {}".format(ie.message))
+        print("ImportError: {}".format(ie))
         
 if __name__ == '__main__':
     unittest.main()

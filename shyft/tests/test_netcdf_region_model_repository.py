@@ -27,14 +27,14 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
             region_model_repository.get_region_model("NeaNidelv_PTGSK",
                                                      PTGSKModel)
         self.assertIsNotNone(region_model)
-        self.assertEquals(4960, region_model.size())
+        self.assertEqual(4960, region_model.size())
         rp = region_model.get_region_parameter()
-        self.assertAlmostEquals(-2.63036759414, rp.kirchner.c1)
+        self.assertAlmostEqual(-2.63036759414, rp.kirchner.c1)
         self.assertTrue(
             region_model.has_catchment_parameter(1),
             "There is a catchment override in the region.yaml file")
         c1p = region_model.get_catchment_parameter(1)
-        self.assertAlmostEquals(-2.539, c1p.kirchner.c1)
+        self.assertAlmostEqual(-2.539, c1p.kirchner.c1)
 
     def test_bounding_box_region(self):
         reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),

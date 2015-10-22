@@ -1,4 +1,6 @@
-import interfaces
+from __future__ import absolute_import
+from builtins import range
+from . import interfaces
 
 
 class DefaultStateRepository(interfaces.StateRepository):
@@ -13,7 +15,7 @@ class DefaultStateRepository(interfaces.StateRepository):
         return interfaces.StateInfo()
 
     def get_state(self, state_id):
-        return self.state_vec_t([self.state_t() for _ in xrange(self.n)])
+        return self.state_vec_t([self.state_t() for _ in range(self.n)])
 
     def put_state(self, region_model_id, utc_timestamp, region_model_state, tags=None):
         pass

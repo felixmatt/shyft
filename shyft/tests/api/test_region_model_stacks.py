@@ -1,4 +1,6 @@
 ﻿from __future__ import print_function
+from six import iteritems
+
 from numpy import random
 import unittest
 
@@ -6,7 +8,11 @@ from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
 
-
+try:
+    range
+except NameError:
+    range = range
+    
 class RegionModel(unittest.TestCase):
 
     @staticmethod
@@ -15,7 +21,7 @@ class RegionModel(unittest.TestCase):
         cells = model_t.cell_t.vector_t()
         cell_area = 1000*1000
         region_parameter = parameter_t()
-        for i in xrange(model_size):
+        for i in range(model_size):
             loc = (10000*random.random(2)).tolist() + \
                 (500*random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
@@ -38,10 +44,9 @@ class RegionModel(unittest.TestCase):
               "iso_pot_energy": 0.0,
               "temp_swe": 0.0}
         kirchner = {"q": 0.25}
-        pt.update({(k, v) for k, v in kwargs.iteritems() if k in pt})
-        gs.update({(k, v) for k, v in kwargs.iteritems() if k in gs})
-        kirchner.update({(k, v) for k, v in kwargs.iteritems()
-                         if k in kirchner})
+        pt.update({(k, v) for k, v in iteritems(kwargs) if k in pt})
+        gs.update({(k, v) for k, v in iteritems(kwargs) if k in gs})
+        kirchner.update({(k, v) for k, v in iteritems( kwargs) if k in kirchner})
         state = pt_gs_k.PTGSKState()
         state.gs.albedo = gs["albedo"]
         state.gs.lwc = gs["lwc"]
@@ -115,7 +120,7 @@ class RegionModel(unittest.TestCase):
         model.run_interpolation(
             model_interpolation_parameter, time_axis,
             self.create_dummy_region_environment(time_axis,
-                                                 model.get_cells()[num_cells/2].geo.mid_point()))
+                                                 model.get_cells()[int(num_cells/2)].geo.mid_point()))
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
@@ -124,9 +129,9 @@ class RegionModel(unittest.TestCase):
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)
         self.assertIsNotNone(avg_precipitation)
-        for time_step in xrange(time_axis.size()):
+        for time_step in range(time_axis.size()):
             precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
-            self.assertEquals(precip_raster.size(), num_cells)
+            self.assertEqual(precip_raster.size(), num_cells)
         avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
         self.assertIsNotNone(avg_gs_sca)
         # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
@@ -141,7 +146,7 @@ class RegionModel(unittest.TestCase):
             model = self.build_model(model_type,pt_gs_k.PTGSKParameter, num_cells)
             state_list = []
             x = ""
-            for i in xrange(num_cells):
+            for i in range(num_cells):
                 state_list.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             initial_states = x.join(state_list)
             sio=model_type.state_t.serializer_t()
@@ -158,14 +163,14 @@ class RegionModel(unittest.TestCase):
             model = self.build_model(model_type, pt_gs_k.PTGSKParameter,num_cells)
             states = []
             x = ""
-            for i in xrange(num_cells - 1):
+            for i in range(num_cells - 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             statestr = x.join(states)
             sio=model_type.state_t.serializer_t()
             state_vector=sio.vector_from_string(statestr)
 
             self.assertRaises(RuntimeError, model.set_states,state_vector)
-            for i in xrange(num_cells + 1):
+            for i in range(num_cells + 1):
                 states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
             statestr = x.join(states)
             state_vector=sio.vector_from_string(statestr)

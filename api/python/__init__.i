@@ -307,6 +307,9 @@ namespace shyft {
         self.counter = 0
         return self
 
+    def __next__(self):                 # Py3-style iterator interface
+        return self.next()
+
     def next(self):
         if self.counter >= len(self):
             del self.counter
