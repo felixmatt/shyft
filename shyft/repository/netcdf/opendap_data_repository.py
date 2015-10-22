@@ -154,12 +154,37 @@ class GFSDataRepository(interfaces.GeoTsRepository):
 
     def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
         """See base class."""
-        pass
+        ens = 0  # Choose zero ensemble by default
+        cal = api.Calendar()
+        ymd = cal.calendar_units(t_c)
+        self.gfs_url = "{}/gens{:04d}{:02d}{:02d}/gec{:02d}_{:02d}z".format(self.base_url,
+                                                                            ymd.year,
+                                                                            ymd.month,
+                                                                            ymd.day,
+                                                                            ens,
+                                                                            ymd.hour//6*6)
+        return self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
 
     def get_forecast_ensemble(self, input_source_types, utc_period,
                               t_c, geo_location_criteria=None):
         """See base class: ..interfaces.GeoTsRepository"""
-        pass
+        cal = api.Calendar()
+        ymd = cal.calendar_units(t_c)
+        res = []
+        for ens in range(21):
+            dset_base = "ge"
+            self.gfs_url = ("{}/gens{:04d}{:02d}"
+                            "{:02d}/ge{}{:02d}_{:02d}z".format(self.base_url,
+                                                               ymd.year,
+                                                               ymd.month,
+                                                               ymd.day,
+                                                               "c" if ens == 0 else "p",
+                                                               ens,
+                                                               ymd.hour//6*6))
+            res.append(self.get_timeseries(input_source_types, utc_period, geo_location_criteria))
+        return res
+
+        
 
     def _transform_raw(self, data, time):
 
