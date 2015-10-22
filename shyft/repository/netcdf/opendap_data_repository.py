@@ -202,12 +202,12 @@ class GFSDataRepository(interfaces.GeoTsRepository):
                            api.DoubleVector_FromNdArray(d.flatten()), 0)
 
             time_series[key] = np.array([[construct(data[fslice + [i, j]])
-                                          for j in xrange(J)] for i in xrange(I)])
+                                          for j in range(J)] for i in range(I)])
         return time_series
 
     def _geo_ts_to_vec(self, data, pts):
         res = {}
-        for name, ts in data.iteritems():
+        for name, ts in data.items():
             tpe = self.source_type_map[name] 
             ids = [idx for idx in np.ndindex(pts.shape[:-1])]
             res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
