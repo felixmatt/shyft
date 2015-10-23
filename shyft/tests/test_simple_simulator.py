@@ -148,9 +148,14 @@ class SimulationTestCase(unittest.TestCase):
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
-        target_discharge = simulator.region_model.statistics.discharge([1])
+        cid = 1
+        target_discharge = simulator.region_model.statistics.discharge([cid])
 
-        param = simulator.region_model.get_catchment_parameter(1)
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(model_t, n_cells)
+        param = simulator.region_model.get_catchment_parameter(cid)
         p_orig = [param.get(i) for i in range(param.size())]
         p = p_orig[:]
         p_min = p[:]
@@ -164,11 +169,7 @@ class SimulationTestCase(unittest.TestCase):
         print("Min,", p_min[:4])
         print("Max,", p_max[:4])
         print("Guess,", p[:4])
-        target_spec = api.TargetSpecificationPts()
-        target_spec.scale_factor = 1.0
-        target_spec.ts = target_discharge
-        target_spec.calc_mode = api.KLING_GUPTA
-        target_spec.catchment_indexes = api.IntVector([1])
+        target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]), 1.0, api.KLING_GUPTA)
         tsv = api.TargetSpecificationVector([target_spec])
         p_opt = simulator.optimize(time_axis, state_repos.get_state(0), tsv, p, p_min, p_max)
         print("True,", p_orig[:4])
