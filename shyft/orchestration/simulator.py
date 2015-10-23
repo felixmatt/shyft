@@ -82,6 +82,7 @@ class SimpleSimulator(object):
         self.state = None
         self.time_axis = None
         self.region_env = None
+        self.optimizer = None
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository
@@ -163,3 +164,24 @@ class SimpleSimulator(object):
             simulator.region_env = simulator._get_region_environment(source)
             runnables.append(simulator)
         return runnables
+
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max):
+        if not hasattr(self.region_model, "optimizer_t"):
+            raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
+                                 "another!".format(self.region_model.__class__.__name__))
+        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
+        period = time_axis.total_period()
+        sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
+                                                        geo_location_criteria=bbox)
+        self.region_env = self._get_region_environment(sources)
+        self.state = state
+        self.time_axis = time_axis
+        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
+        self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
+        self.region_model.set_states(self.state)
+        self.optimizer = self.region_model.optimizer_t(self.region_model,
+                                                       target_specification, 
+                                                       p_min,
+                                                       p_max)
+        self.p_opt = self.optimizer.optimize(p, max_n_evaluations=3000, tr_start=0.3, tr_stop=1.0e-20)
+        return self.p_opt

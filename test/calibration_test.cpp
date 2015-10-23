@@ -362,8 +362,8 @@ void calibration_test::test_simple() {
     const size_t n_calib_params = 4;
     for (size_t i = 0; i < n_params; ++i) {
         double v = model.parameter.get(i);
-        lower.emplace_back(i < n_calib_params?0.5*v:v);
-        upper.emplace_back(i< n_calib_params?1.5*v:v);
+        lower.emplace_back(i < n_calib_params ? 0.5*v : v);
+        upper.emplace_back(i < n_calib_params ? 1.5*v : v);
     }
 
     model.set_parameter_ranges(lower, upper);

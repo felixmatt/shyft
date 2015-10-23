@@ -4,6 +4,7 @@ Tests for the simple simulator.
 
 from __future__ import print_function
 from __future__ import absolute_import
+import random
 from os import path
 
 import unittest
@@ -111,6 +112,76 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
+    def test_calibration(self):
+        # Simulation time axis
+        year, month, day, hour = 2010, 1, 1, 0
+        dt = 24*api.deltahours(1)
+        n_steps = 30
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        time_axis = api.Timeaxis(t0, dt, n_steps)
+
+        # Some fake ids
+        region_id = 0
+        interpolation_id = 0
+
+        # Simulation coordinate system
+        epsg = "32633"
+
+        # Model
+        model_t = pt_gs_k.PTGSKOptModel
+
+        # Configs and repositories
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        region_config = RegionConfig(self.region_config_file)
+        model_config = ModelConfig(self.model_config_file)
+        dataset_config = YamlContent(dataset_config_file)
+        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        interp_repos = InterpolationParameterRepository(model_config)
+        netcdf_geo_ts_repos = []
+        for source in dataset_config.sources:
+            station_file = source["params"]["stations_met"]
+            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
+        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(model_t, n_cells)
+        simulator.run(time_axis, state_repos.get_state(0))
+        target_discharge = simulator.region_model.statistics.discharge([1])
+
+        param = simulator.region_model.get_catchment_parameter(1)
+        p_orig = [param.get(i) for i in range(param.size())]
+        p = p_orig[:]
+        p_min = p[:]
+        p_max = p[:]
+        for i in range(4):
+            p_min[i] *= 0.5
+            p_max[i] *= 1.5
+            p[i] = random.uniform(p_min[i], p_max[i])
+            if p_min[i] > p_max[i]:
+                p_min[i], p_max[i] = p_max[i], p_min[i] 
+        print("Min,", p_min[:4])
+        print("Max,", p_max[:4])
+        print("Guess,", p[:4])
+        target_spec = api.TargetSpecificationPts()
+        target_spec.scale_factor = 1.0
+        target_spec.ts = target_discharge
+        target_spec.calc_mode = api.KLING_GUPTA
+        target_spec.catchment_indexes = api.IntVector([1])
+        tsv = api.TargetSpecificationVector([target_spec])
+        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), tsv, p, p_min, p_max)
+        print("True,", p_orig[:4])
+        print("Computed,", [p for p in p_opt][:4])
+                        
+        #vs = [discharge.value(i) for i in range(discharge.size())]
+        #ts = [discharge.time(i) for i in range(discharge.size())]
+        #from matplotlib import pylab as plt
+        #plt.plot(ts, vs)
+        #plt.show()
+
+
+
     def test_run_arome_ensemble(self):
         # Simulation time axis
         year, month, day, hour = 2015, 7, 26, 0
@@ -128,7 +199,7 @@ class SimulationTestCase(unittest.TestCase):
         epsg = "32633"
 
         # Model
-        model_t = pt_gs_k.PTGSKModel
+        model_t = pt_gs_k.PTGSKOptModel
 
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
