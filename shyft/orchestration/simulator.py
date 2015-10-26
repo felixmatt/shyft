@@ -3,6 +3,7 @@ Simulator classes for running SHyFT forward simulations.
 """
 from __future__ import print_function
 from __future__ import absolute_import
+import  numpy as np
 from shyft import api
 
 
@@ -165,10 +166,19 @@ class SimpleSimulator(object):
             runnables.append(simulator)
         return runnables
 
-    def optimize(self, time_axis, state, target_specification, p, p_min, p_max):
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, 
+                 max_n_evaluations=1500, tr_start=0.3, tr_stop=0.01):
         if not hasattr(self.region_model, "optimizer_t"):
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
+        if not all([isinstance(_, self.region_model.parameter_t) for _ in [p, p_min, p_max]]):
+            raise SimulatorError("p, p_min, and p_max must be of type {}"
+                                 "".format(self.region_model.parameter_t.__name__))
+
+        p_vec = [p.get(i) for i in range(p.size())]
+        p_vec_min = [p_min.get(i) for i in range(p_min.size())]
+        p_vec_max = [p_max.get(i) for i in range(p_max.size())]
+
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
@@ -181,7 +191,10 @@ class SimpleSimulator(object):
         self.region_model.set_states(self.state)
         self.optimizer = self.region_model.optimizer_t(self.region_model,
                                                        target_specification, 
-                                                       p_min,
-                                                       p_max)
-        self.p_opt = self.optimizer.optimize(p, max_n_evaluations=3000, tr_start=0.3, tr_stop=1.0e-20)
-        return self.p_opt
+                                                       p_vec_min,
+                                                       p_vec_max)
+        p_vec_opt = self.optimizer.optimize(p_vec, max_n_evaluations=max_n_evaluations,
+                                            tr_start=tr_start, tr_stop=tr_stop)
+        p_res = self.region_model.parameter_t()
+        p_res.set(p_vec_opt)
+        return p_res
