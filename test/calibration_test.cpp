@@ -350,7 +350,7 @@ void calibration_test::test_simple() {
     pt_gs_k::state_t state{ gs_state, kirchner_state};
 
     // Set up the model and store the synthetic discharge
-	shyfttest::PTGSKTestModel<TestModel::parameter_t> model(t0, dt, 24 * num_days, parameter, state);
+	shyfttest::PTGSKTestModel<TestModel::parameter_t> model(t0, dt, 24*num_days, parameter, state);
     model.init(n_dests, time_axis);
     catchment_t synthetic_discharge = model.run(parameter);
     model.set_measured_discharge(synthetic_discharge);
@@ -398,7 +398,7 @@ void calibration_test::test_simple() {
 	const double tr_start = 0.1;
 	const double tr_end = 1e-6;
 	auto rx = model.reduce_p_vector(x);
-    double residual = min_bobyqa(model, rx,n_max, tr_start,tr_end);//min_sceua(model,rx,n_max,0.001,0.001);//min_dream(model,rx,n_max);//min_bobyqa(model, rx,n_max, tr_start,tr_end);
+    double residual = min_bobyqa(model, rx, n_max, tr_start, tr_end);//min_sceua(model,rx,n_max,0.001,0.001);//min_dream(model,rx,n_max);//min_bobyqa(model, rx,n_max, tr_start,tr_end);
     cout << "====================" << endl;
 	x = model.expand_p_vector(rx);
 	model.p_expanded = x;
@@ -411,11 +411,11 @@ void calibration_test::test_simple() {
     cout << "Trying once more:" << endl;
     model.n_evals = 0;
 	rx = model.reduce_p_vector(x);
-    residual = min_bobyqa(model, rx,n_max*2, tr_start/2, tr_end/2);//min_dream(model,rx,n_max);//
+    residual = min_bobyqa(model, rx, n_max*2, tr_start/2, tr_end/2);//min_dream(model,rx,n_max);//
 	x = model.expand_p_vector(rx);
 	model.p_expanded = x;
     cout << "====================" << endl;
-    cout<< "min_bobyqa..:"<<endl;
+    cout << "min_bobyqa:" << endl;
     for (size_t i = 0; i < n_params; ++i)
         cout << model.parameter.get_name(i) << " = " << x[i] << endl;
     cout << "====================" << endl;

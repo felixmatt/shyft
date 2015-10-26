@@ -426,7 +426,7 @@ namespace shyft {
             void run_cells(size_t thread_cell_count=0) {
                 if(thread_cell_count==0) {
                     if(ncore==0) ncore=4;// a reasonable minimum..
-                    thread_cell_count= size()<=ncore ? 1 : size()/ncore;
+                    thread_cell_count = size() <= ncore ? 1 : size()/ncore;
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
@@ -441,11 +441,11 @@ namespace shyft {
              * \param p is the wanted region parameter set
              */
             void set_region_parameter(const parameter_t &p) {
-                if(region_parameter == nullptr) {
+                if (region_parameter == nullptr) {
                     region_parameter = parameter_t_(new parameter_t(p));
                     for_each(begin(*cells), end(*cells),
                         [this](cell_t& c) {
-                            if( ! has_catchment_parameter( c.geo.catchment_id()) )
+                            if (!has_catchment_parameter(c.geo.catchment_id()))
                                 c.set_parameter(region_parameter);
                     });
                 } else {
@@ -614,9 +614,9 @@ namespace shyft {
              */
             void parallel_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
                 size_t len = std::distance(beg, endc);
-                if(len==0)
+                if(len == 0)
                     return;
-                if(thread_cell_count==0)
+                if(thread_cell_count == 0)
                     throw runtime_error("parallel_run:cell pr thread is zero ");
                 std::vector<std::future<void>> calcs;
                 for (size_t i = 0; i < len;) {
@@ -628,7 +628,7 @@ namespace shyft {
                             this->single_run(time_axis, beg, beg + n); }
                         )
                     );
-                    beg =beg+n;
+                    beg = beg + n;
                     i = i + n;
                 }
                 for_each(begin(calcs), end(calcs), [](std::future<void>& f) {f.get(); });

@@ -669,8 +669,8 @@ namespace shyft{
             double r = rs.correlation();
             double a = qs / qo;
             double b = us / uo;
-            if(!isfinite(a)) a=1.0;//could happen in theory if qo is zero
-            if(!isfinite(b)) b=1.0;// could happen if uo is zero
+            if(!isfinite(a)) a = 1.0;//could happen in theory if qo is zero
+            if(!isfinite(b)) b = 1.0;// could happen if uo is zero
             // We use EDs to scale, and KGEs = (1-EDs) with max at 1.0, we use 1-KGEs to get minimum as 0 for minbobyqa
             return /*EDs=*/ sqrt(std::pow(s_r*(r - 1), 2) + std::pow(s_a*(a - 1), 2) + std::pow(s_b*(b - 1), 2));
 		}
