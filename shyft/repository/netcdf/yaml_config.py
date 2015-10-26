@@ -33,7 +33,7 @@ class RegionConfig(region_model.RegionConfig):
         self._config = YamlContent(config_file)
 
     def parameter_overrides(self):
-        return self._config.parameter_overrides
+        return getattr(self._config, "parameter_overrides", {})
 
     def domain(self):
         return self._config.domain
