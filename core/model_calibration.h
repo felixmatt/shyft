@@ -160,7 +160,7 @@ namespace shyft{
 		* -# a list of catchment ids (zero-based), that denotes the catchment.discharges that should equal the target ts.
 		* -# a scale_factor that is used to construct the final goal function as
 		*
-		* goal_function = sum of all: scale_factor * (1- nash-sutcliff factor) or KLING-GUPTA
+		* goal_function = sum of all: scale_factor*(1 - nash-sutcliff factor) or KLING-GUPTA
 		*
 		* \tparam PS type of the target time-series, any type that is time-series compatible will work. Usually a point-based series.
 		*/
@@ -309,6 +309,10 @@ namespace shyft{
 					auto unique_end = unique(begin(catchment_indexes), end(catchment_indexes));
 					catchment_indexes.resize(distance(begin(catchment_indexes), unique_end));
 				}
+                for (auto i: catchment_indexes) {
+                    if (model.has_catchment_parameter(i))
+                        throw runtime_error("Cannot calibrate on local parameters.");
+                }
 				model.set_catchment_calculation_filter(catchment_indexes); //Only calculate the catchments that we optimize
 				// 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
                 auto cells = model.get_cells();
@@ -451,7 +455,7 @@ namespace shyft{
 				reset_states();
 				model.run_cells();
 				double goal_function_value = 0.0;// overall goal-function, intially zero
-				double scale_factor_sum = 0;
+				double scale_factor_sum = 0.0;
 				//TODO: extract all catchment results.. from the model..
 				vector<pts_t> catchment_discharges;
 				model.catchment_discharges(catchment_discharges);
