@@ -244,7 +244,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         return res
 
     def _limit(self, lon, lat, target_cs, altitudes=None):
-        data_proj = Proj("+init=EPSG:4326")  # WGS84
+        data_proj = Proj("+init=EPSG:4326")  # WGS84, TODO: How to treat vertical transform?
         target_proj = Proj(target_cs)
 
         # Find bounding box in arome projection
@@ -254,22 +254,34 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         lat_min, lat_max = min(bb_proj[1]), max(bb_proj[1])
 
         # Limit data
-        lon_mask = (lon >= lon_min) == (lon <= lon_max)
-        lat_mask = (lat >= lat_min) == (lat <= lat_max)
-        if altitudes is not None:
-            alts = altitudes[lat_mask, lon_mask]
+        # TODO: Change (back) to using index arrays (not boolean).
+        lon_upper = lon >= lon_min
+        lon_lower = lon <= lon_max
+        if sum(lon_upper == lon_lower) < 2:
+            lon_upper[np.argmax(lon_upper) - 1] = True
+            lon_lower[np.argmin(lon_lower)] = True
+
+        lat_upper = lat >= lat_min
+        lat_lower = lat <= lat_max
+        if sum(lat_upper == lat_lower) < 2:
+            lat_upper[np.argmax(lat_upper) - 1] = True
+            lat_lower[np.argmin(lat_lower)] = True
+        lon_mask = lon_upper == lon_lower
+        lat_mask = lat_upper == lat_lower
 
         if not lon_mask.any():
             raise GFSDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
         if not lat_mask.any():
             raise GFSDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
 
-        if altitudes is None:
+        if altitudes is not None:
+            alts = np.clip(altitudes[lat_mask, :][:, lon_mask], 0.0, 100000)
+            xyz = np.meshgrid(lon[lon_mask], lat[lat_mask]) + [alts]
+            t_xyz = transform(data_proj, target_proj, xyz[0].ravel(), xyz[1].ravel(), xyz[2].ravel())
+            x, y, z = [tmp.reshape(xyz[0].shape) for tmp in t_xyz]
+        else:
             x, y = transform(data_proj, target_proj, *np.meshgrid(lon[lon_mask], lat[lat_mask]))
             z = None
-        else:
-            x, y, z = transform(data_proj, target_proj,
-                                *(np.meshgrid(lon[lon_mask], lat[lat_mask]) + [alts]))
         return x, y, z, lon_mask, lat_mask
 
     @classmethod

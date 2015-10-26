@@ -30,7 +30,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity", "radiation")
         sources = repos.get_timeseries(data_names, period, None)
         self.assertEqual(set(data_names), set(sources.keys()))
-        self.assertEqual(len(sources["temperature"]), 2)
+        self.assertEqual(len(sources["temperature"]), 6)
         data1 = sources["temperature"][0]
         data2 = sources["temperature"][1]
         self.assertNotEqual(data1.mid_point().x, data2.mid_point().x)
@@ -62,7 +62,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity", "radiation")
         sources = repos.get_forecast(data_names, period, t_c, None)
         self.assertEqual(set(data_names), set(sources.keys()))
-        self.assertEqual(len(sources["temperature"]), 2)
+        self.assertEqual(len(sources["temperature"]), 6)
         data1 = sources["temperature"][0]
         data2 = sources["temperature"][1]
         self.assertNotEqual(data1.mid_point().x, data2.mid_point().x)
@@ -95,7 +95,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         ensembles = repos.get_forecast_ensemble(data_names, period, t_c, None)
         for sources in ensembles:
             self.assertEqual(set(data_names), set(sources.keys()))
-            self.assertEqual(len(sources["temperature"]), 2)
+            self.assertEqual(len(sources["temperature"]), 6)
             data1 = sources["temperature"][0]
             data2 = sources["temperature"][1]
             self.assertNotEqual(data1.mid_point().x, data2.mid_point().x)
