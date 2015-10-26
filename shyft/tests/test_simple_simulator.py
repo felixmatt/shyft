@@ -1,13 +1,13 @@
 ﻿"""
 Tests for the simple simulator.
 """
-
 from __future__ import print_function
 from __future__ import absolute_import
-import random
-from os import path
 
+from os import path
+import random
 import unittest
+import numpy as np
 
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
@@ -133,7 +133,8 @@ class SimulationTestCase(unittest.TestCase):
 
         # Configs and repositories
         dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config = RegionConfig(self.region_config_file)
+        region_config_file = path.join(path.dirname(__file__), "netcdf", "atnsjoen_calibration_region.yaml")
+        region_config = RegionConfig(region_config_file)
         model_config = ModelConfig(self.model_config_file)
         dataset_config = YamlContent(dataset_config_file)
         region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
@@ -143,6 +144,8 @@ class SimulationTestCase(unittest.TestCase):
             station_file = source["params"]["stations_met"]
             netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
+
+        # Construct target discharge series
         simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
@@ -151,37 +154,43 @@ class SimulationTestCase(unittest.TestCase):
         cid = 1
         target_discharge = simulator.region_model.statistics.discharge([cid])
 
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
-        param = simulator.region_model.get_catchment_parameter(cid)
-        p_orig = [param.get(i) for i in range(param.size())]
-        p = p_orig[:]
-        p_min = p[:]
-        p_max = p[:]
+        # Perturb parameters
+        param = simulator.region_model.get_region_parameter()
+        p_vec_orig = [param.get(i) for i in range(param.size())]
+        p_vec_min = p_vec_orig[:]
+        p_vec_max = p_vec_orig[:]
+        p_vec_guess = p_vec_orig[:]
+        random.seed(0)
+        p_names = []
         for i in range(4):
-            p_min[i] *= 0.5
-            p_max[i] *= 1.5
-            p[i] = random.uniform(p_min[i], p_max[i])
-            if p_min[i] > p_max[i]:
-                p_min[i], p_max[i] = p_max[i], p_min[i] 
-        print("Min,", p_min[:4])
-        print("Max,", p_max[:4])
-        print("Guess,", p[:4])
+            p_names.append(param.get_name(i))
+            p_vec_min[i] *= 0.5
+            p_vec_max[i] *= 1.5
+            p_vec_guess[i] = random.uniform(p_vec_min[i], p_vec_max[i])
+            if p_vec_min[i] > p_vec_max[i]:
+                p_vec_min[i], p_vec_max[i] = p_vec_max[i], p_vec_min[i] 
+        p_min = simulator.region_model.parameter_t()
+        p_max = simulator.region_model.parameter_t()
+        p_guess = simulator.region_model.parameter_t()
+        p_min.set(p_vec_min)
+        p_max.set(p_vec_max)
+        p_guess.set(p_vec_guess)
+
+        # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]), 1.0, api.KLING_GUPTA)
-        tsv = api.TargetSpecificationVector([target_spec])
-        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), tsv, p, p_min, p_max)
-        print("True,", p_orig[:4])
-        print("Computed,", [p for p in p_opt][:4])
+        target_spec_vec = api.TargetSpecificationVector([target_spec])
+        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), target_spec_vec, p_guess, p_min, p_max)
+
+        simulator.region_model.set_catchment_parameter(cid, p_opt)
+        simulator.run(time_axis, state_repos.get_state(0))
+        found_discharge = simulator.region_model.statistics.discharge([cid])
                         
-        #vs = [discharge.value(i) for i in range(discharge.size())]
-        #ts = [discharge.time(i) for i in range(discharge.size())]
-        #from matplotlib import pylab as plt
-        #plt.plot(ts, vs)
-        #plt.show()
-
-
+        t_vs = np.array([target_discharge.value(i) for i in range(target_discharge.size())])
+        t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
+        f_vs = np.array([found_discharge.value(i) for i in range(found_discharge.size())])
+        f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
+        self.assertTrue(np.linalg.norm(t_ts - f_ts) < 1.0e-10)
+        self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
 
     def test_run_arome_ensemble(self):
         # Simulation time axis

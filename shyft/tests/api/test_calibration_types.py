@@ -88,11 +88,9 @@ class ShyftApi(unittest.TestCase):
         # stuff it into the target spec.
         t2=api.TargetSpecificationPts(tsa,api.IntVector([0,2,3]),0.7,api.KLING_GUPTA)
         t.ts = tsa
-        tv = api.TargetSpecificationVector()
-        tv.push_back(t)
-        tv.push_back(t2)
+        tv = api.TargetSpecificationVector([t, t2])
         # now verify we got something ok
-        self.assertAlmostEqual(2,tv.size())
+        self.assertEqual(2, tv.size())
         self.assertAlmostEqual(tv[0].ts.value(1),1.5) # average value 0..1 ->0.5
         self.assertAlmostEqual(tv[0].ts.value(2),2.5) # average value 0..1 ->0.5
         self.assertAlmostEqual(tv[0].ts.value(3),3.0) # average value 0..1 ->0.5
