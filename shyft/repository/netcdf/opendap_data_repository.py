@@ -129,7 +129,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         time_slice = slice(idx_min, idx_max)
         time = time[time_slice]
 
-        x, y, _, m_lon, m_lat = self._limit(lon[:], lat[:], self.shyft_cs)
+        x, y, _, (m_lon, m_lat), _ = self._limit(lon[:], lat[:], self.shyft_cs)
 
         for k in dataset.variables.keys():
             if self._gfs_shyft_map.get(k, None) in input_source_types:
@@ -147,7 +147,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
             alts = alts[np.round(lats) == lats, np.round(longs) == longs]
             lats = lats[np.round(lats) == lats]
             longs = longs[np.round(longs) == longs]
-            _x, _y, z, _m_lon, _m_lat = self._limit(longs, lats, self.shyft_cs, alts)
+            _x, _y, z, (_m_lon, _m_lat), _ = self._limit(longs, lats, self.shyft_cs, alts)
             assert np.linalg.norm(x - _x + y - _y) < 1.0e-10  # x/y coordinates must match
             pts = np.dstack((x, y, z)).reshape(*(x.shape + (3,)))
         if set(("x_wind", "y_wind")).issubset(raw_data):
@@ -266,23 +266,26 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         if sum(lat_upper == lat_lower) < 2:
             lat_upper[np.argmax(lat_upper) - 1] = True
             lat_lower[np.argmin(lat_lower)] = True
+        lon_inds = np.nonzero(lon_upper == lon_lower)[0]
+        lat_inds = np.nonzero(lat_upper == lat_lower)[0]
+        # Masks
         lon_mask = lon_upper == lon_lower
         lat_mask = lat_upper == lat_lower
 
-        if not lon_mask.any():
+        if lon_inds.size == 0:
             raise GFSDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-        if not lat_mask.any():
+        if lat_inds.size == 0:
             raise GFSDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
 
         if altitudes is not None:
-            alts = np.clip(altitudes[lat_mask, :][:, lon_mask], 0.0, 100000)
-            xyz = np.meshgrid(lon[lon_mask], lat[lat_mask]) + [alts]
+            alts = np.clip(altitudes[lat_inds[:, None], lon_inds], 0.0, 100000)
+            xyz = np.meshgrid(lon[lon_inds], lat[lat_inds]) + [alts]
             t_xyz = transform(data_proj, target_proj, xyz[0].ravel(), xyz[1].ravel(), xyz[2].ravel())
             x, y, z = [tmp.reshape(xyz[0].shape) for tmp in t_xyz]
         else:
-            x, y = transform(data_proj, target_proj, *np.meshgrid(lon[lon_mask], lat[lat_mask]))
+            x, y = transform(data_proj, target_proj, *np.meshgrid(lon[lon_inds], lat[lat_inds]))
             z = None
-        return x, y, z, lon_mask, lat_mask
+        return x, y, z, (lon_mask, lat_mask), (lon_inds, lat_inds)
 
     @classmethod
     def ad_to_utc(cls, T):

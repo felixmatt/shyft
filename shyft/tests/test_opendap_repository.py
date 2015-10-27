@@ -1,12 +1,18 @@
 from __future__ import print_function
 import unittest
 from os import path
+import datetime
 
 from shyft import shyftdata_dir
 from shyft import api
 from shyft.repository.netcdf.opendap_data_repository import GFSDataRepository
 
 class GFSDataRepositoryTestCase(unittest.TestCase):
+
+    @property
+    def start_date(self):
+        date = datetime.datetime.utcnow() - datetime.timedelta(1)  # Yesterday....
+        return date.year, date.month, date.day
 
     def test_get_timeseries(self):
         """
@@ -16,11 +22,10 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
 
         dem_file = path.join(shyftdata_dir, "netcdf", "etopo180.nc")
 
+
+
         # Period start
-        year = 2015
-        month = 10
-        day = 21
-        hour = 7
+        (year, month, day), hour = self.start_date, 7
         n_hours = 30
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
@@ -48,10 +53,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         dem_file = path.join(shyftdata_dir, "netcdf", "etopo180.nc")
 
         # Period start
-        year = 2015
-        month = 10
-        day = 20
-        hour = 9
+        (year, month, day), hour = self.start_date, 9
         n_hours = 30
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
@@ -80,10 +82,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         dem_file = path.join(shyftdata_dir, "netcdf", "etopo180.nc")
 
         # Period start
-        year = 2015
-        month = 10
-        day = 20
-        hour = 9
+        (year, month, day), hour = self.start_date, 9
         n_hours = 30
         utc = api.Calendar()  # No offset gives Utc
         t0 = api.YMDhms(year, month, day, hour)
