@@ -120,25 +120,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self._bounding_box = bounding_box
 
         # Field names and mappings
-        self._shyft_fields = ["relative_humidity",
-                              "temperature",
-                              "z",
-                              "precipitation",
-                              "x_wind",
-                              "y_wind",
-                              "radiation"]
-
-        self._arome_fields = ["relative_humidity_2m",
-                            "air_temperature_2m",
-                            "altitude",
-                            "precipitation_amount",
-                            "precipitation_amount_acc",
-                            "x_wind_10m",
-                            "y_wind_10m",
-                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time"]
-
-
-        self.arome_shyft_map = {"relative_humidity_2m": "relative_humidity",
+        self._arome_shyft_map = {"relative_humidity_2m": "relative_humidity",
                               "air_temperature_2m": "temperature",
                               "altitude": "z",
                               "precipitation_amount": "precipitation",
@@ -147,14 +129,15 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                               "y_wind_10m": "y_wind",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
 
+        self._shift_fields = ("precipitation_amount", "precipitation_amount_acc",
+                              "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
+
 
         self.source_type_map = {"relative_humidity": api.RelHumSource,
                                 "temperature": api.TemperatureSource,
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
-        #self.shyft_net_map = {s: n for n, s in zip(netcdf_fields, self._shyft_fields)}
-        self._fetch_ensamble = False
         self.xx = self.yy = self.extracted_data = None
 
     @property
@@ -199,7 +182,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             np.zeros(self.xx.shape, dtype='d')
         return pts
 
-    def _convert_to_timeseries(self, extracted_data, ensemble_index=None):
+    def _convert_to_timeseries(self, data):
         """Convert timeseries from numpy structures to shyft.api timeseries.
 
         We assume the time axis is regular, and that we can use a point time
@@ -211,20 +194,10 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         -------
         timeseries: dict
             Time series arrays keyed by type
-        non_timeseries: dict
-            Other data that can not be converted to time series
-
         """
-        if ensemble_index is not None:
-            ensembles = []
-        time_series = {}
-        non_time_series = {}
         tsc = api.TsFactory().create_point_ts
-        for key, (data, ta) in iteritems(extracted_data):
-            if ta is None:
-                non_time_series[key] = data
-                continue
-
+        time_series = {}
+        for key, (data, ta) in data.items():
             fslice = (len(data.shape) - 2)*[slice(None)]
             I, J = data.shape[-2:]
 
@@ -235,20 +208,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                                    "".format(ta.size(), d.size, key))
                 return tsc(ta.size(), ta.start(), ta.delta(),
                            api.DoubleVector_FromNdArray(d.flatten()), 0)
-            if ensemble_index is not None:
-                if not ensembles:
-                    ensembles = data.shape[ensemble_index]*[{}]
-                for idx in range(data.shape[ensemble_index]):
-                    fslice[ensemble_index + 2] = idx
-                    ensembles[idx][key] = np.array([[construct(data[fslice + [i, j]])
-                                                    for j in range(J)] for i in range(I)])
-            else:
-                time_series[key] = np.array([[construct(data[fslice + [i, j]])
-                                              for j in range(J)] for i in range(I)])
-        if ensemble_index is None:
-            return time_series, non_time_series
-        else:
-            return ensembles, non_time_series
+            time_series[key] = np.array([[construct(data[fslice + [i, j]])
+                                          for j in range(J)] for i in range(I)])
+        return time_series
 
     def _limit(self, x, y, data_cs, target_cs):
         """
@@ -288,8 +250,26 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
         # Limit data
-        x_mask = (x >= x_min) == (x <= x_max)
-        y_mask = (y >= y_min) == (y <= y_max)
+        #x_mask = (x >= x_min) == (x <= x_max)
+        #y_mask = (y >= y_min) == (y <= y_max)
+
+        x_upper = x >= x_min
+        x_lower = x <= x_max
+        if sum(x_upper == x_lower) < 2:
+            x_upper[np.argmax(x_upper) - 1] = True
+            x_lower[np.argmin(x_lower)] = True
+        y_upper = y >= y_min
+        y_lower = y <= y_max
+        if sum(y_upper == y_lower) < 2:
+            y_upper[np.argmax(y_upper) - 1] = True
+            y_lower[np.argmin(y_lower)] = True
+
+        x_inds = np.nonzero(x_upper == x_lower)[0]
+        y_inds = np.nonzero(y_upper == y_lower)[0]
+
+        # Masks
+        x_mask = x_upper == x_lower
+        y_mask = y_upper == y_lower
 
         if not x_mask.any():
             raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
@@ -299,18 +279,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, *np.meshgrid(x[x_mask], y[y_mask]))
 
-        # TODO: Investigate why the lat/long WGS84 does not deliver same coords in
-        #       target coords as the data_proj with x/y in Carthesian coordinate system
-        """
-        gx, gy = target_proj(data_vars["longitude"][y_mask, x_mask].reshape(-1),
-                            data_vars["latitude"][y_mask, x_mask].reshape(-1))
-        # This difference should really be small
-        print(gx.shape)
-        print(np.linalg.norm(gx - xx.reshape(-1)))
-        print(np.linalg.norm(gy - yy.reshape(-1)))
-        print(xx.shape, yy.shape)
-        """
-        return xx, yy, x_mask, y_mask
+        return xx, yy, (x_mask, y_mask), (x_inds, y_inds)
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
@@ -337,9 +306,9 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             return self._get_data_from_dataset(dataset, input_source_types, 
                                                utc_period, geo_location_criteria)
 
-    def _get_data_from_dataset(self, dataset, input_source_types, utc_period, geo_location_criteria):
+    def _get_data_from_dataset(self, dataset, input_source_types, utc_period, geo_location_criteria, ensemble_member=None):
 
-        data_vars = dataset.variables
+
         if geo_location_criteria is not None:
             self._bounding_box = geo_location_criteria
 
@@ -349,103 +318,79 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             input_source_types.append("x_wind")
             input_source_types.append("y_wind")
 
-        # Ensemble?
-        if self._is_ensemble:
-            if "ensemble_member" not in data_vars:
-                raise AromeDataRepositoryError("No ensemble data found in dataset")
-            ensemble_idx = -3  # TODO: Use dimension to resolve pos
-        else:
-            ensemble_idx = None
-            if "ensemble_member" in data_vars:
-                raise AromeDataRepositoryError("Ensemble dataset found, use get_forecast_ensemble")
+        raw_data = {}
+        x = dataset.variables.get("x", None)
+        y = dataset.variables.get("y", None)
+        time = dataset.variables.get("time", None)
+        if not all([x, y, time]):
+            raise AromeDataRepositoryError("Something is wrong with the dataset."
+                                         " x/y coords or time not found.")
+        data_cs = dataset.variables.get("projection_lambert", None)
+        if data_cs is None:
+            raise AromeDataRepositoryError("No coordinate system information in dataset.")
 
-        # Extract time dimension and construct data convert mapping
-        time = data_vars.pop("time")[:]
-        idx_min = time.searchsorted(utc_period.start, side='left')
-        idx_max = time.searchsorted(utc_period.end, side='right')
+        idx_min = np.searchsorted(time, utc_period.start, side='left')
+        idx_max = np.searchsorted(time, utc_period.end, side='right')
+        
+        issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
-        data_convert_map = {n: c for n, c in
-                            zip(self._arome_fields, self._arome_data_convert(time, time_slice))}
+        x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
+        for k in dataset.variables.keys():
+            if self._arome_shyft_map.get(k, None) in input_source_types:
+                if k in self._shift_fields and issubset:  # Add one to time slice
+                    data_time_slice = slice(time_slice.start, time_slice.stop + 1)
+                else:
+                    data_time_slice = time_slice
+                data = dataset.variables[k]
+                dims = data.dimensions
+                data_slice = len(data.dimensions)*[slice(None)]
+                if ensemble_member is not None:
+                    data_slice[dims.index("ensemble_member")] = ensemble_member
+                data_slice[dims.index("x")] = m_x
+                data_slice[dims.index("y")] = m_y
+                data_slice[dims.index("time")] = data_time_slice
+                raw_data[self._arome_shyft_map[k]] = data[data_slice], k
+        if "altitude" in dataset.variables.keys():
+            data = dataset.variables["altitude"]
+            dims = data.dimensions
+            data_slice = len(data.dimensions)*[slice(None)]
+            data_slice[dims.index("x")] = m_x
+            data_slice[dims.index("y")] = m_y
+            z = data[data_slice]
+
+        if self.elevation_file is not None:
+            _x, _y, z = self._read_elevation_file(self.elevation_file)
+            assert np.linalg.norm(x - _x) < 1.0e-10  # x/y coordinates should match
+            assert np.linalg.norm(y - _y) < 1.0e-10
+        pts = np.dstack((x, y, z)).reshape(*(x.shape +(3,)))
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
-        assert set(input_source_types).issubset(self._shyft_fields)
-        possible_data_vars = [x for (x, y) in self.arome_shyft_map.items() if y in input_source_types]
-        if self.allow_subset:
-            input_source_types = list(set([self.arome_shyft_map[y] for y in possible_data_vars]))
-            #input_source_types = [df for df in input_source_types
-            #                      if self.shyft_net_map[df] in data_vars]
-        else:
-            dv = list(data_vars) # py3 compat instead of .keys()
-            if "precipitation_amount" in dv:
-                dv.append("precipitation_amount_acc")
-            elif "precipitation_amount_acc" in dv:
-                dv.append("precipitation_amount")
-            assert set(possible_data_vars).issubset(set(dv)) # fail if this netcdf file does not contain what we are looking for
+        if not self.allow_subset and not (set(raw_data.keys()).issuperset(input_source_types)):
+            raise AromeDataRepositoryError("Could not find all data fields")
 
-        additional_extract = ["z"] if "altitude" in data_vars.keys() else []
-        # Use first field to get sub region masks
-        dv_names = [x for x,y in self.arome_shyft_map.items() ]
-        intersect= set(dv_names).intersection(data_vars)
-        d = data_vars[list(intersect)[0]]
-        self.xx, self.yy, x_mask, y_mask = \
-            self._limit(data_vars.pop("x")[:], data_vars.pop("y")[:],
-                        data_vars.pop(d.grid_mapping).proj4, self.shyft_cs)
-        raw_data = {}
-        for data_field in list(input_source_types) + additional_extract:
-            data_names = [x for x,y in self.arome_shyft_map.items() if y == data_field]
-            if not set(data_names).intersection(data_vars):
-                continue
-            if len(data_names) == 1:
-                data_name = data_names[0]
-                data = data_vars.pop(data_name)
-            else:  # variable can be either accumulated or not, choose the one that is not acced
-                data = None
-                for data_name in data_names:
-                    if data_name in data_vars:
-                        data = data_vars.pop(data_name)
-                        break
-                #data = data_vars.pop([x for x in data_names if "acc" not in x][0])
-                if data is None:
-                    raise AromeDataRepositoryError("Data for {} not found".format(data_field))
-            # Construct slice
-            #print(data.dimensions)
-            data_slice = len(data.dimensions)*[slice(None)]
-            data_slice[data.dimensions.index("x")] = x_mask
-            data_slice[data.dimensions.index("y")] = y_mask
-            # Add extracted data and corresponding coordinates to class
-            raw_data[data_name] = data[data_slice]
-        extracted_data = {self.arome_shyft_map[key]: (data_convert_map[key][0](raw_data[key]),
-                                data_convert_map[key][1]()) for key in raw_data}
-        # Compute wind speed from (x,y) components
-        if set(("x_wind", "y_wind")).issubset(extracted_data):
-            x_wind, _ = extracted_data.pop("x_wind")
-            y_wind, t = extracted_data.pop("y_wind")
-            extracted_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), t
-        # Use elevations from other dataset
-        if self.elevation_file is not None:
-            ds2 = Dataset(self.elevation_file)
-            data = ds2.variables["altitude"]
-            if "altitude" not in ds2.variables.keys():
+        if set(("x_wind", "y_wind")).issubset(raw_data):
+            x_wind, _ = raw_data.pop("x_wind")
+            y_wind, _ = raw_data.pop("y_wind")
+            raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), "wind_speed"
+
+        extracted_data = self._transform_raw(raw_data, time[time_slice], issubset=issubset)
+        return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data), pts)
+
+    def _read_elevation_file(self, filename):
+        with Dataset(self.elevation_file) as dataset:
+            elev = dataset.variables["altitude"]
+            if "altitude" not in dataset.variables.keys():
                 raise interfaces.InterfaceError(
-                    "File '{}' does not contain altitudes".format(self.elevation_file))
-            xx, yy, x_mask, y_mask = \
-                self._limit(ds2.variables.pop("x"),
-                            ds2.variables.pop("y"),
-                            ds2.variables.pop(data.grid_mapping).proj4,
-                            self.shyft_cs)
-            data_slice = len(data.dimensions)*[slice(None)]
-            data_slice[data.dimensions.index("x")] = x_mask
-            data_slice[data.dimensions.index("y")] = y_mask
-            assert np.linalg.norm(self.xx - xx) < 1.0e-10  # x/y coordinates should match
-            assert np.linalg.norm(self.yy - yy) < 1.0e-10
-            extracted_data["z"] = data[data_slice], None
-        self.time_series, self.other_data = \
-            self._convert_to_timeseries(extracted_data, ensemble_index=ensemble_idx)
-        pts = self._geo_points()
-        if self._is_ensemble:
-            return [self._geo_ts_to_vec(run, pts) for run in self.time_series]
-        else:
-            return self._geo_ts_to_vec(self.time_series, pts)
+                        "File '{}' does not contain altitudes".format(self.elevation_file))
+            x, y, (x_mask, y_mask), _ = \
+                    self._limit(dataset.variables.pop("x"),
+                                dataset.variables.pop("y"),
+                                dataset.variables.pop(elev.grid_mapping).proj4,
+                                self.shyft_cs)
+            data_slice = len(elev.dimensions)*[slice(None)]
+            data_slice[elev.dimensions.index("x")] = x_mask
+            data_slice[elev.dimensions.index("y")] = y_mask
+            return x, y, elev[data_slice]
 
     # arome data and time conversions, ordered as _netcdf_fields
     def _arome_data_convert(self, t, time_slice):
@@ -501,6 +446,50 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 (noop, t_to_ta_0),
                 (rad_conv, t_to_ta_1)]
 
+    def _transform_raw(self, data, time, issubset=False):
+        """
+        We need full time if deaccumulating
+        """
+
+        def noop_time(t):
+            t0 = int(t[0])
+            t1 = int(t[1])
+            return api.Timeaxis(t0, t1 - t0, len(t))
+
+        def dacc_time(t):
+            t0 = int(t[0])
+            t1 = int(t[1])
+            return noop_time(t) if issubset else api.Timeaxis(t0, t1 - t0, len(t) - 1)
+
+        def noop_space(x):
+            return x
+
+        def air_temp_conv(T):
+            return T - 273.15
+
+        def prec_conv(p):
+            return p[1:]
+
+        def prec_acc_conv(p):
+            return np.clip(p[1:] - p[:-1], 0.0, 1000.0)
+
+        def rad_conv(r):
+            dr = r[1:] - r[:-1]
+            return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
+
+        convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
+                       "relative_humidity_2m": lambda x, t: (noop_space(x), noop_time(t)),
+                       "air_temperature_2m": lambda x, t: (air_temp_conv(x), noop_time(t)),
+                       "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": lambda x, t: (rad_conv(x), dacc_time(t)),
+                       "precipitation_amount": lambda x, t: (prec_conv(x), dacc_time(t)),
+                       "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x), dacc_time(t))}
+        res = {}
+        for k, (v, ak) in data.items():
+            res[k] = convert_map[ak](v, time)
+        return res
+
+
+
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in iteritems(data):
@@ -544,11 +533,14 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         """
         See base class: ..interfaces.GeoTsRepository
         """
-        self._filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
-        if self._filename:
-            self._is_ensemble = True
-            res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
-            self._filename = None
-            self._is_ensemble = False
+        filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
+        if not path.isfile(filename):
+            raise AromeDataRepositoryError("No ensemble found")
+        
+        with Dataset(filename) as dataset:
+            res = []
+            for idx in dataset.variables["ensemble_member"][:]:
+                res.append(self._get_data_from_dataset(dataset, input_source_types, utc_period, 
+                                                       geo_location_criteria,
+                                                       ensemble_member=idx))
             return res
-        raise interfaces.InterfaceError("No ensemble found")

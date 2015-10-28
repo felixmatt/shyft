@@ -155,7 +155,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
             y_wind = raw_data.pop("y_wind")
             raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind))
         extracted_data = self._transform_raw(raw_data, time)
-        return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data, utc_period), pts)
+        return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data), pts)
 
     def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
         """See base class."""
@@ -204,7 +204,6 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         def prec_conv(x):
             return x*3600
 
-    
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
                        "radiation": lambda x, t: (noop_space(x), noop_time(t)),
                        "temperature": lambda x, t: (air_temp_conv(x), noop_time(t)),
@@ -215,7 +214,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
             res[k] = convert_map[k](v, time)
         return res
 
-    def _convert_to_timeseries(self, data, period):
+    def _convert_to_timeseries(self, data):
         tsc = api.TsFactory().create_point_ts
         time_series = {}
         for key, (data, ta) in data.items():
@@ -254,7 +253,6 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         lat_min, lat_max = min(bb_proj[1]), max(bb_proj[1])
 
         # Limit data
-        # TODO: Change (back) to using index arrays (not boolean).
         lon_upper = lon >= lon_min
         lon_lower = lon <= lon_max
         if sum(lon_upper == lon_lower) < 2:

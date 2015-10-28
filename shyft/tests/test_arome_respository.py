@@ -91,7 +91,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         tc1_precip = tc1_sources["precipitation"][0].ts
         tc2_precip = tc2_sources["precipitation"][0].ts
 
-        self.assertTrue(tc1_precip.size() == n_hours + 1)
+        self.assertEqual(tc1_precip.size(), n_hours)
         self.assertTrue(tc1_precip.time(0) != tc2_precip.time(0))
 
     def test_get_ensemble(self):
