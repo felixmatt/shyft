@@ -331,6 +331,15 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
 
+        if not path.isfile(self.filename):
+            raise AromeDataRepositoryError("File '{}' not found".format(self.filename))
+        with Dataset(self.filename) as dataset:
+            return self._get_data_from_dataset(dataset, input_source_types, 
+                                               utc_period, geo_location_criteria)
+
+    def _get_data_from_dataset(self, dataset, input_source_types, utc_period, geo_location_criteria):
+
+        data_vars = dataset.variables
         if geo_location_criteria is not None:
             self._bounding_box = geo_location_criteria
 
@@ -339,12 +348,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             input_source_types.remove("wind_speed")
             input_source_types.append("x_wind")
             input_source_types.append("y_wind")
-
-        # Open netcdf dataset. TODO: use with...
-        if not path.isfile(self.filename):
-            raise AromeDataRepositoryError("File '{}' not found".format(self.filename))
-        dataset = Dataset(self.filename)
-        data_vars = dataset.variables
 
         # Ensemble?
         if self._is_ensemble:
@@ -405,6 +408,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 if data is None:
                     raise AromeDataRepositoryError("Data for {} not found".format(data_field))
             # Construct slice
+            #print(data.dimensions)
             data_slice = len(data.dimensions)*[slice(None)]
             data_slice[data.dimensions.index("x")] = x_mask
             data_slice[data.dimensions.index("y")] = y_mask
