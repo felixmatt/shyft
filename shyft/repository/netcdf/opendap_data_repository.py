@@ -49,8 +49,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
     __time_b = 719164.0
 
     def __init__(self, epsg, dem_file, utc=None, bounding_box=None):
-        self.epsg = epsg
-        self.shyft_cs = "+init=EPSG:32632"
+        self.shyft_cs = "+init=EPSG:{}".format(epsg)
         self.dem_file = dem_file
         self.ensemble_idx = 0
         self.base_url = "http://nomads.ncep.noaa.gov:9090/dods/gens"
