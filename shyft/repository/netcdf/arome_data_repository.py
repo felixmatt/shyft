@@ -95,69 +95,135 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Allow extraction of a subset of the given source fields
             instead of raising exception.
         """
-        # Make sure input makes sense, or raise exceptions
-        self.directory = directory
-        self._filename = None  # To be used by forecast and ensemble to read data
-        self._is_ensemble = False
+        self._filename = path.join(directory, filename)
         self.allow_subset = allow_subset
-        if not path.isdir(self.directory):
-            raise AromeDataRepositoryError("No such directory '{}'".format(self.directory))
-        self.name_or_pattern = path.join(self.directory, filename)
+        if not path.isdir(directory):
+            raise AromeDataRepositoryError("No such directory '{}'".format(directory))
+        
         if elevation_file is not None:
-            self.elevation_file = path.join(self.directory, elevation_file)
+            self.elevation_file = path.join(directory, elevation_file)
             if not path.isfile(self.elevation_file):
                 raise AromeDataRepositoryError(
                     "Elevation file '{}' not found".format(self.elevation_file))
         else:
             self.elevation_file = None
 
-        self.epsg = int(epsg)
-        self.shyft_cs = \
-            "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(self.epsg - 32600,
-                                                                              "WGS84", "WGS84")
+        self.shyft_cs = "+init=EPSG:{}".format(epsg)
         self._x_padding = x_padding
         self._y_padding = y_padding
         self._bounding_box = bounding_box
 
         # Field names and mappings
         self._arome_shyft_map = {"relative_humidity_2m": "relative_humidity",
-                              "air_temperature_2m": "temperature",
-                              "altitude": "z",
-                              "precipitation_amount": "precipitation",
-                              "precipitation_amount_acc": "precipitation",
-                              "x_wind_10m": "x_wind",
-                              "y_wind_10m": "y_wind",
-                              "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
+                                 "air_temperature_2m": "temperature",
+                                 "altitude": "z",
+                                 "precipitation_amount": "precipitation",
+                                 "precipitation_amount_acc": "precipitation",
+                                 "x_wind_10m": "x_wind",
+                                 "y_wind_10m": "y_wind",
+                                 "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
+                                 "radiation"}
 
         self._shift_fields = ("precipitation_amount", "precipitation_amount_acc",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
-
 
         self.source_type_map = {"relative_humidity": api.RelHumSource,
                                 "temperature": api.TemperatureSource,
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
-        self.xx = self.yy = self.extracted_data = None
 
-    @property
-    def filename(self):
-        if self._filename is not None:
-            return self._filename
-        elif path.isfile(self.name_or_pattern):
-            return self.name_or_pattern
-        else:
-            match = glob(self.name_or_pattern)
-            if len(match) == 1:
-                return match[0]
-        raise AromeDataRepositoryError("Cannot resolve filename")
+    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
+        """Get shyft source vectors of time series for input_source_types
+
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve (precipitation, temperature..)
+        geo_location_criteria: object, optional
+            Some type (to be decided), extent (bbox + coord.ref)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+
+        Returns
+        -------
+        geo_loc_ts: dictionary
+            dictionary keyed by time series name, where values are api vectors of geo
+            located timeseries.
+        """
+        filename = self._filename
+
+        if not path.isfile(filename):
+            raise AromeDataRepositoryError("File '{}' not found".format(filename))
+        with Dataset(filename) as dataset:
+            return self._get_data_from_dataset(dataset, input_source_types,
+                                               utc_period, geo_location_criteria)
+
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
+        """
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve. Valid types are:
+                * relative_humidity
+                * temperature
+                * precipitation
+                * radiation
+                * wind_speed
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+        t_c: long
+            Forecast specification; return newest forecast older than t_c.
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref).
+
+        Returns
+        -------
+        geo_loc_ts: dictionary
+            dictionary keyed by ts type, where values are api vectors of geo
+            located timeseries.
+        """
+        filename = self._get_files(t_c, "_(\d{8})_(\d{2}).nc$")
+        with Dataset(filename) as dataset:
+            return self._get_data_from_dataset(dataset, input_source_types, utc_period,
+                                               geo_location_criteria)
+
+    def get_forecast_ensemble(self, input_source_types, utc_period,
+                              t_c, geo_location_criteria=None):
+        """
+        Parameters
+        ----------
+        input_source_types: list
+            List of source types to retrieve (precipitation, temperature, ...)
+        utc_period: api.UtcPeriod
+            The utc time period that should (as a minimum) be covered.
+        t_c: long
+            Forecast specification; return newest forecast older than t_c.
+        geo_location_criteria: object
+            Some type (to be decided), extent (bbox + coord.ref).
+
+        Returns
+        -------
+        ensemble: list of geo_loc_ts dictionaries
+            Dictionaries are keyed by time series type, with values
+            being api vectors of geo located timeseries.
+        """
+
+        filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
+        with Dataset(filename) as dataset:
+            res = []
+            for idx in dataset.variables["ensemble_member"][:]:
+                res.append(self._get_data_from_dataset(dataset, input_source_types, utc_period,
+                                                       geo_location_criteria,
+                                                       ensemble_member=idx))
+            return res
 
     @property
     def bounding_box(self):
         # Add a padding to the bounding box to make sure the computational
         # domain is fully enclosed in arome dataset
         if self._bounding_box is None:
-            raise AromeDataRepositoryError("A bounding box must be provided")
+            raise AromeDataRepositoryError("A bounding box must be provided.")
         bounding_box = np.array(self._bounding_box)
         bounding_box[0][0] -= self._x_padding
         bounding_box[0][1] += self._x_padding
@@ -168,19 +234,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         bounding_box[1][2] += self._y_padding
         bounding_box[1][3] += self._y_padding
         return bounding_box
-
-    def _geo_points(self):
-        """Return (x,y,z) coordinates for data sources
-
-        Construct and return a numpy array of (x,y,z) coordinates at each
-        (i,j) having a data source.
-        """
-        pts = np.empty(self.xx.shape + (3,), dtype='d')
-        pts[:, :, 0] = self.xx
-        pts[:, :, 1] = self.yy
-        pts[:, :, 2] = self.other_data["z"] if "z" in self.other_data else \
-            np.zeros(self.xx.shape, dtype='d')
-        return pts
 
     def _convert_to_timeseries(self, data):
         """Convert timeseries from numpy structures to shyft.api timeseries.
@@ -239,7 +292,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Boolean index array
         """
         # Get coordinate system for arome data
-        #data_cs = "{}".format(data_cs)  # Add missing field +towgs84=0,0,0
         data_proj = Proj(data_cs)
         target_proj = Proj(target_cs)
 
@@ -250,17 +302,18 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
         # Limit data
-        #x_mask = (x >= x_min) == (x <= x_max)
-        #y_mask = (y >= y_min) == (y <= y_max)
-
         x_upper = x >= x_min
         x_lower = x <= x_max
-        if sum(x_upper == x_lower) < 2:
-            x_upper[np.argmax(x_upper) - 1] = True
-            x_lower[np.argmin(x_lower)] = True
         y_upper = y >= y_min
         y_lower = y <= y_max
+        if sum(x_upper == x_lower) < 2:
+            if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
+                raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
+            x_upper[np.argmax(x_upper) - 1] = True
+            x_lower[np.argmin(x_lower)] = True
         if sum(y_upper == y_lower) < 2:
+            if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
+                raise AromeDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
             y_upper[np.argmax(y_upper) - 1] = True
             y_lower[np.argmin(y_lower)] = True
 
@@ -271,43 +324,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         x_mask = x_upper == x_lower
         y_mask = y_upper == y_lower
 
-        if not x_mask.any():
-            raise AromeDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-        if not y_mask.any():
-            raise AromeDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
-
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, *np.meshgrid(x[x_mask], y[y_mask]))
 
         return xx, yy, (x_mask, y_mask), (x_inds, y_inds)
 
-    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
-        """Get shyft source vectors of time series for input_source_types
-
-        Parameters
-        ----------
-        input_source_types: list
-            List of source types to retrieve (precipitation, temperature..)
-        geo_location_criteria: object, optional
-            Some type (to be decided), extent (bbox + coord.ref)
-        utc_period: api.UtcPeriod
-            The utc time period that should (as a minimum) be covered.
-
-        Returns
-        -------
-        geo_loc_ts: dictionary
-            dictionary keyed by time series name, where values are api vectors of geo
-            located timeseries.
-        """
-
-        if not path.isfile(self.filename):
-            raise AromeDataRepositoryError("File '{}' not found".format(self.filename))
-        with Dataset(self.filename) as dataset:
-            return self._get_data_from_dataset(dataset, input_source_types, 
-                                               utc_period, geo_location_criteria)
-
-    def _get_data_from_dataset(self, dataset, input_source_types, utc_period, geo_location_criteria, ensemble_member=None):
-
+    def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
+                               geo_location_criteria, ensemble_member=None):
 
         if geo_location_criteria is not None:
             self._bounding_box = geo_location_criteria
@@ -324,14 +347,14 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         time = dataset.variables.get("time", None)
         if not all([x, y, time]):
             raise AromeDataRepositoryError("Something is wrong with the dataset."
-                                         " x/y coords or time not found.")
+                                           " x/y coords or time not found.")
         data_cs = dataset.variables.get("projection_lambert", None)
         if data_cs is None:
             raise AromeDataRepositoryError("No coordinate system information in dataset.")
 
         idx_min = np.searchsorted(time, utc_period.start, side='left')
         idx_max = np.searchsorted(time, utc_period.end, side='right')
-        
+
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
         x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
@@ -350,19 +373,22 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 data_slice[dims.index("y")] = m_y
                 data_slice[dims.index("time")] = data_time_slice
                 raw_data[self._arome_shyft_map[k]] = data[data_slice], k
-        if "altitude" in dataset.variables.keys():
+        if self.elevation_file is not None:
+            _x, _y, z = self._read_elevation_file(self.elevation_file)
+            assert np.linalg.norm(x - _x) < 1.0e-10  # x/y coordinates should match
+            assert np.linalg.norm(y - _y) < 1.0e-10
+        elif "altitude" in dataset.variables.keys():
             data = dataset.variables["altitude"]
             dims = data.dimensions
             data_slice = len(data.dimensions)*[slice(None)]
             data_slice[dims.index("x")] = m_x
             data_slice[dims.index("y")] = m_y
             z = data[data_slice]
+        else:
+            raise AromeDataRepositoryError("No elevations found in dataset"
+                                           ", and no elevation file given.")
 
-        if self.elevation_file is not None:
-            _x, _y, z = self._read_elevation_file(self.elevation_file)
-            assert np.linalg.norm(x - _x) < 1.0e-10  # x/y coordinates should match
-            assert np.linalg.norm(y - _y) < 1.0e-10
-        pts = np.dstack((x, y, z)).reshape(*(x.shape +(3,)))
+        pts = np.dstack((x, y, z)).reshape(*(x.shape + (3,)))
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
         if not self.allow_subset and not (set(raw_data.keys()).issuperset(input_source_types)):
@@ -381,70 +407,16 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             elev = dataset.variables["altitude"]
             if "altitude" not in dataset.variables.keys():
                 raise interfaces.InterfaceError(
-                        "File '{}' does not contain altitudes".format(self.elevation_file))
+                    "File '{}' does not contain altitudes".format(self.elevation_file))
             x, y, (x_mask, y_mask), _ = \
-                    self._limit(dataset.variables.pop("x"),
-                                dataset.variables.pop("y"),
-                                dataset.variables.pop(elev.grid_mapping).proj4,
-                                self.shyft_cs)
+                self._limit(dataset.variables.pop("x"),
+                            dataset.variables.pop("y"),
+                            dataset.variables.pop(elev.grid_mapping).proj4,
+                            self.shyft_cs)
             data_slice = len(elev.dimensions)*[slice(None)]
             data_slice[elev.dimensions.index("x")] = x_mask
             data_slice[elev.dimensions.index("y")] = y_mask
             return x, y, elev[data_slice]
-
-    # arome data and time conversions, ordered as _netcdf_fields
-    def _arome_data_convert(self, t, time_slice):
-        """
-        For a given utc time list t, return a list of callable tuples to
-        convert from arome data to shyft data. For radiation we calculate:
-        rad[t_i] = sw_flux(t_{i+1}) - sw_flux(t_i)/dt for i in 0, ..., N-1,
-        where N is the number of values in the dataset, and equals the
-        number of forcast time points + 1. Also temperatures are converted
-        from Kelvin to Celcius, and the elevation data set is treated as a
-        special case.
-
-        Parameters
-        ----------
-        t: np.ndarray
-            Points in time for all data points in dataset
-        time_slice: slice
-            Slice object such that the t[time_slice] is
-            the subset to extract
-        """
-        extract_subset = True if t[time_slice].shape != t.shape else False
-
-        def t_to_ta(t, shift):
-            if extract_subset:
-                shift = 0
-            return api.Timeaxis(int(t[0]), int(t[1] - t[0]), len(t) - shift)
-
-        def noop(d):
-            return d[time_slice]
-
-        def air_temp_conv(t):
-            return t[time_slice] - 273.15
-
-        def prec_conv(p):
-            return p[1:][time_slice]
-
-        def prec_acc_conv(p):
-            return np.clip(p[1:][time_slice] - p[:-1][time_slice], 0.0, 1000.0)
-
-        def rad_conv(rad):
-            delta_rad = rad[1:][time_slice] - rad[:-1][time_slice]
-            dts = (t[1:] - t[:-1])[[time_slice] + (len(rad.shape) - 1)*[np.newaxis]]
-            return np.clip(delta_rad/dts, 0.0, 1000.0)
-
-        t_to_ta_0 = partial(t_to_ta, t[time_slice], 0)  # Full
-        t_to_ta_1 = partial(t_to_ta, t[time_slice], 1)
-        return [(noop, t_to_ta_0),
-                (air_temp_conv, t_to_ta_0),
-                (lambda x: x, lambda: None),  # Altitude
-                (prec_conv, t_to_ta_1),
-                (prec_acc_conv, t_to_ta_1),
-                (noop, t_to_ta_0),
-                (noop, t_to_ta_0),
-                (rad_conv, t_to_ta_1)]
 
     def _transform_raw(self, data, time, issubset=False):
         """
@@ -480,7 +452,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
                        "relative_humidity_2m": lambda x, t: (noop_space(x), noop_time(t)),
                        "air_temperature_2m": lambda x, t: (air_temp_conv(x), noop_time(t)),
-                       "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": lambda x, t: (rad_conv(x), dacc_time(t)),
+                       "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
+                       lambda x, t: (rad_conv(x), dacc_time(t)),
                        "precipitation_amount": lambda x, t: (prec_conv(x), dacc_time(t)),
                        "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x), dacc_time(t))}
         res = {}
@@ -488,19 +461,17 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             res[k] = convert_map[ak](v, time)
         return res
 
-
-
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in iteritems(data):
-            tpe = self.source_type_map[name] 
+            tpe = self.source_type_map[name]
             res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
                                       ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
         return res
 
     def _get_files(self, t_c, date_pattern):
         utc = api.Calendar()
-        file_names = glob(self.name_or_pattern)
+        file_names = glob(self._filename)
         match_files = []
         match_times = []
         for fn in file_names:
@@ -515,32 +486,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                     match_times.append(t)
         if match_files:
             return match_files[np.argsort(match_times)[-1]]
-        return None
-
-    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
-        """
-        See base class
-        """
-        self._filename = self._get_files(t_c, "_(\d{8})_(\d{2}).nc$")
-        if self._filename is not None:
-            res = self.get_timeseries(input_source_types, utc_period, geo_location_criteria)
-            self._filename = None
-            return res
-        raise interfaces.InterfaceError("No forecast found")
-
-    def get_forecast_ensemble(self, input_source_types, utc_period,
-                              t_c, geo_location_criteria=None):
-        """
-        See base class: ..interfaces.GeoTsRepository
-        """
-        filename = self._get_files(t_c, "\D(\d{8})(\d{2}).nc$")
-        if not path.isfile(filename):
-            raise AromeDataRepositoryError("No ensemble found")
-        
-        with Dataset(filename) as dataset:
-            res = []
-            for idx in dataset.variables["ensemble_member"][:]:
-                res.append(self._get_data_from_dataset(dataset, input_source_types, utc_period, 
-                                                       geo_location_criteria,
-                                                       ensemble_member=idx))
-            return res
+        date = "{:4d}.{:02d}.{:02d}:{:02d}:{:02d}:{:02d}".format(t_c.year, t_c.month, t_c.day,
+                                                                 t_c.hour, t_c.minute, t_c.second)
+        raise AromeDataRepositoryError("No matches found for file_pattern = {} and t_c = {} "
+                                       "".format(self._filename, date))
