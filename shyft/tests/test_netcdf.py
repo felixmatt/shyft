@@ -32,11 +32,11 @@ class Simulation():
         cells = self.simulator.model.get_cells()
         assert len(cells) == 4
         expected_results = {
-            "total_discharge": [0.00844, 0.00586, 0.00836, 0.00824],
-            "discharge": [0.0431, 0.0444, 0.0429, 0.0423],
-            "snow_storage": [41.8, 49.7, 41.5, 41.2],
-            "temperature": [9.14, 8.41, 9.27, 9.62],
-            "precipitation": [0.173, 0.178, 0.172, 0.170],
+            "total_discharge": [0.00697, 0.00706, 0.00705, 0.00705],
+            "discharge": [0.00364, 0.00362, 0.00353, 0.00353],
+            "snow_storage": [167.8, 151.4, 147.9, 148.3],
+            "temperature": [-1.66, -1.22, -0.702, -0.702],
+            "precipitation": [0.0753, 0.0741, 0.0726, 0.0726],
         }
 
         # for the fun of it, demonstrate how to use cell_statistics
@@ -63,7 +63,7 @@ class Simulation():
 # Some examples of simulation.  Feel free to add more.
 class Simulation1(Simulation, unittest.TestCase):
     config_file = "configuration.yaml"
-    section = "Himalayas"
+    section = "Atnsjoen"
 
 
 class Calibration():
@@ -111,4 +111,4 @@ class Calibration():
 # Some examples of calibration.  Feel free to add more.
 class Calibration1(Calibration, unittest.TestCase):
     config_file = "calibration.yaml"
-    section = "Himalayas"
+    section = "Atnsjoen"

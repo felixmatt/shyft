@@ -1,10 +1,10 @@
 ---
 repository:
   class: shyft.orchestration2.netcdf.Region
-  data_file: netcdf/orchestration-testdata/cell_info.nc
+  data_file: netcdf/orchestration-testdata/atnasjoen_cell_info.nc
 
 domain:
-  EPSG: 32632
+  EPSG: 32633
   # for netcdf the domain info is inside the netcdf files
   # nx: 122
   # ny: 90
