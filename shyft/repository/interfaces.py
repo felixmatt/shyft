@@ -262,7 +262,7 @@ class GeoTsRepository(object):
         Parameters
         ----------
         input_source_types: list
-            List of source types to retrieve (precipitation,temperature..)
+            List of source types to retrieve (precipitation, temperature, ...)
         utc_period: api.UtcPeriod
             The utc time period that should (as a minimum) be covered.
         t_c: long
@@ -285,7 +285,7 @@ class GeoTsRepository(object):
         Parameters
         ----------
         input_source_types: list
-            List of source types to retrieve (precipitation,temperature..)
+            List of source types to retrieve (precipitation, temperature, ...)
         utc_period: api.UtcPeriod
             The utc time period that should (as a minimum) be covered.
         t_c: long
