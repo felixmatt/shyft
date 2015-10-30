@@ -5,15 +5,16 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from os import path
-import random
+#import random
 import unittest
-import numpy as np
+#import numpy as np
 
 from shyft import api
 from shyft import shyftdata_dir
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollectionError
 from shyft.repository.netcdf import AromeDataRepository
+from shyft.repository.netcdf import AromeDataRepositoryError
 
 class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
 
@@ -128,4 +129,5 @@ class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
         except AromeDataRepositoryError as adre:
             self.skipTest("(test inconclusive- missing arome-data {0})".format(adre))
 
-
+if __name__ == '__main__':
+    unittest.main()
