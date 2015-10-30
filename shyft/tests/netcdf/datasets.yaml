@@ -3,98 +3,50 @@ sources:
   - repository: source_repo1
     class: shyft.orchestration2.netcdf.SourceDatasetRepository
     params:
-      stations_met: netcdf/orchestration-testdata/stations_met.nc
+      stations_met: netcdf/orchestration-testdata/atnasjoen_met.nc
       types:
         - type: precipitation
           stations:
-            - values: /station1/precipitation
-              time: /station1/time
-              location: /station1.x, /station1.y, /station1.z
-            - values: /station2/precipitation
-              time: /station2/time
-              location: /station2.x, /station2.y, /station2.z
-            - values: /station3/precipitation
-              time: /station3/time
-              location: /station3.x, /station3.y, /station3.z
-            - values: /station4/precipitation
-              time: /station4/time
-              location: /station4.x, /station4.y, /station4.z
-            - values: /station5/precipitation
-              time: /station5/time
-              location: /station5.x, /station5.y, /station5.z
-            - values: /station6/precipitation
-              time: /station6/time
-              location: /station6.x, /station6.y, /station6.z
+            - values: /ATNDALEN-ERIKSRUD/precipitation
+              time: /ATNDALEN-ERIKSRUD/time
+              location: /ATNDALEN-ERIKSRUD.x, /ATNDALEN-ERIKSRUD.y, /ATNDALEN-ERIKSRUD.z
+            - values: /ATNSJOEN/precipitation
+              time: /ATNSJOEN/time
+              location: /ATNSJOEN.x, /ATNSJOEN.y, /ATNSJOEN.z
         - type: temperature
           stations:
-            - values: /station1/temperature
-              time: /station1/time
-              location: /station1.x, /station1.y, /station1.z
-            - values: /station2/temperature
-              time: /station2/time
-              location: /station2.x, /station2.y, /station2.z
-            - values: /station3/temperature
-              time: /station3/time
-              location: /station3.x, /station3.y, /station3.z
-            - values: /station4/temperature
-              time: /station4/time
-              location: /station4.x, /station4.y, /station4.z
+            - values: /libru_nve/temperature
+              time: /libru_nve/time
+              location: /libru_nve.x, /libru_nve.y, /libru_nve.z
+            - values: /atnsjoen_nve/temperature
+              time: /atnsjoen_nve/time
+              location: /atnsjoen_nve.x, /atnsjoen_nve.y, /atnsjoen_nve.z
         - type: relative_humidity
           stations:
-            - values: /station1/relative_humidity
-              time: /station1/time
-              location: /station1.x, /station1.y, /station1.z
-            - values: /station2/relative_humidity
-              time: /station2/time
-              location: /station2.x, /station2.y, /station2.z
-            - values: /station3/relative_humidity
-              time: /station3/time
-              location: /station3.x, /station3.y, /station3.z
-            - values: /station4/relative_humidity
-              time: /station4/time
-              location: /station4.x, /station4.y, /station4.z
+            - values: /fake_relative_humidity/relative_humidity
+              time: /fake_relative_humidity/time
+              location: /fake_relative_humidity.x, /fake_relative_humidity.y, /fake_relative_humidity.z
         - type: radiation
           stations:
-            - values: /v1/radiation
-              time: /v1/time
-              location: /v1.x, /v1.y, /v1.z
-            - values: /v2/radiation
-              time: /v2/time
-              location: /v2.x, /v2.y, /v2.z
-            - values: /v3/radiation
-              time: /v3/time
-              location: /v3.x, /v3.y, /v3.z
-            - values: /v4/radiation
-              time: /v4/time
-              location: /v4.x, /v4.y, /v4.z
-            - values: /v5/radiation
-              time: /v5/time
-              location: /v5.x, /v5.y, /v5.z
-            - values: /v6/radiation
-              time: /v6/time
-              location: /v6.x, /v6.y, /v6.z
+            - values: /WFDEI_station1/radiation
+              time: /WFDEI_station1/time
+              location: /WFDEI_station1.x, /WFDEI_station1.y, /WFDEI_station1.z
+            - values: /WFDEI_station2/radiation
+              time: /WFDEI_station2/time
+              location: /WFDEI_station2.x, /WFDEI_station2.y, /WFDEI_station2.z
+            - values: /WFDEI_station3/radiation
+              time: /WFDEI_station3/time
+              location: /WFDEI_station3.x, /WFDEI_station3.y, /WFDEI_station3.z
+            - values: /WFDEI_station4/radiation
+              time: /WFDEI_station4/time
+              location: /WFDEI_station4.x, /WFDEI_station4.y, /WFDEI_station4.z
         - type: wind_speed
           stations:
-            - values: /v1/wind_speed
-              time: /v1/time
-              location: /v1.x, /v1.y, /v1.z
-            - values: /v2/wind_speed
-              time: /v2/time
-              location: /v2.x, /v2.y, /v2.z
-            - values: /v3/wind_speed
-              time: /v3/time
-              location: /v3.x, /v3.y, /v3.z
-            - values: /v4/wind_speed
-              time: /v4/time
-              location: /v4.x, /v4.y, /v4.z
-            - values: /v5/wind_speed
-              time: /v5/time
-              location: /v5.x, /v5.y, /v5.z
-            - values: /v6/wind_speed
-              time: /v6/time
-              location: /v6.x, /v6.y, /v6.z
+            - values: /fake_wind_speed/wind_speed
+              time: /fake_wind_speed/time
+              location: /fake_wind_speed.x, /fake_wind_speed.y, /fake_wind_speed.z
 
-      stations_discharge: stations_discharge.nc
+      stations_discharge: atnasjoen_discharge.nc
 
 # to be implemented...
 #destinations:

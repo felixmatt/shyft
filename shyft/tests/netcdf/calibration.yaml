@@ -1,4 +1,4 @@
-Himalayas:
+Atnsjoen:
   model_config_file: configuration.yaml
   calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
   calibration_type: PTGSKOptimizer.optimize     # can be 'optimize' or 'optimize_dream'
@@ -6,14 +6,14 @@ Himalayas:
   target:
   - repository:
     class: shyft.orchestration2.netcdf.Target
-    file: netcdf/orchestration-testdata/stations_discharge.nc
+    file: netcdf/orchestration-testdata/atnasjoen_discharge.nc
     1D_timeseries:
-    - internal_id: subcatchment2
-      # uid: /SHyFT/STS/Runoff/Vikf-Tistel, 2015-09-01T00:00:00
+    - internal_id: atnsjoen
       uid: discharge
-      start_datetime: 1990-07-01T00:00:00
+      start_datetime: 2005-01-01T00:00:00
       run_time_step: 86400
-      number_of_steps: 730 # two years
+      # number_of_steps: 3652  # 10 years, but for 2013 and 2014 radiation is NaN
+      number_of_steps: 730  # 2 years
       weight: 1.0
       obj_func:
         name: NSE  # Nash–Sutcliffe efficiency (NSE) or Kling–Gupta efficiency (KGE)
@@ -22,7 +22,7 @@ Himalayas:
           s_var: 1.0
           s_bias: 1.0
   catchment_index:
-  - internal_id: subcatchment2
+  - internal_id: atnsjoen
     catch_id: [2]
   overrides:
     model: PTGSKOptModel
