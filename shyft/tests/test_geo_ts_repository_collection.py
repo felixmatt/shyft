@@ -1,4 +1,4 @@
-"""
+﻿"""
 Tests GeoTsRepositoryCollection
 """
 from __future__ import print_function
@@ -14,6 +14,7 @@ from shyft import shyftdata_dir
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollectionError
 from shyft.repository.netcdf import AromeDataRepository
+from shyft.repository.netcdf import AromeDataRepositoryError
 
 class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
 
