@@ -5,9 +5,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from os import path
-import random
+#import random
 import unittest
-import numpy as np
+#import numpy as np
 
 from shyft import api
 from shyft import shyftdata_dir
@@ -129,4 +129,5 @@ class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
         except AromeDataRepositoryError as adre:
             self.skipTest("(test inconclusive- missing arome-data {0})".format(adre))
 
-
+if __name__ == '__main__':
+    unittest.main()

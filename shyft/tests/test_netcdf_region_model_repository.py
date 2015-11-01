@@ -17,7 +17,7 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
     """
     def test_construct_repository(self):
         reg_conf = yaml_config.RegionConfig(path.join(path.dirname(__file__),
-                                            "netcdf", "india_region.yaml"))
+                                            "netcdf", "atnasjoen_region.yaml"))
         mod_conf = yaml_config.ModelConfig(path.join(path.dirname(__file__),
                                            "netcdf", "model.yaml"))
         epsg = "32633"
@@ -27,7 +27,7 @@ class NetCDFRegionModelRepositoryTestCase(unittest.TestCase):
             region_model_repository.get_region_model("NeaNidelv_PTGSK",
                                                      PTGSKModel)
         self.assertIsNotNone(region_model)
-        self.assertEqual(4960, region_model.size())
+        self.assertEqual(1848, region_model.size())
         rp = region_model.get_region_parameter()
         self.assertAlmostEqual(-2.63036759414, rp.kirchner.c1)
         self.assertTrue(

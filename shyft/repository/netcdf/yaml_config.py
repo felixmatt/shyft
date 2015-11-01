@@ -11,7 +11,8 @@ class YamlContent(object):
 
     def __init__(self, config_file):
         self._config_file = config_file
-        config = yaml.load(open(config_file))
+        with open(config_file) as cfg_file:
+            config = yaml.load(cfg_file)
         # Expose all keys in yaml file as attributes
         self.__dict__.update(config)
 
