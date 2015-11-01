@@ -163,14 +163,14 @@ void bayesian_kriging_test::test_covariance_calculation() {
 	arma::vec covs(n*(n - 1) / 2); // Strict upper part of cov matrix, as vector
 	for (arma::uword i = 0; i < n*(n - 1) / 2; ++i) dqs.at(i) = static_cast<double>((i + 1)*(i + 1)); // NB: Not valid dists
 	// Start timer
-	const std::clock_t start = std::clock();
+	//const std::clock_t start = std::clock();
 	utils::cov(dqs, covs, params);
 	arma::uword v_idx = 0;
 	for (arma::uword i = 0; i < n; ++i)
 		for (arma::uword j = i + 1; j < n; ++j)
 			C.at(i, j) = covs.at(v_idx++);
 	C.diag() *= utils::zero_dist_cov(params);
-	const std::clock_t total = std::clock() - start;
+	//const std::clock_t total = std::clock() - start;
 	//std::cout << "Computing upper covariance matrix with nnz " << n*(n + 1) / 2 << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
 
 	// Compute source-target cov
