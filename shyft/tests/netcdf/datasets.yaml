@@ -1,7 +1,7 @@
 ---
 sources:
   - repository: source_repo1
-    class: shyft.orchestration2.netcdf.SourceDataset
+    class: shyft.orchestration2.netcdf.SourceDatasetRepository
     params:
       stations_met: netcdf/orchestration-testdata/atnasjoen_met.nc
       types:

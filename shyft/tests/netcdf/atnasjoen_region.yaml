@@ -1,0 +1,13 @@
+---
+repository:
+  class: shyft.repository.netcdf.RegionModelRepository
+  data_file: netcdf/orchestration-testdata/atnasjoen_cell_info.nc
+
+domain:
+  EPSG: 32633
+
+parameter_overrides:
+  1:
+    kirchner:
+        c1: -2.539
+...

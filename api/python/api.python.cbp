@@ -79,6 +79,11 @@
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Environment>
+				<Variable name="numpy_include" value="/opt/anaconda/lib/python3.4/site-packages/numpy/core/include" />
+				<Variable name="py_include" value="/opt/anaconda/include/python3.4m" />
+				<Variable name="py_lib" value="/opt/anaconda/lib" />
+			</Environment>
 		</Build>
 		<VirtualTargets>
 			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_ss_k_Debug;" />
@@ -89,7 +94,8 @@
 			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
-			<Add directory="/usr/include/python2.7" />
+			<Add directory="$(py_include)" />
+			<Add directory="$(numpy_include)" />
 			<Add directory=".." />
 			<Add directory="../../../dlib" />
 			<Add directory="../.." />
@@ -99,11 +105,11 @@
 			<Add library="shyftcore" />
 			<Add library="blas" />
 			<Add library="lapack" />
-			<Add directory="/usr/lib/python2.7" />
+			<Add directory="$(py_lib)" />
 			<Add directory="/usr/local/lib64" />
 		</Linker>
 		<ExtraCommands>
-			<Add before="make -f Makefile.swig_run" />
+			<Add before="make -f Makefile.swig_run -j 8" />
 		</ExtraCommands>
 		<Unit filename="Makefile.swig_run" />
 		<Unit filename="__init__.i">

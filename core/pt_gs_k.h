@@ -37,6 +37,9 @@ namespace shyft {
                       precipitation_correction_parameter_t p_corr)
              : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) { /*Do nothing */ }
             parameter() {}
+            parameter(const parameter& other)
+             : pt(other.pt), gs(other.gs), ae(other.ae),
+               kirchner(other.kirchner), p_corr(other.p_corr) { /*Do nothing */ }
 
             pt_parameter_t pt;
             gs_parameter_t gs;

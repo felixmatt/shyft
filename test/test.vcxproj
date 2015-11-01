@@ -34,7 +34,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -47,7 +47,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-12.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -86,7 +86,7 @@
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\cxxtest\cxxtest-4.3;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(SolutionDir)..\dlib</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-12.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
@@ -119,7 +119,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>test_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>.;..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -170,7 +170,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>test_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>.;..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>

@@ -10,6 +10,7 @@
 #include <numpy/arrayobject.h>
 
 #include "api/api.h"
+#include "api/pt_ss_k.h"
 #include "core/pt_ss_k.h"
 
 %}
@@ -17,6 +18,7 @@
 %include "numpy.i"
 %include <windows.i>
 %include <std_string.i>
+%include <std_map.i>
 %include <std_vector.i>
 %include <exception.i>
 #define SWIG_SHARED_PTR_NAMESPACE std
@@ -32,6 +34,21 @@
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> > )
 %shared_ptr(std::vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> > )
 
+// exceptions need to go here:
+%exception {
+  try {
+    $action
+  } catch (const std::runtime_error& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch ( const std::invalid_argument& e){
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (const std::exception& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  } catch (...) {
+    SWIG_exception(SWIG_UnknownError,"c++ unknown exception");
+  }
+}
+
 %rename(PTSSKResponse)    shyft::core::pt_ss_k::response;
 %rename(PTSSKState)       shyft::core::pt_ss_k::state;
 %rename(PTSSKParameter)   shyft::core::pt_ss_k::parameter;
@@ -42,6 +59,9 @@
 %rename(PTSSKStateCollector)       shyft::core::pt_ss_k::state_collector;
 %rename(PTSSKAllCollector)         shyft::core::pt_ss_k::all_response_collector;
 %include "core/pt_ss_k_cell_model.h"
+
+%rename (PTSSKStateIo) shyft::api::pt_ss_k_state_io;
+%include "pt_ss_k.h"
 
 namespace shyft {
   namespace core {
@@ -77,6 +97,7 @@ namespace std {
    %template(PTSSKCellAllVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::state_collector, shyft::core::pt_ss_k::all_response_collector> >;
     %template(PTSSKCellOptVector) vector< shyft::core::cell<shyft::core::pt_ss_k::parameter, shyft::core::environment_t, shyft::core::pt_ss_k::state, shyft::core::pt_ss_k::null_collector, shyft::core::pt_ss_k::discharge_collector> >;
     %template(PTSSKStateVector) vector<shyft::core::pt_ss_k::state>;
+	%template(PTSSKParameterMap) map<size_t, shyft::core::pt_ss_k::parameter>;
 }
 
 namespace shyft {
@@ -92,6 +113,9 @@ namespace shyft {
 }
 %pythoncode %{
 PTSSKModel.cell_t = PTSSKCellAll
+PTSSKParameter.map_t=PTSSKParameterMap
+PTSSKModel.parameter_t = PTSSKParameter
+PTSSKModel.state_t = PTSSKState
 PTSSKModel.statistics = property(lambda self: PTSSKCellAllStatistics(self.get_cells()))
 PTSSKModel.skaugen_state = property(lambda self: PTSSKCellSkaugenStateStatistics(self.get_cells()))
 PTSSKModel.skaugen_response = property(lambda self: PTSSKCellSkaugenResponseStatistics(self.get_cells()))
@@ -99,20 +123,17 @@ PTSSKModel.priestley_taylor_response = property(lambda self: PTSSKCellPriestleyT
 PTSSKModel.actual_evaptranspiration_response=property(lambda self: PTSSKCellActualEvapotranspirationResponseStatistics(self.get_cells()))
 PTSSKModel.kirchner_state = property(lambda self: PTSSKCellKirchnerStateStatistics(self.get_cells()))
 PTSSKOptModel.cell_t = PTSSKCellOpt
+PTSSKOptModel.parameter_t = PTSSKParameter
+PTSSKOptModel.state_t = PTSSKState
 PTSSKOptModel.statistics = property(lambda self:PTSSKCellOptStatistics(self.get_cells()))
 PTSSKCellAll.vector_t = PTSSKCellAllVector
 PTSSKCellOpt.vector_t = PTSSKCellOptVector
+PTSSKState.vector_t = PTSSKStateVector
+PTSSKState.serializer_t = PTSSKStateIo
+
 %}
 
-%exception {
-  try {
-    $action
-  } catch (const std::runtime_error& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  } catch (const std::exception& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
-  }
-}
+
 
 
 %init %{
