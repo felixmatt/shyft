@@ -1,5 +1,5 @@
 ﻿import matplotlib.pylab as plt
-from descartes import PolygonPatch
+from patch import PolygonPatch
 from matplotlib.collections import PatchCollection
 from matplotlib import cm
 
