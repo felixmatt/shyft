@@ -3,7 +3,7 @@ Simulator classes for running SHyFT forward simulations.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-import  numpy as np
+import numpy as np
 from shyft import api
 
 
@@ -78,7 +78,8 @@ class SimpleSimulator(object):
         self._geo_ts_names = ("temperature", "wind_speed", "precipitation",
                               "relative_humidity", "radiation")
         self.geo_ts_repository = geo_ts_repository
-        self.region_model = region_model_repository.get_region_model(region_id, catchments=catchments)
+        self.region_model = region_model_repository.get_region_model(region_id,
+                                                                     catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
         self.state = None
         self.time_axis = None
@@ -119,7 +120,6 @@ class SimpleSimulator(object):
             self.region_model.run_cells()
             self.state = None
             self.time_axis = None
-            #self.region_env = None
         else:
             raise SimulatorError("Model not runnable.")
 
@@ -166,7 +166,7 @@ class SimpleSimulator(object):
             runnables.append(simulator)
         return runnables
 
-    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, 
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max,
                  max_n_evaluations=1500, tr_start=0.3, tr_stop=0.01):
         if not hasattr(self.region_model, "optimizer_t"):
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
@@ -190,7 +190,7 @@ class SimpleSimulator(object):
         self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
         self.region_model.set_states(self.state)
         self.optimizer = self.region_model.optimizer_t(self.region_model,
-                                                       target_specification, 
+                                                       target_specification,
                                                        p_vec_min,
                                                        p_vec_max)
         p_vec_opt = self.optimizer.optimize(p_vec, max_n_evaluations=max_n_evaluations,
@@ -198,3 +198,24 @@ class SimpleSimulator(object):
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
         return p_res
+
+    def discharge_adjusted_state(self, obs_discharge, state):
+        """
+        Parameters
+        ----------
+        obs_discharge: float
+            Observed discharge in units m3/s
+        state: shyft.api state vector type
+            Vector of state having ground water response kirchner with variable q.
+        """
+        reg_mod = self.region_model
+        areas = np.array([cell.geo.area() for cell in reg_mod.get_cells()])
+        area_tot = areas.sum()
+        avg_obs_discharge = obs_discharge*3600.*1000./area_tot  # Convert to l/h per m2
+        state_discharge = np.array([state[i].kirchner.q for i in range(state.size())])
+        avg_state_discharge = (state_discharge*areas).sum()/area_tot
+        discharge_ratios = state_discharge/avg_state_discharge
+        updated_state_discharge = avg_obs_discharge*discharge_ratios
+        for i in range(state.size()):
+            state[i].kirchner.q = updated_state_discharge[i]
+        return state
