@@ -8,6 +8,8 @@ from os import path
 import random
 import unittest
 import numpy as np
+from functools import reduce
+import operator
 
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
@@ -74,6 +76,61 @@ class SimulationTestCase(unittest.TestCase):
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
+
+    def test_set_observed_state(self):
+        # Simulation time axis
+        year, month, day, hour = 2010, 1, 1, 0
+        dt = 24*api.deltahours(1)
+        n_steps = 30
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        time_axis = api.Timeaxis(t0, dt, n_steps)
+
+        # Some fake ids
+        region_id = 0
+        interpolation_id = 0
+
+        # Simulation coordinate system
+        epsg = "32633"
+
+        # Model
+        model_t = pt_gs_k.PTGSKModel
+
+        # Configs and repositories
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        region_config = RegionConfig(self.region_config_file)
+        model_config = ModelConfig(self.model_config_file)
+        dataset_config = YamlContent(dataset_config_file)
+        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        interp_repos = InterpolationParameterRepository(model_config)
+        netcdf_geo_ts_repos = []
+        for source in dataset_config.sources:
+            station_file = source["params"]["stations_met"]
+            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
+        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(model_t, n_cells)
+        state = state_repos.get_state(0) 
+        simulator.run(time_axis, state)
+        simulator.region_model.get_states(state)
+        obs_discharge = 0.0
+        state = simulator.discharge_adjusted_state(obs_discharge, state)
+        tot_cell_areas = reduce(operator.add, (cell.geo.area()
+                                for cell in simulator.region_model.get_cells()))
+        
+        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].kirchner.q for i 
+                                                          in range(state.size()))))
+        simulator.region_model.get_states(state)
+
+        obs_discharge = 10.0 # m3/s
+        state = simulator.discharge_adjusted_state(obs_discharge, state)
+
+        # Convert from l/h to m3/s by dividing by 3.6e6
+        adj_discharge = reduce(operator.add, (state[i].kirchner.q*cell.geo.area() for (i, cell) 
+                               in enumerate(simulator.region_model.get_cells())))/(3.6e6)
+        self.assertAlmostEqual(obs_discharge, adj_discharge)
 
     def test_run_geo_ts_data_simulator(self):
         # Simulation time axis

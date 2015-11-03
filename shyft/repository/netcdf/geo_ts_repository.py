@@ -122,7 +122,6 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                 times = station['time']
                 assert type(times) is list
                 dt = times[1] - times[0] if len(times) > 1 else api.deltahours(1)
-                print(times)
                 total_period = api.UtcPeriod(times[0], times[-1] + dt)
                 time_points = api.UtcTimeVector(times)
                 time_points.push_back(total_period.end)
