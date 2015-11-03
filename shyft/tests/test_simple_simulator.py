@@ -30,7 +30,8 @@ class SimulationTestCase(unittest.TestCase):
 
     def setUp(self):
 
-        self.region_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_region.yaml")
+        self.region_config_file = path.join(path.dirname(__file__), "netcdf",
+                                            "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def test_run_arome_data_simulator(self):
@@ -55,7 +56,7 @@ class SimulationTestCase(unittest.TestCase):
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
@@ -101,7 +102,7 @@ class SimulationTestCase(unittest.TestCase):
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
         dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         netcdf_geo_ts_repos = []
         for source in dataset_config.sources:
@@ -112,23 +113,21 @@ class SimulationTestCase(unittest.TestCase):
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
-        state = state_repos.get_state(0) 
+        state = state_repos.get_state(0)
         simulator.run(time_axis, state)
         simulator.region_model.get_states(state)
         obs_discharge = 0.0
         state = simulator.discharge_adjusted_state(obs_discharge, state)
-        tot_cell_areas = reduce(operator.add, (cell.geo.area()
-                                for cell in simulator.region_model.get_cells()))
-        
-        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].kirchner.q for i 
+
+        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].kirchner.q for i
                                                           in range(state.size()))))
         simulator.region_model.get_states(state)
 
-        obs_discharge = 10.0 # m3/s
+        obs_discharge = 10.0  # m3/s
         state = simulator.discharge_adjusted_state(obs_discharge, state)
 
         # Convert from l/h to m3/s by dividing by 3.6e6
-        adj_discharge = reduce(operator.add, (state[i].kirchner.q*cell.geo.area() for (i, cell) 
+        adj_discharge = reduce(operator.add, (state[i].kirchner.q*cell.geo.area() for (i, cell)
                                in enumerate(simulator.region_model.get_cells())))/(3.6e6)
         self.assertAlmostEqual(obs_discharge, adj_discharge)
 
@@ -156,7 +155,7 @@ class SimulationTestCase(unittest.TestCase):
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
         dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         netcdf_geo_ts_repos = []
         for source in dataset_config.sources:
@@ -190,11 +189,12 @@ class SimulationTestCase(unittest.TestCase):
 
         # Configs and repositories
         dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config_file = path.join(path.dirname(__file__), "netcdf", "atnsjoen_calibration_region.yaml")
+        region_config_file = path.join(path.dirname(__file__), "netcdf",
+                                       "atnsjoen_calibration_region.yaml")
         region_config = RegionConfig(region_config_file)
         model_config = ModelConfig(self.model_config_file)
         dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         netcdf_geo_ts_repos = []
         for source in dataset_config.sources:
@@ -225,7 +225,7 @@ class SimulationTestCase(unittest.TestCase):
             p_vec_max[i] *= 1.5
             p_vec_guess[i] = random.uniform(p_vec_min[i], p_vec_max[i])
             if p_vec_min[i] > p_vec_max[i]:
-                p_vec_min[i], p_vec_max[i] = p_vec_max[i], p_vec_min[i] 
+                p_vec_min[i], p_vec_max[i] = p_vec_max[i], p_vec_min[i]
         p_min = simulator.region_model.parameter_t()
         p_max = simulator.region_model.parameter_t()
         p_guess = simulator.region_model.parameter_t()
@@ -234,14 +234,16 @@ class SimulationTestCase(unittest.TestCase):
         p_guess.set(p_vec_guess)
 
         # Find parameters
-        target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]), 1.0, api.KLING_GUPTA)
+        target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
+                                                 1.0, api.KLING_GUPTA)
         target_spec_vec = api.TargetSpecificationVector([target_spec])
-        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), target_spec_vec, p_guess, p_min, p_max)
+        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), target_spec_vec,
+                                   p_guess, p_min, p_max)
 
         simulator.region_model.set_catchment_parameter(cid, p_opt)
         simulator.run(time_axis, state_repos.get_state(0))
         found_discharge = simulator.region_model.statistics.discharge([cid])
-                        
+
         t_vs = np.array([target_discharge.value(i) for i in range(target_discharge.size())])
         t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
         f_vs = np.array([found_discharge.value(i) for i in range(found_discharge.size())])
@@ -271,16 +273,19 @@ class SimulationTestCase(unittest.TestCase):
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
         model_config = ModelConfig(self.model_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config,model_t, epsg)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
         base_dir = path.join(shyftdata_dir, "netcdf", "arome")
         pattern = "fc*.nc"
         try:
-            geo_ts_repository = AromeDataRepository(epsg, base_dir, filename=pattern, allow_subset=True)
+            geo_ts_repository = AromeDataRepository(epsg, base_dir, filename=pattern,
+                                                    allow_subset=True)
         except Exception as e:
-            print("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****")
+            print("**** test_run_arome_ensemble: Arome data missing or"
+                  " wrong, test inconclusive ****")
             print("****{}****".format(e))
-            self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test inconclusive ****\n\t exception:{}".format(e))
+            self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test "
+                          "inconclusive ****\n\t exception:{}".format(e))
         simulator = SimpleSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
