@@ -29,7 +29,7 @@ try:
     from shyft.repository.interfaces import TimeseriesStore
     from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
     from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
-    from shyft import shyftdata_dir
+
     
     class InterpolationConfig(object):
         """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
@@ -52,14 +52,11 @@ try:
             }
     
 
-            
-            
     class StatkraftTistelTest(unittest.TestCase):
         """
         This is a test/demo class, showing how we could run catchment Tistel (vik in sogn)
         using statkraft repositories (incl gis and db-services),
         and the orchestator SimpleSimulator to do the work.
-
         """
         def test_run_observed_then_arome_and_store(self):
             """
@@ -83,18 +80,18 @@ try:
             n_cells = ptgsk.region_model.size()
             ptgsk_state = DefaultStateRepository(ptgsk.region_model.__class__, n_cells)
 
-            ptgsk.region_model.set_state_collection(-1,True)# collect state so we can inspect it
-            s0=ptgsk_state.get_state(0)
+            ptgsk.region_model.set_state_collection(-1, True)# collect state so we can inspect it
+            s0 = ptgsk_state.get_state(0)
             for i in range(s0.size()): #add some juice to get started
-                s0[i].kirchner.q=0.5
+                s0[i].kirchner.q = 0.5
 
-            ptgsk.run(time_axis,s0 )
+            ptgsk.run(time_axis, s0)
             
             print("Done simulation, testing that we can extract data from model")
             
             cids = api.IntVector() # we pull out for all the catchments-id if it's empty
-            model=ptgsk.region_model # fetch out  the model 
-            sum_discharge=model.statistics.discharge(cids)
+            model = ptgsk.region_model # fetch out  the model 
+            sum_discharge = model.statistics.discharge(cids)
             self.assertIsNotNone(sum_discharge)
             avg_temperature = model.statistics.temperature(cids)
             avg_precipitation = model.statistics.precipitation(cids)
@@ -116,18 +113,18 @@ try:
                 TsStoreItem(u'/test/sih/shyft/tistel/precipitation',lambda m: m.statistics.precipitation(cids)),
             ]
 
-            tss=TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),save_list)
+            tss = TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),save_list)
             
             self.assertTrue(tss.store_ts(ptgsk.region_model))
 
             print("Run forecast arome")
-            endstate=ptgsk.region_model.state_t.vector_t()
-            ptgsk.region_model.get_states(endstate) # get the state at end of obs
-            ptgsk.geo_ts_repository=self.arome_repository #switch to arome here
-            ptgsk.run_forecast(fc_time_axis,fc_time_axis.start(),endstate) # now forecast
+            endstate = ptgsk.region_model.state_t.vector_t()
+            ptgsk.region_model.get_states(endstate)  # get the state at end of obs
+            ptgsk.geo_ts_repository = self.arome_repository  #switch to arome here
+            ptgsk.run_forecast(fc_time_axis, fc_time_axis.start(), endstate) # now forecast
             print("Done forecast")
             fc_save_list=[
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_discharge_m3s',lambda m:  m.statistics.discharge(cids)),
+                TsStoreItem(u'/test/sih/shyft/tistel/fc_discharge_m3s',lambda m: m.statistics.discharge(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_temperature',lambda m: m.statistics.temperature(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_precipitation',lambda m: m.statistics.precipitation(cids)),
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_radiation',lambda m: m.statistics.radiation(cids)),
@@ -135,9 +132,12 @@ try:
                 TsStoreItem(u'/test/sih/shyft/tistel/fc_wind_speed',lambda m: m.statistics.wind_speed(cids)),
                 
             ]
-            TimeseriesStore(SmGTsRepository(PREPROD,FC_PREPROD),fc_save_list).store_ts(ptgsk.region_model)
+            TimeseriesStore(SmGTsRepository(PREPROD, FC_PREPROD), fc_save_list).store_ts(ptgsk.region_model)
             print("Done save to db")
             
+        @property
+        def statkraft_data_dir(self):
+            return path.abspath(path.join("D:", path.join(path.sep, "statkraft_data")))
     
         @property
         def region_model_repository(self):
@@ -186,18 +186,18 @@ try:
     
             return GeoTsRepository( #together, the location provider, ts-provider, and the station, we have
                 epsg_id=self.epsg_id,
-                geo_location_repository=gis_location_repository,# a complete geo_ts-repository
+                geo_location_repository=gis_location_repository,  # a complete geo_ts-repository
                 ts_repository=smg_ts_repository,
                 met_station_list=met_stations,
                 ens_config=None) #pass service info and met_stations 
 
         @property
         def epsg_id(self):
-            return self.grid_spec.epsg_id
+            return self.grid_spec.epsg()
 
         @property
         def grid_spec(self):
-             return GridSpecification(epsg_id=32633,x0=35000.0,y0=6788000.0,dx=1000,dy=1000,nx=16,ny=17)  
+             return GridSpecification(epsg_id=32633, x0=35000.0, y0=6788000.0, dx=1000, dy=1000, nx=16, ny=17)  
 
         @property
         def arome_repository(self):
@@ -212,18 +212,19 @@ try:
             the filepattrns we currently use for arome downloads.
 
             """
-            base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
+            base_dir = path.join(self.statkraft_data_dir, "repository", "arome_data_repository")
  
-            EPSG=self.grid_spec.epsg_id
-            bbox=self.grid_spec.bounding_box(EPSG)
-            arome_4 = AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_default2_5km_*.nc", bounding_box=bbox,allow_subset=True)
-            #data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity","radiation")
-            arome_rad=AromeDataRepository(EPSG, base_dir, filename="arome_metcoop_test2_5km_*.nc", bounding_box=bbox,allow_subset=True)
-            arome_total=GeoTsRepositoryCollection([arome_4,arome_rad])
-            return arome_total
+            epsg = self.grid_spec.epsg()
+            bbox = self.grid_spec.bounding_box(epsg)
+            f1 = "arome_metcoop_default2_5km_20151001_00.nc"
+            f2 = "arome_metcoop_test2_5km_20151001_00.nc"
+            arome_4 = AromeDataRepository(epsg, base_dir, filename=f1,
+                                          bounding_box=bbox, allow_subset=True)
+            arome_rad = AromeDataRepository(epsg, base_dir, filename=f2,
+                                            elevation_file=f1,
+                                            bounding_box=bbox, allow_subset=True)
+            return  GeoTsRepositoryCollection([arome_4, arome_rad])
 
-            
-            
         @property
         def geo_ts_repository(self):
             """

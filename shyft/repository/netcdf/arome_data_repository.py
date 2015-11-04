@@ -486,7 +486,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                     match_times.append(t)
         if match_files:
             return match_files[np.argsort(match_times)[-1]]
-        date = "{:4d}.{:02d}.{:02d}:{:02d}:{:02d}:{:02d}".format(t_c.year, t_c.month, t_c.day,
-                                                                 t_c.hour, t_c.minute, t_c.second)
+        ymds = utc.calendar_units(t_c)
+        date = "{:4d}.{:02d}.{:02d}:{:02d}:{:02d}:{:02d}".format(ymds.year, ymds.month, ymds.day,
+                                                                 ymds.hour, ymds.minute, ymds.second)
         raise AromeDataRepositoryError("No matches found for file_pattern = {} and t_c = {} "
                                        "".format(self._filename, date))

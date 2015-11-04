@@ -156,7 +156,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
             t0 = api.YMDhms(2015, 12, 24, 18)
             period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(30))
             ar1 = AromeDataRepository(32632, shyftdata_dir, filename="plain_wrong_*.nc")
-            ar1.get_forecast(("temperature",), period, t0, None)
+            ar1.get_forecast(("temperature",), period, utc.time(t0), None)
         self.assertTrue(all(x in context.exception.args[0] for x in
                             ["No matches found for file_pattern = ", "and t_c = "]))
 

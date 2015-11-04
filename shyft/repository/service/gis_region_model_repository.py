@@ -18,17 +18,19 @@ from ..interfaces import RegionModelRepository
 from ..interfaces import BoundingRegion
 from shyft import api
 
+
 class GisDataFetchError(Exception): pass
+
 
 class GridSpecification(BoundingRegion):
     """
-    Defines a grid, as lower left x0,y0, dx,dy,nx,ny
+    Defines a grid, as lower left x0, y0, dx, dy, nx, ny
     in the specified epsg_id coordinate system
     given a coordindate system with y-axis positive upwards.
 
     """
-    def __init__(self,epsg_id,x0,y0,dx,dy,nx,ny):
-        self.epsg_id=epsg_id
+    def __init__(self, epsg_id, x0, y0, dx, dy, nx, ny):
+        self._epsg_id = epsg_id
         self.x0 = x0
         self.y0 = y0
         self.dx = dx
@@ -42,52 +44,51 @@ class GridSpecification(BoundingRegion):
         Return
         ------
         returns a list describing the bounding box of the gridspec
-        lower left x0,y0 and upper right x1,y1
-         [x0,y0,x1,y1]
+        lower left x0, y0 and upper right x1, y1
+         [x0, y0, x1, y1]
         """
-        return [self.x0, self.y0, self.x0 + self.dx*self.nx , self.y0 + self.dy*self.ny]
-    
-    def cells(self,elevations):
+        return [self.x0, self.y0, self.x0 + self.dx*self.nx, self.y0 + self.dy*self.ny]
+ 
+    def cells(self, elevations):
         """
         Parameters
         ----------
-        elevations:array[y,x]
-            - a array[y,x] with elevations, layout is lower-to upper
+        elevations:array[y, x]
+            - a array[y, x] with elevations, layout is lower-to upper
         Return
         ------
-        a list of (shapely box'es, elevation) flat list for nx,ny
+        a list of (shapely box'es, elevation) flat list for nx, ny
         """
-        r = []
-        for i in range(self.nx):
-            for j in range(self.ny):
-                r.append((box(self.x0 + i*self.dx, self.y0 + j*self.dy, self.x0 + (i + 1)*self.dx,  self.y0 + (j + 1)*self.dy), float(elevations[j,i]))) 
-        return r
+        x0, dx = self.x0, self.dx
+        y0, dy = self.y0, self.dy
+        return [(box(x0 + i*dx, y0 + j*dy, x0 + (i + 1)*dx, y0 + (j + 1)*dy), float(e))
+            for (i, j), e in np.ndenumerate(elevations.T)]
 
     def bounding_box(self, epsg):
-        """ implementation of interface.BoundingRegion  """
+        """Implementation of interface.BoundingRegion"""
         epsg = str(epsg)
-        x=np.array([self.x0,self.x0+self.dx*self.nx,self.x0+self.dx*self.nx,self.x0],dtype="d")
-        y=np.array([self.y0,self.y0,self.y0+self.dy*self.ny,self.y0+self.dy*self.ny],dtype="d")
+        x0, dx, nx = self.x0, self.dx, self.nx
+        y0, dy, ny = self.y0, self.dy, self.ny
+
+        x = np.array([x0, x0 + dx*nx, x0 + dx*nx, x0], dtype="d")
+        y = np.array([y0, y0, y0 + dy*ny, y0 + dy*ny], dtype="d")
         if epsg == self.epsg():
             return np.array(x), np.array(y)
         else:
-            source_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
-                int(self.epsg()) - 32600, "WGS84", "WGS84")
-            target_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
-                int(epsg) - 32600, "WGS84", "WGS84")
+            source_cs = "+init=EPSG:{}".format(self.epsg())
+            target_cs = "+init=EPSG:{}".format(epsg)
             source_proj = Proj(source_cs)
             target_proj = Proj(target_cs)
             return [np.array(a) for a in transform(source_proj, target_proj, x, y)]
 
     def bounding_polygon(self, epsg):
-        """ implementation of interface.BoundingRegion  """
+        """Implementation of interface.BoundingRegion"""
         return self.bounding_box(epsg)
-    
-    def epsg(self):
-        """ implementation of interface.BoundingRegion  """        
-        return str(self.epsg_id)    
 
-      
+    def epsg(self):
+        """Implementation of interface.BoundingRegion""" 
+        return str(self._epsg_id) 
+ 
 
 class BaseGisDataFetcher(object):
     """
@@ -108,14 +109,14 @@ class BaseGisDataFetcher(object):
 
     """
 
-    def __init__(self, epsg_id,geometry=None, server_name=None, server_port=None, service_index=None):
+    def __init__(self, epsg_id, geometry=None, server_name=None, server_port=None, service_index=None):
         self.server_name = server_name
         self.server_port = server_port
         self.service_index = service_index
         self.geometry = geometry
         self.epsg_id = epsg_id
         if server_name.endswith('p'):
-            self.url_template="http://{}:{}/arcgis/rest/services/Enki/gis_info/MapServer/{}/query"
+            self.url_template = "http://{}:{}/arcgis/rest/services/Enki/gis_info/MapServer/{}/query"
         else:
             self.url_template = "http://{}:{}/arcgis/rest/services/EnkiLandTypes/EnkiLandTypes/MapServer/{}/query"
         if os.environ.get("NO_PROXY", False) and not self.server_name in os.environ["NO_PROXY"]: os.environ["NO_PROXY"] += ", {}".format(self.server_name)
@@ -150,7 +151,7 @@ class BaseGisDataFetcher(object):
         Returns
         -------
         A ready to use url based on
-        url-template,server-name,-port and service index 
+        url-template, server-name, -port and service index 
         """
         url = self.url_template.format(self.server_name, self.server_port, self.service_index)
         return url
@@ -160,7 +161,7 @@ class BaseGisDataFetcher(object):
         Parameters
         ----------
         geometry:list
-            - [x0,y0,x1,y1] the epsg_id ref. bounding box limiting the search
+            - [x0, y0, x1, y1] the epsg_id ref. bounding box limiting the search
         """
         q = copy.deepcopy(self.query)
         if geometry is None:
@@ -174,21 +175,21 @@ class BaseGisDataFetcher(object):
 
 class LandTypeFetcher(BaseGisDataFetcher):
 
-    def __init__(self,  epsg_id,geometry=None):
-        super(LandTypeFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=0, epsg_id=epsg_id)
-        self.name_to_layer_map = {"glacier":0,"forest":1,"lake":2}
-        self.query["outFields"]="OBJECTID"
-    
+    def __init__(self,  epsg_id, geometry=None):
+        super(LandTypeFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p",
+                                              server_port="6080", service_index=0, epsg_id=epsg_id)
+        self.name_to_layer_map = {"glacier": 0, "forest": 1, "lake": 2}
+        self.query["outFields"] ="OBJECTID"
+ 
     @property
     def en_field_names(self):
         return self.name_to_layer_map.keys()
-        
+ 
     def build_query(self, name):
-        self.service_index=self.name_to_layer_map[name]
-        q = self.get_query()
-        return q
+        self.service_index = self.name_to_layer_map[name]
+        return self.get_query()
 
-    def fetch(self,name):
+    def fetch(self, name):
         """
         Parameters
         ----------
@@ -198,7 +199,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
         ------
         shapely multipolygon that is within the geometry boundingbox 
         """
-        
+ 
         if not name or name not in self.en_field_names:
             raise RuntimeError("Invalid or missing land_type_name 'name' not given")
 
@@ -209,26 +210,27 @@ class LandTypeFetcher(BaseGisDataFetcher):
         data = response.json()
         polygons = []
         print ("Extracting {} {} features".format(len(data["features"]), name))
-        error_count=0
+        error_count = 0
         for feature in data["features"]:
             shell = feature["geometry"]["rings"][0]
             holes = feature["geometry"]["rings"][1:]
             holes = holes if holes else None
-            polygon=Polygon(shell=shell, holes=holes)
+            polygon = Polygon(shell=shell, holes=holes)
             if polygon.is_valid:
                 polygons.append(polygon)
             else:
-                error_count +=1
+                error_count += 1
         if error_count>0:
-            print ("gis polygon error count is",error_count)
+            print ("gis polygon error count is", error_count)
         return cascaded_union(polygons)
+
 
 class ReservoirFetcher(BaseGisDataFetcher):
 
     def __init__(self, epsg_id, geometry=None):
         super(ReservoirFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080", service_index=5, epsg_id=epsg_id)
-        self.query["where"]="1 = 1"
-        self.query["outFields"]="OBJECTID"
+        self.query["where"] = "1 = 1"
+        self.query["outFields"] = "OBJECTID"
 
     def fetch(self, **kwargs):
         q = self.get_query(kwargs.pop("geometry", None))
@@ -245,26 +247,29 @@ class ReservoirFetcher(BaseGisDataFetcher):
             points.append(Point(x, y))
         return points
 
+
 class CatchmentFetcher(BaseGisDataFetcher):
 
     def __init__(self, catchment_type, identifier, epsg_id):
-        if (catchment_type=='regulated'):
+        if (catchment_type == 'regulated'):
             service_index = 6
             #self.identifier = 'POWER_PLANT_ID'
-        elif (catchment_type=='unregulated'):
+        elif (catchment_type == 'unregulated'):
             service_index = 7
             #self.identifier = 'FELTNR'
         else:
             raise GisDataFetchError("Undefined catchment type {} - use either regulated or unregulated".format(catchment_type))
-        super(CatchmentFetcher, self).__init__(geometry=None, server_name="oslwvagi001p", server_port="6080", service_index=service_index, epsg_id=epsg_id)
-        self.identifier = identifier       
+        super(CatchmentFetcher, self).__init__(geometry=None, server_name="oslwvagi001p", 
+                                               server_port="6080", service_index=service_index,
+                                               epsg_id=epsg_id)
+        self.identifier = identifier 
         self.query["outFields"] = "{}".format(self.identifier) #additional attributes to be extracted can be specified here
 
     def build_query(self, **kwargs):
         q = self.get_query(kwargs.pop("geometry", None))
         id_list = kwargs.pop("id_list", None)
         if id_list:
-            q["where"] = "{} IN ({})".format(self.identifier,", ".join([str(i) for i in id_list]))
+            q["where"] = "{} IN ({})".format(self.identifier, ", ".join([str(i) for i in id_list]))
         return q
 
     def fetch(self, **kwargs):
@@ -286,24 +291,24 @@ class CatchmentFetcher(BaseGisDataFetcher):
                 polygons[c_id].append(polygon) 
         return {key: cascaded_union(polygons[key]) for key in polygons if polygons[key]}
 
+
 class CellDataFetcher(object):
 
     def __init__(self, catchment_type, identifier, grid_specification, id_list):
-        self.catchment_type=catchment_type
-        self.identifier=identifier
-        self.grid_specification=grid_specification
+        self.catchment_type = catchment_type
+        self.identifier = identifier
+        self.grid_specification = grid_specification
         self.id_list = id_list
         self.cell_data = {}
         self.catchment_land_types = {}
 
     @property
     def epsg_id(self):
-        return self.grid_specification.epsg_id
-        
+        return self.grid_specification.epsg()
+ 
     def fetch(self):
         
-        catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier,self.epsg_id)
-        #, geometry=self.grid_specification.geometry, id_list=self.id_list, )
+        catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier, self.epsg_id)
         catchments = catchment_fetcher.fetch(id_list=self.id_list)
 
         # Construct cells and populate with elevations from tdm
@@ -314,23 +319,24 @@ class CellDataFetcher(object):
         catchment_cells = {}
 
         # Filter all data with each catchment
-        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry,epsg_id=self.grid_specification.epsg_id)
-        rf = ReservoirFetcher(epsg_id=self.grid_specification.epsg_id)
-        all_reservoir_coords=rf.fetch(geometry=self.grid_specification.geometry);
-        all_glaciers=ltf.fetch(name="glacier")
-        prep_glaciers=prep(all_glaciers)
-        all_lakes   =ltf.fetch(name="lake")
-        prep_lakes= prep(all_lakes)
-        #all_forest  =ltf.fetch(name="forest")
-        #prep_forest=prep(all_forest)
+        epsg = self.grid_specification.epsg()
+        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry, epsg_id=epsg)
+        rf = ReservoirFetcher(epsg_id=epsg)
+        all_reservoir_coords = rf.fetch(geometry=self.grid_specification.geometry);
+        all_glaciers = ltf.fetch(name="glacier")
+        prep_glaciers = prep(all_glaciers)
+        all_lakes = ltf.fetch(name="lake")
+        prep_lakes = prep(all_lakes)
+        #all_forest  = ltf.fetch(name="forest")
+        #prep_forest = prep(all_forest)
         print ("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
-        for catchment_id, catchment in iter(catchments.items()):
+        for catchment_id, catchment in catchments.items():
             if not catchment_id in catchment_land_types: # SiH: default landtype, plus the special ones fetched below
                 catchment_land_types[catchment_id] = {}
             if prep_lakes.intersects(catchment):
                 lake_in_catchment = all_lakes.intersection(catchment)
                 if  isinstance(lake_in_catchment, (Polygon, MultiPolygon)) and lake_in_catchment.area >1000.0:
-                    reservoir_list=[]
+                    reservoir_list = []
                     for rsv_point in all_reservoir_coords:
                         if isinstance(lake_in_catchment, (Polygon)):
                             if lake_in_catchment.contains(rsv_point):
@@ -340,17 +346,17 @@ class CellDataFetcher(object):
                                 if lake.contains(rsv_point):
                                     reservoir_list.append(lake)
                     if reservoir_list:
-                        reservoir= MultiPolygon(reservoir_list)
+                        reservoir = MultiPolygon(reservoir_list)
                         catchment_land_types[catchment_id]["reservoir"] = reservoir
-                        diff=lake_in_catchment.difference(reservoir)
-                        if diff.area >1000.0:
-                            catchment_land_types[catchment_id]["lake"] =diff 
+                        diff = lake_in_catchment.difference(reservoir)
+                        if diff.area > 1000.0:
+                            catchment_land_types[catchment_id]["lake"] = diff 
                     else:
-                        catchment_land_types[catchment_id]["lake"]=lake_in_catchment
+                        catchment_land_types[catchment_id]["lake"] = lake_in_catchment
             if prep_glaciers.intersects(catchment):
-                glacier_in_catchment=all_glaciers.intersection(catchment)
+                glacier_in_catchment = all_glaciers.intersection(catchment)
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
-                    catchment_land_types[catchment_id]["glacier"]=glacier_in_catchment
+                    catchment_land_types[catchment_id]["glacier"] = glacier_in_catchment
             #if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
             #    forest_in_catchment= all_forest.intersection(catchment)
             #    if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
@@ -381,19 +387,20 @@ class CellDataFetcher(object):
     def geometry(self):
         return self.grid_specification.geometry
 
+
 class DTMFetcher(object):
 
-    def __init__(self,grid_specification):
-        self.grid_specification=grid_specification
+    def __init__(self, grid_specification):
+        self.grid_specification =grid_specification
         self.server_name = "oslwvagi001p" #PROD
         self.server_port = "6080"
         self.url_template = "http://{}:{}/arcgis/rest/services/Enki/Norway_DTM_1000m/ImageServer/exportImage" #PROD
         
         self.query = dict(
-                          bboxSR=self.grid_specification.epsg_id,
+                          bboxSR=self.grid_specification.epsg(),
                           size= "{},{}".format(self.grid_specification.nx, self.grid_specification.ny),
                           bbox=",".join([str(c) for c in self.grid_specification.geometry]),
-                          imageSR=self.grid_specification.epsg_id,
+                          imageSR=self.grid_specification.epsg(),
                           time="",
                           format="tiff", 
                           pixelType="F32",
@@ -429,7 +436,6 @@ class DTMFetcher(object):
         return np.array(data, dtype=np.float64)
 
 
-
 class RegionModelConfig(object):
     """
     Describes the needed mapping betwen a symbolic region-model name and
@@ -444,10 +450,11 @@ class RegionModelConfig(object):
        * bounding box (with epsk_id)
        
     This class is used to configure the GisRegionModelRepository,
-    so that it have a list of known RegionModels,identified by names
+    so that it have a list of known RegionModels, identified by names
 
     """
-    def __init__(self, name,region_model_type,region_parameters,grid_specification,catchment_regulated_type,service_id_field_name,id_list):
+    def __init__(self, name, region_model_type, region_parameters, grid_specification,
+                 catchment_regulated_type, service_id_field_name, id_list):
         """
         Parameters
         ----------
@@ -469,18 +476,17 @@ class RegionModelConfig(object):
         TODO: consider also to add catchment level parameters
         
         """
-        self.name=name
-        self.region_model_type=region_model_type
-        self.region_parameters=region_parameters
-        self.grid_specification=grid_specification
-        self.catchment_regulated_type=catchment_regulated_type
-        self.service_id_field_name=service_id_field_name
-        self.id_list=id_list
+        self.name = name
+        self.region_model_type = region_model_type
+        self.region_parameters = region_parameters
+        self.grid_specification = grid_specification
+        self.catchment_regulated_type = catchment_regulated_type
+        self.service_id_field_name = service_id_field_name
+        self.id_list = id_list
         
     @property
     def epsg_id(self):
         return self.grid_specification.epsg_id
-
 
 
 class GisRegionModelRepository(RegionModelRepository):
@@ -494,9 +500,9 @@ class GisRegionModelRepository(RegionModelRepository):
         ----------
         region_id_config: dictionary(region_id:RegionModelConfig)
         """
-        self._region_id_config=region_id_config
+        self._region_id_config = region_id_config
 
-    def _get_cell_data_info(self,region_id,catchments):
+    def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
         # neannidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
         return self._region_id_config[region_id] # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
@@ -529,37 +535,37 @@ class GisRegionModelRepository(RegionModelRepository):
       
         """
 
-        rm= self._get_cell_data_info(region_id,catchments)# fetch region model info needed to fetch efficiently
-        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,rm.grid_specification,rm.id_list)
-        result=cell_info_service.fetch() # clumsy result, we can adjust this..
-        cell_info=result['cell_data'] # this is the part we need here
+        rm = self._get_cell_data_info(region_id, catchments)# fetch region model info needed to fetch efficiently
+        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,
+                                            rm.grid_specification, rm.id_list)
+        result = cell_info_service.fetch()  # clumsy result, we can adjust this..
+        cell_info = result['cell_data']  # this is the part we need here
         cell_vector = rm.region_model_type.cell_t.vector_t()
-        radiation_slope_factor=0.9 # todo: get it from service layer 
-        catchment_id_map = [] # needed to build up the external c-id to shyft core internal 0-based c-ids
-        for c_id,c_info_list in iter(cell_info.items()):
-            if not c_id == 0: # only cells with c_id different from 0
+        radiation_slope_factor = 0.9  # todo: get it from service layer 
+        catchment_id_map = []  # needed to build up the external c-id to shyft core internal 0-based c-ids
+        for c_id, c_info_list in cell_info.items():
+            if not c_id == 0:  # only cells with c_id different from 0
                 if not c_id in catchment_id_map:
                     catchment_id_map.append(c_id)
-                    c_id_0=len(catchment_id_map)-1
+                    c_id_0 = len(catchment_id_map) - 1
                 else:
-                    c_id_0=catchment_id_map.index(c_id)
+                    c_id_0 = catchment_id_map.index(c_id)
                 for c_info in c_info_list:
-                    shape=c_info['cell'] # todo fetcher should return geopoint,area, ltf..
-                    z=c_info['elevation']
-                    geopoint=api.GeoPoint(shape.centroid.x,shape.centroid.y,z)
-                    area=shape.area
-                    ltf=api.LandTypeFractions()
-                    ltf.set_fractions(c_info.get('glacier',0.0),c_info.get('lake',0.0),c_info.get('reservoir',0.0),c_info.get('forest',0.0))
+                    shape = c_info['cell']  # todo fetcher should return geopoint,area, ltf..
+                    z = c_info['elevation']
+                    geopoint = api.GeoPoint(shape.centroid.x, shape.centroid.y, z)
+                    area = shape.area
+                    ltf = api.LandTypeFractions()
+                    ltf.set_fractions(c_info.get('glacier', 0.0), c_info.get('lake', 0.0),
+                                      c_info.get('reservoir', 0.0), c_info.get('forest', 0.0))
                     cell = rm.region_model_type.cell_t()
-                    cell.geo = api.GeoCellData(geopoint, area, c_id_0, radiation_slope_factor,ltf)
+                    cell.geo = api.GeoCellData(geopoint, area, c_id_0, radiation_slope_factor, ltf)
                     cell_vector.append(cell)
-        catchment_parameter_map=rm.region_model_type.parameter_t.map_t()
+        catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
         #todo add catchment level parameters to map
-        region_model= rm.region_model_type(cell_vector,rm.region_parameters,catchment_parameter_map)
-        region_model.bounding_region=rm.grid_specification  # mandatory for orchestration
-        region_model.catchment_id_map=catchment_id_map #needed to map from externa c_id to 0-based c_id used internally in
-        region_model.gis_info=result # opt:needed for internal statkraft use/presentation
+        region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
+        region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
+        region_model.catchment_id_map = catchment_id_map  #needed to map from externa c_id to 0-based c_id used internally in
+        region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
         return region_model
-
-
 
