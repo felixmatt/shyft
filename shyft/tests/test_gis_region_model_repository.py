@@ -79,7 +79,7 @@ try:
     
         def test_reservoir_fetcher(self):
             gs=GridSpecification(32632,x0=557600,y0=7040000,dx=1000,dy=1000,nx=122,ny=90)
-            rf=ReservoirFetcher(epsg_id=gs.epsg_id,geometry=gs.geometry)
+            rf=ReservoirFetcher(epsg_id=gs.epsg(), geometry=gs.geometry)
             rpts=rf.fetch()
             self.assertIsNotNone(rpts)
             self.assertEqual(24,len(rpts)) #well, seems that this can change when doing maintenance in db ?
