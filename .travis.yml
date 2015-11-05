@@ -10,7 +10,7 @@ addons:
     - cmake
     - g++-4.9
     - liblapack-dev
-    - boost1.55
+    - libboost-all-dev
 
 cache:
   apt: true
