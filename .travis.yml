@@ -5,10 +5,12 @@ addons:
     sources:
     - kalakris/cmake
     - ubuntu-toolchain-r-test
+    - boost-latest
     packages:
     - cmake
     - g++-4.9
     - liblapack-dev
+    - boost1.55
 
 cache:
   apt: true

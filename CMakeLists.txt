@@ -41,19 +41,6 @@ message("DEPENDENCIES:" ${SHYFT_DEPENDENCIES})
 # Create the dependencies directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
-# subdirectories
-# Python extensions
-if(BUILD_PYTHON_EXTENSIONS)
-  add_subdirectory(shyft/api)
-endif(BUILD_PYTHON_EXTENSIONS)
-
-# subdirectories
-if(BUILD_TESTING)
-  enable_testing()
-  add_subdirectory(core)
-  add_subdirectory(test)
-endif(BUILD_TESTING)
-
 # The versions for dependencies
 set(DLIB_PREFIX "dlib")
 set(DLIB_VERSION "18.17")
@@ -68,7 +55,7 @@ set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL
 set(BOOST_PREFIX "boost")
 set(BOOST_VERSION "1.59.0")
 string(REPLACE "." "_" BOOST__VERSION ${BOOST_VERSION})
-set(BOOST_TARBALL ${BOOST_PREFIX}_${BOOST_VERSION}.tar.gz)
+set(BOOST_TARBALL ${BOOST_PREFIX}_${BOOST__VERSION}.tar.gz)
 set(BOOST_URL http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download)
 
 set(CXXTEST_PREFIX "cxxtest")
@@ -113,3 +100,18 @@ DownloadAndExtractTarball(
   ${CXXTEST_TARBALL}
   ${CXXTEST_URL}
   ${SHYFT_DEPENDENCIES})
+
+
+# Once we have the dependencies solved, let's go with cmake subdirectories
+
+# C++ core and tests
+if(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(core)
+  add_subdirectory(test)
+endif(BUILD_TESTING)
+
+# Python extensions
+if(BUILD_PYTHON_EXTENSIONS)
+  add_subdirectory(shyft/api)
+endif(BUILD_PYTHON_EXTENSIONS)
