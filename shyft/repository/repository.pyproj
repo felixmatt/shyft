@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{5907ed02-15f7-409c-85f3-b5989175c56c}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>service\gis_region_model_repository.py</StartupFile>
+    <StartupFile>service\ssa_geo_ts_repository.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

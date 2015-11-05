@@ -9,19 +9,19 @@ class ShyftApi(unittest.TestCase):
 
 
     def _create_std_ptgsk_param(self):
-        ptp = api.PriestleyTaylorParameter()
+        ptp = api.PriestleyTaylorParameter(albedo=0.85,alpha=1.23)
         ptp.albedo = 0.9
         ptp.alpha = 1.26
-        aep = api.ActualEvapotranspirationParameter()
+        aep = api.ActualEvapotranspirationParameter(ae_scale_factor=1.5)
         aep.ae_scale_factor = 1.2
-        gsp = api.GammaSnowParameter()
+        gsp = api.GammaSnowParameter(winter_end_day_of_year=99,initial_bare_ground_fraction=0.04,snow_cv=0.44,tx=-0.3,wind_scale=1.9,wind_const=0.9,max_water=0.11,surface_magnitude=33.0,max_albedo=0.88,min_albedo=0.55,fast_albedo_decay_rate=6.0,slow_albedo_decay_rate=4.0,snowfall_reset_depth=6.1,glacier_albedo=0.44,calculate_iso_pot_energy=False)
         gsp.snow_cv = 0.5
         gsp.initial_bare_ground_fraction = 0.04
-        kp = api.KirchnerParameter()
+        kp = api.KirchnerParameter(c1=-2.55,c2=0.8,c3=-0.01)
         kp.c1 = 2.5
         kp.c2 = -0.9
         kp.c3 = 0.01
-        spcp = api.PrecipitationCorrectionParameter()
+        spcp = api.PrecipitationCorrectionParameter(scale_factor=0.9)
         ptgsk_p = pt_gs_k.PTGSKParameter(ptp,gsp,aep,kp,spcp)
         return ptgsk_p
     

@@ -25,8 +25,7 @@ namespace shyft {
 			struct parameter {
 				double albedo = 0.2;
 				double alpha = 1.26;
-				parameter() { /* Do nothing */ }
-				parameter(double albedo, double alpha) : albedo(albedo), alpha(alpha) { /* Do nothing */ }
+				parameter(double albedo=0.2, double alpha=1.26) : albedo(albedo), alpha(alpha) { }
 			};
 
 
