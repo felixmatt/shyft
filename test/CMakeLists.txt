@@ -35,9 +35,7 @@ if(NOT rv EQUAL 0)
 endif()
 
 # Flags
-#set(C_FLAGS -Wall -pthread -std=c++1y -fexceptions -Winvalid-pch)
 add_definitions("-DARMA_DONT_NO_DEBUG -DARMA_DONT_USE_WRAPPER -D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_STD")
-include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/cxxtest ${SHYFT_DEPENDENCIES}/dlib)
 
 add_executable(${target} ${sources})
 # Additional libraries

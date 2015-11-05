@@ -41,6 +41,13 @@ message("DEPENDENCIES:" ${SHYFT_DEPENDENCIES})
 # Create the dependencies directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
+# The flags for compile the beast
+set(CMAKE_CXX_FLAGS "-Wall -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/local/lib" CACHE STRING "CXX flags." FORCE)
+
+# The directories to be included
+include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/cxxtest ${SHYFT_DEPENDENCIES}/dlib ${SHYFT_DEPENDENCIES}/armadillo/include ${SHYFT_DEPENDENCIES}/local/include)
+
+
 # The versions for dependencies
 set(DLIB_PREFIX "dlib")
 set(DLIB_VERSION "18.17")

@@ -27,6 +27,7 @@ python:
   - 3.4
 
 before_install:
+  - echo "HOME is in: " $HOME
   - uname -a
   - free -m
   - df -h
@@ -62,7 +63,8 @@ before_script:
   - CC=gcc-4.9 CXX=g++-4.9 cmake ..
 
 script:
-  - make
+  - make -j 2 VERBOSE=1  # 2 paralel g++ process should take up to 3.5 GB RAM!
+  - export LD_LIBRARY_PATH=../../dependencies/local/lib
   - make test
   - make install
   - PYTHONPATH=.. python -c"import shyft; shyft.print_versions()"
