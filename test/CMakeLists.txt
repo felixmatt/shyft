@@ -18,7 +18,8 @@ endif()
 
 # Generate the main.cpp file
 message(STATUS "Generating main test unit for C++ test suite...")
-execute_process(COMMAND ${MAKE_COMMAND} ${MAKE_FLAGS} ${MAKE_FILE}
+set(CXXTESTGEN "TestGenerator=${SHYFT_DEPENDENCIES}/cxxtest/bin/cxxtestgen")
+execute_process(COMMAND ${MAKE_COMMAND} ${MAKE_FLAGS} ${MAKE_FILE} ${CXXTESTGEN}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/test
   RESULT_VARIABLE rv
   OUTPUT_VARIABLE make_output
