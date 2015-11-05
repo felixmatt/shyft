@@ -5,12 +5,12 @@ addons:
     sources:
     - kalakris/cmake
     - ubuntu-toolchain-r-test
-    #- boost-latest
+    # - boost-latest
     packages:
     - cmake
     - g++-4.9
     - liblapack-dev
-    #- libboost1.55-all-dev
+    # - libboost1.55-all-dev
 
 cache:
   directories:
@@ -27,7 +27,7 @@ python:
   - 3.4
 
 before_install:
-  - echo "HOME is in: " $HOME
+  # - echo "HOME is in: " $HOME  # this is giving a YAML error (?)
   - uname -a
   - free -m
   - df -h
