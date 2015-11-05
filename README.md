@@ -29,6 +29,7 @@ from the root directory.
 TESTING
 ====================
 The way to test SHyFT is by running::
+
 ```bash
 $ nosetests
 ```
@@ -40,6 +41,7 @@ indications that your installation is sane.
 INSTALLING
 ====================
 Once you tested you SHyFT package you can install it in your system via::
+
 ```bash
 $ python setup.py install
 ```
