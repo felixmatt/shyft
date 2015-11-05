@@ -6,7 +6,7 @@ import unittest
 try:
     from os import path
     from shyft import api
-    from shyft.api import Calendar,YMDhms,Timeaxis,deltahours,TsTransform
+    from shyft.api import Calendar,YMDhms,Timeaxis,deltahours
     from shyft.api import pt_gs_k 
     from shyft.api import pt_ss_k
  
@@ -20,8 +20,6 @@ try:
     
     from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
     from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
-    #from shyft.repository.service.ssa_geo_ts_repository import EnsembleStation
-    #from shyft.repository.service.ssa_geo_ts_repository import EnsembleConfig
     from shyft.repository.service.gis_location_service import GisLocationService
     from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD,FC_PROD,PREPROD,FC_PREPROD
     from shyft.orchestration.simulator import SimpleSimulator
@@ -164,6 +162,7 @@ try:
             ]
             rm_cfg_dict={ x.name:x for x in cfg_list}
             return GisRegionModelRepository(rm_cfg_dict)
+
         @property
         def fc_geo_ts_repository(self):
             """

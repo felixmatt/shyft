@@ -199,6 +199,13 @@ class SimpleSimulator(object):
         p_res.set(p_vec_opt)
         return p_res
 
+
+    def reg_model_state(self):
+        state = self.region_model.__class__.state_t.vector_t()
+        self.region_model.get_states(state)
+        return state
+
+
     def discharge_adjusted_state(self, obs_discharge, state):
         """
         Parameters
