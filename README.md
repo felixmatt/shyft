@@ -1,5 +1,10 @@
 README	
 ====================
+
+|Branch      |Status   |
+|------------|---------|
+|cmake       | [![Build Status](https://travis-ci.org/FrancescAlted/shft.svg?branch=master)](https://travis-ci.org/FrancescAlted/shyft) |
+
 SHyFT is an OpenSource hydrological toolbox developed by
 [Statkraft](http://www.statkraft.com).
 

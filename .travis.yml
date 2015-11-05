@@ -1,0 +1,71 @@
+sudo: false
+
+addons:
+  apt:
+    sources:
+    - kalakris/cmake
+    - ubuntu-toolchain-r-test
+    packages:
+    - cmake
+    - g++-4.9
+    - liblapack-dev
+
+cache:
+  apt: true
+  directories:
+  - $HOME/dependencies
+
+
+language: python
+
+os:
+  - linux
+  # - osx
+
+python:
+  - 3.4
+
+before_install:
+  - uname -a
+  - free -m
+  - df -h
+  - ulimit -a
+  - ulimit -s 32768  # C++ compilers require a lot of memory
+
+  # Install conda
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update conda
+
+  # Install dependencies
+  - conda create -n shyft_env python=$TRAVIS_PYTHON_VERSION pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj swig
+  - source activate shyft_env
+  #- conda install -c https://conda.anaconda.org/minrk swig  # hits a bug in conda
+  #- conda install swig
+  - pip install descartes
+  - python -V
+
+  # The data repository dependency
+  - git clone --depth=50 --branch=master https://github.com/statkraft/shyft-data.git shyft-data
+  - ln -s `pwd`/shyft-data ../shyft-data  # make it visible to the test suite of shyft
+
+#compiler:
+#  - gcc
+#  - clang
+
+before_script:
+  - mkdir build
+  - cd build
+  - CC=gcc-4.9 CXX=g++-4.9 cmake ..
+
+script:
+  - make
+  - make test
+  - make install
+  - PYTHONPATH=.. python -c"import shyft; shyft.print_versions()"
+  - nosetests ..
+
+notifications:
+  email: false
