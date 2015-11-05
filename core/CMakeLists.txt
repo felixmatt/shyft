@@ -8,7 +8,7 @@ set(SOURCES ${headers} ${cpps})
 
 message(STATUS "Generating Makefile for the SHyFT static library...")
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++1y -fexceptions -pthread -Winvalid-pch -I${SHYFT_DEPENDENCIES}/armadillo/include" CACHE STRING "CXX flags." FORCE)
+set(CMAKE_CXX_FLAGS "-Wall -std=c++1y -fexceptions -pthread -Winvalid-pch -I${SHYFT_DEPENDENCIES}/armadillo/include -I${SHYFT_DEPENDENCIES}/boost" CACHE STRING "CXX flags." FORCE)
 add_definitions("-DARMA_DONT_USE_WRAPPER")
 
 add_library(shyftcore STATIC ${SOURCES})
