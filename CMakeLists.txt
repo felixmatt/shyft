@@ -12,7 +12,7 @@
 #
 # The next environment variables are honored:
 #
-#   SHYFT_DEPENDENCIES_DIR: default ${PROJECT_SOURCE_DIR}/../shyft-dependencies
+#   SHYFT_DEPENDENCIES_DIR: default ${PROJECT_SOURCE_DIR}/shyft-dependencies
 #
 
 
@@ -45,7 +45,7 @@ endif()
 if(DEFINED ENV{SHYFT_DEPENDENCIES_DIR})
   set(SHYFT_DEPENDENCIES_DIR $ENV{SHYFT_DEPENDENCIES_DIR})
 else()
-  set(SHYFT_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/../shyft-dependencies")
+  set(SHYFT_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/shyft-dependencies")
 endif()
 # Our code requires an absolute directory for the dependencies
 get_filename_component(SHYFT_DEPENDENCIES ${SHYFT_DEPENDENCIES_DIR} ABSOLUTE)

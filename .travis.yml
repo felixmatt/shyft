@@ -60,7 +60,7 @@ before_script:
   - cmake ..
 
 script:
-  - make -j 2 VERBOSE=1  # 2 paralel g++ process should take up to 3.5 GB RAM!
+  - make -j 3 VERBOSE=1  # 3 paralel compiler processes can take up to 5 GB RAM!
   - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
   - make test
   - make install

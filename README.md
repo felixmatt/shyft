@@ -1,5 +1,5 @@
-README	
-====================
+README
+======
 
 |Branch      |Status   |
 |------------|---------|
@@ -19,36 +19,75 @@ developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland
 and Oddbjorn Bruland.
 
 COMPILING
-=====================
-You can compile SHyFT by using the typical procedure for Python packages::
+=========
+
+You can compile SHyFT by using the typical procedure for Python packages:
+
 ```bash
 $ python setup.py build_ext --inplace
 ```
 from the root directory.
 
+COMPILING VIA CMAKE
+=====================
+
+You can also compile SHyFT with CMake building tool which is available
+for the most of the platforms out there.  The steps are the usual ones:
+
+```bash
+$ export SHYFT_SOURCES=shyft_sources_directory  # absolute path!
+$ cd $SHYFT_SOURCES
+$ mkdir build
+$ export SHYFT_DEPENDENCIES_DIR=directory_to_keep_dependencies  # absolute path
+$ cmake ..      # configuration step; or just "ccmake .." for curses interface
+$ make -j 4     # do the actual compilation of C++ sources (using 4 processes)
+$ make install  # copy Python extensions somewhere in $SHYFT_SOURCES
+```
+
+We have the beast compiled by now.  For testing:
+
+```bash
+$ export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
+$ make test     # run the C++ tests
+$ export PYTHONPATH=$SHYFT_SOURCES
+$ nosetests ..  # run the Python tests
+```
+
+If all the tests pass, then you have an instance of SHyFT that is
+fully functional.  In case this directory is going to act as a
+long-term installation it is recommended to persist your
+$LD_LIBRARY_PATH and $PYTHONPATH environment variables (in ~/.bashrc
+or similar).
+
+
 TESTING
 ====================
+
 The way to test SHyFT is by running::
 
 ```bash
 $ nosetests
 ```
-from the root directory (your will need the numpy and pytest packages).
+from the root directory (your will need the numpy and nosetest packages).
 
 The test suite is not very comprehensive yet, but at least would provide
 indications that your installation is sane.
 
 INSTALLING
 ====================
+
 Once you tested you SHyFT package you can install it in your system via::
 
 ```bash
 $ python setup.py install
 ```
+
 AUTHORS
 ====================
-SHyFT is developed by Statkraft, and the two main initial authors to the C++ core were
-Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and Ola Skavhaug <ola@xal.no>. 
+
+SHyFT is developed by Statkraft, and the two main initial authors to
+the C++ core were Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and
+Ola Skavhaug <ola@xal.no>.
 
 Orchestration and the Python wrappers were originally developed by
 John F. Burkhart <john.burkhart@statkraft.com>
