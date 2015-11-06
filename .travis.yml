@@ -1,7 +1,9 @@
 sudo: required
 dist: trusty
 
-install: sudo apt-get install liblapack-dev
+install:
+  - sudo apt-get update -qq
+  - sudo apt-get install liblapack-dev
 
 cache:
   directories:
