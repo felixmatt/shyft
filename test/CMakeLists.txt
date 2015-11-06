@@ -1,10 +1,4 @@
 # CMake configuration for tests
-# Sources
-file(GLOB cpps *.cpp)
-list(REMOVE_ITEM cpps "test_pch.cpp")
-file(GLOB headers *.h)
-set(sources ${cpps} ${headers})
-set(target "test_shyft")
 
 if(WIN32 AND MSVC)
   set(MAKE_COMMAND "nmake")
@@ -12,7 +6,7 @@ if(WIN32 AND MSVC)
   set(MAKE_FILE "NMakeFile.testupdate")
 else()
   set(MAKE_COMMAND "make")
-  set(MAKE_FLAGS -j 4 -f)
+  set(MAKE_FLAGS -f)
   set(MAKE_FILE "Makefile.testupdate")
 endif()
 
@@ -33,6 +27,13 @@ if(NOT rv EQUAL 0)
   message(FATAL_ERROR "Errors occurred.  Leaving now!")
   return()
 endif()
+
+# Sources
+file(GLOB cpps *.cpp)
+list(REMOVE_ITEM cpps "test_pch.cpp")
+file(GLOB headers *.h)
+set(sources ${cpps} ${headers})
+set(target "test_shyft")
 
 # Flags
 add_definitions("-DARMA_DONT_NO_DEBUG -DARMA_DONT_USE_WRAPPER -D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_STD")
