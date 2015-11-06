@@ -1,7 +1,7 @@
 # CMake build system for SHyFT
 # ============================
 #
-# This requires SWIG and NumPy installed as well as a C++14 compliant compiler.
+# This requires SWIG and NumPy installed as well as a C++11 compliant compiler.
 #
 # Available options:
 #
@@ -9,6 +9,12 @@
 #       build test programs and generates the "test" target
 #   BUILD_PYTHON_EXTENSIONS: default ON
 #       build Python extensions for SHYFT
+#
+# The next environment variables are honored:
+#
+#   SHYFT_DEPENDENCIES_DIR: default ${PROJECT_SOURCE_DIR}/../shyft-dependencies
+#
+
 
 cmake_minimum_required(VERSION 2.8.7)
 project(shyft)
@@ -36,8 +42,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # The dependencies directory
-set(SHYFT_DEPENDENCIES "${PROJECT_SOURCE_DIR}/../dependencies")
-message("DEPENDENCIES:" ${SHYFT_DEPENDENCIES})
+if(DEFINED ENV{SHYFT_DEPENDENCIES_DIR})
+  set(SHYFT_DEPENDENCIES_DIR $ENV{SHYFT_DEPENDENCIES_DIR})
+else()
+  set(SHYFT_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/../shyft-dependencies")
+endif()
+# Our code requires an absolute directory for the dependencies
+get_filename_component(SHYFT_DEPENDENCIES ${SHYFT_DEPENDENCIES_DIR} ABSOLUTE)
+message("SHYFT_DEPENDENCIES directory: " ${SHYFT_DEPENDENCIES})
+message("You can override the above via the $SHYFT_DEPENDENCIES environment variable.")
 # Create the dependencies directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
