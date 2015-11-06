@@ -58,7 +58,7 @@ before_script:
 
 script:
   - make -j 2 VERBOSE=1  # 2 paralel g++ process should take up to 3.5 GB RAM!
-  - export LD_LIBRARY_PATH=$HOME/dependencies/local/lib
+  - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/../dependencies/local/lib
   - make test
   - make install
   - PYTHONPATH=.. python -c"import shyft; shyft.print_versions()"
