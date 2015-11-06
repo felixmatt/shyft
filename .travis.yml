@@ -1,23 +1,15 @@
-sudo: false
+sudo: required
+dist: trusty
 
-addons:
-  apt:
-    sources:
-    - kalakris/cmake
-    - ubuntu-toolchain-r-test
-    # - boost-latest
-    packages:
-    - cmake
-    - g++-4.9
-    - liblapack-dev
-    # - libboost1.55-all-dev
+install: sudo apt-get install liblapack-dev
 
 cache:
   directories:
     - $HOME/dependencies
 
-
-language: python
+language:
+  - python
+  - cpp
 
 os:
   - linux
@@ -60,7 +52,7 @@ before_install:
 before_script:
   - mkdir build
   - cd build
-  - CC=gcc-4.9 CXX=g++-4.9 cmake ..
+  - cmake ..
 
 script:
   - make -j 2 VERBOSE=1  # 2 paralel g++ process should take up to 3.5 GB RAM!
