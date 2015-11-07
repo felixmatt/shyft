@@ -63,12 +63,12 @@ include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/cxxtest ${SHYFT_DE
 
 # The versions for dependencies
 set(DLIB_PREFIX "dlib")
-set(DLIB_VERSION "18.17")
+set(DLIB_VERSION "18.18")
 set(DLIB_TARBALL ${DLIB_PREFIX}-${DLIB_VERSION}.tar.bz2)
 set(DLIB_URL http://sourceforge.net/projects/dclib/files/dlib/v${DLIB_VERSION}/${DLIB_TARBALL}/download)
 
 set(ARMADILLO_PREFIX "armadillo")
-set(ARMADILLO_VERSION "6.100.0")
+set(ARMADILLO_VERSION "6.200.2")
 set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.gz)
 set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL})
 
