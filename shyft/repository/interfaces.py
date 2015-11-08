@@ -1,5 +1,4 @@
-﻿
-from abc import ABCMeta, abstractmethod
+﻿from abc import ABCMeta, abstractmethod
 
 """Module description: This module contain the abstract base-classes for the
 repositories in shyft, defining the contracts that a repository should
@@ -186,6 +185,17 @@ class StateRepository(object):
         """
         Persist the state into the repository, assigning a new unique state_id,
         so that it can later be retrieved by that return state_id assigned.
+        Parameters
+        ----------
+        region_model_id: string
+            name of the model
+        utc_timestamp:utctime
+            time for which the state is (considered) valid
+        region_model_state:string
+            something that can be interpreted as state elsewhere
+        tags:list of string
+            optional, tags can be associated with a state so that it can be filtered later.
+            note: we are not sure if this is useful, so it's optional feature
         Returns
         -------
         state_id: immutable id
@@ -201,6 +211,12 @@ class StateRepository(object):
         ------
         StateRepositoryError: if invalid state_id, or not able to delete the
         state (access rights)
+
+        Parameters
+        ----------
+        state_id: immutable id
+            Identifier that uniquely identifies the state
+
 
         """
         pass
@@ -308,15 +324,16 @@ class InterpolationParameterRepository(object):
     @abstractmethod
     def get_parameters(self, interpolation_id):
         """
+        Parameters
+        ----------
+        interpolation_id: identifier (int| string)
+            unique identifier within this repository that identifies one set of interpolation-parameters
         Returns
         -------
         parameter: shyft.api type
             Interpolation parameter object
         """
         pass
-
-
-
 
 
 class BoundingRegion(object):
@@ -329,7 +346,6 @@ class BoundingRegion(object):
         ----------
         epsg: string
             epsg id of the resulting coordinates
-        Returns
         Returns
         -------
         x: np.ndarray
@@ -371,10 +387,11 @@ class BoundingRegion(object):
 class InterfaceError(Exception):
     pass
 
+
 class TsStoreItem(object):
     """
     Represent a minimal mapping between the
-    destination_id in the tsstore (like SmG, tsname),
+    destination_id in the ts-store (like SmG, ts-name),
     and the lambda/function that from a supplied model extracts, 
     and provides a ts 
     possibly transformed/clipped to the wanted resolution and range.
@@ -382,7 +399,8 @@ class TsStoreItem(object):
     See: TimeseriesStore for usage
     
     """
-    def __init__(self,destination_id, extract_method):
+
+    def __init__(self, destination_id, extract_method):
         """
         Parameters
         ----------
@@ -392,9 +410,10 @@ class TsStoreItem(object):
         extract_method: callable 
         - that takes shyft.api model as input and return a shyft.api time-series
         """
-        self.destination_id=destination_id
-        self.extract_method=extract_method
-        
+        self.destination_id = destination_id
+        self.extract_method = extract_method
+
+
 class TimeseriesStore(object):
     """
     Represent a repository, that is capable of storing time-series 
@@ -405,8 +424,8 @@ class TimeseriesStore(object):
     where we would like to save some simulation result to a database.
     
     """
-    
-    def __init__(self,tss, ts_item_list):
+
+    def __init__(self, tss, ts_item_list):
         """
         Parameters
         ----------
@@ -416,10 +435,10 @@ class TimeseriesStore(object):
          - provide a list of mappings between ts_id and model extract function
            ref. to TsStoreItem class for description.
         """
-        self.tss=tss
-        self.ts_item_list=ts_item_list
-    
-    def store_ts(self,region_model):
+        self.tss = tss
+        self.ts_item_list = ts_item_list
+
+    def store_ts(self, region_model):
         """
         Extracts time-series from the region_model, according to 
         the ts_item_list (ref. to constructor description and TsStoreItem)
@@ -435,5 +454,5 @@ class TimeseriesStore(object):
         -------
         True if storing all ts went well, otherwise False
         """
-        tsid_ts_map={ tsi.destination_id:tsi.extract_method(region_model) for tsi in self.ts_item_list}
+        tsid_ts_map = {tsi.destination_id: tsi.extract_method(region_model) for tsi in self.ts_item_list}
         return self.tss.store(tsid_ts_map)
