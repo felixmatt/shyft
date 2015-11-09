@@ -3,7 +3,17 @@ import matplotlib.pylab as plt
 from matplotlib import ticker
 from shyft.api import Timeaxis
 from shyft.api import deltahours
+from matplotlib.patches import Rectangle
 
+
+def blend_colors(color1, color2):
+    if len(color1) != 4 or len(color2) != 4:
+        raise ValueError("Both colors must be of length 4")
+    r_alpha = 1 - (1 - color1[-1])*(1 - color2[-1])
+    #r_alpha = color1[-1] + color2[-1]*(1 - color1[-1])
+    return list(np.asarray(color1[:-1])*color1[-1]/r_alpha + 
+                np.asarray(color2[:-1])*color2[-1]*(1 - color1[-1])/r_alpha) + [r_alpha]
+    
 
 def plot_np_percentiles(time, percentiles, base_color=1.0, alpha=0.5, plw=0.5, linewidth=1, mean_color=0.0, label=None):
     if base_color is not None:
@@ -18,11 +28,16 @@ def plot_np_percentiles(time, percentiles, base_color=1.0, alpha=0.5, plw=0.5, l
     percentiles = list(percentiles)
     num_intervals = len(percentiles)//2
     f_handles = []
+    fill_legend = []
+    prev_facecolor = None
     for i in range(num_intervals):
-        facecolor = list((1.0 - float(i+1)/(num_intervals + 1))*base_color) + [alpha] if base_color is not None else 4*[1.]
-        f_handles.append(plt.fill_between(time, percentiles[i], percentiles[-(i+1)],
-                         edgecolor=(0, 0, 0, 0),
-                         facecolor=facecolor))
+        facecolor = list((1.0 - float(i + 1)/(num_intervals + 1))*base_color) + [alpha] if \
+            base_color is not None else 4*[1.]
+        f_handles.append(plt.fill_between(time, percentiles[i], percentiles[-(i+1)], 
+                         edgecolor=(0, 0, 0, 0), facecolor=facecolor))
+        fill_legend.append(blend_colors(prev_facecolor, facecolor) if prev_facecolor is not None else facecolor)
+        prev_facecolor = facecolor
+    print(fill_legend)
     linewidths = len(percentiles)*[plw]
     linecols = len(percentiles)*[(0.7, 0.7, 0.7, 1.0)]
     labels = len(percentiles)*[None]
@@ -38,7 +53,20 @@ def plot_np_percentiles(time, percentiles, base_color=1.0, alpha=0.5, plw=0.5, l
     if len(percentiles) % 2:
         mean_h = handles.pop(len(handles)//2)
         handles = [mean_h] + handles
-    return handles + f_handles
+    ax = plt.gca()
+    y_min, y_max = ax.get_ylim()
+    x_min, x_max = ax.get_xlim()
+    y_min += (y_max + y_min)/2
+
+    dy = (y_max - y_min)/(2*num_intervals)
+    dx = (x_max - x_min)/num_intervals
+    for i, fill in enumerate(fill_legend):
+        x = time[0]
+        y = y_min + i*2*dy
+        rectangle = Rectangle((x, y), dx, dy, facecolor=fill)
+        ax.add_patch(rectangle)
+        plt.text(x + 1.5*dx, y - dy, "Foo i")
+    return (handles + f_handles), fill_legend
 
 
 def set_display_time_axis(ta, cal, n_xticks=10, format="W-WY"):
