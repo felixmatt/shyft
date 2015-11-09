@@ -60,7 +60,7 @@ def set_display_time_axis(ta, cal, n_xticks=10, format="W-WY"):
     return handles
 
 
-def set_utc_time_formatter(ta, cal):
+def set_calendar_formatter(cal):
     ax = plt.gca()
     fig = plt.gcf()
     def format_date(x, pos=None):

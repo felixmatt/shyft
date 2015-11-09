@@ -60,14 +60,14 @@ def adjust_simulator_state(sim, t, q_obs):
 
 def plot_results(ptgsk, q_obs=None):
     if ptgsk is not None:
-        plt.subplot(3,1,1)
+        plt.subplot(3, 1, 1)
         discharge = ptgsk.region_model.statistics.discharge([0])
         temp = ptgsk.region_model.statistics.temperature([0])
         precip = ptgsk.region_model.statistics.precipitation([0])
 
         # Results on same time axis, so we only need one
         ts = [discharge.time(i) for i in range(discharge.size())]
-    
+
         plt.plot(ts, np.array(discharge.v))
     if q_obs is not None:
         ots = [q_obs.time(i) for i in range(q_obs.size())]
@@ -80,17 +80,29 @@ def plot_results(ptgsk, q_obs=None):
         plt.plot(ts, np.array(precip.v))
 
 
-def plot_percentiles(sim, percentiles, time_axis):
+def plot_percentiles(sim, percentiles):
     discharges = [s.region_model.statistics.discharge([0]) for s in sim]
     ts = np.array([discharges[0].time(i) for i in range(discharges[0].size())])
     all_discharges = np.array([d.v for d in discharges])
     perc_arrs = [a for a in np.percentile(all_discharges, percentiles, 0)]
     h = plot_np_percentiles(ts, perc_arrs)
-    ax = set_utc_time_formatter(time_axis, Calendar()) 
+    ax = set_utc_time_formatter(Calendar())
+    return h, ax
 
 
-def demo_tistel_forecast():
-    """Now, with Burn In (... and tukle). Stay tuned"""
+def forecast_demo():
+    """Simple forecast demo using arome data from met.no. Initial state
+    is bootstrapped by simulating one hydrological year (starting
+    Sept 1. 2011), and then calculating the state August 31. 2012. This 
+    state is then used as initial state for simulating Sept 1, 2011, 
+    after scaling with observed discharge. The validity of this approach 
+    is limited by the temporal variation of the spatial distribution of 
+    the discharge state, q, in the Kirchner method. The model is then
+    stepped forward until Oct 1, 2015, and then used to compute the
+    discharge for 65 hours using Arome data. At last, the results
+    are plotted as simple timeseries.
+
+    """
     utc = Calendar()
     t_start = utc.time(YMDhms(2011, 9, 1))
     t_fc_start = utc.time(YMDhms(2015, 10, 1))
@@ -99,25 +111,25 @@ def demo_tistel_forecast():
     n_fc = 65
     obs_time_axis = Timeaxis(t_start, dt, n_obs)
     fc_time_axis = Timeaxis(t_fc_start, dt, n_fc)
-    total_time_axis = Timeaxis(t_start, dt, n_obs + n_fc)      
+    total_time_axis = Timeaxis(t_start, dt, n_obs + n_fc)
     q_obs_m3s_ts = observed_tistel_discharge(total_time_axis.total_period())
     ptgsk, initial_state = burn_in_state(t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
     ptgsk.run(obs_time_axis, initial_state)
-    plot_results(ptgsk, q_obs_m3s_ts)  
+    plot_results(ptgsk, q_obs_m3s_ts)
 
-    current_state = adjust_simulator_state(ptgsk, t_fc_start, q_obs_m3s_st)
+    current_state = adjust_simulator_state(ptgsk, t_fc_start, q_obs_m3s_ts)
 
     ptgsk_fc = create_tistel_simulator(tistel.arome_repository(tistel.grid_spec, t_fc_start))
     ptgsk_fc.run(fc_time_axis, current_state)
     plt.figure()
     q_obs_m3s_ts = observed_tistel_discharge(fc_time_axis.total_period())
     plot_results(ptgsk_fc, q_obs_m3s_ts)
+    set_calendar_formatter(Calendar())
     plt.interactive(1)
     plt.show()
 
 
-
-def demo_tistel_ensemble():
+def ensemble_demo():
     utc = Calendar()
     t_start = utc.time(YMDhms(2011, 9, 1))
     t_fc_ens_start = utc.time(YMDhms(2015, 7, 26))
@@ -143,14 +155,14 @@ def demo_tistel_ensemble():
         sim.simulate()
     plt.hold(1)
     percentiles = [10, 25, 50, 75, 90]
-    plot_percentiles(sims, percentiles, display_time_axis)
+    plot_percentiles(sims, percentiles)
     q_obs_m3s_ts = observed_tistel_discharge(display_time_axis.total_period())
     plot_results(None, q_obs_m3s_ts)
     plt.interactive(1)
     plt.legend([str(p) for p in percentiles] + ["Obs"])
     plt.show()
-     
+
 
 if __name__ == "__main__":
-    #demo_tistel_forecast()
-    sims = demo_tistel_ensemble()
+    # forecast_demo()
+    sims = ensemble_demo()
