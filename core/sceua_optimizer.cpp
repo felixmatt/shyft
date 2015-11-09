@@ -19,7 +19,7 @@ namespace shyft {
                 double fx_solution_min,	// 2. Stop when fx is within fx_solution_min..fx_solution_max
                 double fx_solution_max,	//   (to disable, set fx_solution_min > fx_solution_max)
                 const double x_epsilon[],// 3. Stop when all x[] are just moving within x_epsilon range
-                size_t max_iterations	// 4. Stop when maxiterations/invocations are reached
+                size_t max_iterations	// 4. Stop when max iterations/invocations are reached
                 )
                 const
             {
@@ -35,10 +35,10 @@ namespace shyft {
                 double **ssample= __autoalloc__(double*,n_live_points);
 
                 for (i=0; i<m; i++)
-                    ax[i]=new double[n];
+                    ax[i]= __autoalloc__(double,n);
                 for (i=0;i<n_live_points;i++) {// While the x table contains the full parameter vector,
                     sample[i] =__autoalloc__(double,n);	// sample does not contain any fixed parameters.
-                    ssample[i]=__autoalloc__(double,n);	// Neither does ssample.
+                    ssample[i]=__autoalloc__(double,n);	// Neither does sample.
                 }
                 size_t*		ind=__autoalloc__(size_t,n_live_points);
                 double*		af =__autoalloc__(double,m);
@@ -59,9 +59,9 @@ namespace shyft {
                     fastcopy(ssample[i],sample[ind[i]],n);
                 }
 
-                //**************** Start the optimisation *********************
-                while(optimizerState==Searching && !terminateRequested) {// This loop performes one "shuffling", that is, sorting the m*p points and distributing them among complexes
-                    for (ij=0; ij<p; ij++) {//	Step 3:	Partion the sample into p complexes of m points
+                //**************** Start the optimization *********************
+                while(optimizerState==Searching && !terminateRequested) {// This loop performs one "shuffling", that is, sorting the m*p points and distributing them among complexes
+                    for (ij=0; ij<p; ij++) {//	Step 3:	Partition the sample into p complexes of m points
                         for (j=0; j<m; j++) {
                             jj=(j)*p + ij;
                             fastcopy(ax[j],ssample[jj],n);
@@ -105,14 +105,14 @@ namespace shyft {
                     optimizerState=FinishedUserRequest;
                 return optimizerState;		// The reason for terminating sceua.
             }
-            ///	Function evolve corresponds to the competitive complex ecolution (CCE),
+            ///	Function evolve corresponds to the competitive complex evolution (CCE),
             /// fig. 2 in Duan et. al (1993). It is called from sceua.
             void
-            sceua::evolve(double *ax[],	// ax[m][n]  are the parameter values of complex to be evovled.
+            sceua::evolve(double *ax[],	// ax[m][n]  are the parameter values of complex to be evolved.
                 double af[],						// af[m]     is the objective function value of the subcomplex.
                 size_t m,							// m         is the n_live_points of the complex.
                 size_t n,							// n         is number of parameters to be optimized.
-                ifx& fn,			// The function (hydrological model) to be evaluated
+                ifx& fn,			// The function (hydro model) to be evaluated
                 const double x_min[],				// x_min[n]   are the minimum values of the parameters to be optimized.
                 const double x_max[],				// maxi[n]   are the maximum values of the parameters to be optimized.
                 double x[],							// x[n]  is all the parameter vector required by the model.
@@ -126,7 +126,7 @@ namespace shyft {
                 size_t		kk, sel, mutation;
 
                 int *selected	= __autoalloc__(int,m);
-                double *gg		= __autoalloc__(double,n);		// The center of grativity for the q-1 best points in bf.
+                double *gg		= __autoalloc__(double,n);		// The center of gravity for the q-1 best points in bf.
                 double *pp		= __autoalloc__(double,m);		// The probability density of ax
                 double *cp		= __autoalloc__(double,m);		// The probability function for ax used to elect points to bf.
 
@@ -135,9 +135,9 @@ namespace shyft {
                 for (i=0; i<m; i++)
                     sax[i]=__autoalloc__(double,n);
                 // STEP 0: initialization of optimization parameters.
-                size_t q				= n+1;					// The n_live_points of a subcomplex
+                size_t q				= n+1;					// The n_live_points of a sub-complex
                 size_t alfa				= 1;					// The values of q, alfa and beta are selected according
-                size_t beta				= 2 * n + 1;			// to recommandations in ????? */
+                size_t beta				= 2 * n + 1;			// to recommendations in ????? */
 
                 size_t* inda=__autoalloc__(size_t,m)	;		// The index array sorting bf in increasing order
                 double* saf =__autoalloc__(double,m);
@@ -165,7 +165,7 @@ namespace shyft {
                 }
                 // Step 5 Iterate: Repeat step 2 through 4 beta times
                 for (kk=0; kk<beta; kk++) {
-                    // Step 2 :		Create the subcomplex bf; bx fom af; ax by
+                    // Step 2 :		Create the sub-complex bf; bx fom af; ax by
                     nsel=0;					// selecting q of m points from af;ax according to the
                     for (i=0; i<m; i++)		// distribution specified above. The index for the
                         selected[i]=0;		// location in the original array af;ax is stored in ll.*/
@@ -200,7 +200,7 @@ namespace shyft {
 
                         for (i=0 ;i<n ;i++)			// Step 3a continues + step 3b:  Compute the centroid
                             gg[i] = 0.0;			// of the q-1 best points in bf;bx
-                        mutation = 0;				// gg is the ceontroide, newp is the new parameter vector
+                        mutation = 0;				// gg is the centroid, newp is the new parameter vector
 
                         for (i=0; i<n; i++) {
                             for (j=0; j<q-1; j++)
