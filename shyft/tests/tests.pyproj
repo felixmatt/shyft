@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9d4b92c2-21e7-4de4-8295-fe87cb43cda3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>demo_statkraft_stuff.py</StartupFile>
+    <StartupFile>test_ssa_geo_ts_repository.py</StartupFile>
     <SearchPath>..\..\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -22,6 +22,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="demo_statkraft_stuff.py" />
+    <Compile Include="patch.py" />
     <Compile Include="test_arome_respository.py" />
     <Compile Include="test_geo_ts_repository_collection.py" />
     <Compile Include="test_gis_region_model_repository.py">

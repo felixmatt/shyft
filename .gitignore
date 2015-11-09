@@ -37,6 +37,6 @@ shyft/api/pt_ss_k.py
 api/python/*_wrap.cxx
 api/python/*_wrap.cpp
 shyft/tests/state_tmp
-
+workspace.xml
 
 
