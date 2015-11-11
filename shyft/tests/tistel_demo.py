@@ -7,8 +7,7 @@ Created on Thu Nov  5 11:30:50 2015
 import pytz
 import numpy as np
 from matplotlib import pylab as plt
-from matplotlib.dates import MO, TU, WE, TH, FR, SA, SU
-from matplotlib.dates import WeekdayLocator, AutoDateLocator
+from matplotlib.dates import AutoDateLocator
 
 from shyft.api import UtcPeriod
 from shyft.api import TsTransform
@@ -80,6 +79,7 @@ def construct_calibration_parameters(simulator):
     p_max.kirchner.c3 *= 1.2
     return p, p_min, p_max
 
+
 def plot_results(ptgsk, q_obs=None):
     h_obs = None
     if ptgsk is not None:
@@ -143,10 +143,10 @@ def plot_percentiles(sim, percentiles, obs=None):
 def forecast_demo():
     """Simple forecast demo using arome data from met.no. Initial state
     is bootstrapped by simulating one hydrological year (starting
-    Sept 1. 2011), and then calculating the state August 31. 2012. This 
-    state is then used as initial state for simulating Sept 1, 2011, 
-    after scaling with observed discharge. The validity of this approach 
-    is limited by the temporal variation of the spatial distribution of 
+    Sept 1. 2011), and then calculating the state August 31. 2012. This
+    state is then used as initial state for simulating Sept 1, 2011,
+    after scaling with observed discharge. The validity of this approach
+    is limited by the temporal variation of the spatial distribution of
     the discharge state, q, in the Kirchner method. The model is then
     stepped forward until Oct 1, 2015, and then used to compute the
     discharge for 65 hours using Arome data. At last, the results
@@ -223,9 +223,9 @@ def continuous_calibration():
 
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
     initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
-    
-    num_opt_days = 30 
-    #Step forward num_opt_days days and store the state for each day:
+
+    num_opt_days = 30
+    # Step forward num_opt_days days and store the state for each day:
     recal_start = t_start + deltahours(num_opt_days*24)
     t = t_start
     state = initial_state
@@ -233,7 +233,6 @@ def continuous_calibration():
     while t < recal_start:
         ptgsk.run(Timeaxis(t, dt, 24), state)
         t += deltahours(24)
-        #state = adjust_simulator_state(ptgsk, t, q_obs_m3s_ts)
         state = ptgsk.reg_model_state
         opt_states[t] = state
 
@@ -253,7 +252,8 @@ def continuous_calibration():
         opt_start = curr_time - deltahours(24*num_opt_days)
         opt_state = opt_states.pop(opt_start)
         p = ptgsk.region_model.get_region_parameter()
-        p_opt = ptgsk.optimize(Timeaxis(opt_start, dt, 24*num_opt_days), opt_state, target_spec_vec, p, p_min, p_max, tr_stop=1.0e-5)
+        p_opt = ptgsk.optimize(Timeaxis(opt_start, dt, 24*num_opt_days), opt_state, target_spec_vec,
+                               p, p_min, p_max, tr_stop=1.0e-5)
         ptgsk.region_model.set_region_parameter(p_opt)
         corr_state = adjust_simulator_state(ptgsk, curr_time, q_obs_m3s_ts)
         ptgsk.run(Timeaxis(curr_time, dt, 24), corr_state)
