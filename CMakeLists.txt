@@ -50,7 +50,7 @@ endif()
 # Our code requires an absolute directory for the dependencies
 get_filename_component(SHYFT_DEPENDENCIES ${SHYFT_DEPENDENCIES_DIR} ABSOLUTE)
 message("SHYFT_DEPENDENCIES directory: " ${SHYFT_DEPENDENCIES})
-message("You can override the above via the $SHYFT_DEPENDENCIES environment variable.")
+message("You can override the above via the $SHYFT_DEPENDENCIES_DIR environment variable.")
 # Create the dependencies directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
