@@ -28,16 +28,14 @@ def plot_np_percentiles(time, percentiles, base_color=1.0, alpha=0.5, plw=0.5, l
     percentiles = list(percentiles)
     num_intervals = len(percentiles)//2
     f_handles = []
-    fill_legend = []
+    proxy_handles= []
     prev_facecolor = None
     for i in range(num_intervals):
-        facecolor = list((1.0 - float(i + 1)/(num_intervals + 1))*base_color) + [alpha] if \
-            base_color is not None else 4*[1.]
+        facecolor = list(base_color) + [alpha]
         f_handles.append(plt.fill_between(time, percentiles[i], percentiles[-(i+1)], 
                          edgecolor=(0, 0, 0, 0), facecolor=facecolor))
-        fill_legend.append(blend_colors(prev_facecolor, facecolor) if prev_facecolor is not None else facecolor)
+        proxy_handles.append(Rectangle((0, 0), 1, 1, fc=blend_colors(prev_facecolor, facecolor) if prev_facecolor is not None else facecolor))
         prev_facecolor = facecolor
-    print(fill_legend)
     linewidths = len(percentiles)*[plw]
     linecols = len(percentiles)*[(0.7, 0.7, 0.7, 1.0)]
     labels = len(percentiles)*[None]
@@ -53,48 +51,40 @@ def plot_np_percentiles(time, percentiles, base_color=1.0, alpha=0.5, plw=0.5, l
     if len(percentiles) % 2:
         mean_h = handles.pop(len(handles)//2)
         handles = [mean_h] + handles
-    ax = plt.gca()
-    y_min, y_max = ax.get_ylim()
-    x_min, x_max = ax.get_xlim()
-    y_min += (y_max + y_min)/2
-
-    dy = (y_max - y_min)/(2*num_intervals)
-    dx = (x_max - x_min)/num_intervals
-    for i, fill in enumerate(fill_legend):
-        x = time[0]
-        y = y_min + i*2*dy
-        rectangle = Rectangle((x, y), dx, dy, facecolor=fill)
-        ax.add_patch(rectangle)
-        plt.text(x + 1.5*dx, y - dy, "Foo i")
-    return (handles + f_handles), fill_legend
+    return (handles + f_handles), proxy_handles
 
 
-def set_display_time_axis(ta, cal, n_xticks=10, format="W-WY"):
-    if isinstance(ta, Timeaxis):
-        dt = ta.delta()
-        start = ta.start()
-        t = [start + i*dt for i in range(ta.size())]
-    else:
-        t = ta[:]
-    ticks = ([t[int(round(_))] for _ in np.linspace(0, len(t) - 1, n_xticks)])
-    ticks[-1] = t[-1]
-    def convert(t_utc):
-        ymd = cal.calendar_units(t_utc)
-        return "{:04d}.{:02d}.{:02d}:{:02d}".format(ymd.year, ymd.month, ymd.day, ymd.hour)
-    handles = plt.xticks(ticks, [convert(_t) for _t in ticks], rotation="vertical")
-    plt.subplots_adjust(bottom=0.15)
-    plt.xlabel("Time in {} coordinates.".format("UTC"))
-    plt.xlim(ticks[0], ticks[-1])
-    return handles
-
-
-def set_calendar_formatter(cal):
+def set_calendar_formatter(cal, str_format="{year:04d}.{month:02d}.{day:02d}", format_major=True):
+    fields = {"year": None,
+              "month": None,
+              "day": None,
+              "hour": None,
+              "minute": None,
+              "second": None}
     ax = plt.gca()
     fig = plt.gcf()
     def format_date(x, pos=None):
-        t_utc = cal.trim(int(round(x)), deltahours(1))
+        t_utc = cal.trim(int(round(greg_to_utc(x))), deltahours(1))
         ymd = cal.calendar_units(t_utc)
-        return "{:04d}.{:02d}.{:02d}:{:02d}".format(ymd.year, ymd.month, ymd.day, ymd.hour)
-    ax.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
+        for f in fields:
+            fields[f] = getattr(ymd, f)
+        return str_format.format(**fields)
+    if format_major:
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
+        plt.setp(ax.get_xminorticklabels(), rotation=45, horizontalalignment='right')
+    else:
+        ax.xaxis.set_minor_formatter(ticker.FuncFormatter(format_date))
+        plt.setp(ax.get_xmajorticklabels(), rotation=45, horizontalalignment='right')
     fig.autofmt_xdate()
-    return ax
+
+
+def greg_to_utc(t):
+    a = 3600*24.0
+    b = 719164.0
+    return (np.asarray(t) - b)*a
+
+
+def utc_to_greg(t):
+    a = 3600*24.0
+    b = 719164.0
+    return np.asarray(t)/a + b
