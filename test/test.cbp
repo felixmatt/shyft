@@ -30,7 +30,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="sceua_test " />
+				<Option parameters="calibration_test" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -125,11 +125,11 @@
 		<Extensions>
 			<DoxyBlocks>
 				<comment_style block="0" line="0" />
-				<doxyfile_project />
+				<doxyfile_project project_number="1" output_directory="home/sih/projects/shyft-doc/core" />
 				<doxyfile_build />
 				<doxyfile_warnings />
 				<doxyfile_output />
-				<doxyfile_dot />
+				<doxyfile_dot class_diagrams="1" have_dot="1" />
 				<general />
 			</DoxyBlocks>
 			<code_completion />

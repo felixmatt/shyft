@@ -1,7 +1,9 @@
 %module(package="shyft.api") pt_ss_k
 
 #define SWIG_FILE_WITH_INIT
-
+%begin %{ // gcc win-compile needs this to avoid problems in cmath, fix: to include first
+#include <cmath>
+%}
 %header %{
 
 #define SWIG_FILE_WITH_INIT
