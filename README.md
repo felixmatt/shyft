@@ -15,14 +15,24 @@ methods.
 
 The code is based on an early initiative for distributed hydrological
 simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki)
-developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland
-and Oddbjorn Bruland.
+developed at Sintef by Sjur Kolberg with contributions from Kolbjorn
+Engeland and Oddbjorn Bruland.
 
 REQUIREMENTS
 ============
 
-For compiling and running SHyFT, you will need a C++11 compiler, 
-Python3 (3.4 or higher), plus a series of packages that can be installed via:
+For compiling and running SHyFT, you will need:
+
+* A C++11 compiler
+* The BLAS and LAPACK libraries (development packages)
+* A Python3 (3.4 or higher) interpreter
+* The SWIG wrapping tool (>= 3.0.5)
+* The NumPy package (>= 1.8.0)
+* The netCDF4 package (>= 1.2.1)
+* The CMake building tool (2.8.7 or higher)
+
+In addition, a series of Python packages are needed mainly for running
+the tests.  These can be easily installed via:
 
 ```bash
 $ pip install -r requeriments.txt
@@ -37,19 +47,40 @@ $ cat requirements.txt | xargs conda install
 COMPILING
 =========
 
+NOTE: the compiling instructions below have been mainly tested on
+Linux platforms.  SHyFT can also be compiled (and it is actively
+maintained) for Windows, but the building instructions are not covered
+here (yet).
+
 You can compile SHyFT by using the typical procedure for Python packages:
 
 ```bash
-$ python setup.py build_ext --inplace
+$ python setup.py build
 ```
 
 from the root directory.
 
-COMPILING VIA CMAKE
-=====================
+Although SHyFT tests are meant to be run from the sources directory
+(e.g. it expects the shyft-data repo to be cloned locally next to the
+shyft repo sources), you can also install it with:
 
-You can also compile SHyFT with CMake building tool which is available
-for the most of the platforms out there.  The steps are the usual ones:
+```bash
+$ python setup.py install
+```
+
+Although you won't be able to run the tests except in a very
+restricted scenario (i.e. `shyft-data` should be a sibling of the
+current working directory), this won't prevent you to use SHyFT on top
+of your own datasets.
+
+
+COMPILING MANUALLY VIA CMAKE
+============================
+
+Although (at least on Linux) the `setup.py` method above uses the
+CMake building tool behind the scenes, you can also compile it
+manually (in fact, this is recommended because you will be able to run
+the integrated C++ tests).  The steps are the usual ones:
 
 ```bash
 $ export SHYFT_SOURCES=shyft_root_directory  # absolute path required!
@@ -86,7 +117,7 @@ The way to test SHyFT is by running:
 ```bash
 $ nosetests
 ```
-from the root directory. 
+from the root directory.
 
 The test suite is not very comprehensive yet, but at least would provide
 indications that your installation is sane.
