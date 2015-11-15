@@ -9,7 +9,7 @@
 #  armadillo (including blas/lapack, other options easily availabe)
 # notice that you can override 
 #    py_include/py_lib defaults to (-I/opt/anaconda/include/python3.4m -I/opt/anaconda/lib/python3.4/site-packages/numpy/core/include)/(-L/opt/anaconda/lib)
-#    armadillo_defs/armadillo_libs defaults to (-DARMA_DONT_USE_WRAPPER)/(-lblas -llapack) 
+#    armadillo_defs/armadillo_libs defaults to (-DARMA_DONT_USE_WRAPPER)/(-lblas -llapack)  alternative if you utilize armadillo (/-larmadillo)
 #    boost_include/boost_libs defaults to ()/()
 #    shyft_march  defaults to (-march=native))
 #  env-var before invoking the script
