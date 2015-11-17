@@ -151,13 +151,14 @@ namespace shyft {
                 typedef boost::math::policies::policy< boost::math::policies::digits10<5> > low_precision_type;
                 const high_precision_type high_precision = high_precision_type();
                 const low_precision_type low_precision = low_precision_type();
+                const double precision_threshold = 2.0;
 
                 double gamma_p(double a, double b) const {
-                    return a < 2.0 ? boost::math::gamma_p(a, b, high_precision) : boost::math::gamma_p(a, b, low_precision);
+                    return a < precision_threshold ? boost::math::gamma_p(a, b, high_precision) : boost::math::gamma_p(a, b, low_precision);
                 }
 
                 double lgamma(double a) const {
-                    return a < 2.0 ? boost::math::lgamma(a, high_precision) : boost::math::lgamma(a, low_precision);
+                    return a < precision_threshold ? boost::math::lgamma(a, high_precision) : boost::math::lgamma(a, low_precision);
                 }
 
                 inline double calc_df(const double a, const double b, const double z) const {
