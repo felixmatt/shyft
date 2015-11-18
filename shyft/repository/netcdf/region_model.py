@@ -159,11 +159,10 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         -----------
         region_id: string
             unique identifier of region in data
-        
+
         catchments: list of unique integers
             catchment indices when extracting a region consisting of a subset
-            of the catchments
-        has attribs to construct  params and cells etc.
+            of the catchments has attribs to construct params and cells etc.
 
         Returns
         -------
@@ -174,14 +173,18 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             grp = dset.groups["elevation"]
             xcoord = grp.variables["xcoord"][:]
             ycoord = grp.variables["ycoord"][:]
-            dataset_epsg = grp.epsg
-            if not hasattr(grp, "epsg"):
+            dataset_epsg = None
+            if hasattr(grp, "epsg"):
+                dataset_epsg = grp.epsg
+            if hasattr(grp, "EPSG"):
+                dataset_epsg = grp.EPSG
+            if not dataset_epsg:
                 raise interfaces.InterfaceError("netcdf: epsg attr not found in group elevation")
-            if grp.epsg != self._epsg:
+            if dataset_epsg != self._epsg:
                 source_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
                     int(self._epsg) - 32600, "WGS84", "WGS84")
                 target_cs = "+proj=utm +zone={} +ellps={} +datum={} +units=m +no_defs".format(
-                    int(grp.epsg) - 32600, "WGS84", "WGS84")
+                    int(dataset_epsg) - 32600, "WGS84", "WGS84")
                 source_proj = Proj(source_cs)
                 target_proj = Proj(target_cs)
                 mesh2d = np.dstack(transform(source_proj, target_proj,
