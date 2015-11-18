@@ -79,6 +79,8 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                     times = dset.groups[tpath[0]].variables[tpath[1]][:]
                     imin = times.searchsorted(period.start, side='left')
                     imax = times.searchsorted(period.end, side='right')
+                    if imin >= imax:
+                        raise RuntimeError("No data found for period interval!")
                     # Get the indices of the valid period
                     tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
                     tseries['time'] = times[imin:imax].astype(np.long).tolist()
