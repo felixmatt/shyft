@@ -24,7 +24,7 @@ def abs_datafilepath(filepath):
 
 class GeoTsRepository(interfaces.GeoTsRepository):
 
-    def __init__(self, params, metstation_filepath, discharge_filepath):
+    def __init__(self, params, metstation_filepath, discharge_filepath, raise_if_no_date=False):
         """
         Parameters
         ----------
@@ -43,7 +43,17 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             have the shyft.Repository.BaseYamlConfig that provides the
             structure from yaml file (given the structure in the supplied
             yaml-files is ok).
+
+        metstation_filepath: string
+            path to the netcdf file that contains all observed data, like precip/temp etc.
+        discharge_filepath: string
+            path to the netcdf file that contains the discharge data, we use that for calibration, or adjustment
+        raise_if_no_date: bool
+            if you set it to true, and request data for a period that no data exists, raise runtime exception
+            default is false, and empty time-series with Nan beginning,end period is returned.
+
         """
+        self.raise_if_no_data=raise_if_no_date
         self._params = params
         self._metstation_filepath = metstation_filepath
         self._discharge_filepath = discharge_filepath
@@ -80,10 +90,16 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                     imin = times.searchsorted(period.start, side='left')
                     imax = times.searchsorted(period.end, side='right')
                     if imin >= imax:
-                        raise RuntimeError("No data found for period interval!")
+                        #policy test goes here: then either
+                        if self.raise_if_no_data:
+                            raise RuntimeError("No data found for period interval!")
+                        # or just empty values
+                        tseries['values'] = np.array([np.nan, np.nan], dtype=np.float32) #our best guess?
+                        tseries['time'] = [period.start, period.end]
                     # Get the indices of the valid period
-                    tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
-                    tseries['time'] = times[imin:imax].astype(np.long).tolist()
+                    else:
+                        tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
+                        tseries['time'] = times[imin:imax].astype(np.long).tolist()
                     coords = []
                     for loc in station['location'].split(","):
                         grname, axis = loc.split(".")
