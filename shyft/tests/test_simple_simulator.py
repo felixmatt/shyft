@@ -25,6 +25,7 @@ from shyft.repository.netcdf.yaml_config import ModelConfig
 from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.orchestration.simulator import SimpleSimulator
 from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
+from shyft.orchestration.plotting import plot_np_percentiles
 
 
 def print_param(header_text, param):
@@ -258,6 +259,60 @@ class SimulationTestCase(unittest.TestCase):
         self.assertTrue(np.linalg.norm(t_ts - f_ts) < 1.0e-10)
         self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
 
+    def test_compute_lwc_percentiles(self):
+        from matplotlib import pylab as plt
+        # Simulation time axis
+        year, month, day, hour = 2010, 9, 1, 0
+        dt = api.deltahours(24)
+        n_steps = 400
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        time_axis = api.Timeaxis(t0, dt, n_steps)
+
+        # Some fake ids
+        region_id = 0
+        interpolation_id = 0
+
+        # Simulation coordinate system
+        epsg = "32633"
+
+        # Model
+        model_t = pt_gs_k.PTGSKModel
+
+        # Configs and repositories
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        region_config_file = path.join(path.dirname(__file__), "netcdf",
+                                       "atnsjoen_calibration_region.yaml")
+        region_config = RegionConfig(region_config_file)
+        model_config = ModelConfig(self.model_config_file)
+        dataset_config = YamlContent(dataset_config_file)
+        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
+        interp_repos = InterpolationParameterRepository(model_config)
+        netcdf_geo_ts_repos = []
+        for source in dataset_config.sources:
+            station_file = source["params"]["stations_met"]
+            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
+        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
+
+        # Construct target discharge series
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
+        n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(model_t, n_cells)
+        cid = 1
+        simulator.region_model.set_state_collection(cid, True)
+        simulator.run(time_axis, state_repos.get_state(0))
+
+        percentile_list = [10, 25, 50, 75, 90]
+        # From here, things could be calculated without copies (except for 't')
+        # TODO: Graham optimize with numba :-)
+        cells = simulator.region_model.get_cells()
+        lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
+        t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
+        percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
+        plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
+        set_calendar_formatter(api.Calendar())
+        plt.show()
        
     def test_snow_and_ground_water_response_calibration(self):
         """

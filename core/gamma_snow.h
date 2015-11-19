@@ -73,19 +73,21 @@ namespace shyft {
 
 
             struct state {
-                state (double albedo=0.4, double lwc=0.1, double surface_heat=30000.0,double alpha=1.26,double sdc_melt_mean=0.0, double acc_melt=0.0, double iso_pot_energy=0.0, double temp_swe=0.0):
-                albedo(albedo),lwc(lwc),surface_heat(surface_heat),alpha(alpha),sdc_melt_mean(sdc_melt_mean),acc_melt(acc_melt),iso_pot_energy(iso_pot_energy),temp_swe(temp_swe)
-                {
-                }
+                state (double albedo=0.4, double lwc=0.1, double surface_heat=30000.0,
+                       double alpha=1.26, double sdc_melt_mean=0.0, double acc_melt=0.0, 
+                       double iso_pot_energy=0.0, double temp_swe=0.0)
+                  :
+                    albedo(albedo), lwc(lwc), surface_heat(surface_heat), alpha(alpha), sdc_melt_mean(sdc_melt_mean),
+                    acc_melt(acc_melt), iso_pot_energy(iso_pot_energy), temp_swe(temp_swe) {/* Do nothing */}
 
-                double albedo=0.4;
-                double lwc=0.1;
-                double surface_heat=30000.0;
-                double alpha=1.26;
-                double sdc_melt_mean=0.0;
-                double acc_melt=0.0;
-                double iso_pot_energy=0.0;
-                double temp_swe=0.0;
+                double albedo = 0.4;
+                double lwc = 0.1;
+                double surface_heat = 30000.0;
+                double alpha = 1.26;
+                double sdc_melt_mean = 0.0;
+                double acc_melt = 0.0;
+                double iso_pot_energy = 0.0;
+                double temp_swe = 0.0;
             };
 
 
