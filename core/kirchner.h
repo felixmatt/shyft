@@ -32,7 +32,7 @@ namespace shyft {
                     double t_start = 0.0; // Start of integration period
                     double t_a = 0.0; // Left hand side time of next integration subinterval
                 public:
-                    trapezoidal_average(S* stepper) {}
+                    trapezoidal_average(S& stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -76,10 +76,10 @@ namespace shyft {
                     double t_start = 0.0;
                     double t_a = 0.0;
                     const size_t n{5}; // Number of internal subintervals
-                    S* stepper;
+                    S& stepper;
                     typename S::state_type x; // Storage for the intermediate state
                 public:
-                    composite_trapezoidal_average(S* stepper): stepper(stepper) {}
+                    composite_trapezoidal_average(S& stepper): stepper(stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -98,7 +98,7 @@ namespace shyft {
                         const double dt = (t - t_a)/n;
                         double sum = (f_a + f)*0.5;
                         for (size_t k=1; k < n; ++k) {
-                            stepper->calc_state(t_a + k*dt, x);
+                            stepper.calc_state(t_a + k*dt, x);
                             // The Kirchner method is solving the log transform of the
                             // original problem formulation, hence the result at the
                             // internal steps are inverted back by applying the
@@ -169,7 +169,7 @@ namespace shyft {
               private:
                 dense_stepper_type dense_stepper = boost::numeric::odeint::make_dense_output(1.0e-7, 1.0e-8,
                                                    boost::numeric::odeint::runge_kutta_dopri5<state_type>());
-                AC<dense_stepper_type> average_computer{&dense_stepper};
+                AC<dense_stepper_type> average_computer{dense_stepper};
                 const P param;
 
                 /** \brief Sensitivity function g(q)
@@ -189,12 +189,6 @@ namespace shyft {
                  */
                 double log_transform_f(double ln_q, double p, double e) const {
                     const double gln_q = g(ln_q);
-
-                    //if (gln_q < 1.0e-30) /// TODO:a numerical challenge, but why is 1.0e-30 a suitable number?
-                    //    return 0.0;
-                    //const double rest = (p - e)*exp(-ln_q) - 1.0;
-                    //return gln_q*rest;
-
                     return gln_q >= 1.e-30 ? gln_q*((p - e)*exp(-ln_q) - 1.0) : 0.0;
                 }
 
@@ -203,8 +197,8 @@ namespace shyft {
 
                 calculator(double abs_err, double rel_err, P& param)
                     : dense_stepper(boost::numeric::odeint::make_dense_output(abs_err, rel_err,
-                        boost::numeric::odeint::runge_kutta_dopri5<state_type>())),
-                      average_computer(&dense_stepper), param(param) {}
+                      boost::numeric::odeint::runge_kutta_dopri5<state_type>())),
+                      average_computer(dense_stepper), param(param) {}
 
 
                 /** \brief step Kirchner model forward from time t0 to time t1
