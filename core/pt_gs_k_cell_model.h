@@ -86,7 +86,7 @@ namespace shyft {
                     : destination_area(destination_area), avg_discharge(time_axis, 0.0) {}
 
                 void initialize(const timeaxis_t& time_axis, double area) {
-                    destination_area=area;
+                    destination_area = area;
                     avg_discharge = pts_t(time_axis, 0.0);
                 }
 

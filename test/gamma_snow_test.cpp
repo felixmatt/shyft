@@ -86,8 +86,8 @@ void gamma_snow_test::test_correct_lwc() {
     const double b2 = 2.0;
 
     const double result = gs.corr_lwc(z1, a1, b1, z2, a2, b2);
-
-    TS_ASSERT_DELTA(result, 3.8417594715, shyfttest::EPS);
+// as a result of using lower resolution, less accuracy
+    TS_ASSERT_DELTA(result, 3.8417594715,10000* shyfttest::EPS);
 
 }
 
@@ -142,7 +142,7 @@ void gamma_snow_test::test_warm_winter_effect() {
 	bool verbose = getenv("SHYFT_VERBOSE");
     for (size_t i = 0; i < 24*num_days; ++i) {
         gs.step(states, response, dt*24*232+i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum);
-		
+
 		if (verbose && (i % 10 == 0)) {
             std::cout << "Time step: " << i << ", ";
             std::cout << response.storage << ", ";

@@ -6,7 +6,6 @@ from builtins import range
 import re
 from glob import glob
 from os import path
-from functools import partial
 import numpy as np
 from netCDF4 import Dataset
 from pyproj import Proj
@@ -372,7 +371,13 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 data_slice[dims.index("x")] = m_x
                 data_slice[dims.index("y")] = m_y
                 data_slice[dims.index("time")] = data_time_slice
-                raw_data[self._arome_shyft_map[k]] = data[data_slice], k
+                pure_arr = data[data_slice]
+                if isinstance(pure_arr, np.ma.core.MaskedArray):
+                    #print(pure_arr.fill_value)
+                    pure_arr = pure_arr.filled(np.nan)
+                raw_data[self._arome_shyft_map[k]] = pure_arr, k
+                #raw_data[self._arome_shyft_map[k]] = np.array(data[data_slice], dtype='d'), k
+
         if self.elevation_file is not None:
             _x, _y, z = self._read_elevation_file(self.elevation_file)
             assert np.linalg.norm(x - _x) < 1.0e-10  # x/y coordinates should match
@@ -398,7 +403,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             x_wind, _ = raw_data.pop("x_wind")
             y_wind, _ = raw_data.pop("y_wind")
             raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), "wind_speed"
-
         extracted_data = self._transform_raw(raw_data, time[time_slice], issubset=issubset)
         return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data), pts)
 
