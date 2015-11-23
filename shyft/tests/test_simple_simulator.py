@@ -1,10 +1,10 @@
 ﻿"""
 Tests for the simple simulator.
 """
-from __future__ import print_function
-from __future__ import absolute_import
 
 from os import path
+from os import environ
+
 import random
 import unittest
 import numpy as np
@@ -310,9 +310,12 @@ class SimulationTestCase(unittest.TestCase):
         lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
         t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
         percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
-        plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
-        set_calendar_formatter(api.Calendar())
-        plt.show()
+        if 'DISPLAY' in environ.keys():
+            plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
+            set_calendar_formatter(api.Calendar())
+            plt.show()
+        else:
+            print("DISPLAY not set, not showing plot")
        
     def test_snow_and_ground_water_response_calibration(self):
         """
