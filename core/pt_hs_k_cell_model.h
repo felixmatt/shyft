@@ -119,8 +119,8 @@ namespace shyft {
 
                 state_collector() : collect_state(false), destination_area(0.0) {}
                 state_collector(const timeaxis_t& time_axis) 
-                 : collect_state(false),destination_area(0.0), kirchner_discharge(time_axis, 0.0),
-                    snow_swe(time_axis,0.0), snow_sca(time_axis, 0.0) { /* Do nothing */ }
+                 : collect_state(false), destination_area(0.0), kirchner_discharge(time_axis, 0.0),
+                    snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0) { /* Do nothing */ }
                 /** brief called before run, prepares state time-series
                  *
                  * with preallocated room for the supplied time-axis.
