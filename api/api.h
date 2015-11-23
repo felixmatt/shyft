@@ -318,26 +318,26 @@ namespace shyft {
 		}
 
 
-        result_ts_t_ lwc(const vector<int>& catchment_indexes)const {
+        result_ts_t_ lwc(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
                 average_catchment_feature(*cells, catchment_indexes,
-                [](const cell&c) {return c.sc.gs_lwc; });
+                [](const cell&c) { return c.sc.gs_lwc; });
         }
-		vector<double> lwc(const vector<int>& catchment_indexes,size_t ith_timestep)const {
+		vector<double> lwc(const vector<int>& catchment_indexes, size_t ith_timestep) const {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
-				[](const cell&c) {return c.sc.gs_lwc; },ith_timestep);
+				[](const cell&c) { return c.sc.gs_lwc; }, ith_timestep);
 		}
 
 		result_ts_t_ surface_heat(const vector<int>& catchment_indexes)const {
             return shyft::core::cell_statistics::
                 average_catchment_feature(*cells, catchment_indexes,
-                [](const cell&c) {return c.sc.gs_surface_heat; });
+                [](const cell&c) { return c.sc.gs_surface_heat; });
         }
 		vector<double> surface_heat(const vector<int>& catchment_indexes,size_t ith_timestep)const {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
-				[](const cell&c) {return c.sc.gs_surface_heat; },ith_timestep);
+				[](const cell&c) { return c.sc.gs_surface_heat; }, ith_timestep);
 		}
 
         result_ts_t_ alpha(const vector<int>& catchment_indexes)const {

@@ -11,7 +11,7 @@ from shyft import api
 
 from shapely.geometry import MultiPolygon
 
-from shyft.repository.service.gis_region_model_repository import CellDataFetcher,GridSpecification
+from shyft.repository.service.gis_region_model_repository import CellDataFetcher, GridSpecification
 
 class GisRegionModelDemo(object):
     """

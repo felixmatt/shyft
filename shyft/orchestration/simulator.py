@@ -199,15 +199,25 @@ class SimpleSimulator(object):
         p_res.set(p_vec_opt)
         return p_res
 
-    def discharge_adjusted_state(self, obs_discharge, state):
+
+    @property
+    def reg_model_state(self):
+        state = self.region_model.__class__.state_t.vector_t()
+        self.region_model.get_states(state)
+        return state
+
+
+    def discharge_adjusted_state(self, obs_discharge, state=None):
         """
         Parameters
         ----------
         obs_discharge: float
             Observed discharge in units m3/s
-        state: shyft.api state vector type
+        state: shyft.api state vector type, optional
             Vector of state having ground water response kirchner with variable q.
         """
+        if state is None:
+            state = self.reg_model_state
         reg_mod = self.region_model
         areas = np.array([cell.geo.area() for cell in reg_mod.get_cells()])
         area_tot = areas.sum()
