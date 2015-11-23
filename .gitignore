@@ -16,6 +16,7 @@ shyft/tests/api/state_test.yaml
 *.lib
 *.a
 *.so
+*.bmarks
 Debug
 x64
 Release
@@ -38,5 +39,6 @@ api/python/*_wrap.cxx
 api/python/*_wrap.cpp
 shyft/tests/state_tmp
 workspace.xml
-
+ValgrindOut.xml
+cachegrind.out.*
 

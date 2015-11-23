@@ -1,30 +1,32 @@
-from __future__ import print_function
 
 import os.path
+import glob
+import platform
 from setuptools import setup, find_packages
 import subprocess
 
 
 # Build shyft using the build_script
-if (not os.path.exists("shyft/api.py") or
-    not os.path.exists("shyft/_api.so")):
+if not glob.glob("shyft/api/___init__*"):
     try:
-        print(subprocess.check_output(
-            "sh build_api.sh", shell=True))
+        if "Linux" in platform.platform():
+            # For Linux, use the cmake approach for compiling the extensions
+            print(subprocess.check_output(
+                "sh build_api_cmake.sh", shell=True))
+        else:
+            print(subprocess.check_output(
+                "sh build_api.sh", shell=True))
     except:
-        print("Problems compiling shyft, try building with the build_api.sh script manually...")
-    else:
-        if not os.path.exists("shyft/_api.so"):
-            print("### ERRORS ### \n\n"
-                  "Check build messages for errors. Seems Release\n "
-                  "version of shyft/_api.so does not exist.")
+        print("Problems compiling shyft, try building with the build_api.sh "
+              "or build_api_cmake.sh (Linux only) script manually...")
 
-if (os.path.exists("shyft/_api.so") and
-    os.path.exists("shyft/api.py")):
+if glob.glob("shyft/api/___init__*"):
     print("### SUCCESS BUILDING SHyFT ### \n\n"
-          "Looks like shyft is built correctly.\n "
-          "Be sure to:: \n export LD_LIBRARY_PATH={}:$LD_LIBRARY_PATH \n".format(
-          os.path.join(os.path.abspath(os.path.curdir), "shyft")))
+          "Looks like shyft has been built correctly.\n ")
+else:
+    print("### ERRORS ### \n\n"
+          "Check build messages for errors. Seems that\n "
+          "extensions do not appear in its directory.")
 
 
 # SHyFT version
@@ -37,11 +39,11 @@ setup(
     version=VERSION,
     author='Statkraft',
     author_email='shyft@statkraft.com',
-    url='http://www.opensource-enki.com',
-    description='A modular hydrologic framework',
+    url='https://github.com/statkraft/shyft',
+    description='An OpenSource hydrological toolbox',
     license='LGPL v3',
     packages=find_packages(),
-    package_data={'shyft': ['_api.so', 'tests/netcdf/*']},
+    package_data={'shyft': ['api/*.so', 'tests/netcdf/*']},
     entry_points={
         'console_scripts': [
             #################### orchestration #######################

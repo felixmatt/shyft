@@ -1,0 +1,10 @@
+swig
+numpy
+netcdf4
+pyyaml
+gdal
+matplotlib
+requests
+nose
+shapely
+pyproj

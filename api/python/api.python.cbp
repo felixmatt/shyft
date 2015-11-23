@@ -94,8 +94,6 @@
 			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
-			<Add directory="$(py_include)" />
-			<Add directory="$(numpy_include)" />
 			<Add directory=".." />
 			<Add directory="../../../dlib" />
 			<Add directory="../.." />
@@ -105,7 +103,6 @@
 			<Add library="shyftcore" />
 			<Add library="blas" />
 			<Add library="lapack" />
-			<Add directory="$(py_lib)" />
 			<Add directory="/usr/local/lib64" />
 		</Linker>
 		<ExtraCommands>

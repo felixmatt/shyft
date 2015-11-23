@@ -13,7 +13,9 @@
 
 %feature("autodoc", "2");
 %feature("kwargs");
-
+%begin %{ // gcc win-compile needs this to avoid problems in cmath, fix: to include first
+#include <cmath>
+%}
 
 //
 // Include SWIG mappings for libraries that we use
