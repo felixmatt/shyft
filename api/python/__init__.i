@@ -164,6 +164,14 @@
     %rename(GammaSnowCalculator) shyft::core::gamma_snow::calculator;
     %include "core/gamma_snow.h"
 
+
+    %rename(HbvSnowParameter)  shyft::core::hbv_snow::parameter;
+    %rename(HbvSnowState)      shyft::core::hbv_snow::state;
+    %rename(HbvSnowResponse)   shyft::core::hbv_snow::response;
+    %rename(HbvSnowCalculator) shyft::core::hbv_snow::calculator;
+    %include "core/hbv_snow.h"
+
+
     %rename(SkaugenParameter)  shyft::core::skaugen::parameter;
     %rename(SkaugenState)      shyft::core::skaugen::state;
     %rename(SkaugenResponse)   shyft::core::skaugen::response;

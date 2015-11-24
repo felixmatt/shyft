@@ -1,11 +1,18 @@
 ﻿from shyft import api 
 from shyft.api import pt_gs_k
+from shyft.api import pt_hs_k
 import unittest
 import numpy as np
 
 
-    
 class ShyftApi(unittest.TestCase):
+
+    def test_pt_hs_k_param(self):
+        pthsk= pt_hs_k.PTHSKParameter()
+        self.assertIsNotNone(pthsk)
+        self.assertEqual(pthsk.size(),10)
+        pthsk.snow.lw = 0.23
+        self.assertAlmostEqual(pthsk.snow.lw,0.23)
 
 
     def _create_std_ptgsk_param(self):
