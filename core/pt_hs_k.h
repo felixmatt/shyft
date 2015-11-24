@@ -179,15 +179,13 @@ namespace shyft {
 
                 // HBVSnow
                 hbv_snow.step(snow_state, response.snow, period.start, period.end, parameter.snow, prec, temp);
-                response.snow.sca = snow_state.sca;
-                response.snow.swe = snow_state.swe; // TODO: Should swe really be a state variable?
 
                 // Communicate snow
                 // At my pos xx mm of snow moves in direction d.
 
                 // Actual Evapotranspiration
                 double act_evap = actual_evapotranspiration::calculate_step(q, pot_evap, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
-                response.ae.ae=act_evap;
+                response.ae.ae = act_evap;
 
                 // Use responses from PriestleyTaylor and HBVSnow in Kirchner
                 double q_avg;

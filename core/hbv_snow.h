@@ -100,10 +100,7 @@ namespace shyft {
 
 
             struct response {
-
                 double outflow = 0.0;
-                double sca = 0.0;
-                double swe = 0.0;
             };
 
 
@@ -226,11 +223,11 @@ namespace shyft {
                     double step_in_days = (t1 - t0)/86400.0;
                     swe += snow + sca*rain;
                     if (swe < 0.1) {
-                        r.outflow=total_water;
+                        r.outflow = total_water;
                         std::fill(begin(sp), end(sp), 0.0);
                         std::fill(begin(sw), end(sw), 0.0);
-                        s.swe=0.0;
-                        s.sca=0.0;
+                        s.swe = 0.0;
+                        s.sca = 0.0;
                         return;
                     }
                     if (snow > 0.0) {
@@ -291,9 +288,9 @@ namespace shyft {
                         } else
                             swe = total_water;
                     }
-                    r.outflow=total_water - swe;
-                    s.swe=swe;
-                    s.sca=sca;
+                    r.outflow = total_water - swe;
+                    s.swe = swe;
+                    s.sca = sca;
                 }
             };
         }
