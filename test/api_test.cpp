@@ -10,6 +10,8 @@
 #include "api/api.h"
 #include "api/pt_gs_k.h"
 #include "api/pt_ss_k.h"
+#include "api/pt_hs_k.h"
+
 using namespace std;
 using namespace shyft::core;
 using namespace shyft::timeseries;
@@ -40,6 +42,14 @@ bool operator==(const pt_ss_k_state_t& a, const pt_ss_k_state_t& b) {
 		&& fabs(a.snow.residual - b.snow.residual) < tol
 		&& fabs(a.kirchner.q - b.kirchner.q) < tol
 		&& (a.snow.num_units == b.snow.num_units);
+
+}
+bool operator==(const pt_hs_k_state_t& a, const pt_hs_k_state_t& b) {
+	const double tol = 1e-9;
+	return
+		   fabs(a.snow.sca - b.snow.sca) < tol
+		&& fabs(a.snow.swe - b.snow.swe) < tol
+		&& fabs(a.kirchner.q - b.kirchner.q) < tol;
 
 }
 
@@ -102,6 +112,34 @@ void api_test::test_ptssk_state_io() {
 	}
 	string ssv = sio.to_string(sv);
 	vector<pt_ss_k_state_t> rsv;
+	rsv = sio.vector_from_string(ssv);
+	TS_ASSERT_EQUALS(rsv.size(), sv.size());
+	for (size_t i = 0; i < sv.size(); ++i) {
+		TS_ASSERT_EQUALS(rsv[i], sv[i]);
+	}
+
+}
+
+void api_test::test_pthsk_state_io() {
+	using namespace shyft::api;
+	pt_hs_k_state_t s;
+	s.snow.sca = 12.2;
+	s.snow.swe = 100;
+	s.kirchner.q = 12.2;
+	pt_hs_k_state_io sio;
+	string s1 = sio.to_string(s);
+	pt_hs_k_state_t  sr;
+	TS_ASSERT(sio.from_string(s1, sr));
+	TS_ASSERT_EQUALS(s, sr);
+	vector<pt_hs_k_state_t> sv;
+	size_t n = 2 * 2;
+	sv.reserve(n);
+	for (size_t i = 0; i < n; ++i) {
+		sv.emplace_back(s);
+		s.snow.swe += 0.01;
+	}
+	string ssv = sio.to_string(sv);
+	vector<pt_hs_k_state_t> rsv;
 	rsv = sio.vector_from_string(ssv);
 	TS_ASSERT_EQUALS(rsv.size(), sv.size());
 	for (size_t i = 0; i < sv.size(); ++i) {

@@ -104,7 +104,7 @@ file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 set(LIBS "-lblas -llapack")
 
 # Compile extensions
-foreach(python_extension "__init__" "pt_gs_k" "pt_ss_k")
+foreach(python_extension "__init__" "pt_gs_k" "pt_ss_k" "pt_hs_k")
   add_library(${python_extension} SHARED ${CXX_FILES} ${CMAKE_SOURCE_DIR}/api/python/${python_extension}_wrap.cxx)
   set_target_properties(${python_extension} PROPERTIES OUTPUT_NAME ${python_extension})
   # Python extensions do not use the 'lib' prefix

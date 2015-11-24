@@ -35,6 +35,7 @@ shyft/tests/netcdf/state.yaml
 shyft/api/__init__.py
 shyft/api/pt_gs_k.py
 shyft/api/pt_ss_k.py
+shyft/api/pt_hs_k.py
 api/python/*_wrap.cxx
 api/python/*_wrap.cpp
 shyft/tests/state_tmp

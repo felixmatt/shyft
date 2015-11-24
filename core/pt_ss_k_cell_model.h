@@ -30,7 +30,7 @@ namespace shyft {
                 // Collect responses as time series
                 pts_t avg_discharge;  ///< Kirchner Discharge given in [m³/s] for the timestep
                 pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm]
-                pts_t snow_output;  ///< gamma snow output [m³/s] for the timestep
+                pts_t snow_outflow;  ///< gamma snow output [m³/s] for the timestep
                 pts_t ae_output;  ///< actual evap mm/h
                 pts_t pe_output;  ///< actual evap mm/h
                 response_t end_reponse;  ///<< end_response, at the end of collected
@@ -39,14 +39,14 @@ namespace shyft {
                 all_response_collector(const double destination_area) : destination_area(destination_area) {}
                 all_response_collector(const double destination_area, const timeaxis_t& time_axis)
                  : destination_area(destination_area), avg_discharge(time_axis, 0.0), snow_total_stored_water(time_axis, 0.0),
-                   snow_output(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
+                   snow_outflow(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
 
                 /**\brief Called before run to allocate space for results */
                 void initialize(const timeaxis_t& time_axis, double area) {
                     destination_area = area;
                     avg_discharge = pts_t(time_axis, 0.0);
                     snow_total_stored_water = pts_t(time_axis, 0.0);
-                    snow_output = pts_t(time_axis, 0.0);
+                    snow_outflow = pts_t(time_axis, 0.0);
                     ae_output = pts_t(time_axis, 0.0);
                     pe_output = pts_t(time_axis, 0.0);
                 }
@@ -65,7 +65,7 @@ namespace shyft {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area));
                     snow_total_stored_water.set(idx, mmh_to_m3s(response.snow.total_stored_water, destination_area));
                     // Convert snow outflow to volume per time unit (m^3/s) instead of mm per time step
-                    snow_output.set(idx, mmh_to_m3s(response.snow.outflow, destination_area));
+                    snow_outflow.set(idx, mmh_to_m3s(response.snow.outflow, destination_area));
                     ae_output.set(idx, response.ae.ae);
                     pe_output.set(idx, response.pt.pot_evapotranspiration);
                 }
