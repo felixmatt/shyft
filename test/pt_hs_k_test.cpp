@@ -26,8 +26,7 @@ namespace shyfttest {
         // need specialization for pthsk_response_t above
         template<> template<>
         void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
-            _snow_sca.set(idx, response.snow.sca);
-            _snow_swe.set(idx, response.snow.swe);
+            _snow_output.set(idx, response.snow.outflow);
         }
         template <> template <>
         void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
