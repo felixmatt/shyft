@@ -12,7 +12,7 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(pthsk.size(), 10)
         pthsk.snow.lw = 0.23
         self.assertAlmostEqual(pthsk.snow.lw, 0.23)
-        snow = api.HbvSnowParameter()  # keyword does not work yet (lw=0.2)
+        snow = api.HbvSnowParameter(lw=0.2)  # keyword does work now!
         self.assertIsNotNone(snow)
         snow.lw = 0.2
         self.assertAlmostEqual(snow.lw, 0.2);

@@ -74,19 +74,25 @@ namespace shyft {
                 double ts;
                 double lw;
                 double cfr;
-                parameter() : tx(0.0), cx(1.0), ts(0.0), lw(0.1), cfr(0.5) {
+                void set_std_distribution_and_quantiles() {
                     double si[] = {1.0, 1.0, 1.0, 1.0, 1.0};
                     double ii[] = {0, 0.25, 0.5, 0.75, 1.0};
-                    s.reserve(5);
-                    intervals.reserve(5);
+                    s.clear();s.reserve(5);
+                    intervals.clear();intervals.reserve(5);
                     for(size_t i=0; i<5; ++i) {
                         s.push_back(si[i]);
                         intervals.push_back(ii[i]);
                     }
                 }
+                parameter(double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
+                  :  tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) {
+                      set_std_distribution_and_quantiles();
+                }
+                #ifndef SWIG
                 parameter(std::vector<double>& s, std::vector<double>& intervals,
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
+                #endif // SWIG
 
                 void set_snow_redistribution_factors(const std::vector<double>& values) { s = values; }
                 void set_snow_quantiles(const std::vector<double>& values) { intervals = values; }
