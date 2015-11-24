@@ -10,9 +10,12 @@ class ShyftApi(unittest.TestCase):
     def test_pt_hs_k_param(self):
         pthsk= pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
-        self.assertEqual(pthsk.size(),10)
+        self.assertEqual(pthsk.size(), 10)
         pthsk.snow.lw = 0.23
-        self.assertAlmostEqual(pthsk.snow.lw,0.23)
+        self.assertAlmostEqual(pthsk.snow.lw, 0.23)
+        snow= api.HbvSnowParameter()
+        self.assertIsNotNone(snow)
+        #TODO: add more simple tests, especially since we for snow do have some extra features in the parameters
 
 
     def _create_std_ptgsk_param(self):
