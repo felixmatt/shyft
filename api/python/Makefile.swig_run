@@ -9,7 +9,7 @@ pt_gs_k_dependencies =  __init__.i $(api_dependencies) $(model_dependencies) ../
 pt_ss_k_dependencies =  __init__.i $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/skaugen.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_ss_k_cell_model.h ../../core/pt_ss_k.h
 pt_hs_k_dependencies =  __init__.i $(api_dependencies) $(model_dependencies) ../../core/priestley_taylor.h ../../core/hbv_snow.h ../../core/actual_evapotranspiration.h ../../core/kirchner.h   ../../core/pt_hs_k_cell_model.h ../../core/pt_hs_k.h
 
-all: __init___wrap.cxx  pt_gs_k_wrap.cxx  pt_ss_k_wrap.cxx
+all: __init___wrap.cxx  pt_gs_k_wrap.cxx  pt_ss_k_wrap.cxx pt_hs_k_wrap.cxx
 
 __init___wrap.cxx  : __init__.i $(MAKEFILE) $(api_dependencies);
 	$(Generator)  __init__.i

@@ -186,7 +186,7 @@ namespace shyft {
         RelHumSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
     };
- 
+
     struct RadiationSource : GeoPointSource {
         RadiationSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
@@ -546,9 +546,9 @@ namespace shyft {
 
     ///< access to hbv snow routine response statistics
     template <typename cell>
-    struct hbv_snow_response_statistics {
+    struct hbv_snow_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        hbv_snow_response_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
+        hbv_snow_cell_response_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
 
         result_ts_t_ output(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::

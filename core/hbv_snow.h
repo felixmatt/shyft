@@ -27,6 +27,9 @@
 namespace shyft {
     namespace core {
         namespace hbv_snow {
+
+            #ifndef SWIG
+
             /** \brief integrate function f given as linear interpolated between the f_i(x_i) from a to b for a, b in x.
              * If f_rhs_is_zero is set, f(b) = 0, unless b = x[i] for some i in [0,n).
              */
@@ -60,6 +63,8 @@ namespace shyft {
                 }
                 return area;
             }
+
+            #endif // SWIG
 
             struct parameter {
                 std::vector<double> s;///<snow redistribution factors

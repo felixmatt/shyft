@@ -43,6 +43,8 @@ echo "  Compile&Link _pt_gs_k.so started"
 g++ $gcc_opt  -o api/_pt_gs_k.so   ../api/python/pt_gs_k_wrap.cxx   $shyft_common_source  $armadillo_libs $boost_libs $py_lib  &
 echo "  Compile&Link _pt_ss_k.so started"
 g++ $gcc_opt -o api/_pt_ss_k.so    ../api/python/pt_ss_k_wrap.cxx    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
+echo "  Compile&Link _pt_hs_k.so started"
+g++ $gcc_opt -o api/_pt_hs_k.so    ../api/python/pt_hs_k_wrap.cxx    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
 echo -n "Waiting for the background compilations to complete..(could take some minutes)"
 wait
 echo "."

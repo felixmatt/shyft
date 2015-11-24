@@ -9,8 +9,9 @@
 namespace shyft {
   namespace core {
     namespace pt_hs_k {
+        using namespace std;
 
-        struct parameter_t {
+        struct parameter {
             typedef priestley_taylor::parameter pt_parameter_t;
             typedef hbv_snow::parameter snow_parameter_t;
             typedef actual_evapotranspiration::parameter ae_parameter_t;
@@ -23,28 +24,91 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
 
-            parameter_t(pt_parameter_t& pt,
+            parameter(pt_parameter_t& pt,
                         snow_parameter_t& snow,
                         ae_parameter_t& ae,
                         kirchner_parameter_t& kirchner,
                         precipitation_correction_parameter_t p_corr)
              : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
+             			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+			parameter(){}
+			#ifndef SWIG
+			parameter& operator=(const parameter &c) {
+                if(&c != this) {
+                    pt = c.pt;
+                    snow = c.snow;
+                    ae = c.ae;
+                    kirchner = c.kirchner;
+                    p_corr = c.p_corr;
+                }
+                return *this;
+			}
+			#endif
+            ///< Calibration support, size is the total number of calibration parameters
+            size_t size() const { return 10; }
+
+            void set(const vector<double>& p) {
+                if (p.size() != size())
+                    throw runtime_error("pt_ss_k parameter accessor: .set size missmatch");
+                int i = 0;
+                kirchner.c1 = p[i++];
+                kirchner.c2 = p[i++];
+                kirchner.c3 = p[i++];
+                ae.ae_scale_factor = p[i++];
+                snow.lw = p[i++];
+                snow.tx = p[i++];
+                snow.cx = p[i++];
+                snow.ts = p[i++];
+                snow.cfr = p[i++];
+                p_corr.scale_factor = p[i++];
+            }
+            //
+            ///< calibration support, get the value of i'th parameter
+            double get(size_t i) const {
+                switch (i) {
+                    case  0:return kirchner.c1;
+                    case  1:return kirchner.c2;
+                    case  2:return kirchner.c3;
+                    case  3:return ae.ae_scale_factor;
+                    case  4:return snow.lw;
+                    case  5:return snow.tx;
+                    case  6:return snow.cx;
+                    case  7:return snow.ts;
+                    case  8:return snow.cfr;
+                    case  9:return p_corr.scale_factor;
+                default:
+                    throw runtime_error("pt_hs_k parameter accessor:.get(i) Out of range.");
+                }
+                return 0.0;
+            }
+
+            ///< calibration and python support, get the i'th parameter name
+            string get_name(size_t i) const {
+                static const char *names[] = {
+                    "c1", "c2", "c3", "ae_scale_factor",
+                    "lw",
+                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor"};
+                if (i >= size())
+                    throw runtime_error("pt_hs_k parameter accessor:.get_name(i) Out of range.");
+                return names[i];
+            }
+
         };
 
 
-        struct state_t {
+        struct state {
             typedef hbv_snow::state snow_state_t;
             typedef kirchner::state kirchner_state_t;
 
             snow_state_t snow;
             kirchner_state_t kirchner;
-            state_t() {}
-            state_t(snow_state_t& snow, kirchner_state_t& kirchner)
+            state() {}
+            state(snow_state_t& snow, kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
-            state_t(const state_t& state) : snow(state.snow), kirchner(state.kirchner) {}
+            state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
         };
 
-        struct response_t {
+        struct response {
             typedef priestley_taylor::response pt_response_t;
             typedef hbv_snow::response snow_response_t;
             typedef actual_evapotranspiration::response ae_response_t;
@@ -103,6 +167,7 @@ namespace shyft {
                 double rad = rad_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);
                 double prec = p_corr.calc(prec_accessor.value(i));
+                state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
 
                 //
                 // Land response:
@@ -140,7 +205,6 @@ namespace shyft {
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);
-                state_collector.collect(i, state);
             }
             response_collector.set_end_response(response);
         }

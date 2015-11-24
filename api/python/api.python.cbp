@@ -110,8 +110,8 @@
 			</Target>
 		</Build>
 		<VirtualTargets>
-			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_ss_k_Debug;" />
-			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;" />
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_ss_k_Debug;pt_hs_k_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;pt_hs_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />

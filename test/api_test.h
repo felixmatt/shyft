@@ -9,5 +9,6 @@ class api_test : public CxxTest::TestSuite {
   public:
     void test_ptgsk_state_io(void);
 	void test_ptssk_state_io(void);
+	void test_pthsk_state_io(void);
 
 };

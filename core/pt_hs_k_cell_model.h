@@ -12,6 +12,9 @@ namespace shyft {
         namespace pt_hs_k {
             using namespace std;
 
+            typedef parameter parameter_t;
+            typedef state state_t;
+            typedef response response_t;
             typedef shared_ptr<parameter_t> parameter_t_;
             typedef shared_ptr<state_t>     state_t_;
             typedef shared_ptr<response_t>  response_t_;
@@ -118,7 +121,7 @@ namespace shyft {
                 pts_t snow_sca;
 
                 state_collector() : collect_state(false), destination_area(0.0) {}
-                state_collector(const timeaxis_t& time_axis) 
+                state_collector(const timeaxis_t& time_axis)
                  : collect_state(false), destination_area(0.0), kirchner_discharge(time_axis, 0.0),
                     snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0) { /* Do nothing */ }
                 /** brief called before run, prepares state time-series
