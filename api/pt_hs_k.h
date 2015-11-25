@@ -48,7 +48,7 @@ namespace shyft {
                     if (!from_raw_string(h, e))
                         break;
                     r.emplace_back(e);
-                    l = h + 6;// advance after ptgsk marker
+                    l = h + 6;  // advance after ptgsk marker
                 }
             }
             return r;

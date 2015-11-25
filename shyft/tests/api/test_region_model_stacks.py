@@ -7,6 +7,7 @@ import unittest
 from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
+from shyft.api import pt_hs_k
 
 try:
     range
@@ -91,11 +92,18 @@ class RegionModel(unittest.TestCase):
         re.radiation.append(self._create_constant_geo_ts(
             api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
         return re
+
     def test_pt_ss_k_model_init(self):
         num_cells = 20
         model_type = pt_ss_k.PTSSKModel
-        model = self.build_model(model_type,pt_ss_k.PTSSKParameter, num_cells)
+        model = self.build_model(model_type, pt_ss_k.PTSSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+
+    def test_pt_hs_k_model_init(self):
+        num_cells = 20
+        model_type = pt_hs_k.PTHSKModel
+        model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
+
         
     def test_model_initialize_and_run(self):
         num_cells = 20

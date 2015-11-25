@@ -142,15 +142,16 @@ namespace shyft {
             };
 
             // typedef the variants we need exported.
-            typedef cell<parameter_t, environment_t, state_t, null_collector, all_response_collector> cell_complete_response_t;
+            typedef cell<parameter_t, environment_t, state_t, state_collector, all_response_collector> cell_complete_response_t;
             typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> cell_discharge_response_t;
 
         } // pt_hs_k
 
         //specialize run method for all_response_collector
         template<>
-        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t, pt_hs_k::null_collector,
-                         pt_hs_k::all_response_collector>::run(const timeaxis_t& time_axis) {
+        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t,
+                         pt_hs_k::state_collector, pt_hs_k::all_response_collector>
+            ::run(const timeaxis_t& time_axis) {
             if (parameter.get() == nullptr)
                 throw std::runtime_error("pt_hs_k::run with null parameter attempted");
             begin_run(time_axis);
@@ -169,15 +170,17 @@ namespace shyft {
         }
 
         template<>
-        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t, pt_hs_k::state_collector,
-               pt_hs_k::all_response_collector>::set_state_collection(bool on_or_off) {
+        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t,
+                         pt_hs_k::state_collector, pt_hs_k::all_response_collector>
+            ::set_state_collection(bool on_or_off) {
             sc.collect_state = on_or_off;
         }
 
         //specialize run method for discharge_collector
         template<>
-        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t, pt_hs_k::null_collector,
-                         pt_hs_k::discharge_collector>::run(const timeaxis_t& time_axis) {
+        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t,
+                         pt_hs_k::null_collector, pt_hs_k::discharge_collector>
+            ::run(const timeaxis_t& time_axis) {
             if (parameter.get() == nullptr)
                 throw std::runtime_error("pt_hs_k::run with null parameter attempted");
             begin_run(time_axis);

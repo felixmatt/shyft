@@ -14,6 +14,8 @@ import operator
 from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
+from shyft.api import pt_ss_k
+from shyft.api import pt_hs_k
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository
@@ -32,7 +34,7 @@ def print_param(header_text, param):
     print(header_text)
     print("Kirchner:   {:8.2f}{:8.2f}{:8.2f}".format(param.kirchner.c1, param.kirchner.c2, param.kirchner.c3))
     print("Gamma snow: {:8.2f}{:8.2f}".format(param.gs.tx, param.gs.max_water))
- 
+
 
 class SimulationTestCase(unittest.TestCase):
 
@@ -42,7 +44,7 @@ class SimulationTestCase(unittest.TestCase):
                                             "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
-    def test_run_arome_data_simulator(self):
+    def run_simulator(self, model_t):
         # Simulation time axis
         year, month, day, hour = 2015, 8, 23, 6
         n_hours = 30
@@ -57,9 +59,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Simulation coordinate system
         epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
 
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
@@ -76,15 +75,20 @@ class SimulationTestCase(unittest.TestCase):
 
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
-        simulator = SimpleSimulator(region_id,
-                                    interpolation_id,
-                                    region_model_repository,
-                                    geo_ts_repository,
-                                    interp_repos,
-                                    None)
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
+
+    def test_run_arome_data_pt_gs_k_simulator(self):
+        self.run_simulator(pt_gs_k.PTGSKModel)
+
+    def test_run_arome_data_pt_hs_k_simulator(self):
+        self.run_simulator(pt_hs_k.PTHSKModel)
+
+    def test_run_arome_data_pt_ss_k_simulator(self):
+        self.run_simulator(pt_ss_k.PTSSKModel)
 
     def test_set_observed_state(self):
         # Simulation time axis
@@ -176,7 +180,7 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
-    def test_calibration(self):
+    def run_calibration(self, model_t):
         # Simulation time axis
         year, month, day, hour = 2010, 1, 1, 0
         dt = 24*api.deltahours(1)
@@ -191,9 +195,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Simulation coordinate system
         epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKOptModel
 
         # Configs and repositories
         dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
@@ -259,8 +260,16 @@ class SimulationTestCase(unittest.TestCase):
         self.assertTrue(np.linalg.norm(t_ts - f_ts) < 1.0e-10)
         self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
 
+    def test_pt_gs_k_calibration(self):
+        self.run_calibration(pt_gs_k.PTGSKOptModel)
+
+    def test_pt_ss_k_calibration(self):
+        self.run_calibration(pt_ss_k.PTSSKOptModel)
+
+    def test_pt_hs_k_calibration(self):
+        self.run_calibration(pt_hs_k.PTHSKOptModel)
+
     def test_compute_lwc_percentiles(self):
-        from matplotlib import pylab as plt
         # Simulation time axis
         year, month, day, hour = 2010, 9, 1, 0
         dt = api.deltahours(24)
@@ -311,17 +320,18 @@ class SimulationTestCase(unittest.TestCase):
         t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
         percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
         if 'DISPLAY' in environ.keys():
+            from matplotlib import pylab as plt
             plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
             set_calendar_formatter(api.Calendar())
             plt.show()
         else:
             print("DISPLAY not set, not showing plot")
-       
+
     def test_snow_and_ground_water_response_calibration(self):
         """
-        Test dual calibration strategy: 
-            * First fit the three Kirchner parameters for 
-              ground water response during July, August, and 
+        Test dual calibration strategy:
+            * First fit the three Kirchner parameters for
+              ground water response during July, August, and
               September.
             * Then fit two snow routine parameters (tx and max_water)
               from November to April.
@@ -370,7 +380,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Construct kirchner parameters
         param = simulator.region_model.parameter_t(simulator.region_model.get_region_parameter())
-        stored_p = simulator.region_model.parameter_t(param)
         print_param("True solution", param)
 
         kirchner_param_min = simulator.region_model.parameter_t(param)
@@ -382,8 +391,8 @@ class SimulationTestCase(unittest.TestCase):
         kirchner_param_max.kirchner.c1 *= 1.2
         kirchner_param_max.kirchner.c2 *= 1.2
         kirchner_param_max.kirchner.c3 *= 1.2
-        #kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
-        #kirchner_time_axis = api.Timeaxis(kirchner_t_start, dt, 150)
+        # kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
+        # kirchner_time_axis = api.Timeaxis(kirchner_t_start, dt, 150)
         kirchner_time_axis = time_axis
 
         # Construct gamma snow parameters (realistic tx and max_lwc)
@@ -395,8 +404,8 @@ class SimulationTestCase(unittest.TestCase):
         gamma_snow_param_max.gs.max_water = 0.25  # Max 35% max water content, or we get too little melt
         gs_t_start = utc.time(api.YMDhms(2010, 11, 1, 0))
         gs_time_axis = api.Timeaxis(gs_t_start, dt, 250)
-        #gs_time_axis = time_axis
- 
+        # gs_time_axis = time_axis
+
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
@@ -410,16 +419,16 @@ class SimulationTestCase(unittest.TestCase):
             if name in ("c1", "c2", "c3"):
                 p_vec[i] = random.uniform(0.8*p_vec[i], 1.2*p_vec[i])
             elif name == "TX":
-                #pass
                 p_vec[i] = random.uniform(gamma_snow_param_min.gs.tx, gamma_snow_param_max.gs.tx)
             elif name == "max_water":
-                #pass
                 p_vec[i] = random.uniform(gamma_snow_param_min.gs.max_water, gamma_snow_param_max.gs.max_water)
         param.set(p_vec)
         print_param("Initial guess", param)
         # Two pass optimization, once for the ground water response, and second time for
-        kirchner_p_opt = simulator.optimize(kirchner_time_axis, state_repos.get_state(0), target_spec_vec, param, kirchner_param_min, kirchner_param_max)
-        gamma_snow_p_opt = simulator.optimize(gs_time_axis, state_repos.get_state(0), target_spec_vec, kirchner_p_opt, gamma_snow_param_min, gamma_snow_param_max)
+        kirchner_p_opt = simulator.optimize(kirchner_time_axis, state_repos.get_state(0), target_spec_vec, param,
+                                            kirchner_param_min, kirchner_param_max)
+        gamma_snow_p_opt = simulator.optimize(gs_time_axis, state_repos.get_state(0), target_spec_vec, kirchner_p_opt,
+                                              gamma_snow_param_min, gamma_snow_param_max)
         print_param("Half way result", kirchner_p_opt)
         print_param("Result", gamma_snow_p_opt)
 
@@ -432,7 +441,7 @@ class SimulationTestCase(unittest.TestCase):
         f_vs = np.array(found_discharge.v)
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         # Simple demo plotting that should be turned off during unit testing:
-        if False:
+        if 'DISPLAY' in environ.keys():
             from matplotlib import pylab as plt
             plt.plot(utc_to_greg(t_ts), t_vs)
             plt.hold(1)

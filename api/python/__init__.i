@@ -151,12 +151,10 @@
     %rename(PriestleyTaylorCalculator) shyft::core::priestley_taylor::calculator;
     %include "core/priestley_taylor.h"
 
-
     %rename(ActualEvapotranspirationParameter)  shyft::core::actual_evapotranspiration::parameter;
     %rename(ActualEvapotranspirationResponse)   shyft::core::actual_evapotranspiration::response;
     %rename(ActualEvapotranspirationCalculate_step) shyft::core::actual_evapotranspiration::calculate_step;
     %include "core/actual_evapotranspiration.h"
-
 
     %rename(GammaSnowParameter)  shyft::core::gamma_snow::parameter;
     %rename(GammaSnowState)      shyft::core::gamma_snow::state;
@@ -164,19 +162,17 @@
     %rename(GammaSnowCalculator) shyft::core::gamma_snow::calculator;
     %include "core/gamma_snow.h"
 
-
     %rename(HbvSnowParameter)  shyft::core::hbv_snow::parameter;
     %rename(HbvSnowState)      shyft::core::hbv_snow::state;
     %rename(HbvSnowResponse)   shyft::core::hbv_snow::response;
     %rename(HbvSnowCalculator) shyft::core::hbv_snow::calculator;
     %include "core/hbv_snow.h"
 
-
     %rename(SkaugenParameter)  shyft::core::skaugen::parameter;
     %rename(SkaugenState)      shyft::core::skaugen::state;
     %rename(SkaugenResponse)   shyft::core::skaugen::response;
-	%rename(SkaugenStatistics) shyft::core::skaugen::statistics;
-	%rename(SkaugenMassBalanceError) shyft::core::skaugen::mass_balance_error;
+    %rename(SkaugenStatistics) shyft::core::skaugen::statistics;
+    %rename(SkaugenMassBalanceError) shyft::core::skaugen::mass_balance_error;
     %include "core/skaugen.h"
 
     %rename(KirchnerParameter)  shyft::core::kirchner::parameter;
@@ -199,7 +195,6 @@
     %rename(BTKConstParameter)  shyft::core::bayesian_kriging::const_parameter;
     %rename(BTKParameter)       shyft::core::bayesian_kriging::parameter;
     %include "core/bayesian_kriging.h"
-
 
     %include "core/region_model.h"
 
