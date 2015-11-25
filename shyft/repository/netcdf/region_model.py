@@ -81,7 +81,7 @@ class ModelConfig(object):
             Parameters for the method stack
         """
         pass
-    
+
 
 class RegionModelRepository(interfaces.RegionModelRepository):
     """
@@ -107,7 +107,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             * glacier-fraction: float array of dim (xcoord, ycoord)
     """
 
-    def __init__(self, region_config, model_config,region_model, epsg):
+    def __init__(self, region_config, model_config, region_model, epsg):
         """
         Parameters
         ----------
@@ -125,11 +125,11 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             Coordinate system for result region model
         """
         if not isinstance(region_config, RegionConfig) or \
-           not isinstance(model_config,ModelConfig):
+           not isinstance(model_config, ModelConfig):
             raise interfaces.InterfaceError()
         self._rconf = region_config
         self._mconf = model_config
-        self._region_model=region_model
+        self._region_model = region_model
         self._mask = None
         self._epsg = epsg
         self._data_file = path.join(shyftdata_dir, self._rconf.repository()["data_file"])
@@ -243,7 +243,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
                     "skaugen": "skaugen", "hbv_snow": "snow"}
         region_parameter = self._region_model.parameter_t()
-        for p_type_name, value_ in iteritems( self._mconf.model_parameters()):
+        for p_type_name, value_ in iteritems(self._mconf.model_parameters()):
             if p_type_name in name_map:
                 if hasattr(region_parameter, name_map[p_type_name]):
                     sub_param = getattr(region_parameter, name_map[p_type_name])

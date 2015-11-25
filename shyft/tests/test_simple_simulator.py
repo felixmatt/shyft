@@ -34,7 +34,7 @@ def print_param(header_text, param):
     print(header_text)
     print("Kirchner:   {:8.2f}{:8.2f}{:8.2f}".format(param.kirchner.c1, param.kirchner.c2, param.kirchner.c3))
     print("Gamma snow: {:8.2f}{:8.2f}".format(param.gs.tx, param.gs.max_water))
- 
+
 
 class SimulationTestCase(unittest.TestCase):
 
@@ -326,12 +326,12 @@ class SimulationTestCase(unittest.TestCase):
             plt.show()
         else:
             print("DISPLAY not set, not showing plot")
-       
+
     def test_snow_and_ground_water_response_calibration(self):
         """
-        Test dual calibration strategy: 
-            * First fit the three Kirchner parameters for 
-              ground water response during July, August, and 
+        Test dual calibration strategy:
+            * First fit the three Kirchner parameters for
+              ground water response during July, August, and
               September.
             * Then fit two snow routine parameters (tx and max_water)
               from November to April.
@@ -380,7 +380,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Construct kirchner parameters
         param = simulator.region_model.parameter_t(simulator.region_model.get_region_parameter())
-        stored_p = simulator.region_model.parameter_t(param)
         print_param("True solution", param)
 
         kirchner_param_min = simulator.region_model.parameter_t(param)
@@ -392,8 +391,8 @@ class SimulationTestCase(unittest.TestCase):
         kirchner_param_max.kirchner.c1 *= 1.2
         kirchner_param_max.kirchner.c2 *= 1.2
         kirchner_param_max.kirchner.c3 *= 1.2
-        #kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
-        #kirchner_time_axis = api.Timeaxis(kirchner_t_start, dt, 150)
+        # kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
+        # kirchner_time_axis = api.Timeaxis(kirchner_t_start, dt, 150)
         kirchner_time_axis = time_axis
 
         # Construct gamma snow parameters (realistic tx and max_lwc)
@@ -405,8 +404,8 @@ class SimulationTestCase(unittest.TestCase):
         gamma_snow_param_max.gs.max_water = 0.25  # Max 35% max water content, or we get too little melt
         gs_t_start = utc.time(api.YMDhms(2010, 11, 1, 0))
         gs_time_axis = api.Timeaxis(gs_t_start, dt, 250)
-        #gs_time_axis = time_axis
- 
+        # gs_time_axis = time_axis
+
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
@@ -420,16 +419,16 @@ class SimulationTestCase(unittest.TestCase):
             if name in ("c1", "c2", "c3"):
                 p_vec[i] = random.uniform(0.8*p_vec[i], 1.2*p_vec[i])
             elif name == "TX":
-                #pass
                 p_vec[i] = random.uniform(gamma_snow_param_min.gs.tx, gamma_snow_param_max.gs.tx)
             elif name == "max_water":
-                #pass
                 p_vec[i] = random.uniform(gamma_snow_param_min.gs.max_water, gamma_snow_param_max.gs.max_water)
         param.set(p_vec)
         print_param("Initial guess", param)
         # Two pass optimization, once for the ground water response, and second time for
-        kirchner_p_opt = simulator.optimize(kirchner_time_axis, state_repos.get_state(0), target_spec_vec, param, kirchner_param_min, kirchner_param_max)
-        gamma_snow_p_opt = simulator.optimize(gs_time_axis, state_repos.get_state(0), target_spec_vec, kirchner_p_opt, gamma_snow_param_min, gamma_snow_param_max)
+        kirchner_p_opt = simulator.optimize(kirchner_time_axis, state_repos.get_state(0), target_spec_vec, param,
+                                            kirchner_param_min, kirchner_param_max)
+        gamma_snow_p_opt = simulator.optimize(gs_time_axis, state_repos.get_state(0), target_spec_vec, kirchner_p_opt,
+                                              gamma_snow_param_min, gamma_snow_param_max)
         print_param("Half way result", kirchner_p_opt)
         print_param("Result", gamma_snow_p_opt)
 
