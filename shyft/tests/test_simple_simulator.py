@@ -14,6 +14,7 @@ import operator
 from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
+from shyft.api import pt_ss_k
 from shyft.api import pt_hs_k
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
@@ -85,6 +86,9 @@ class SimulationTestCase(unittest.TestCase):
 
     def test_run_arome_data_pt_hs_k_simulator(self):
         self.run_simulator(pt_hs_k.PTHSKModel)
+
+    def test_run_arome_data_pt_ss_k_simulator(self):
+        self.run_simulator(pt_ss_k.PTSSKModel)
 
     def test_set_observed_state(self):
         # Simulation time axis
