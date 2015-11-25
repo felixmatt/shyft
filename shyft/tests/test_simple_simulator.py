@@ -180,7 +180,7 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
 
-    def test_calibration(self):
+    def run_calibration(self, model_t):
         # Simulation time axis
         year, month, day, hour = 2010, 1, 1, 0
         dt = 24*api.deltahours(1)
@@ -195,9 +195,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Simulation coordinate system
         epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKOptModel
 
         # Configs and repositories
         dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
@@ -262,6 +259,15 @@ class SimulationTestCase(unittest.TestCase):
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         self.assertTrue(np.linalg.norm(t_ts - f_ts) < 1.0e-10)
         self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
+
+    def test_pt_gs_k_calibration(self):
+        self.run_calibration(pt_gs_k.PTGSKOptModel)
+
+    def test_pt_ss_k_calibration(self):
+        self.run_calibration(pt_ss_k.PTSSKOptModel)
+
+    def test_pt_hs_k_calibration(self):
+        self.run_calibration(pt_hs_k.PTHSKOptModel)
 
     def test_compute_lwc_percentiles(self):
         # Simulation time axis
