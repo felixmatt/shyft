@@ -115,7 +115,7 @@ namespace shyft {
 }
 %pythoncode %{
 PTHSKModel.cell_t = PTHSKCellAll
-PTHSKParameter.map_t=PTHSKParameterMap
+PTHSKParameter.map_t = PTHSKParameterMap
 PTHSKModel.parameter_t = PTHSKParameter
 PTHSKModel.state_t = PTHSKState
 PTHSKModel.statistics = property(lambda self: PTHSKCellAllStatistics(self.get_cells()))
@@ -132,10 +132,7 @@ PTHSKCellAll.vector_t = PTHSKCellAllVector
 PTHSKCellOpt.vector_t = PTHSKCellOptVector
 PTHSKState.vector_t = PTHSKStateVector
 PTHSKState.serializer_t = PTHSKStateIo
-
 %}
-
-
 
 
 %init %{

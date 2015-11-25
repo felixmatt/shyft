@@ -241,13 +241,14 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         # Construct region parameter:
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
-                    "skaugen": "skaugen"}
+                    "skaugen": "skaugen", "hbv_snow": "snow"}
         region_parameter = self._region_model.parameter_t()
         for p_type_name, value_ in iteritems( self._mconf.model_parameters()):
             if p_type_name in name_map:
-                sub_param = getattr(region_parameter, name_map[p_type_name])
-                for p, v in iteritems(value_):
-                    setattr(sub_param, p, v)
+                if hasattr(region_parameter, name_map[p_type_name]):
+                    sub_param = getattr(region_parameter, name_map[p_type_name])
+                    for p, v in iteritems(value_):
+                        setattr(sub_param, p, v)
             elif p_type_name == "p_corr_scale_factor":
                 region_parameter.p_corr.scale_factor = value_
 

@@ -14,6 +14,7 @@ import operator
 from shyft import shyftdata_dir
 from shyft import api
 from shyft.api import pt_gs_k
+from shyft.api import pt_hs_k
 from shyft.repository.netcdf import RegionModelRepository
 from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollection
 from shyft.repository.netcdf import AromeDataRepository
@@ -42,7 +43,7 @@ class SimulationTestCase(unittest.TestCase):
                                             "atnasjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
-    def test_run_arome_data_simulator(self):
+    def run_simulator(self, model_t):
         # Simulation time axis
         year, month, day, hour = 2015, 8, 23, 6
         n_hours = 30
@@ -57,9 +58,6 @@ class SimulationTestCase(unittest.TestCase):
 
         # Simulation coordinate system
         epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
 
         # Configs and repositories
         region_config = RegionConfig(self.region_config_file)
@@ -76,15 +74,17 @@ class SimulationTestCase(unittest.TestCase):
 
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
-        simulator = SimpleSimulator(region_id,
-                                    interpolation_id,
-                                    region_model_repository,
-                                    geo_ts_repository,
-                                    interp_repos,
-                                    None)
+        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
+
+    def test_run_arome_data_pt_gs_k_simulator(self):
+        self.run_simulator(pt_gs_k.PTGSKModel)
+
+    def test_run_arome_data_pt_hs_k_simulator(self):
+        self.run_simulator(pt_hs_k.PTHSKModel)
 
     def test_set_observed_state(self):
         # Simulation time axis
@@ -260,7 +260,6 @@ class SimulationTestCase(unittest.TestCase):
         self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
 
     def test_compute_lwc_percentiles(self):
-        from matplotlib import pylab as plt
         # Simulation time axis
         year, month, day, hour = 2010, 9, 1, 0
         dt = api.deltahours(24)
@@ -311,6 +310,7 @@ class SimulationTestCase(unittest.TestCase):
         t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
         percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
         if 'DISPLAY' in environ.keys():
+            from matplotlib import pylab as plt
             plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
             set_calendar_formatter(api.Calendar())
             plt.show()
@@ -432,7 +432,7 @@ class SimulationTestCase(unittest.TestCase):
         f_vs = np.array(found_discharge.v)
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         # Simple demo plotting that should be turned off during unit testing:
-        if False:
+        if 'DISPLAY' in environ.keys():
             from matplotlib import pylab as plt
             plt.plot(utc_to_greg(t_ts), t_vs)
             plt.hold(1)

@@ -6,6 +6,7 @@ import numpy as np
 
 
 class ShyftApi(unittest.TestCase):
+
     def test_pt_hs_k_param(self):
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
