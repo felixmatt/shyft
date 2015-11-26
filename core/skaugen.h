@@ -44,11 +44,11 @@ namespace shyft {
                 statistics(double alpha_0, double d_range, double unit_size)
                   : alpha_0(alpha_0), d_range(d_range), unit_size(unit_size) { /* Do nothing */ }
 
-                static inline double c(long unsigned int n, double d_range) {
+                static inline double c(unsigned long n, double d_range) {
                     return exp(-(double)n/d_range);
                 }
 
-                static inline double sca_rel_red(long unsigned int u, long unsigned int n, double unit_size, double nu_a, double alpha) {
+                static inline double sca_rel_red(unsigned long u, unsigned long n, double unit_size, double nu_a, double alpha) {
                     const double nu_m = ((double)u/n)*nu_a;
                     // Note; We use m (melt) in stead of s (smelt) due to language conversion
                     // Compute: Find X such that f_a(X) = f_m(X)
@@ -75,9 +75,9 @@ namespace shyft {
                     return a + 1.0 - m;
                 }
 
-                double c(long unsigned int n) const { return c(n, d_range); }
+                double c(unsigned long n) const { return c(n, d_range); }
 
-                double sca_rel_red(long unsigned int u, long unsigned int n, double nu_a, double alpha) const {
+                double sca_rel_red(unsigned long u, unsigned long n, double nu_a, double alpha) const {
                     return sca_rel_red(u, n, unit_size, nu_a, alpha);
                 }
             };
@@ -122,13 +122,11 @@ namespace shyft {
                 double total_stored_water = 0.0;
             };
 
-            template<class P, class S, class R> //, class PM> // TODO: Implement a physical model for the gamma snow swe/sca dynamics
+            template<class P, class S, class R>
             class calculator {
               private:
                 const double snow_tol = 1.0e-10;
-                //PM pm; // TODO: Implement a physical model for the gamma snow swe/sca dynamics
               public:
-                //Skaugen(PM& pm) : pm(pm) { /* Do nothing */ } // TODO Implement a physical model for the gamma snow swe/sca dynamics
                 calculator() { /* Do nothing */ }
                 void step(shyft::timeseries::utctimespan dt,
                           const P& p,
@@ -140,35 +138,16 @@ namespace shyft {
                           R& r) const {
                     const double unit_size = p.unit_size;
 
-                    /*
-                    // Redistribute residual, if possible:
-                    double corr_prec = prec;
-                    if (s.residual > 0.0) {
-                        corr_prec += s.residual;
-                        s.residual = 0.0;
-                    } else if (prec > 0.0) {
-                        if (prec + s.residual > 0.0) {
-                            corr_prec += s.residual;
-                            s.residual = 0.0;
-                        } else {
-                            s.residual += prec;
-                            corr_prec = 0.0;
-                        }
-                    }
-                    */
-
                     // Redistribute residual, if possible:
                     const double corr_prec = std::max(0.0, prec + s.residual);
                     s.residual = std::min(0.0, prec + s.residual);
 
-                    // Perhaps Eli can come up with the physics. First hard coded degree day model here
+                    // Simple degree day model physics
                     const double step_in_days = dt/86400.0;
                     const double snow = T < p.tx ? corr_prec : 0.0;
                     const double rain = T < p.tx ? 0.0 : corr_prec;
 
-                    //PM::calculate_melt(T, prec, rad, wind_speed, snow, rain, pot_melt); // TODO: Resolve interface to physical model
-
-                    if (s.sca*s.swe < p.unit_size && snow < snow_tol) {
+                    if (s.sca*s.swe < unit_size && snow < snow_tol) {
                         // Set state and response and return
                         r.outflow = rain + s.sca*(s.swe + s.free_water) + s.residual;
                         r.total_stored_water = 0.0;
@@ -177,7 +156,7 @@ namespace shyft {
                             s.residual = r.outflow;
                             r.outflow = 0.0;
                         }
-                        s.nu = p.alpha_0*p.unit_size;
+                        s.nu = p.alpha_0*unit_size;
                         s.alpha = p.alpha_0;
                         s.sca = 0.0;
                         s.swe = 0.0;
@@ -188,10 +167,9 @@ namespace shyft {
 
                     const double alpha_0 = p.alpha_0;
                     double swe = s.swe; // Conditional value!
-                    const double sca_old = s.sca;
 
-                    long unsigned int nnn = s.num_units;
-                    double sca = sca_old;
+                    unsigned long nnn = s.num_units;
+                    double sca = s.sca;
                     double nu = s.nu;
                     double alpha = s.alpha;
 
@@ -207,52 +185,30 @@ namespace shyft {
                     const double total_storage = swe + lwc; // Conditional value
 
                     double pot_melt = p.cx*step_in_days*(T - p.ts);
-                    if (pot_melt < 0.0) { // Refreeze
-                        pot_melt *= p.cfr;
-                        if (pot_melt + lwc < 0.0) {
-                            pot_melt = -lwc;
-                        }
-                        total_new_snow -= sca*pot_melt;  // New snow and refreeze of old free water
-                        lwc += pot_melt;  // EA and OS: We move water from lwc to total new snow, so both add and subtract
-                        pot_melt = 0.0;  // EA and OS: Water has been moved, so zero out the refreeze variable
-                    } else {
-                        if (pot_melt > total_new_snow) {
-                            pot_melt -= total_new_snow;
-                            total_new_snow = 0.0;
-                        } else {
-                            total_new_snow -= pot_melt;
-                            pot_melt = 0.0;
-                        }
-                    }
+                    const double refreeze = std::min(std::max(0.0, -pot_melt*p.cfr), lwc);
+                    total_new_snow += sca*refreeze;
+                    lwc -= refreeze;
+                    pot_melt = std::max(0.0, pot_melt);
+                    const double new_snow_reduction = std::min(pot_melt, total_new_snow);
+                    pot_melt -= new_snow_reduction;
+                    total_new_snow -= new_snow_reduction;
 
                     statistics stat(alpha_0, p.d_range, unit_size);
 
-                    long unsigned int n = 0;
-                    long unsigned int u = 0;
+                    unsigned long n = 0;
+                    unsigned long u = 0;
 
                     // Accumulation
-                    if (total_new_snow > 0.1) {
+                    if (total_new_snow > unit_size) {
                         n = lrint(total_new_snow/unit_size);
-                        if (n == 0) n = 1;
-                        if (nnn == 0) { // First snowfall, simple case
-                            sca = 1.0;
-                            if (n == 1) {
-                                alpha = alpha_0;
-                                nu = alpha_0*unit_size;
-                            } else
-                                compute_shape_vars(stat, nnn, n, 0, sca, 0.0, alpha, nu);
-                            swe = n*unit_size;
-                        } else {
-                            compute_shape_vars(stat, nnn, n, 0, sca, 0.0, alpha, nu);
-                            nnn = lrint(nnn*sca) + n;
-                            swe = nnn*unit_size;
-                            sca = 1.0;
-                        }
-                        nnn = lrint(swe/unit_size);  // Update after accumulation
+                        compute_shape_vars(stat, nnn, n, 0, sca, 0.0, alpha, nu);
+                        nnn = lrint(nnn*sca) + n;
+                        sca = 1.0;
+                        swe = nnn*unit_size;
                     }
 
-                    // Melting // Eli thinks there might possibly be something not completely right here ...
-                    if (pot_melt > 0.1) {
+                    // Melting 
+                    if (pot_melt > unit_size) {
                         u = lrint(pot_melt/unit_size);
                         if (nnn < u + 2) {
                             nnn = 0;
@@ -264,7 +220,7 @@ namespace shyft {
                         } else {
                             const double rel_red_sca = stat.sca_rel_red(u, nnn, nu, alpha);
                             const double sca_scale_factor = 1.0 - rel_red_sca;
-                            sca = sca_old*sca_scale_factor;
+                            sca = s.sca*sca_scale_factor;
                             swe = (nnn - u)/sca_scale_factor*unit_size;
 
                             if (swe >= nnn*unit_size) {
@@ -281,7 +237,7 @@ namespace shyft {
                                 lwc = 0.0;
                                 sca = 0.0;
                             } else {
-                                //compute_shape_vars(stat, nnn, n, u, sca, rel_red_sca, alpha, nu);
+                                compute_shape_vars(stat, nnn, n, u, sca, rel_red_sca, alpha, nu);
                                 nnn = lrint(swe/unit_size);
                                 swe = nnn*unit_size;
                             }
@@ -295,21 +251,21 @@ namespace shyft {
                     // The good news is that the residual is in the interval [-0.1, 0.1] for the cases we've investigated, and that 15
                     // years of simulation on real data gives a O(1.0e-11) accumulated mass balance violation (in mm).
 
-                    if (sca_old*s.swe > sca*swe) { // (Unconditional) melt
+                    if (s.sca*s.swe > sca*swe) { // (Unconditional) melt
                         lwc += std::max(0.0, s.swe - swe); // Add melted water to free water in snow
                     }
-                    lwc *= std::min(1.0, sca_old/sca); // Scale lwc (preserve total free water when sca increases)
-                    lwc = std::min(lwc, swe*p.max_water_fraction); // Max is max, you know ;)
-                    double discharge = sca_old*total_storage + snow - sca*(swe + lwc); // We consider rain later
+                    lwc *= std::min(1.0, s.sca/sca); // Scale lwc (preserve total free water when sca increases)
+                    lwc = std::min(lwc, swe*p.max_water_fraction); // Limit by parameter
+                    double discharge = s.sca*total_storage + snow - sca*(swe + lwc); // We consider rain later
 
                     // If discharge is negative, recalculate new lwc to take the slack
                     if (discharge < 0.0) {
-                        lwc = (sca_old*total_storage + snow)/sca - swe;
+                        lwc = (s.sca*total_storage + snow)/sca - swe;
                         discharge = 0.0;
                         // Not enough water in the snow for the negative outflow
                         if (lwc < 0.0) {
                             lwc = 0.0;
-                            discharge = sca_old*total_storage + snow - sca*swe;
+                            discharge = s.sca*total_storage + snow - sca*swe;
                             // Giving up and adding to residual. TODO: SHOULD BE CHECKED, and preferably REWRITTEN!!
                             if (discharge < 0.0) {
                                 s.residual += discharge;
@@ -363,9 +319,9 @@ namespace shyft {
                 }
 
                 static inline void compute_shape_vars(const statistics& stat,
-                                                      long unsigned int nnn,
-                                                      long unsigned int n,
-                                                      long unsigned int u,
+                                                      unsigned long nnn,
+                                                      unsigned long n,
+                                                      unsigned long u,
                                                       double sca,
                                                       double rel_red_sca,
                                                       double& alpha,
@@ -391,7 +347,7 @@ namespace shyft {
                         const double factor = (dyn_var/(nnn*init_var) + 1.0 + (nnn - 1)*stat.c(nnn))/(2*nnn);
                         const double non_cond_mean = (nnn - u)*stat.unit_size;
                         tot_mean = non_cond_mean/(1.0 - rel_red_sca);
-                        const long unsigned int cond_u = lrint((1.0 - rel_red_sca)*nnn - (nnn - u));
+                        const unsigned long cond_u = lrint((1.0 - rel_red_sca)*nnn - (nnn - u));
                         const double auto_var  = cond_u > 0 ? init_var*cond_u*(1.0 + (cond_u - 1.0)*stat.c(cond_u)) : 0.0;
                         const double cross_var = cond_u > 0 ? init_var*cond_u*2.0*factor*cond_u : 0.0;
                         tot_var = dyn_var + auto_var - cross_var;
