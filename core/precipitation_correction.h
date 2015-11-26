@@ -25,6 +25,7 @@ namespace shyft {
 		namespace precipitation_correction {
 			struct parameter {
 				double scale_factor = 1.0;
+				parameter(double scale_factor = 1.0) {}
 			};
 
 

@@ -11,6 +11,7 @@ class utctime_utilities_test: public CxxTest::TestSuite {
 	void test_calendar_day_of_week();
 	void test_calendar_trim();
 	void test_calendar_add_and_diff_units();
+	void test_YMDhms_reasonable_calendar_coordinates();
 };
 
 

@@ -37,6 +37,9 @@ namespace shyft {
                       precipitation_correction_parameter_t p_corr)
              : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) { /*Do nothing */ }
             parameter() {}
+            parameter(const parameter& other)
+             : pt(other.pt), gs(other.gs), ae(other.ae),
+               kirchner(other.kirchner), p_corr(other.p_corr) { /*Do nothing */ }
 
             pt_parameter_t pt;
             gs_parameter_t gs;
@@ -267,13 +270,13 @@ namespace shyft {
                 // Actual Evapotranspiration
                 double act_evap = actual_evapotranspiration::calculate_step(q, pot_evap,
                                   parameter.ae.ae_scale_factor, response.gs.sca, period.timespan());
-                response.ae.ae=act_evap;
+                response.ae.ae = act_evap;
 
                 // Use responses from PriestleyTaylor and GammaSnow in Kirchner
                 double q_avg;
                 kirchner.step(period.start, period.end, q, q_avg, response.gs.outflow, act_evap);
-                state.kirchner.q=q; // Save discharge state variable
-                response.kirchner.q_avg=q_avg;
+                state.kirchner.q = q; // Save discharge state variable
+                response.kirchner.q_avg = q_avg;
 
                 //
                 // Adjust land response for lakes and reservoirs (Treat them the same way for now)

@@ -11,6 +11,10 @@ void utctime_utilities_test::test_utctime() {
     YMDhms y_null;
 
     TS_ASSERT(y_null.is_null());
+    TS_ASSERT(c.time(y_null)==no_utctime);
+    TS_ASSERT(c.time(YMDhms::max())==max_utctime);
+    TS_ASSERT(c.time(YMDhms::min())==min_utctime);
+
     TS_ASSERT_EQUALS(0L,c.time(unixEra));
     YMDhms r=c.calendar_units(utctime(0L));
     TS_ASSERT_EQUALS(r,unixEra);
@@ -61,7 +65,20 @@ void utctime_utilities_test::test_calendar_month() {
 
 }
 
-
+void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
+	TS_ASSERT_THROWS_ANYTHING(YMDhms(10000, 1, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(-10000,1,1,0,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,0,1,0,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,13,1,0,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,0,0,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,32,0,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,-1,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,24,0,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,-1,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,60,0));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,-1));
+    TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,60));
+}
 void utctime_utilities_test::test_calendar_add_and_diff_units() {
 	calendar cet(deltahours(1));
 	int n_units = 3;

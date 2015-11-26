@@ -87,16 +87,23 @@ namespace shyft {
         /** \brief YMDhms, simple structure that contains calendar coordinates.
          * Contains year,month,day,hour,minute, second,
          * for ease of constructing utctime.
+         *\note the constructor do a range check for Y M D h m s, and throws if fail.
          *
          */
 		struct YMDhms {
 			YMDhms():year(0), month(0), day(0), hour(0), minute(0), second(0) {}
-			YMDhms(int Y, int M=1, int D=1, int h=0, int m=0, int s=0): year(Y), month(M), day(D), hour(h), minute(m), second(s) {}
+			YMDhms(int Y, int M=1, int D=1, int h=0, int m=0, int s=0) : year(Y), month(M), day(D), hour(h), minute(m), second(s)  {
+                if(!is_valid())
+                    throw std::runtime_error("calendar coordinates failed simple range check for one or more item");
+			}
 
 			int year; int month; int day; int hour; int minute; int second;
+			///< just check that YMDhms are within reasonable ranges,\note it might still be an 'invalid' date!
+			bool is_valid_coordinates() const {return !(year<-9999 || year>9999 || month<1 || month>12 ||day<1 || day>31 ||hour<0 || hour>23 || minute<0 ||minute>59||second<0 ||second>59);}
+            ///< if a 'null' or valid_coordinates
+			bool is_valid() const { return is_null() || is_valid_coordinates(); }
 			bool is_null() const { return year == 0 && month == 0 && day == 0 && hour == 0 && minute == 0 && second == 0; }
-			bool operator==(const YMDhms& x) const
-            {
+			bool operator==(const YMDhms& x) const {
                 return x.year == year && x.month == month && x.day == day && x.hour == hour
                        && x.minute == minute && x.second == second;
             }
@@ -160,8 +167,14 @@ namespace shyft {
 			utctimespan tz_offset;
 			calendar(utctimespan tz=0): tz_offset(tz) {}
 			utctime time(YMDhms c) const {
-				if (!((1 <= c.month && c.month <= 12) && (1 <= c.day && c.day <= 31) && (0 <= c.hour&&c.hour <= 23) && (0 <= c.minute&&c.minute <= 59) && (0 <= c.second&&c.second <= 59)))
-					return no_utctime;
+			    if(c.is_null())
+                    return no_utctime;
+                if(c==YMDhms::max())
+                    return max_utctime;
+                if(c==YMDhms::min())
+                    return min_utctime;
+				if (!c.is_valid_coordinates())
+					throw std::runtime_error("Calendar.time with invalid YMDhms coordinates attempted");
 				return ((day_number(c) - UnixDay)*DAY) + seconds(c.hour, c.minute, c.second) - tz_offset;
 			}
 			YMDhms  calendar_units(utctime t) const {

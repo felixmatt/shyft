@@ -54,6 +54,8 @@
 		<Unit filename="api.cpp" />
 		<Unit filename="api.h" />
 		<Unit filename="pt_gs_k.h" />
+		<Unit filename="pt_hs_k.h" />
+		<Unit filename="pt_ss_k.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

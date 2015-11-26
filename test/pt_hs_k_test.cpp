@@ -25,12 +25,11 @@ namespace shyfttest {
     namespace mock {
         // need specialization for pthsk_response_t above
         template<> template<>
-        void ResponseCollector<timeaxis>::collect<response_t>(size_t idx, const response_t& response) {
-            _snow_sca.set(idx, response.snow.sca);
-            _snow_swe.set(idx, response.snow.swe);
+        void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+            _snow_output.set(idx, response.snow.outflow);
         }
         template <> template <>
-        void DischargeCollector<timeaxis>::collect<response_t>(size_t idx, const response_t& response) {
+        void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
             // q_avg is given in mm, so compute the totals
             avg_discharge.set(idx, destination_area*response.kirchner.q_avg / 1000.0 / 3600.0);
         }
@@ -71,17 +70,17 @@ void pt_hs_k_test::test_call_stack() {
     hs::state snow_state(10.0, 0.5);
 
     // Initialize response
-    response_t response;
+    response run_response;
 
     // Initialize collectors
     shyfttest::mock::ResponseCollector<timeaxis> response_collector(1000*1000, time_axis);
     shyfttest::mock::StateCollector<timeaxis> state_collector(time_axis);
 
-    state_t state {snow_state, kirchner_state};
-    parameter_t parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
+    state state {snow_state, kirchner_state};
+    parameter parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
     geo_cell_data geo_cell_data;
-    pt_hs_k::run<direct_accessor, response_t>(geo_cell_data, parameter, time_axis, temp,
-                                              prec, wind_speed, rel_hum, radiation, state, 
+    pt_hs_k::run<direct_accessor, response>(geo_cell_data, parameter, time_axis, temp,
+                                              prec, wind_speed, rel_hum, radiation, state,
                                               state_collector, response_collector);
 
     auto snow_swe = response_collector.snow_swe();

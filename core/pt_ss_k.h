@@ -23,13 +23,27 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
 
-            parameter(pt_parameter_t& pt,
-                      snow_parameter_t& snow,
-                      ae_parameter_t& ae,
-                      kirchner_parameter_t& kirchner,
+            parameter(pt_parameter_t pt,
+                      snow_parameter_t snow,
+                      ae_parameter_t ae,
+                      kirchner_parameter_t kirchner,
                       precipitation_correction_parameter_t p_corr)
              : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
 
+			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+			parameter(){}
+			#ifndef SWIG
+			parameter& operator=(const parameter &c) {
+                if(&c != this) {
+                    pt = c.pt;
+                    snow = c.snow;
+                    ae = c.ae;
+                    kirchner = c.kirchner;
+                    p_corr = c.p_corr;
+                }
+                return *this;
+			}
+			#endif
             ///< Calibration support, size is the total number of calibration parameters
             size_t size() const { return 13; }
 

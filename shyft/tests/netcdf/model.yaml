@@ -33,11 +33,12 @@ parameters:
       wind_const: 1.0
       wind_scale: 5.801571270653461
       winter_end_day_of_year: 100
+    hbv_snow:
+        foo: 10.0
     kirchner:
       c1: -2.6303675941421294
       c2: 0.8
       c3: -0.05
-    model_api: PTGSKOptModel
     p_corr_scale_factor: 1.0
     priestley_taylor:
       albedo: 0.2

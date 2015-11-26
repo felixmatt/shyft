@@ -7,12 +7,10 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="api_Debug">
-				<Option output="../../shyft/_api" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/___init__" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -21,7 +19,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_gs_k_Debug">
-				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_gs_k" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -33,12 +31,10 @@
 				</Linker>
 			</Target>
 			<Target title="api_Release">
-				<Option output="../../shyft/_api" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/___init__" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -49,7 +45,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_gs_k_Release">
-				<Option output="../../shyft/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_gs_k" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -63,7 +59,7 @@
 				</Linker>
 			</Target>
 			<Target title="pt_ss_k_Debug">
-				<Option output="../../shyft/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -75,25 +71,55 @@
 				</Linker>
 			</Target>
 			<Target title="pt_ss_k_Release">
-				<Option output="../../shyft/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option output="../../shyft/api/_pt_ss_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DARMA_NO_DEBUG" />
+				</Compiler>
 				<Linker>
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="pt_hs_k_Release">
+				<Option output="../../shyft/api/_pt_hs_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DARMA_NO_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
+			<Target title="pt_hs_k_Debug">
+				<Option output="../../shyft/api/_pt_hs_k" imp_lib="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).a" def_file="$(TARGET_OUTPUT_DIR)$(TARGET_OUTPUT_BASENAME).def" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
 		</Build>
 		<VirtualTargets>
-			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_ss_k_Debug;" />
-			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;" />
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_ss_k_Debug;pt_hs_k_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_ss_k_Release;pt_hs_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread" />
+			<Add option="-I$(#python.include)" />
+			<Add option="-I$(#numpy.include)" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
-			<Add directory="/usr/include/python2.7" />
 			<Add directory=".." />
 			<Add directory="../../../dlib" />
 			<Add directory="../.." />
@@ -103,18 +129,17 @@
 			<Add library="shyftcore" />
 			<Add library="blas" />
 			<Add library="lapack" />
-			<Add directory="/usr/lib/python2.7" />
 			<Add directory="/usr/local/lib64" />
 		</Linker>
 		<ExtraCommands>
-			<Add before="make -f Makefile.swig_run" />
+			<Add before="make -f Makefile.swig_run -j 8" />
 		</ExtraCommands>
 		<Unit filename="Makefile.swig_run" />
-		<Unit filename="api.i">
+		<Unit filename="__init__.i">
 			<Option compile="1" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
-		<Unit filename="api_wrap.cxx">
+		<Unit filename="__init___wrap.cxx">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
@@ -123,18 +148,22 @@
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="pt_gs_k_wrap.cxx">
-			<Option target="api_Debug" />
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
-			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="pt_hs_k.i">
+			<Option compile="1" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="pt_hs_k_wrap.cxx">
+			<Option target="pt_hs_k_Debug" />
+			<Option target="pt_hs_k_Release" />
 		</Unit>
 		<Unit filename="pt_ss_k.i">
 			<Option compile="1" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="pt_ss_k_wrap.cxx">
-			<Option target="api_Debug" />
-			<Option target="api_Release" />
 			<Option target="pt_ss_k_Debug" />
 			<Option target="pt_ss_k_Release" />
 		</Unit>

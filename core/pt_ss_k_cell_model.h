@@ -5,7 +5,7 @@
 namespace shyft {
     namespace core {
         /** \brief pt_ss_k namespace declares the needed pt_ss_k specific parts of a cell
-        * 
+        *
         * See pt_gs_k namespace core/pt_gs_k_cell_model.h for more info
         */
         namespace pt_ss_k {
@@ -27,10 +27,10 @@ namespace shyft {
             */
             struct all_response_collector {
                 double destination_area;  ///< in [m²]
-                // Collect responses as time series 
+                // Collect responses as time series
                 pts_t avg_discharge;  ///< Kirchner Discharge given in [m³/s] for the timestep
-                pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm] 
-                pts_t snow_output;  ///< gamma snow output [m³/s] for the timestep
+                pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm]
+                pts_t snow_outflow;  ///< gamma snow output [m³/s] for the timestep
                 pts_t ae_output;  ///< actual evap mm/h
                 pts_t pe_output;  ///< actual evap mm/h
                 response_t end_reponse;  ///<< end_response, at the end of collected
@@ -39,14 +39,14 @@ namespace shyft {
                 all_response_collector(const double destination_area) : destination_area(destination_area) {}
                 all_response_collector(const double destination_area, const timeaxis_t& time_axis)
                  : destination_area(destination_area), avg_discharge(time_axis, 0.0), snow_total_stored_water(time_axis, 0.0),
-                   snow_output(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
+                   snow_outflow(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
 
                 /**\brief Called before run to allocate space for results */
                 void initialize(const timeaxis_t& time_axis, double area) {
                     destination_area = area;
                     avg_discharge = pts_t(time_axis, 0.0);
                     snow_total_stored_water = pts_t(time_axis, 0.0);
-                    snow_output = pts_t(time_axis, 0.0);
+                    snow_outflow = pts_t(time_axis, 0.0);
                     ae_output = pts_t(time_axis, 0.0);
                     pe_output = pts_t(time_axis, 0.0);
                 }
@@ -62,10 +62,10 @@ namespace shyft {
                  */
                 void collect(size_t idx, const response_t& response) {
                     // Convert discharge to volume per time unit (m^3/s) instead of mm per time step
-                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); 
+                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area));
                     snow_total_stored_water.set(idx, mmh_to_m3s(response.snow.total_stored_water, destination_area));
                     // Convert snow outflow to volume per time unit (m^3/s) instead of mm per time step
-                    snow_output.set(idx, mmh_to_m3s(response.snow.outflow, destination_area));
+                    snow_outflow.set(idx, mmh_to_m3s(response.snow.outflow, destination_area));
                     ae_output.set(idx, response.ae.ae);
                     pe_output.set(idx, response.pt.pot_evapotranspiration);
                 }
@@ -110,7 +110,7 @@ namespace shyft {
              *  \note that the state collected is instant in time, valid at the beginning of period
              */
             struct state_collector {
-                bool collect_state;  ///< if true, collect state, otherwise ignore 
+                bool collect_state;  ///< if true, collect state, otherwise ignore
                                      //(and the state of time-series are undefined/zero)
                 // State variables to collect as time series
                 double destination_area;
@@ -124,7 +124,7 @@ namespace shyft {
 
                 state_collector() : collect_state(false), destination_area(0.0) {}
 
-                state_collector(const timeaxis_t& time_axis) 
+                state_collector(const timeaxis_t& time_axis)
                  : collect_state(false), destination_area(0.0),
                    kirchner_discharge(time_axis, 0.0),
                    snow_swe(time_axis, 0.0),
@@ -135,10 +135,10 @@ namespace shyft {
                    snow_residual(time_axis, 0.0)
                    { /* Do nothing */ }
 
-                /** brief called before run, prepares state time-series with preallocated room 
+                /** brief called before run, prepares state time-series with preallocated room
                  *  for the supplied time-axis.
                  *
-                 * \note if collect_state is false, a zero length time-axis is used to ensure 
+                 * \note if collect_state is false, a zero length time-axis is used to ensure
                  * data is wiped/out.
                  */
                 void initialize(const timeaxis_t& time_axis, double area) {
@@ -168,13 +168,13 @@ namespace shyft {
             };
 
             // typedef the variants we need exported.
-            typedef cell<parameter_t, environment_t, state_t, null_collector, all_response_collector> cell_complete_response_t;
+            typedef cell<parameter_t, environment_t, state_t, state_collector, all_response_collector> cell_complete_response_t;
             typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> cell_discharge_response_t;
         } // pt_ss_k
 
         //specialize run method for all_response_collector
         template<>
-        inline void cell<pt_ss_k::parameter_t, environment_t, pt_ss_k::state_t, pt_ss_k::null_collector,
+        inline void cell<pt_ss_k::parameter_t, environment_t, pt_ss_k::state_t, pt_ss_k::state_collector,
                          pt_ss_k::all_response_collector>::run(const timeaxis_t& time_axis) {
             if (parameter.get() == nullptr)
                 throw std::runtime_error("pt_ss_k::run with null parameter attempted");

@@ -1,5 +1,5 @@
 ---
-Himalayas:
+Atnsjoen:
   config_dir: .     # where to find other config files
   data_dir: .       # where to find data files
   repository:
@@ -9,9 +9,10 @@ Himalayas:
   model_config_file: model.yaml
   # model_config_file: /tmp/calibrated_model.yaml
   datasets_config_file: datasets.yaml
-  start_datetime: 1990-01-01T00:00:00
+  start_datetime: 2005-01-01T00:00:00
   run_time_step: 86400
-  number_of_steps: 730
+  # number_of_steps: 3652  # 10 years, but for 2013 and 2014 radiation is NaN
+  number_of_steps: 730  # 2 years
   max_cells: 4  # consider only a maximum of cells (optional, mainly for testing purposes)
   output:
     class: shyft.orchestration2.netcdf.SimulationOutput

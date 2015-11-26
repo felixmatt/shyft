@@ -1,0 +1,48 @@
+---
+sources:
+  - repository: source_repo1
+    class: shyft.repository.netcdf.geo_ts_repository.GeoTsRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/atnasjoen_met.nc
+      types:
+        - type: precipitation
+          stations:
+            - values: /ATNDALEN-ERIKSRUD/precipitation
+              time: /ATNDALEN-ERIKSRUD/time
+              location: /ATNDALEN-ERIKSRUD.x, /ATNDALEN-ERIKSRUD.y, /ATNDALEN-ERIKSRUD.z
+            - values: /ATNSJOEN/precipitation
+              time: /ATNSJOEN/time
+              location: /ATNSJOEN.x, /ATNSJOEN.y, /ATNSJOEN.z
+        - type: temperature
+          stations:
+            - values: /libru_nve/temperature
+              time: /libru_nve/time
+              location: /libru_nve.x, /libru_nve.y, /libru_nve.z
+            - values: /atnsjoen_nve/temperature
+              time: /atnsjoen_nve/time
+              location: /atnsjoen_nve.x, /atnsjoen_nve.y, /atnsjoen_nve.z
+        - type: relative_humidity
+          stations:
+            - values: /fake_relative_humidity/relative_humidity
+              time: /fake_relative_humidity/time
+              location: /fake_relative_humidity.x, /fake_relative_humidity.y, /fake_relative_humidity.z
+        - type: radiation
+          stations:
+            - values: /WFDEI_station1/radiation
+              time: /WFDEI_station1/time
+              location: /WFDEI_station1.x, /WFDEI_station1.y, /WFDEI_station1.z
+            - values: /WFDEI_station2/radiation
+              time: /WFDEI_station2/time
+              location: /WFDEI_station2.x, /WFDEI_station2.y, /WFDEI_station2.z
+            - values: /WFDEI_station3/radiation
+              time: /WFDEI_station3/time
+              location: /WFDEI_station3.x, /WFDEI_station3.y, /WFDEI_station3.z
+            - values: /WFDEI_station4/radiation
+              time: /WFDEI_station4/time
+              location: /WFDEI_station4.x, /WFDEI_station4.y, /WFDEI_station4.z
+        - type: wind_speed
+          stations:
+            - values: /fake_wind_speed/wind_speed
+              time: /fake_wind_speed/time
+              location: /fake_wind_speed.x, /fake_wind_speed.y, /fake_wind_speed.z
+...

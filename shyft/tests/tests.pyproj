@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9d4b92c2-21e7-4de4-8295-fe87cb43cda3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_netcdf.py</StartupFile>
+    <StartupFile>test_ssa_geo_ts_repository.py</StartupFile>
     <SearchPath>..\..\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -21,7 +21,24 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="test_netcdf.py" />
+    <Compile Include="demo_statkraft_stuff.py" />
+    <Compile Include="patch.py" />
+    <Compile Include="test_arome_respository.py" />
+    <Compile Include="test_geo_ts_repository_collection.py" />
+    <Compile Include="test_gis_region_model_repository.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="test_netcdf_geo_ts_repository.py" />
+    <Compile Include="test_netcdf_region_model_repository.py" />
+    <Compile Include="test_opendap_repository.py" />
+    <Compile Include="test_simple_simulator.py" />
+    <Compile Include="test_ssa_geo_ts_repository.py" />
+    <Compile Include="test_ssa_smg_db.py" />
+    <Compile Include="test_statkraft_run.py" />
+    <Compile Include="test_yaml_geo_location_repository.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="test_yaml_state_repository.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />

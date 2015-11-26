@@ -137,7 +137,7 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 			pt.z = 500 * std::sin(pt.x / x_max) + std::sin(pt.y / y_max) / 2;
 			vector<double> pts; pts.reserve(ts_size);
 			double b_t = unif(re);
-			std::cout << "Base temp at pos (i,j) = " << i << ", " << j << ") = " << b_t << std::endl;
+			//std::cout << "Base temp at pos (i,j) = " << i << ", " << j << ") = " << b_t << std::endl;
 			for (size_t l = 0; l < ts_size; ++l)
 				pts.emplace_back( b_t + pt.z*(0.6 / 100));
 			sources.emplace_back(pt, xpts_t(dta,pts.cbegin(), pts.cend()));
@@ -163,15 +163,15 @@ void bayesian_kriging_test::test_covariance_calculation() {
 	arma::vec covs(n*(n - 1) / 2); // Strict upper part of cov matrix, as vector
 	for (arma::uword i = 0; i < n*(n - 1) / 2; ++i) dqs.at(i) = static_cast<double>((i + 1)*(i + 1)); // NB: Not valid dists
 	// Start timer
-	const std::clock_t start = std::clock();
+	//const std::clock_t start = std::clock();
 	utils::cov(dqs, covs, params);
 	arma::uword v_idx = 0;
 	for (arma::uword i = 0; i < n; ++i)
 		for (arma::uword j = i + 1; j < n; ++j)
 			C.at(i, j) = covs.at(v_idx++);
 	C.diag() *= utils::zero_dist_cov(params);
-	const std::clock_t total = std::clock() - start;
-	std::cout << "Computing upper covariance matrix with nnz " << n*(n + 1) / 2 << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+	//const std::clock_t total = std::clock() - start;
+	//std::cout << "Computing upper covariance matrix with nnz " << n*(n + 1) / 2 << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
 
 	// Compute source-target cov
 	const arma::uword m = 200 * 200;
@@ -241,10 +241,12 @@ void bayesian_kriging_test::test_interpolation() {
 	MCell d = destinations[destinations.size() - 1];
 	std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;
 	d = destinations[0];
-	std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;
-	for (auto d : destinations) {
-		std::cout << d.mid_point().z << std::endl;
-		std::cout << "Max/Min: " << *std::max_element(d.temperatures.begin(), d.temperatures.end()) <<
-			", " << *std::min_element(d.temperatures.begin(), d.temperatures.end()) << std::endl;
+	if (getenv("SHYFT_BTK_VERBOSE")) {
+		std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;
+		for (auto d : destinations) {
+			std::cout << d.mid_point().z << std::endl;
+			std::cout << "Max/Min: " << *std::max_element(d.temperatures.begin(), d.temperatures.end()) <<
+				", " << *std::min_element(d.temperatures.begin(), d.temperatures.end()) << std::endl;
+		}
 	}
 }

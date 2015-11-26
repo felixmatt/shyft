@@ -33,7 +33,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -46,7 +46,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -68,21 +68,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-12.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <TargetName>_pt_gs_k</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\pt_gs_k\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-12.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
     <TargetName>_pt_gs_k</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\pt_gs_k\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -107,10 +109,10 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run pt_gs_k_wrap.cpp</Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files</Message>
+      <Message>Update swig generated files pt_gs_k</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,10 +139,10 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
+      <Command>nmake /Nologo /F NMakefile.swig_run pt_gs_k_wrap.cpp</Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files</Message>
+      <Message>Update swig generated files pt_gs_k</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -150,25 +152,6 @@
     <ProjectReference Include="..\api.vcxproj">
       <Project>{fdfdaa14-75d7-455c-aae4-e89a4e43c062}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="api.i">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">nmake /NoLogo /F NMakefile.swig_run</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)pt_gs_k_wrap.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">nmake /NoLogo /F NMakefile.swig_run</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)pt_gs_k_wrap.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </AdditionalInputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Running Swig to (re)generate pt_gs_k_wrap.cpp</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Running Swig to (re)generate pt_gs_k_wrap.cpp</Message>
-    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="NMakefile.swig_run" />

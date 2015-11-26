@@ -56,9 +56,9 @@ namespace shyft{
 			}
 			///<Template class to transform model evaluation into something that dream can run
             template<class M>
-            struct dream_fx:public shyft::core::optimizer::ifx {
+            struct dream_fx : public shyft::core::optimizer::ifx {
                 M& m;
-                dream_fx( M & m):m(m){}
+                dream_fx(M & m) : m(m) {}
                 double evaluate(const vector<double> &x) {
                     return -m(x); // notice that dream find maximumvalue, so we need to negate the goal function, effectively finding the minimum value.
                 }
@@ -72,12 +72,12 @@ namespace shyft{
              * \return the goal function of m value, corresponding to the found x-vector
              */
 			template  <class M>
-			double min_dream( M& model,vector<double>& x,int max_n_evaluations) {
+			double min_dream( M& model, vector<double>& x, int max_n_evaluations) {
 				// Scale all parameter ranges to [0, 1]
 				std::vector<double> x_s = model.to_scaled(x);
                 dream_fx<M> fx_m(model);
                 shyft::core::optimizer::dream dr;
-				double res = dr.find_max(fx_m,x_s,max_n_evaluations);
+				double res = dr.find_max(fx_m, x_s, max_n_evaluations);
 				// Convert back to real parameter range
 				x = model.from_scaled(x_s);
 				return res;
@@ -85,9 +85,9 @@ namespace shyft{
 
 			///<Template class to transform model evaluation into something that dream can run
             template<class M>
-            struct sceua_fx:public shyft::core::optimizer::ifx {
+            struct sceua_fx : public shyft::core::optimizer::ifx {
                 M& m;
-                sceua_fx( M & m):m(m){}
+                sceua_fx(M & m) : m(m) {}
                 double evaluate(const vector<double> &x) {
                     return m(x);
                 }
@@ -103,25 +103,25 @@ namespace shyft{
              * \throw runtime_error with text sceua: max_iterations reached before convergence
              */
             template <class M>
-            double min_sceua(M &model, vector<double>&x,size_t max_n_evaluations,double x_eps=0.0001,double y_eps=0.0001) {
+            double min_sceua(M& model, vector<double>& x, size_t max_n_evaluations, double x_eps=0.0001, double y_eps=0.0001) {
 				// Scale all parameter ranges to [0, 1]
 				vector<double> x_s = model.to_scaled(x);
-				vector<double> x_min(x_s.size(),0.0);///normalized range is 0..1 so is min..max
-				vector<double> x_max(x_s.size(),1.0);
+				vector<double> x_min(x_s.size(), 0.0);///normalized range is 0..1 so is min..max
+				vector<double> x_max(x_s.size(), 1.0);
 				vector<double> x_epsv(x_s.size(),x_eps);
 				// notice that there is some adapter code here, for now, just to keep
 				// the sceua as close to origin as possible(it is fast&efficient, with stack-based mem.allocs)
-				double *xv=__autoalloc__(double,x_s.size());shyft::core::optimizer::fastcopy(xv,x_s.data(),x_s.size());
+				double *xv=__autoalloc__(double, x_s.size()); shyft::core::optimizer::fastcopy(xv, x_s.data(), x_s.size());
                 sceua_fx<M> fx_m(model);
                 shyft::core::optimizer::sceua opt;
-                double y_result=0;
+                double y_result = 0;
                 // optimize with no specific range for y-exit (max-less than min):
-                auto opt_state= opt.find_min(x_s.size(),x_min.data(),x_max.data(),xv,y_result,fx_m,y_eps,-1.0,-2.0,x_epsv.data(),max_n_evaluations);
-                for(size_t i=0;i<x_s.size();++i) x_s[i]=xv[i];//copy from raw vector
+                auto opt_state = opt.find_min(x_s.size(), x_min.data(), x_max.data(), xv, y_result, fx_m, y_eps, -1.0, -2.0, x_epsv.data(), max_n_evaluations);
+                for(size_t i=0; i < x_s.size(); ++i) x_s[i]=xv[i];//copy from raw vector
 				// Convert back to real parameter range
 				x = model.from_scaled(x_s);
-				if( !(opt_state== shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state==shyft::core::optimizer::OptimizerState::FinishedXconvergence))
-                    throw runtime_error("sceua: max-iterations reached before convergence");//FinishedMaxIterations)
+				if( !(opt_state == shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state == shyft::core::optimizer::OptimizerState::FinishedXconvergence))
+                    throw runtime_error("sceua: max-iterations reached before convergence"); //FinishedMaxIterations)
 				return y_result;
 
             }
@@ -160,34 +160,37 @@ namespace shyft{
 		* -# a list of catchment ids (zero-based), that denotes the catchment.discharges that should equal the target ts.
 		* -# a scale_factor that is used to construct the final goal function as
 		*
-		* goal_function = sum of all: scale_factor * (1- nash-sutcliff factor) or KLING-GUPTA
+		* goal_function = sum of all: scale_factor*(1 - nash-sutcliff factor) or KLING-GUPTA
 		*
 		* \tparam PS type of the target time-series, any type that is time-series compatible will work. Usually a point-based series.
 		*/
 		template<class PS>
 		struct target_specification {
 			typedef PS target_time_series_t;
-			target_specification():scale_factor(1.0), calc_mode(NASH_SUTCLIFFE),s_r(1.0),s_a(1.0),s_b(1.0) {}
+			target_specification()
+              : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), s_r(1.0), s_a(1.0), s_b(1.0) {}
 #ifndef SWIG
-			target_specification(const target_specification&c) :
-			    ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor), calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
-			target_specification(target_specification&&c) :
-				ts(std::move(c.ts)),
-				catchment_indexes(std::move(c.catchment_indexes)),
-				scale_factor(c.scale_factor), calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
-			target_specification& operator=(target_specification&&c) {
-				ts=std::move(c.ts);
-				catchment_indexes =move(c.catchment_indexes);
+			target_specification(const target_specification& c)
+              : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor), 
+                calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+			target_specification(target_specification&&c) 
+              : ts(std::move(c.ts)),
+                catchment_indexes(std::move(c.catchment_indexes)),
+                scale_factor(c.scale_factor), calc_mode(c.calc_mode),
+                s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+			target_specification& operator=(target_specification&& c) {
+				ts = std::move(c.ts);
+				catchment_indexes = move(c.catchment_indexes);
 				scale_factor = c.scale_factor;
 				calc_mode = c.calc_mode;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
 				return *this;
 			}
-			target_specification& operator=(const target_specification&c) {
+			target_specification& operator=(const target_specification& c) {
                 if(this == &c) return *this;
-                ts=c.ts;
-                catchment_indexes=c.catchment_indexes;
-                scale_factor=c.scale_factor;
+                ts = c.ts;
+                catchment_indexes = c.catchment_indexes;
+                scale_factor = c.scale_factor;
                 calc_mode = c.calc_mode;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
                 return *this;
@@ -199,16 +202,18 @@ namespace shyft{
              * \param cids;  a vector of the catchment ids (zero-based) in the model that together should add up to the target time-series
              * \param scale_factor; the weight that this target_specification should have relative to the possible other target_specs.
              */
-			target_specification(const target_time_series_t& ts,vector<int> cids, double scale_factor,
-                        target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,double s_a=1.0,double s_b=1.0) :
-				ts(ts), catchment_indexes(cids), scale_factor(scale_factor),calc_mode(calc_mode),s_r(s_r),s_a(s_a),s_b(s_b) {}
+			target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
+                                 target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r=1.0,
+                                 double s_a=1.0, double s_b=1.0)
+              : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
+                calc_mode(calc_mode), s_r(s_r), s_a(s_a), s_b(s_b) {}
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes (zero based) that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
 			target_spec_calc_type calc_mode;
-			double s_r;///< KG-scalefactor for correlation
-			double s_a;///< KG-scalefactor for alpha (variance)
-			double s_b;///< KG-scalefactor for beta (bias)
+			double s_r; ///< KG-scalefactor for correlation
+			double s_a; ///< KG-scalefactor for alpha (variance)
+			double s_b; ///< KG-scalefactor for beta (bias)
 		};
 
 
@@ -237,7 +242,7 @@ namespace shyft{
         class optimizer {
           public:
             typedef dlib::matrix<double, 0, 1> column_vector; ///< dlib optimizer enjoys dlib matrix types.
-            typedef PS target_time_series_t;///< target_time_series_t.. could that be of same type as model calc, always, or is it supplied from outside?
+            typedef PS target_time_series_t; ///< target_time_series_t. could that be of same type as model calc, always, or is it supplied from outside?
 
 			typedef target_specification<PS> target_specification_t;///< describes how to calculate the goal function, maybe better 'retemplate' on this
 			typedef M region_model_t; ///< obvious and Ok template, the region_model, and there is just a few things that we need from this template.
@@ -247,13 +252,13 @@ namespace shyft{
           private:
 #ifndef SWIG
 		public:
-            PA& parameter_accessor;///<  a *reference* to the model parameters in the target  model, all cells share this!
-            region_model_t& model;///< a reference to the region model that we optimize
+            PA& parameter_accessor; ///<  a *reference* to the model parameters in the target  model, all cells share this!
+            region_model_t& model; ///< a reference to the region model that we optimize
 		private:
-            vector<target_specification_t> targets;///<  list of targets ts& catchments indexes to be optimized, used to calculate goal function
+            vector<target_specification_t> targets; ///<  list of targets ts& catchments indexes to be optimized, used to calculate goal function
 			// internal parameter vectors
 			vector<double> p_expanded;
-            vector<double> p_min;// min==max, no- optimization..
+            vector<double> p_min; // min==max, no- optimization..
             vector<double> p_max;
             vector<state_t> initial_state;
 			int print_progress_level;
@@ -261,7 +266,7 @@ namespace shyft{
 			bool is_active_parameter(size_t i) const { return fabs(p_max[i] - p_min[i]) > 0.000001; }
 			vector<double> reduce_p_vector(const vector<double>& fp) const {
 				std::vector<double> r; r.reserve(fp.size());
-				for (size_t i = 0; i < fp.size();++i) {
+				for (size_t i = 0; i < fp.size(); ++i) {
 					if (is_active_parameter(i))
 						r.push_back(fp[i]);// only pick values that are active in optimization
 				}
@@ -287,7 +292,7 @@ namespace shyft{
 			* \param p_max maximum values for the parameters to be  optimized
 			*/
 			optimizer(region_model_t& model, const vector<target_specification_t>& targetsA,
-                          const vector<double>& p_min, const vector<double>& p_max)
+                      const vector<double>& p_min, const vector<double>& p_max)
               : parameter_accessor(model.get_region_parameter()),
                 model(model),
                 targets(targetsA),
@@ -304,8 +309,12 @@ namespace shyft{
 					auto unique_end = unique(begin(catchment_indexes), end(catchment_indexes));
 					catchment_indexes.resize(distance(begin(catchment_indexes), unique_end));
 				}
-				model.set_catchment_calculation_filter(catchment_indexes);//Only calculate the catchments that we optimize
-				// 2. fetch out the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
+                for (auto i: catchment_indexes) {
+                    if (model.has_catchment_parameter(i))
+                        throw runtime_error("Cannot calibrate on local parameters.");
+                }
+				model.set_catchment_calculation_filter(catchment_indexes); //Only calculate the catchments that we optimize
+				// 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
                 auto cells = model.get_cells();
                 initial_state.reserve((*cells).size());
                 for_each(begin(*cells), end(*cells), [this] (const cell_t &cell) { initial_state.emplace_back(cell.state); } );
@@ -325,7 +334,7 @@ namespace shyft{
 			 * \param tr_stop is the trust region stop, default 1e-5, ref bobyqa
 			 * \return the optimized parameter vector
 			 */
-           vector<double> optimize(vector<double> p,size_t max_n_evaluations=1500, double tr_start=0.1, double tr_stop=1.0e-5) {
+           vector<double> optimize(vector<double> p, size_t max_n_evaluations=1500, double tr_start=0.1, double tr_stop=1.0e-5) {
 				// reduce using min..max the parameter space,
 				p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
 				auto rp = reduce_p_vector(p);
@@ -379,7 +388,7 @@ namespace shyft{
                 for_each(begin(*cells), end(*cells), [this, &i] (cell_t& cell) { cell.set_state(initial_state[i++]); });
             }
 			/**\brief set the parameter ranges, set min=max=wanted parameter value for those not subject to change during optimization */
-			void set_parameter_ranges(vector<double> p_min,vector<double> p_max) { this->p_min = p_min; this->p_max = p_max; }
+			void set_parameter_ranges(vector<double> p_min, vector<double> p_max) { this->p_min = p_min; this->p_max = p_max; }
 			void set_verbose_level(int level) { print_progress_level = level; }
 			/**\brief calculate the goal_function as used by minbobyqa,
 			 *   using the full set of  parameters vectors (as passed to optimize())
@@ -401,9 +410,9 @@ namespace shyft{
 			/** called by bobyqua:reduced parameter space p */
            vector<double> to_scaled(const vector<double>& rp) const {
                 if (p_min.size() == 0) throw runtime_error("Parameter ranges are not set");
-               vector<double> p_s;
-				auto rp_min = reduce_p_vector(p_min);
-				auto rp_max = reduce_p_vector(p_max);
+                vector<double> p_s;
+                auto rp_min = reduce_p_vector(p_min);
+                auto rp_max = reduce_p_vector(p_max);
                 const size_t n_params = rp.size();
                 p_s.reserve(n_params);
                 for (size_t i = 0; i < n_params; ++i)
@@ -413,10 +422,10 @@ namespace shyft{
 			/** called by bobyqua: reduced parameter space p */
            vector<double> from_scaled(column_vector p_s) const {
                 if (p_min.size() == 0) throw runtime_error("Parameter ranges are not set");
-               vector<double> p;
-				auto rp_min = reduce_p_vector(p_min);
-				auto rp_max = reduce_p_vector(p_max);
-				p.reserve(p_s.nr());
+                vector<double> p;
+                auto rp_min = reduce_p_vector(p_min);
+                auto rp_max = reduce_p_vector(p_max);
+                p.reserve(p_s.nr());
                 for (int i = 0; i < p_s.nr(); ++i)
                     p.emplace_back((rp_max[i] - rp_min[i])*p_s(i) + rp_min[i]);
                 return p;
@@ -424,10 +433,10 @@ namespace shyft{
 			/** called by bobyqua: reduced parameter space p */
            vector<double> from_scaled(vector<double> p_s) const {
                 if (p_min.size() == 0) throw runtime_error("Parameter ranges are not set");
-               vector<double> p;
-				auto rp_min = reduce_p_vector(p_min);
-				auto rp_max = reduce_p_vector(p_max);
-				p.reserve(p_s.size());
+                vector<double> p;
+                auto rp_min = reduce_p_vector(p_min);
+                auto rp_max = reduce_p_vector(p_max);
+                p.reserve(p_s.size());
                 for (size_t i = 0; i < p_s.size(); ++i)
                     p.emplace_back((rp_max[i] - rp_min[i])*p_s[i] + rp_min[i]);
                 return p;
@@ -444,12 +453,10 @@ namespace shyft{
 				auto p = expand_p_vector(rp);// expand to full vector, then:
 				parameter_accessor.set(p); // Sets global parameters, all cells share a common pointer.
 				reset_states();
-				//model.reset_catchment_results();
 				model.run_cells();
 				double goal_function_value = 0.0;// overall goal-function, intially zero
-				double scale_factor_sum = 0;
+				double scale_factor_sum = 0.0;
 				//TODO: extract all catchment results.. from the model..
-				//
 				vector<pts_t> catchment_discharges;
 				model.catchment_discharges(catchment_discharges);
 				for (auto& t : targets) {
@@ -459,15 +466,20 @@ namespace shyft{
 					}
 					// now calculate the discharge_sum for the target ts resolution
 
-					shyft::timeseries::direct_accessor<pts_t, timeaxis_t>   target_accessor(t.ts, t.ts.get_time_axis());
+					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.get_time_axis());
 					shyft::timeseries::average_accessor<pts_t, timeaxis_t> discharge_sum_accessor(discharge_sum, t.ts.get_time_axis());
 					if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
-						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, discharge_sum_accessor); //nash_sutcliffe_goal_function(t.ts, discharge_sum);
+						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, discharge_sum_accessor); 
 						goal_function_value += partial_nash_sutcliffe_gf* t.scale_factor;// add scaled contribution from each target
 					} else {
-						// ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10), a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
-						double EDs = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor, discharge_sum_accessor, t.s_r, t.s_a, t.s_b);
-							goal_function_value += t.scale_factor*EDs;
+						// ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
+                        // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
+                        double EDs = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
+                                                                                                        discharge_sum_accessor,
+                                                                                                        t.s_r,
+                                                                                                        t.s_a,
+                                                                                                        t.s_b);
+                        goal_function_value += t.scale_factor*EDs;
 					}
 					scale_factor_sum += t.scale_factor;
 				}
