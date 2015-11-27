@@ -49,12 +49,14 @@ class OrchestrationConfig(object):
                   "Defaulting to '{}'".format(self.config_dir))
         if not (os.path.isdir(self.config_dir) and
                 os.path.isabs(self.config_dir)):
-            raise ConfigError("'config_dir' must be an absolute directory")
+            raise ConfigError(
+                "'config_dir' must exist and be an absolute path")
         if not hasattr(self, "data_dir"):
             raise ConfigError("'data_dir' must be present in config section")
         if not (os.path.isdir(self.data_dir) and
                 os.path.isabs(self.data_dir)):
-            raise ConfigError("'data_dir' must be an absolute directory")
+            raise ConfigError(
+                "'data_dir' must exist and be an absolute path")
 
         # Create a time axis
         self.start_time = utctime_from_datetime(self.start_datetime)
@@ -68,7 +70,6 @@ class OrchestrationConfig(object):
             raise ConfigError("Asking for a missing 'simulator' section.")
         # Get the flavor and the params for the simulator
         flavor = getattr(shyft.orchestration, self.simulator['flavor'])
-        print("flavor:", flavor, type(flavor))
         params = self.simulator['params']
         simulator = flavor.get_simulator(self, params)
         return simulator

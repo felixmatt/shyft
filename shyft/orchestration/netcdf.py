@@ -31,6 +31,9 @@ def get_simulator(cfg, *params):
     netcdf_geo_ts_repos = []
     for source in datasets_config.sources:
         station_file = source["params"]["stations_met"]
+        if not os.path.isabs(station_file):
+            # Relative paths will be prepended the cfg.data_dir
+            station_file = os.path.join(cfg.data_dir, station_file)
         netcdf_geo_ts_repos.append(
             GeoTsRepository(source["params"], station_file, ""))
     geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(
