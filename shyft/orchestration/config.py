@@ -11,7 +11,6 @@ import numpy as np
 from shyft import api
 from shyft.api import pt_gs_k
 import shyft.orchestration
-from shyft.repository.netcdf import yaml_config
 
 
 utc_calendar = api.Calendar()
@@ -63,17 +62,6 @@ class OrchestrationConfig(object):
             self.start_time, self.run_time_step, self.number_of_steps)
         # Get the region model in API
         self.model_t = getattr(pt_gs_k, self.model_t)
-
-        # Read region, model and datasets config files
-        region_config_file = os.path.join(
-            self.config_dir, self.region_config_file)
-        self.region_config = yaml_config.RegionConfig(region_config_file)
-        model_config_file = os.path.join(
-            self.config_dir, self.model_config_file)
-        self.model_config = yaml_config.ModelConfig(model_config_file)
-        datasets_config_file = os.path.join(
-            self.config_dir, self.datasets_config_file)
-        self.datasets_config = yaml_config.YamlContent(datasets_config_file)
 
     def get_simulator(self):
         if not hasattr(self, "simulator"):
