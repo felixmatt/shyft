@@ -319,13 +319,14 @@ class SimulationTestCase(unittest.TestCase):
         lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
         t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
         percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
-        if 'DISPLAY' in environ.keys():
-            from matplotlib import pylab as plt
-            plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
-            set_calendar_formatter(api.Calendar())
-            plt.show()
-        else:
-            print("DISPLAY not set, not showing plot")
+        # The next should be moved into an example directory
+        # if 'DISPLAY' in environ.keys():
+        #     from matplotlib import pylab as plt
+        #     plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
+        #     set_calendar_formatter(api.Calendar())
+        #     plt.show()
+        # else:
+        #     print("DISPLAY not set, not showing plot")
 
     def test_snow_and_ground_water_response_calibration(self):
         """
@@ -440,17 +441,18 @@ class SimulationTestCase(unittest.TestCase):
         t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
         f_vs = np.array(found_discharge.v)
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
+        # The next should be moved into an example directory
         # Simple demo plotting that should be turned off during unit testing:
-        if 'DISPLAY' in environ.keys():
-            from matplotlib import pylab as plt
-            plt.plot(utc_to_greg(t_ts), t_vs)
-            plt.hold(1)
-            plt.plot(utc_to_greg(f_ts), f_vs)
-            plt.ylabel("Discharge in $m^3s^{-1}$")
-            plt.xlabel("Time in utc time axis dimension")
-            set_calendar_formatter(api.Calendar())
-            plt.legend(["Synthetic discharge", "Calibrated discharge"])
-            plt.show()
+        # if 'DISPLAY' in environ.keys():
+        #     from matplotlib import pylab as plt
+        #     plt.plot(utc_to_greg(t_ts), t_vs)
+        #     plt.hold(1)
+        #     plt.plot(utc_to_greg(f_ts), f_vs)
+        #     plt.ylabel("Discharge in $m^3s^{-1}$")
+        #     plt.xlabel("Time in utc time axis dimension")
+        #     set_calendar_formatter(api.Calendar())
+        #     plt.legend(["Synthetic discharge", "Calibrated discharge"])
+        #     plt.show()
 
     def test_run_arome_ensemble(self):
         # Simulation time axis
