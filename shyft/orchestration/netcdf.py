@@ -9,7 +9,7 @@ from shyft.repository.interpolation_parameter_repository import (
 from shyft.orchestration import SimpleSimulator
 
 
-def netcdf_simulator(cfg):
+def get_simulator(cfg, *params):
     # Build some interesting constructs
     region_model = RegionModelRepository(
         cfg.region_config, cfg.model_config, cfg.model_t, cfg.epsg)

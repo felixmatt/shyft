@@ -10,6 +10,7 @@ import numpy as np
 
 from shyft import api
 from shyft.api import pt_gs_k
+import shyft.orchestration
 from shyft.repository.netcdf import yaml_config
 
 
@@ -73,6 +74,16 @@ class OrchestrationConfig(object):
         datasets_config_file = os.path.join(
             self.config_dir, self.datasets_config_file)
         self.datasets_config = yaml_config.YamlContent(datasets_config_file)
+
+    def get_simulator(self):
+        if not hasattr(self, "simulator"):
+            raise ConfigError("Asking for a missing 'simulator' section.")
+        # Get the flavor and the params for the simulator
+        flavor = getattr(shyft.orchestration, self.simulator['flavor'])
+        print("flavor:", flavor, type(flavor))
+        params = self.simulator['params']
+        simulator = flavor.get_simulator(self, params)
+        return simulator
 
 
     def __repr__(self):
