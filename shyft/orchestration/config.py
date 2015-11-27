@@ -34,25 +34,40 @@ class OrchestrationConfig(object):
     Concrete class for yaml content.
     """
 
-    def __init__(self, config_file, config_section):
-        self._config_file = config_file
+    def __init__(self, config_file, config_section, **kwargs):
+        # The config_file needs to be an absolute path or have 'config_dir'
+        if os.path.isabs(config_file):
+            self._config_file = config_file
+        elif "config_dir" in kwargs:
+            self._config_file = os.path.join(kwargs["config_dir"], config_file)
+        else:
+            raise ConfigError(
+                "'config_file' must be an absolute path "
+                "or 'config_dir' passed as an argument")
+
         self._config_section = config_section
-        with open(config_file) as cfg_file:
-            config = yaml.load(cfg_file)[config_section]
+
+        # Load main configuration file
+        with open(self._config_file) as cfg:
+            config = yaml.load(cfg)[config_section]
         # Expose all keys in yaml file as attributes
         self.__dict__.update(config)
+        # Override the parameters with kwargs
+        self.__dict__.update(kwargs)
 
         # Check validity of some attributes
         if not hasattr(self, "config_dir"):
-            self.config_dir = os.path.dirname(os.path.abspath(config_file))
-            print("Warning: 'config_dir' is not present in config section.  "
-                  "Defaulting to '{}'".format(self.config_dir))
+            raise ConfigError(
+                "'config_dir' must be present in config section "
+                "or passed as an argument")
         if not (os.path.isdir(self.config_dir) and
                 os.path.isabs(self.config_dir)):
             raise ConfigError(
                 "'config_dir' must exist and be an absolute path")
         if not hasattr(self, "data_dir"):
-            raise ConfigError("'data_dir' must be present in config section")
+            raise ConfigError(
+                "'data_dir' must be present in config section "
+                "or passed as an argument")
         if not (os.path.isdir(self.data_dir) and
                 os.path.isabs(self.data_dir)):
             raise ConfigError(

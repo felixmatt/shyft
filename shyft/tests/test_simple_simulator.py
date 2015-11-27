@@ -28,6 +28,7 @@ from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.orchestration.simulator import SimpleSimulator
 from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
 from shyft.orchestration.plotting import plot_np_percentiles
+from shyft.orchestration import OrchestrationConfig
 
 
 def print_param(header_text, param):
@@ -91,42 +92,18 @@ class SimulationTestCase(unittest.TestCase):
         self.run_simulator(pt_ss_k.PTSSKModel)
 
     def test_set_observed_state(self):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = OrchestrationConfig("atnsjoen_simulation.yaml", "atnsjoen",
+                                  config_dir=config_dir, data_dir=shyftdata_dir)
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config = RegionConfig(self.region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         state = state_repos.get_state(0)
-        simulator.run(time_axis, state)
+        simulator.run(cfg.time_axis, state)
         simulator.region_model.get_states(state)
         obs_discharge = 0.0
         state = simulator.discharge_adjusted_state(obs_discharge, state)
