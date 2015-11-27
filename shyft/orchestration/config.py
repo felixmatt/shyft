@@ -9,6 +9,7 @@ import yaml
 import numpy as np
 
 from shyft import api
+from shyft.api import pt_gs_k
 from shyft.repository.netcdf import yaml_config
 
 
@@ -43,7 +44,9 @@ class OrchestrationConfig(object):
 
         # Check validity of some attributes
         if not hasattr(self, "config_dir"):
-            raise ConfigError("'config_dir' must be present in config section")
+            self.config_dir = os.path.dirname(os.path.abspath(config_file))
+            print("Warning: 'config_dir' is not present in config section.  "
+                  "Defaulting to '{}'".format(self.config_dir))
         if not (os.path.isdir(self.config_dir) and
                 os.path.isabs(self.config_dir)):
             raise ConfigError("'config_dir' must be an absolute directory")
@@ -58,7 +61,7 @@ class OrchestrationConfig(object):
         self.time_axis = api.Timeaxis(
             self.start_time, self.run_time_step, self.number_of_steps)
         # Get the region model in API
-        self.model_t = getattr(api.pt_gs_k, self.model_t)
+        self.model_t = getattr(pt_gs_k, self.model_t)
 
         # Read region, model and datasets config files
         region_config_file = os.path.join(
@@ -70,6 +73,7 @@ class OrchestrationConfig(object):
         datasets_config_file = os.path.join(
             self.config_dir, self.datasets_config_file)
         self.datasets_config = yaml_config.YamlContent(datasets_config_file)
+
 
     def __repr__(self):
         srepr = "%s::%s(" % (self.__class__.__name__, self._config_section)
