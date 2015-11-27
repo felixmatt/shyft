@@ -9,7 +9,7 @@ import yaml
 import numpy as np
 
 from shyft import api
-from shyft.api import pt_gs_k
+from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
 import shyft.orchestration
 
 
@@ -38,6 +38,7 @@ class OrchestrationConfig(object):
         # The config_file needs to be an absolute path or have 'config_dir'
         if os.path.isabs(config_file):
             self._config_file = config_file
+            self.config_dir = os.path.dirname(config_file)
         elif "config_dir" in kwargs:
             self._config_file = os.path.join(kwargs["config_dir"], config_file)
         else:
@@ -77,8 +78,10 @@ class OrchestrationConfig(object):
         self.start_time = utctime_from_datetime(self.start_datetime)
         self.time_axis = api.Timeaxis(
             self.start_time, self.run_time_step, self.number_of_steps)
-        # Get the region model in API
-        self.model_t = getattr(pt_gs_k, self.model_t)
+        # Get the region model in API (already an object if in kwargs)
+        if 'model_t' not in kwargs:
+            module, model_t = self.model_t.split(".")
+            self.model_t = getattr(globals()[module], model_t)
 
     def get_simulator(self):
         if not hasattr(self, "simulator"):

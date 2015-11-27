@@ -3,7 +3,7 @@ atnsjoen:
   simulator:   # The kind of simulator to be build.  Optional section.
     flavor: netcdf
     params:         # add your own params (not used yet, so better remove this?)
-  region_config_file: atnasjoen_region.yaml
+  region_config_file: atnsjoen_calibration_region.yaml
   model_config_file: model.yaml
   datasets_config_file: atnasjoen_datasets.yaml
   start_datetime: 2010-01-01T00:00:00

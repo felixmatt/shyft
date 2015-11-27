@@ -121,78 +121,31 @@ class SimulationTestCase(unittest.TestCase):
         self.assertAlmostEqual(obs_discharge, adj_discharge)
 
     def test_run_geo_ts_data_simulator(self):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = OrchestrationConfig("atnsjoen_simulation.yaml", "atnsjoen",
+                                  config_dir=config_dir, data_dir=shyftdata_dir)
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config = RegionConfig(self.region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
-        simulator.run(time_axis, state_repos.get_state(0))
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        simulator.run(cfg.time_axis, state_repos.get_state(0))
 
     def run_calibration(self, model_t):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = OrchestrationConfig("atnsjoen_calibration.yaml", "atnsjoen",
+                                  config_dir=config_dir, data_dir=shyftdata_dir,
+                                  model_t=model_t)
+        time_axis = cfg.time_axis
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config_file = path.join(path.dirname(__file__), "netcdf",
-                                       "atnsjoen_calibration_region.yaml")
-        region_config = RegionConfig(region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-
-        # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
         target_discharge = simulator.region_model.statistics.discharge([cid])
@@ -223,8 +176,8 @@ class SimulationTestCase(unittest.TestCase):
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
         target_spec_vec = api.TargetSpecificationVector([target_spec])
-        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), target_spec_vec,
-                                   p_guess, p_min, p_max)
+        p_opt = simulator.optimize(time_axis, state_repos.get_state(0),
+                                   target_spec_vec, p_guess, p_min, p_max)
 
         simulator.region_model.set_catchment_parameter(cid, p_opt)
         simulator.run(time_axis, state_repos.get_state(0))
