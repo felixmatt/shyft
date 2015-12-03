@@ -46,11 +46,11 @@ class SimulationTestCase(unittest.TestCase):
 
     def run_simulator(self, model_t):
         # Simulation time axis
-        year, month, day, hour = 2015, 8, 23, 6
+        dt0 = api.YMDhms(2015, 8, 24, 6)
         n_hours = 30
         dt = api.deltahours(1)
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        t0 = utc.time(dt0)
         time_axis = api.Timeaxis(t0, dt, n_hours)
 
         # Some dummy ids not needed for the netcdf based repositories
@@ -65,7 +65,7 @@ class SimulationTestCase(unittest.TestCase):
         model_config = ModelConfig(self.model_config_file)
         region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
         interp_repos = InterpolationParameterRepository(model_config)
-        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        date_str = "{}{:02}{:02}_{:02}".format(dt0.year, dt0.month, dt0.day, dt0.hour)
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
         f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
         f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
