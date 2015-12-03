@@ -9,6 +9,7 @@ class Calendar(unittest.TestCase):
     plan to do so) Nevertheless, keeping it here allow users of api-Core to
     use start practicing utctime/calendar perimeter.
     """
+
     def setUp(self):
         self.utc = api.Calendar()  # A utc calendar
         self.std = api.Calendar(3600)  # UTC+01
@@ -30,7 +31,6 @@ class Calendar(unittest.TestCase):
         self.assertEqual(a.day, c.day, 'should leave same day')
 
     def test_conversion_roundtrip(self):
-        #c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
         c1 = api.YMDhms(1960, 1, 2, 3, 4, 5)
         t1 = self.std.time(c1)
         c2 = self.std.calendar_units(t1)
@@ -44,7 +44,7 @@ class Calendar(unittest.TestCase):
         a = api.utctime_now()
         x = dt.datetime.utcnow()
         b = self.utc.time(api.YMDhms(x.year, x.month, x.day,
-                          x.hour, x.minute, x.second))
+                                     x.hour, x.minute, x.second))
         self.assertLess(abs(a - b), 2, 'Should be less than 2 seconds')
 
     def test_utc_time_to_string(self):
@@ -70,10 +70,18 @@ class Calendar(unittest.TestCase):
         self.assertEqual(s, "[2000.01.02T03:04:05,2000.01.02T04:04:05>")
 
     def test_swig_python_time(self):
+        """
+        This particular test is here to point out a platform specific bug detected
+        on windows.
+
+        """
         c1 = api.YMDhms(1969, 12, 31, 23, 0, 0)
-        t = self.utc.time(c1)
-        t_str= self.utc.to_string(t)
-        self.assertEquals(t,api.deltahours(-1))
+        t = self.utc.time(c1)  # at this point, the value returned from c++ is correct, but on its
+        # way through swig layer to python it goes via int32 and then to int64, proper signhandling
+        #
+        t_str = self.utc.to_string(t)  # this one just to show it's still working as it should internally
+        self.assertEquals(t_str, "1969.12.31T23:00:00")
+        self.assertEquals(t, api.deltahours(-1))
 
 
 if __name__ == "__main__":
