@@ -3,11 +3,10 @@ Tests GeoTsRepositoryCollection
 """
 from __future__ import print_function
 from __future__ import absolute_import
-
 from os import path
-#import random
+# import random
 import unittest
-#import numpy as np
+# import numpy as np
 
 from shyft import api
 from shyft import shyftdata_dir
@@ -16,28 +15,28 @@ from shyft.repository.geo_ts_repository_collection import GeoTsRepositoryCollect
 from shyft.repository.netcdf import AromeDataRepository
 from shyft.repository.netcdf import AromeDataRepositoryError
 
-class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
 
+class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
     @property
     def arome_epsg_bbox(self):
         """A slice of test-data located in shyft-data repository/arome."""
         EPSG = 32632
-        x0 = 436100.0   # lower left
+        x0 = 436100.0  # lower left
         y0 = 6823000.0  # lower right
         nx = 74
         ny = 24
         dx = 1000.0
         dy = 1000.0
-        return EPSG, ([x0, x0 + nx*dx, x0 + nx*dx, x0], [y0, y0, y0 + ny*dy, y0 + ny*dy])
+        return EPSG, ([x0, x0 + nx * dx, x0 + nx * dx, x0], [y0, y0, y0 + ny * dy, y0 + ny * dy])
 
     def test_get_timeseries_collection(self):
-        year, month, day, hour = 2015, 8, 23, 6
+        tc= api.YMDhms(2015, 8, 24, 6)
         n_hours = 30
         dt = api.deltahours(1)
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        t0 = utc.time(tc)
         period = api.UtcPeriod(t0, t0 + api.deltahours(n_hours))
-        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        date_str = "{}{:02}{:02}_{:02}".format(tc.year, tc.month, tc.day, tc.hour)
 
         epsg, bbox = self.arome_epsg_bbox
 
@@ -61,13 +60,13 @@ class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
                                                        period, geo_location_criteria=bbox)
 
     def test_get_forecast_collection(self):
-        year, month, day, hour = 2015, 8, 23, 6
         n_hours = 30
         dt = api.deltahours(1)
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        tc = api.YMDhms(2015, 8, 24, 6)
+        t0 = utc.time(tc)
         period = api.UtcPeriod(t0, t0 + api.deltahours(n_hours))
-        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        date_str = "{}{:02}{:02}_{:02}".format(tc.year, tc.month, tc.day, tc.hour)
 
         epsg, bbox = self.arome_epsg_bbox
 
@@ -97,23 +96,18 @@ class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
         ny = 94
         dx = 1000.0
         dy = 1000.0
-        # Period start
-        year = 2015
-        month = 7
-        day = 26
-        hour = 0
+        t0 = api.YMDhms(2015, 7, 26, 0)
         n_hours = 30
         utc = api.Calendar()  # No offset gives Utc
-        t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
         t_c = utc.time(t0) + api.deltahours(1)
 
         base_dir = path.join(shyftdata_dir, "netcdf", "arome")
         pattern = "fc2015072600.nc"
-        bbox = ([upper_left_x, upper_left_x + nx*dx,
-                 upper_left_x + nx*dx, upper_left_x],
+        bbox = ([upper_left_x, upper_left_x + nx * dx,
+                 upper_left_x + nx * dx, upper_left_x],
                 [upper_left_y, upper_left_y,
-                 upper_left_y - ny*dy, upper_left_y - ny*dy])
+                 upper_left_y - ny * dy, upper_left_y - ny * dy])
         try:
             ar1 = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
             ar2 = AromeDataRepository(EPSG, base_dir, filename=pattern, bounding_box=bbox)
@@ -128,6 +122,7 @@ class GeoTsRepositoryCollectionTestCase(unittest.TestCase):
             self.assertEqual("Only replace is supported yet", context.exception.args[0])
         except AromeDataRepositoryError as adre:
             self.skipTest("(test inconclusive- missing arome-data {0})".format(adre))
+
 
 if __name__ == '__main__':
     unittest.main()

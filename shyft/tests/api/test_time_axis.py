@@ -12,7 +12,8 @@ class TimeAxis(unittest.TestCase):
         self.c=api.Calendar()
         self.d=api.deltahours(1)
         self.n=24
-        self.t= self.c.trim(api.utctime_now(),self.d)
+        #self.t= self.c.trim(api.utctime_now(),self.d)
+        self.t= self.c.trim(self.c.time(api.YMDhms(1969,12,31,0,0,0)),self.d)
         self.ta=api.Timeaxis(self.t,self.d,self.n)
         
     def tearDown(self):

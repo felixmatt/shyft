@@ -12,7 +12,7 @@ from pyproj import Proj
 from pyproj import transform
 from shyft import api
 from .. import interfaces
-
+from .time_conversion import convert_netcdf_time
 
 class AromeDataRepositoryError(Exception):
     pass
@@ -347,6 +347,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         if not all([x, y, time]):
             raise AromeDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
+        time = convert_netcdf_time(time.units,time)
         data_cs = dataset.variables.get("projection_lambert", None)
         if data_cs is None:
             raise AromeDataRepositoryError("No coordinate system information in dataset.")

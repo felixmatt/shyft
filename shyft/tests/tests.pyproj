@@ -28,6 +28,7 @@
     <Compile Include="test_gis_region_model_repository.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="test_netcdftime.py" />
     <Compile Include="test_netcdf_geo_ts_repository.py" />
     <Compile Include="test_netcdf_region_model_repository.py" />
     <Compile Include="test_opendap_repository.py" />
