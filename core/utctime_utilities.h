@@ -175,7 +175,7 @@ namespace shyft {
                     return min_utctime;
 				if (!c.is_valid_coordinates())
 					throw std::runtime_error("Calendar.time with invalid YMDhms coordinates attempted");
-				return ((day_number(c) - UnixDay)*DAY) + seconds(c.hour, c.minute, c.second) - tz_offset;
+				return ((int(day_number(c)) - UnixDay)*DAY) + seconds(c.hour, c.minute, c.second) - tz_offset;
 			}
 			YMDhms  calendar_units(utctime t) const {
 				if (t == no_utctime) {
