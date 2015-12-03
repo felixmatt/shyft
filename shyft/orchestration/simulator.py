@@ -11,7 +11,7 @@ class SimulatorError(Exception):
     pass
 
 
-class SimpleSimulator(object):
+class DefaultSimulator(object):
     """
     This simlator orchestrates a simple shyft run based on repositories
     given as input.

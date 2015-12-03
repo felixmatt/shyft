@@ -9,12 +9,12 @@ from shyft.repository.netcdf import (
     RegionModelRepository, GeoTsRepository, yaml_config)
 from shyft.repository.interpolation_parameter_repository import (
     InterpolationParameterRepository)
-from shyft.orchestration import SimpleSimulator
+from shyft.orchestration import DefaultSimulator
 
 
 def get_simulator(cfg):
     """
-    Return a SimpleSimulator based on `cfg`.
+    Return a DefaultSimulator based on `cfg`.
 
     Parameters
     ----------
@@ -23,7 +23,7 @@ def get_simulator(cfg):
 
     Returns
     -------
-    SimpleSimulator instance
+    DefaultSimulator instance
     """
     # Read region, model and datasets config files
     region_config_file = os.path.join(
@@ -55,6 +55,6 @@ def get_simulator(cfg):
     region_id = 0
     interpolation_id = 0
     # set up the simulator
-    simulator = SimpleSimulator(region_id, interpolation_id, region_model,
+    simulator = DefaultSimulator(region_id, interpolation_id, region_model,
                                 geo_ts, interp_repos, None)
     return simulator

@@ -25,7 +25,7 @@ from shyft.repository.netcdf.yaml_config import YamlContent
 from shyft.repository.netcdf.yaml_config import RegionConfig
 from shyft.repository.netcdf.yaml_config import ModelConfig
 from shyft.repository.default_state_repository import DefaultStateRepository
-from shyft.orchestration.simulator import SimpleSimulator
+from shyft.orchestration.simulator import DefaultSimulator
 from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
 from shyft.orchestration.plotting import plot_np_percentiles
 from shyft import orchestration
@@ -76,7 +76,7 @@ class SimulationTestCase(unittest.TestCase):
 
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -237,7 +237,7 @@ class SimulationTestCase(unittest.TestCase):
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
 
         # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -304,7 +304,7 @@ class SimulationTestCase(unittest.TestCase):
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
 
         # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -422,7 +422,7 @@ class SimulationTestCase(unittest.TestCase):
             print("****{}****".format(e))
             self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test "
                           "inconclusive ****\n\t exception:{}".format(e))
-        simulator = SimpleSimulator(region_id,
+        simulator = DefaultSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
                                     geo_ts_repository,
