@@ -1,3 +1,3 @@
 ﻿from .simulator import SimpleSimulator
-from .config import OrchestrationConfig
+from .config import YAMLConfig
 from . import netcdf

@@ -12,7 +12,19 @@ from shyft.repository.interpolation_parameter_repository import (
 from shyft.orchestration import SimpleSimulator
 
 
-def get_simulator(cfg, *params):
+def get_simulator(cfg):
+    """
+    Return a SimpleSimulator based on `cfg`.
+
+    Parameters
+    ----------
+    cfg : YAMLConfig instance
+      Instance with the information for the simulation.
+
+    Returns
+    -------
+    SimpleSimulator instance
+    """
     # Read region, model and datasets config files
     region_config_file = os.path.join(
         cfg.config_dir, cfg.region_config_file)

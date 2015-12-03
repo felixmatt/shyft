@@ -1,5 +1,5 @@
 """
-Utilities for reading configurations for SHyFT simulations and calibrations.
+Utilities for reading YAML configurations for SHyFT simulations.
 """
 
 import os
@@ -29,12 +29,23 @@ class ConfigError(Exception):
     pass
 
 
-class OrchestrationConfig(object):
-    """
-    Concrete class for yaml content.
-    """
+class YAMLConfig(object):
 
     def __init__(self, config_file, config_section, **kwargs):
+        """
+        Setup a config instance for a netcdf orchestration from a YAML file.
+
+        Parameters
+        ----------
+        config_file : string
+          Path to the YAML configuration file
+        config_section : string
+          Section in YAML file for simulation parameters.
+
+        Returns
+        -------
+        YAMLConfig instance
+        """
         # The config_file needs to be an absolute path or have 'config_dir'
         if os.path.isabs(config_file):
             self._config_file = config_file
@@ -85,11 +96,10 @@ class OrchestrationConfig(object):
 
     def get_simulator(self):
         if not hasattr(self, "simulator"):
-            raise ConfigError("Asking for a missing 'simulator' section.")
+            raise ConfigError("Asking for a missing 'simulator' entry.")
         # Get the flavor and the params for the simulator
-        flavor = getattr(shyft.orchestration, self.simulator['flavor'])
-        params = self.simulator['params']
-        simulator = flavor.get_simulator(self, params)
+        flavor = getattr(shyft.orchestration, self.simulator)
+        simulator = flavor.get_simulator(self)
         return simulator
 
 

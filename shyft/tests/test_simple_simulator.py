@@ -28,7 +28,7 @@ from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.orchestration.simulator import SimpleSimulator
 from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
 from shyft.orchestration.plotting import plot_np_percentiles
-from shyft.orchestration import OrchestrationConfig
+from shyft import orchestration
 
 
 def print_param(header_text, param):
@@ -94,8 +94,9 @@ class SimulationTestCase(unittest.TestCase):
     def test_set_observed_state(self):
         # set up configuration
         config_dir = path.join(path.dirname(__file__), "netcdf")
-        cfg = OrchestrationConfig("atnsjoen_simulation.yaml", "atnsjoen",
-                                  config_dir=config_dir, data_dir=shyftdata_dir)
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_simulation.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir)
 
         # get a simulator
         simulator = cfg.get_simulator()
@@ -123,8 +124,9 @@ class SimulationTestCase(unittest.TestCase):
     def test_run_geo_ts_data_simulator(self):
         # set up configuration
         config_dir = path.join(path.dirname(__file__), "netcdf")
-        cfg = OrchestrationConfig("atnsjoen_simulation.yaml", "atnsjoen",
-                                  config_dir=config_dir, data_dir=shyftdata_dir)
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_simulation.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir)
 
         # get a simulator
         simulator = cfg.get_simulator()
@@ -136,9 +138,10 @@ class SimulationTestCase(unittest.TestCase):
     def run_calibration(self, model_t):
         # set up configuration
         config_dir = path.join(path.dirname(__file__), "netcdf")
-        cfg = OrchestrationConfig("atnsjoen_calibration.yaml", "atnsjoen",
-                                  config_dir=config_dir, data_dir=shyftdata_dir,
-                                  model_t=model_t)
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_calibration.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir,
+            model_t=model_t)
         time_axis = cfg.time_axis
 
         # get a simulator
