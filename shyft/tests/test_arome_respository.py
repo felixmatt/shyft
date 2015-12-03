@@ -17,18 +17,14 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         EPSG, bbox = self.arome_epsg_bbox
 
         # Period start
-        year = 2015
-        month = 8
-        day = 23
-        hour = 6
         n_hours = 30
-        date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
+        t0 = api.YMDhms(2015, 8, 24, 0)
+        date_str = "{}{:02}{:02}_{:02}".format(t0.year,t0.month, t0.day, t0.hour)
         utc = api.Calendar()  # No offset gives Utc
-        t0 = api.YMDhms(year, month, day, hour)
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
 
         base_dir = path.join(shyftdata_dir, "repository", "arome_data_repository")
-        f1 = "arome_metcoop_red_default2_5km_{}.nc".format(date_str)
+        f1 = "arome_metcoop_red_default2_5km_{}_diff_time_unit.nc".format(date_str)
         f2 = "arome_metcoop_red_test2_5km_{}.nc".format(date_str)
 
         ar1 = AromeDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox)
@@ -51,6 +47,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(p0.time(0) == temp0.time(0))
         self.assertTrue(r0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
         self.assertTrue(p0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
+        self.assertTrue(p0.time(0),period.start)
 
     @property
     def arome_epsg_bbox(self):
@@ -68,7 +65,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 65
         utc = api.Calendar()  # No offset gives Utc
@@ -144,7 +141,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
     def test_wrong_file(self):
         with self.assertRaises(AromeDataRepositoryError) as context:
             utc = api.Calendar()  # No offset gives Utc
-            t0 = api.YMDhms(2015, 12, 24, 18)
+            t0 = api.YMDhms(2015, 12, 25, 18)
             period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(30))
             ar1 = AromeDataRepository(32632, shyftdata_dir, filename="plain_wrong.nc")
             ar1.get_timeseries(("temperature",), period, None)
@@ -153,7 +150,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
     def test_wrong_forecast(self):
         with self.assertRaises(AromeDataRepositoryError) as context:
             utc = api.Calendar()  # No offset gives Utc
-            t0 = api.YMDhms(2015, 12, 24, 18)
+            t0 = api.YMDhms(2015, 12, 25, 18)
             period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(30))
             ar1 = AromeDataRepository(32632, shyftdata_dir, filename="plain_wrong_*.nc")
             ar1.get_forecast(("temperature",), period, utc.time(t0), None)
@@ -167,7 +164,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 30
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
@@ -191,7 +188,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 30
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
@@ -213,7 +210,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 30
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
@@ -244,7 +241,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 30
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)
@@ -268,7 +265,7 @@ class AromeDataRepositoryTestCase(unittest.TestCase):
         # Period start
         year = 2015
         month = 8
-        day = 23
+        day = 24
         hour = 6
         n_hours = 30
         date_str = "{}{:02}{:02}_{:02}".format(year, month, day, hour)

@@ -30,7 +30,8 @@ class Calendar(unittest.TestCase):
         self.assertEqual(a.day, c.day, 'should leave same day')
 
     def test_conversion_roundtrip(self):
-        c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
+        #c1 = api.YMDhms(2000, 1, 2, 3, 4, 5)
+        c1 = api.YMDhms(1960, 1, 2, 3, 4, 5)
         t1 = self.std.time(c1)
         c2 = self.std.calendar_units(t1)
         self.assertEqual(c1.year, c2.year, 'roundtrip should keep year')
@@ -67,6 +68,12 @@ class Calendar(unittest.TestCase):
         p = api.UtcPeriod(t, t + api.deltahours(1))
         s = str(p)
         self.assertEqual(s, "[2000.01.02T03:04:05,2000.01.02T04:04:05>")
+
+    def test_swig_python_time(self):
+        c1 = api.YMDhms(1969, 12, 31, 23, 0, 0)
+        t = self.utc.time(c1)
+        t_str= self.utc.to_string(t)
+        self.assertEquals(t,api.deltahours(-1))
 
 
 if __name__ == "__main__":
