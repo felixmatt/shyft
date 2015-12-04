@@ -11,6 +11,7 @@ import numpy as np
 from netCDF4 import Dataset
 from .. import interfaces
 from shyft import api, shyftdata_dir
+from shyft.repository import geo_ts_repository_collection
 
 
 def abs_datafilepath(filepath):
@@ -162,3 +163,15 @@ class GeoTsRepository(interfaces.GeoTsRepository):
     def get_forecast_ensemble(self, input_source_types, utc_period,
                               t_c, geo_location_criteria=None):
         raise NotImplementedError("get_forecast_ensemble")
+
+
+def get_geo_ts_collection(datasets_config, data_dir):
+    """Return a collection of geo-ts repos in datasets config file."""
+    geo_ts_repos = []
+    for source in datasets_config.sources:
+        station_file = source["params"]["stations_met"]
+        if not os.path.isabs(station_file):
+            # Relative paths will be prepended the data_dir
+            station_file = os.path.join(data_dir, station_file)
+        geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
+    return geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos)
