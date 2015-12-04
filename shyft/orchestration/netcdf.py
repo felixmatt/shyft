@@ -56,5 +56,5 @@ def get_simulator(cfg):
     interpolation_id = 0
     # set up the simulator
     simulator = DefaultSimulator(region_id, interpolation_id, region_model,
-                                geo_ts, interp_repos, None)
+                                 geo_ts, interp_repos, None)
     return simulator
