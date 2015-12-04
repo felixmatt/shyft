@@ -1,6 +1,5 @@
 ---
 atnsjoen:
-  simulator: netcdf  # the kind of simulator to be build
   region_config_file: atnsjoen_calibration_region.yaml
   model_config_file: model.yaml
   datasets_config_file: atnasjoen_datasets.yaml

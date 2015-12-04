@@ -10,7 +10,11 @@ import numpy as np
 
 from shyft import api
 from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
-import shyft.orchestration
+from shyft.repository.netcdf import (
+    RegionModelRepository, GeoTsRepository, get_geo_ts_collection, yaml_config)
+from shyft.repository.interpolation_parameter_repository import (
+    InterpolationParameterRepository)
+from .simulator import DefaultSimulator
 
 
 utc_calendar = api.Calendar()
@@ -95,13 +99,37 @@ class YAMLConfig(object):
             self.model_t = getattr(globals()[module], model_t)
 
     def get_simulator(self):
-        if not hasattr(self, "simulator"):
-            raise ConfigError("Asking for a missing 'simulator' entry.")
-        # Get the flavor and the params for the simulator
-        flavor = getattr(shyft.orchestration, self.simulator)
-        simulator = flavor.get_simulator(self)
-        return simulator
+        """
+        Return a DefaultSimulator based on `cfg`.
 
+        Returns
+        -------
+        DefaultSimulator instance
+        """
+        # Read region, model and datasets config files
+        region_config_file = os.path.join(
+            self.config_dir, self.region_config_file)
+        region_config = yaml_config.RegionConfig(region_config_file)
+        model_config_file = os.path.join(
+            self.config_dir, self.model_config_file)
+        model_config = yaml_config.ModelConfig(model_config_file)
+        datasets_config_file = os.path.join(
+            self.config_dir, self.datasets_config_file)
+        datasets_config = yaml_config.YamlContent(datasets_config_file)
+
+        # Build some interesting constructs
+        region_model = RegionModelRepository(
+            region_config, model_config, self.model_t, self.epsg)
+        interp_repos = InterpolationParameterRepository(model_config)
+        geo_ts = get_geo_ts_collection(datasets_config, self.data_dir)
+
+        # some fake ids
+        region_id = 0
+        interpolation_id = 0
+        # set up the simulator
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model,
+                                     geo_ts, interp_repos, None)
+        return simulator
 
     def __repr__(self):
         srepr = "%s::%s(" % (self.__class__.__name__, self._config_section)
