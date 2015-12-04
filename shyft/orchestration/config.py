@@ -123,9 +123,10 @@ class YAMLConfig(object):
         interp_repos = InterpolationParameterRepository(model_config)
         geo_ts = get_geo_ts_collection(datasets_config, self.data_dir)
 
-        # some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # If region and interpolation ids are not present, just use fake ones
+        region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
+        interpolation_id = 0 if not hasattr(self, "interpolation_id") \
+                           else int(self.interpolation_id)
         # set up the simulator
         simulator = DefaultSimulator(region_id, interpolation_id, region_model,
                                      geo_ts, interp_repos, None)

@@ -6,6 +6,8 @@ atnsjoen:
   start_datetime: 2010-01-01T00:00:00
   run_time_step: 86400  # 1 day time step
   number_of_steps: 30   # 1 month
+  #region_id: 1          # this is optional (default 0)
+  #interpolation_id: 2   # this is optional (default 0)
   epsg: 32633
   model_t: pt_gs_k.PTGSKModel  # model to construct
 
