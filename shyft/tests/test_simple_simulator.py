@@ -42,7 +42,7 @@ class SimulationTestCase(unittest.TestCase):
     def setUp(self):
 
         self.region_config_file = path.join(path.dirname(__file__), "netcdf",
-                                            "atnasjoen_region.yaml")
+                                            "atnsjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def run_simulator(self, model_t):
@@ -222,7 +222,8 @@ class SimulationTestCase(unittest.TestCase):
         model_t = pt_gs_k.PTGSKModel
 
         # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf",
+                                        "atnsjoen_datasets.yaml")
         region_config_file = path.join(path.dirname(__file__), "netcdf",
                                        "atnsjoen_calibration_region.yaml")
         region_config = RegionConfig(region_config_file)
@@ -289,7 +290,8 @@ class SimulationTestCase(unittest.TestCase):
         model_t = pt_gs_k.PTGSKOptModel
 
         # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf",
+                                        "atnsjoen_datasets.yaml")
         region_config_file = path.join(path.dirname(__file__), "netcdf",
                                        "atnsjoen_calibration_region.yaml")
         region_config = RegionConfig(region_config_file)
