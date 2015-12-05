@@ -22,7 +22,7 @@ try:
     from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
     from shyft.repository.service.gis_location_service import GisLocationService
     from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD,FC_PROD,PREPROD,FC_PREPROD
-    from shyft.orchestration.simulator import SimpleSimulator
+    from shyft.orchestration.simulator import DefaultSimulator
     from shyft.repository.interfaces import TsStoreItem
     from shyft.repository.interfaces import TimeseriesStore
     from shyft.repository.netcdf.arome_data_repository import AromeDataRepository
@@ -54,7 +54,7 @@ try:
         """
         This is a test/demo class, showing how we could run catchment Tistel (vik in sogn)
         using statkraft repositories (incl gis and db-services),
-        and the orchestator SimpleSimulator to do the work.
+        and the orchestator DefaultSimulator to do the work.
         """
         def test_run_observed_then_arome_and_store(self):
             """
@@ -70,7 +70,7 @@ try:
             fc_time_axis = Timeaxis(utc.time(YMDhms(2015,10,1, 0)), deltahours(1), 65)
             
             interpolation_id = 0
-            ptgsk = SimpleSimulator("Tistel-ptgsk", 
+            ptgsk = DefaultSimulator("Tistel-ptgsk", 
                                         interpolation_id, 
                                         self.region_model_repository,
                                         self.geo_ts_repository, 

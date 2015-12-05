@@ -1,7 +1,20 @@
 """
 Read region netCDF files with cell data.
-Note: It does require a specific content/layout of the supplied netcdf files
+
+This part of code is a reworked version of former orchestration2, that
+depended heavily on yaml & dictionaries as a general approach. (Deprecated)
+
+Current state is that it's not dependent on yaml anymore, configs goes into constructor etc.,
+but there are still some more improvement to be done regarding use of untyped dictionaries
+Ref. Note2 below. for future directions and changes.
+
+Note1: It does require a specific content/layout of the supplied netcdf files
       this should be clearly stated.
+
+Note2: The configuration classes are currently very loosely specified,
+       and fueled by Yaml that will (sooner or later) lead to errors deep inside
+       the repository. The goal is to fix these issues through a series of changes.
+
 """
 
 from __future__ import absolute_import
@@ -23,10 +36,32 @@ from shyft import shyftdata_dir
 
 class RegionConfig(object):
     __metaclass__ = ABCMeta
-
+    """
+    Provides region model catchment level parameters and domain bounding box
+    """
     @abstractmethod
     def parameter_overrides(self):
         """
+        TODO: Comments from SiH:
+          Intent is clear, but returned result is unclear
+          regarding definition of valid parameter_overrides.
+          The practical use is like
+           {    1234: {
+                    kirchner:{c1:-2.41,c2:-0.93},
+                    gamma_snow:{tx:0.7}
+                },
+                5678: {
+                    kirchner: {c3:0.03},
+                    gamma_snow:{cx:-0.8}
+                }
+            }
+
+            What if we instead of overrides, just specified the complete valid parameters ?
+            Then we got type-safe checked parameters instead.
+            Then any errors (in name/mapping from storage to shyft) is detected early,
+             - at the spot where it needs to be fixed - ?
+
+
         Returns
         -------
         overrides: dict
@@ -38,6 +73,9 @@ class RegionConfig(object):
     @abstractmethod
     def domain(self):
         """
+        TODO: Comments from SiH;
+          This specific method should provide a BoundingBoxRegion(interfaces.BoundingRegion)
+          instead of a dictionary.
         Returns
         -------
         domain: dict
@@ -61,10 +99,21 @@ class RegionConfig(object):
 
 class ModelConfig(object):
     __metaclass__ = ABCMeta
+    """
+    Provide
+        interpolation parameters, for projection of region level environment
+            like precipitation temperature, radiation, wind-speed.
 
+        model parameters, specific for the method stacks to be used.
+
+    """
     @abstractmethod
     def interpolation_parameters(self):
         """
+        TODO: Comments from SiH;
+            Use api-type for interpolation parameters, and return that.
+            Ensures that the config provides something well known and verified.
+
         Returns
         -------
         parameters: dict
@@ -75,6 +124,10 @@ class ModelConfig(object):
     @abstractmethod
     def model_parameters(self):
         """
+        TODO: Comments from SiH;
+            Similar for the above comments, - use well defined and specific types
+            instead of dictionaries. Strong model parameters types are provided by shyft api.
+
         Returns
         -------
         parameters: dict
@@ -105,6 +158,15 @@ class RegionModelRepository(interfaces.RegionModelRepository):
             * reservoir-fraction: float array of dim (xcoord, ycoord)
         * Group "glacier-fraction" with variables:
             * glacier-fraction: float array of dim (xcoord, ycoord)
+
+    Limitations:
+        This RegionModelRepository currently provide only ONE model pr. region-model instance.
+        The .get_region_model(region_id,..) ignores the region_id, as there is only one model
+        Future extensions:
+         Pass maps of configurations into constructor, {'region-id', configuration}*
+         Then do a lookup in this map to provide the model.
+         Alternatively, and maybe better: Use this Repository as a component in another
+         fully specified Repository that keeps several *named/identified* models).
     """
 
     def __init__(self, region_config, model_config, region_model, epsg):
@@ -271,8 +333,8 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                 for p_type_name, value_ in iteritems(v):
                     if p_type_name in name_map:
                         sub_param = getattr(param, name_map[p_type_name])
-                        for p, v in iteritems(value_):
-                            setattr(sub_param, p, v)
+                        for p, pv in iteritems(value_):
+                            setattr(sub_param, p, pv)
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
                 catchment_parameters[k] = param

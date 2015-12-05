@@ -1,0 +1,12 @@
+---
+atnsjoen:
+  region_config_file: atnsjoen_calibration_region.yaml
+  model_config_file: model.yaml
+  datasets_config_file: atnsjoen_datasets.yaml
+  start_datetime: 2010-01-01T00:00:00
+  run_time_step: 86400  # 1 day time step
+  number_of_steps: 30   # 1 month
+  epsg: 32633
+  model_t: pt_gs_k.PTGSKModel  # model to construct
+
+...

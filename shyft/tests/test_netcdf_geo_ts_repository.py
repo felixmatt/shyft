@@ -15,9 +15,12 @@ class NetCDFGeoTsRepositoryTestCase(unittest.TestCase):
     based file-store.
     """
     def _construct_from_test_data(self):
-        met = path.join(shyftdata_dir, "netcdf", "orchestration-testdata","atnasjoen_met.nc")
-        dis = path.join(shyftdata_dir, "netcdf", "orchestration-testdata","atnasjoen_discharge.nc")
-        map_cfg_file = path.join(path.dirname(__file__), "netcdf", "datasets.yaml")
+        met = path.join(shyftdata_dir, "netcdf", "orchestration-testdata",
+                        "atnasjoen_met.nc")
+        dis = path.join(shyftdata_dir, "netcdf", "orchestration-testdata",
+                        "atnasjoen_discharge.nc")
+        map_cfg_file = path.join(path.dirname(__file__), "netcdf",
+                                 "datasets.yaml")
         map_cfg = YamlContent(map_cfg_file)
         params = map_cfg.sources[0]['params']  # yes, hmm.
         return GeoTsRepository(params, met, dis)

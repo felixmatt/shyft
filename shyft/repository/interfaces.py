@@ -346,6 +346,7 @@ class BoundingRegion(object):
         ----------
         epsg: string
             epsg id of the resulting coordinates
+
         Returns
         -------
         x: np.ndarray
@@ -364,6 +365,7 @@ class BoundingRegion(object):
         ----------
         epsg: string
             epsg id of the resulting coordinates
+
         Returns
         -------
         x: np.ndarray
@@ -389,40 +391,37 @@ class InterfaceError(Exception):
 
 
 class TsStoreItem(object):
-    """
-    Represent a minimal mapping between the
-    destination_id in the ts-store (like SmG, ts-name),
-    and the lambda/function that from a supplied model extracts, 
-    and provides a ts 
-    possibly transformed/clipped to the wanted resolution and range.
-    
+    """Represent a minimal mapping between the destination_id in the
+    ts-store (like SmG, ts-name), and the lambda/function that from a
+    supplied model extracts, and provides a ts possibly
+    transformed/clipped to the wanted resolution and range.
+
     See: TimeseriesStore for usage
-    
+
     """
 
     def __init__(self, destination_id, extract_method):
         """
         Parameters
         ----------
-        destination_id: string or id 
-         - meaningful for the time-series store, identifes a unique time-series
-         
-        extract_method: callable 
-        - that takes shyft.api model as input and return a shyft.api time-series
+        destination_id: string or id
+            meaningful for the time-series store, identifes a unique time-series
+
+        extract_method: callable
+            takes shyft.api model as input and return a shyft.api time-series
         """
         self.destination_id = destination_id
         self.extract_method = extract_method
 
 
 class TimeseriesStore(object):
-    """
-    Represent a repository, that is capable of storing time-series 
-     (with almost no metadata, or they are provided elsewhere)
-    Typical example would be Powel SmG, a netcdf-file-based ts-store etc.
-    
+    """Represent a repository, that is capable of storing time-series
+    (with almost no metadata, or they are provided elsewhere) Typical
+    example would be Powel SmG, a netcdf-file-based ts-store etc.
+
     The usage of this class would be as a final step in orchestration,
     where we would like to save some simulation result to a database.
-    
+
     """
 
     def __init__(self, tss, ts_item_list):
@@ -430,26 +429,26 @@ class TimeseriesStore(object):
         Parameters
         ----------
         tss: TsRepository
-         - provides a method tss.store({ts_id:shyft.api.TimeSeries})
+             provides a method tss.store({ts_id:shyft.api.TimeSeries})
         ts_item_list: TsStoreItem
-         - provide a list of mappings between ts_id and model extract function
-           ref. to TsStoreItem class for description.
+             provide a list of mappings between ts_id and model extract function
+             ref. to TsStoreItem class for description.
         """
         self.tss = tss
         self.ts_item_list = ts_item_list
 
     def store_ts(self, region_model):
         """
-        Extracts time-series from the region_model, according to 
+        Extracts time-series from the region_model, according to
         the ts_item_list (ref. to constructor description and TsStoreItem)
         and store the result by means of the self.tss.store method.
-        
+
         Parameters
         ----------
         region_model: shyft.api model type, like PTGSKModel
-         - the model is passed to the extract-methods so that correct ts
-           is fetched out.
-          
+            the model is passed to the extract-methods so that correct ts
+            is fetched out.
+
         Returns
         -------
         True if storing all ts went well, otherwise False

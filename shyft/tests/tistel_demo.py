@@ -29,7 +29,7 @@ from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD, FC_PROD
 from shyft.orchestration.plotting import plot_np_percentiles
 from shyft.orchestration.plotting import set_calendar_formatter
 from shyft.orchestration.plotting import utc_to_greg
-from shyft.orchestration.simulator import SimpleSimulator as Simulator
+from shyft.orchestration.simulator import DefaultSimulator as Simulator
 
 
 def create_tistel_simulator(model, geo_ts_repository):
