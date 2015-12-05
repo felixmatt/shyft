@@ -25,9 +25,10 @@ from shyft.repository.netcdf.yaml_config import YamlContent
 from shyft.repository.netcdf.yaml_config import RegionConfig
 from shyft.repository.netcdf.yaml_config import ModelConfig
 from shyft.repository.default_state_repository import DefaultStateRepository
-from shyft.orchestration.simulator import SimpleSimulator
+from shyft.orchestration.simulator import DefaultSimulator
 from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
 from shyft.orchestration.plotting import plot_np_percentiles
+from shyft import orchestration
 
 
 def print_param(header_text, param):
@@ -41,7 +42,7 @@ class SimulationTestCase(unittest.TestCase):
     def setUp(self):
 
         self.region_config_file = path.join(path.dirname(__file__), "netcdf",
-                                            "atnasjoen_region.yaml")
+                                            "atnsjoen_region.yaml")
         self.model_config_file = path.join(path.dirname(__file__), "netcdf", "model.yaml")
 
     def run_simulator(self, model_t):
@@ -75,7 +76,7 @@ class SimulationTestCase(unittest.TestCase):
 
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -91,42 +92,19 @@ class SimulationTestCase(unittest.TestCase):
         self.run_simulator(pt_ss_k.PTSSKModel)
 
     def test_set_observed_state(self):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_simulation.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir)
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config = RegionConfig(self.region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         state = state_repos.get_state(0)
-        simulator.run(time_axis, state)
+        simulator.run(cfg.time_axis, state)
         simulator.region_model.get_states(state)
         obs_discharge = 0.0
         state = simulator.discharge_adjusted_state(obs_discharge, state)
@@ -144,78 +122,33 @@ class SimulationTestCase(unittest.TestCase):
         self.assertAlmostEqual(obs_discharge, adj_discharge)
 
     def test_run_geo_ts_data_simulator(self):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_simulation.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir)
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Model
-        model_t = pt_gs_k.PTGSKModel
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config = RegionConfig(self.region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
-        simulator.run(time_axis, state_repos.get_state(0))
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        simulator.run(cfg.time_axis, state_repos.get_state(0))
 
     def run_calibration(self, model_t):
-        # Simulation time axis
-        year, month, day, hour = 2010, 1, 1, 0
-        dt = 24*api.deltahours(1)
-        n_steps = 30
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        # set up configuration
+        config_dir = path.join(path.dirname(__file__), "netcdf")
+        cfg = orchestration.YAMLConfig(
+            "atnsjoen_calibration.yaml", "atnsjoen",
+            config_dir=config_dir, data_dir=shyftdata_dir,
+            model_t=model_t)
+        time_axis = cfg.time_axis
 
-        # Some fake ids
-        region_id = 0
-        interpolation_id = 0
+        # get a simulator
+        simulator = cfg.get_simulator()
 
-        # Simulation coordinate system
-        epsg = "32633"
-
-        # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
-        region_config_file = path.join(path.dirname(__file__), "netcdf",
-                                       "atnsjoen_calibration_region.yaml")
-        region_config = RegionConfig(region_config_file)
-        model_config = ModelConfig(self.model_config_file)
-        dataset_config = YamlContent(dataset_config_file)
-        region_model_repository = RegionModelRepository(region_config, model_config, model_t, epsg)
-        interp_repos = InterpolationParameterRepository(model_config)
-        netcdf_geo_ts_repos = []
-        for source in dataset_config.sources:
-            station_file = source["params"]["stations_met"]
-            netcdf_geo_ts_repos.append(GeoTsRepository(source["params"], station_file, ""))
-        geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
-
-        # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
         target_discharge = simulator.region_model.statistics.discharge([cid])
@@ -246,8 +179,8 @@ class SimulationTestCase(unittest.TestCase):
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
         target_spec_vec = api.TargetSpecificationVector([target_spec])
-        p_opt = simulator.optimize(time_axis, state_repos.get_state(0), target_spec_vec,
-                                   p_guess, p_min, p_max)
+        p_opt = simulator.optimize(time_axis, state_repos.get_state(0),
+                                   target_spec_vec, p_guess, p_min, p_max)
 
         simulator.region_model.set_catchment_parameter(cid, p_opt)
         simulator.run(time_axis, state_repos.get_state(0))
@@ -289,7 +222,8 @@ class SimulationTestCase(unittest.TestCase):
         model_t = pt_gs_k.PTGSKModel
 
         # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf",
+                                        "atnsjoen_datasets.yaml")
         region_config_file = path.join(path.dirname(__file__), "netcdf",
                                        "atnsjoen_calibration_region.yaml")
         region_config = RegionConfig(region_config_file)
@@ -304,7 +238,7 @@ class SimulationTestCase(unittest.TestCase):
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
 
         # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -319,13 +253,14 @@ class SimulationTestCase(unittest.TestCase):
         lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
         t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
         percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
-        if 'DISPLAY' in environ.keys():
-            from matplotlib import pylab as plt
-            plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
-            set_calendar_formatter(api.Calendar())
-            plt.show()
-        else:
-            print("DISPLAY not set, not showing plot")
+        # The next should be moved into an example directory
+        # if 'DISPLAY' in environ.keys():
+        #     from matplotlib import pylab as plt
+        #     plot_np_percentiles(utc_to_greg(t), percentiles, base_color=(51/256, 102/256, 193/256))
+        #     set_calendar_formatter(api.Calendar())
+        #     plt.show()
+        # else:
+        #     print("DISPLAY not set, not showing plot")
 
     def test_snow_and_ground_water_response_calibration(self):
         """
@@ -355,7 +290,8 @@ class SimulationTestCase(unittest.TestCase):
         model_t = pt_gs_k.PTGSKOptModel
 
         # Configs and repositories
-        dataset_config_file = path.join(path.dirname(__file__), "netcdf", "atnasjoen_datasets.yaml")
+        dataset_config_file = path.join(path.dirname(__file__), "netcdf",
+                                        "atnsjoen_datasets.yaml")
         region_config_file = path.join(path.dirname(__file__), "netcdf",
                                        "atnsjoen_calibration_region.yaml")
         region_config = RegionConfig(region_config_file)
@@ -370,7 +306,7 @@ class SimulationTestCase(unittest.TestCase):
         geo_ts_repository = GeoTsRepositoryCollection(netcdf_geo_ts_repos)
 
         # Construct target discharge series
-        simulator = SimpleSimulator(region_id, interpolation_id, region_model_repository,
+        simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                     geo_ts_repository, interp_repos, None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
@@ -440,17 +376,18 @@ class SimulationTestCase(unittest.TestCase):
         t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
         f_vs = np.array(found_discharge.v)
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
+        # The next should be moved into an example directory
         # Simple demo plotting that should be turned off during unit testing:
-        if 'DISPLAY' in environ.keys():
-            from matplotlib import pylab as plt
-            plt.plot(utc_to_greg(t_ts), t_vs)
-            plt.hold(1)
-            plt.plot(utc_to_greg(f_ts), f_vs)
-            plt.ylabel("Discharge in $m^3s^{-1}$")
-            plt.xlabel("Time in utc time axis dimension")
-            set_calendar_formatter(api.Calendar())
-            plt.legend(["Synthetic discharge", "Calibrated discharge"])
-            plt.show()
+        # if 'DISPLAY' in environ.keys():
+        #     from matplotlib import pylab as plt
+        #     plt.plot(utc_to_greg(t_ts), t_vs)
+        #     plt.hold(1)
+        #     plt.plot(utc_to_greg(f_ts), f_vs)
+        #     plt.ylabel("Discharge in $m^3s^{-1}$")
+        #     plt.xlabel("Time in utc time axis dimension")
+        #     set_calendar_formatter(api.Calendar())
+        #     plt.legend(["Synthetic discharge", "Calibrated discharge"])
+        #     plt.show()
 
     def test_run_arome_ensemble(self):
         # Simulation time axis
@@ -487,7 +424,7 @@ class SimulationTestCase(unittest.TestCase):
             print("****{}****".format(e))
             self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test "
                           "inconclusive ****\n\t exception:{}".format(e))
-        simulator = SimpleSimulator(region_id,
+        simulator = DefaultSimulator(region_id,
                                     interpolation_id,
                                     region_model_repository,
                                     geo_ts_repository,

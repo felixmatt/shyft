@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from .region_model import RegionModelRepository
 from .arome_data_repository import AromeDataRepository
 from .arome_data_repository import AromeDataRepositoryError
-from .geo_ts_repository import GeoTsRepository
+from .geo_ts_repository import GeoTsRepository, get_geo_ts_collection
 
 __all__ = ["RegionModelRepository",
            "AromeDataRepository",
