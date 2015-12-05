@@ -14,7 +14,7 @@ class SimulatorError(Exception):
 
 class DefaultSimulator(object):
     """
-    This simlator orchestrates a simple shyft run based on repositories
+    This simulator orchestrates a simple shyft run based on repositories
     given as input.
     """
 
@@ -27,12 +27,12 @@ class DefaultSimulator(object):
         Parameters
         ----------
         region_id: string
-            Region identifyer to be used with the region model repository
+            Region identifier to be used with the region model repository
             to qualify what region to use.
         interpolation_id: string
             Identifier to use with the interpolation parameter
             repository.
-        region_model_repostiory: interfaces.RegionModelRepository subclass
+        region_model_repository: interfaces.RegionModelRepository subclass
             Repository that can deliver a model with initialized cells
         geo_ts_repository: interfaces.GeoTsRepository subclass
             Repository that can deliver time series data to drive simulator.
@@ -58,12 +58,12 @@ class DefaultSimulator(object):
         Parameters
         ----------
         region_id: string
-            Region identifyer to be used with the region model repository
+            Region identifier to be used with the region model repository
             to qualify what region to use.
         interpolation_id: string
             Identifier to use with the interpolation parameter
             repository.
-        region_model_repostiory: interfaces.RegionModelRepository subclass
+        region_model_repository: interfaces.RegionModelRepository subclass
             Repository that can deliver a model with initialized cells
         geo_ts_repository: interfaces.GeoTsRepository subclass
             Repository that can deliver time series data to drive simulator.

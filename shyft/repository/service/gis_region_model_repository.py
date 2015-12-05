@@ -441,7 +441,7 @@ class DTMFetcher(object):
 
 class RegionModelConfig(object):
     """
-    Describes the needed mapping betwen a symbolic region-model name and
+    Describes the needed mapping between a symbolic region-model name and
     the fields/properties needed to extract correct boundaries(shapes)
     from the published services.
     The published services needs:
@@ -469,13 +469,13 @@ class RegionModelConfig(object):
         region_parameters: region_model_type.parameter_t()
          - specifies the concrete parameters at region-level that should be used
         grid_specification: GridSpecification
-         - specifies the grid, provides boundingbox and means of creating the cells
+         - specifies the grid, provides bounding-box and means of creating the cells
         catchment_regulated_type: string
          - 'REGULATED'|'UNREGULATED' - type of catchments used in statkraft
         service_id_field_name:string
          - specifies the service- where clause field, that is matched up against the id_list
         id_list:list of identifiers, int
-         - specifies the identifiers that should be retreived (matched against the service_id_field_name) 
+         - specifies the identifiers that should be fetched (matched against the service_id_field_name)
          
         TODO: consider also to add catchment level parameters
         
@@ -508,7 +508,7 @@ class GisRegionModelRepository(RegionModelRepository):
 
     def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
-        # neannidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
+        # neanidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
         return self._region_id_config[
             region_id]  # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
 

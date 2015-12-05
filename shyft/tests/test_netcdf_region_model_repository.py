@@ -3,8 +3,8 @@ from os import path
 import numpy as np
 from netCDF4 import Dataset
 from shyft import shyftdata_dir
-from shyft.repository.netcdf.region_model import RegionModelRepository
-from shyft.repository.netcdf.region_model import BoundingBoxRegion
+from shyft.repository.netcdf.region_model_repository import RegionModelRepository
+from shyft.repository.netcdf.region_model_repository import BoundingBoxRegion
 from shyft.repository.netcdf import yaml_config
 from shyft.api.pt_gs_k import PTGSKModel
 
