@@ -34,6 +34,10 @@ from shyft import api
 from shyft import shyftdata_dir
 
 
+class RegionConfigError(Exception):
+    pass
+
+
 class RegionConfig(object):
     __metaclass__ = ABCMeta
     """
@@ -66,7 +70,7 @@ class RegionConfig(object):
         -------
         overrides: dict
             Dictionary with parameter overrides for catchments:
-            {catchmend_id: parameter_overrides}
+            {catchment_id: parameter_overrides}
         """
         pass
 
@@ -337,6 +341,11 @@ class RegionModelRepository(interfaces.RegionModelRepository):
                             setattr(sub_param, p, pv)
                     elif p_type_name == "p_corr_scale_factor":
                         param.p_corr.scale_factor = value_
+                    else:
+                        # Avoid unknown params to go unadvertised
+                        raise RegionConfigError(
+                            "parameter {} is not in the set of allowed ones".format(p_type_name))
+
                 catchment_parameters[k] = param
         region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
         region_model.bounding_region = bounding_region
