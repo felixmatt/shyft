@@ -1,4 +1,3 @@
-swig
 numpy
 netcdf4
 pyyaml
