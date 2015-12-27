@@ -223,7 +223,7 @@ namespace shyft {
             void clone(const region_model& c) {
                 // First, clear own content
                 ncore = c.ncore;
-                time_axis = c.time_axis; 
+                time_axis = c.time_axis;
                 catchment_filter = c.catchment_filter;
                 n_catchments = c.n_catchments;
                 catchment_parameters.clear();
@@ -560,16 +560,15 @@ namespace shyft {
              *       cell-types that are used during calibration/optimization
              */
             void set_state_collection(int catchment_id, bool on_or_off) {
-                for_each(begin(*cells), end(*cells), [on_or_off, catchment_id](cell_t& cell) {
+                for(auto& cell:*cells)
                     if (catchment_id == -1 || (int)cell.geo.catchment_id() == catchment_id )
                         cell.set_state_collection(on_or_off);
-                });
             }
             /** \return cells as shared_ptr<vector<cell_t>> */
             cell_vec_t_ get_cells() { return cells; }
 
             /** \return number of cells */
-            size_t size() const { return std::distance(begin(*cells), end(*cells)); }
+            size_t size() const { return distance(begin(*cells), end(*cells)); }
 
             /** \brief catchment_discharges, vital for calibration
              * \tparam TSV a vector<timeseries> type, where timeseries supports:
@@ -579,7 +578,7 @@ namespace shyft {
              *
              */
             template <class TSV>
-            void  catchment_discharges( TSV& cr) const {
+            void catchment_discharges( TSV& cr) const {
                 typedef typename TSV::value_type ts_t;
                 cr.clear();
                 cr.reserve(n_catchments);
@@ -591,6 +590,7 @@ namespace shyft {
                         cr[c.geo.catchment_id()].add(c.rc.avg_discharge);
                 }
             }
+
         protected:
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *

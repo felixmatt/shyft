@@ -155,6 +155,13 @@ namespace shyft{
 			KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
 		};
 
+		/** \brief property_type for target specification */
+		enum catchment_property_type {
+            DISCHARGE,
+            SNOW_COVERED_AREA,
+            SNOW_WATER_EQUIVALENT
+		};
+
 		/** \brief The target specification contains:
 		* -# a target ts (the observed quantity)
 		* -# a list of catchment ids (zero-based), that denotes the catchment.discharges that should equal the target ts.
@@ -168,12 +175,12 @@ namespace shyft{
 		struct target_specification {
 			typedef PS target_time_series_t;
 			target_specification()
-              : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), s_r(1.0), s_a(1.0), s_b(1.0) {}
+              : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {}
 #ifndef SWIG
 			target_specification(const target_specification& c)
-              : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor), 
+              : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
                 calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
-			target_specification(target_specification&&c) 
+			target_specification(target_specification&&c)
               : ts(std::move(c.ts)),
                 catchment_indexes(std::move(c.catchment_indexes)),
                 scale_factor(c.scale_factor), calc_mode(c.calc_mode),
@@ -204,13 +211,14 @@ namespace shyft{
              */
 			target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                                  target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r=1.0,
-                                 double s_a=1.0, double s_b=1.0)
+                                 double s_a=1.0, double s_b=1.0, catchment_property_type catchment_property_ = DISCHARGE)
               : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
-                calc_mode(calc_mode), s_r(s_r), s_a(s_a), s_b(s_b) {}
+                calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b) {}
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes (zero based) that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
 			target_spec_calc_type calc_mode;
+			catchment_property_type catchment_property;
 			double s_r; ///< KG-scalefactor for correlation
 			double s_a; ///< KG-scalefactor for alpha (variance)
 			double s_b; ///< KG-scalefactor for beta (bias)
@@ -249,6 +257,7 @@ namespace shyft{
             typedef typename M::state_t state_t;
             typedef typename M::parameter_t parameter_t;
             typedef typename M::cell_t cell_t;
+            typedef typename cell_t::response_collector_t response_collector_t;
           private:
 #ifndef SWIG
 		public:
@@ -442,6 +451,75 @@ namespace shyft{
                 return p;
             }
 		  private:
+
+            pts_t compute_discharge_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
+                pts_t discharge_sum(model.time_axis,0.0);
+                if(catchment_d.empty())
+                    model.catchment_discharges(catchment_d);
+                for(auto i : t.catchment_indexes)
+                    discharge_sum.add(catchment_d[i]);
+                return discharge_sum;
+            }
+
+            template<class T,class=void>
+            struct detect_snow_sca:false_type{};
+
+            template<class T>
+            struct detect_snow_sca<T,decltype(T::snow_sca,void())>:true_type{};
+
+            template<class rc_t = response_collector_t>
+            enable_if_t<detect_snow_sca<rc_t>::value,pts_t> compute_sca_sum(target_specification_t& t,vector<pts_t>& catchment_sca) const {
+                if(catchment_sca.empty()){
+                    catchment_sca=vector<pts_t>(model.n_catchments,pts_t(model.time_axis, 0.0));
+                    vector<double> ca(model.n_catchments,0.0);
+                    for(const auto& c: *model.cells) {
+                        if (is_calculated(c.geo.catchment_id())){
+                            catchment_sca[c.geo.catchment_id()].add_scale(c.rc.snow_sca,c.geo.area());
+                            ca[c.geo.catchment_id()]+=c.geo.area(); //using entire cell geo area for now.
+                        }
+                    }
+                    for(size_t i=0;i<model.n_catchments;++i)
+                        if(model.is_calculated(i))
+                            catchment_sca[i].scale_by(1/ca[i]);
+
+                }
+                return pts_t();
+            }
+            template<class rc_t = response_collector_t>
+            enable_if_t<!detect_snow_sca<rc_t>::value,pts_t> compute_sca_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
+                throw runtime_error("resource collector doesn't have snow_sca");
+            }
+
+            template<class T,class=void>
+            struct detect_snow_swe:false_type{};
+
+            template<class T>
+            struct detect_snow_swe<T,decltype(T::snow_swe,void())>:true_type{};
+
+
+            template<class rc_t = response_collector_t>
+            enable_if_t<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(target_specification_t& t,vector<pts_t>& catchment_swe) const {
+                if(catchment_swe.empty()){
+                    catchment_swe=vector<pts_t>(model.n_catchments,ts_t(model.time_axis, 0.0));
+                    vector<double> ca(model.n_catchments,0.0);
+                    for(const auto& c: *model.cells) {
+                        if (model.is_calculated(c.geo.catchment_id())){
+                            catchment_swe[c.geo.catchment_id()].add_scale(c.rc.snow_sca,c.geo.area());
+                            ca[c.geo.catchment_id()]+=c.geo.area(); //using entire cell geo area for now.
+                        }
+                    }
+                    for(size_t i=0;i<model.n_catchments;++i)
+                        if(model.is_calculated(i))
+                            catchment_swe[i].scale_by(1/ca[i]);
+                }
+
+                return pts_t();
+            }
+            template<class rc_t = response_collector_t>
+            enable_if_t<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
+                throw runtime_error("resource collector doesn't have snow_swe");
+            }
+
 			/**\brief from operator(), called by min_bobyqa, for each iteration, so p is bobyqa parameter vector
 			* notice that the function returns the value of the goal function,
 			* as specified by the target specification. The flexibility is rather large:
@@ -457,25 +535,39 @@ namespace shyft{
 				double goal_function_value = 0.0;// overall goal-function, intially zero
 				double scale_factor_sum = 0.0;
 				//TODO: extract all catchment results.. from the model..
-				vector<pts_t> catchment_discharges;
-				model.catchment_discharges(catchment_discharges);
+				vector<pts_t> catchment_d,catchment_sca,catchment_swe;
+				//extract snow covered area / snow-water-equivalent
+				//model.catchment_discharges(catchment_discharges);
 				for (auto& t : targets) {
-					pts_t discharge_sum(model.time_axis, 0, shyft::timeseries::POINT_AVERAGE_VALUE);
-					for (auto i : t.catchment_indexes) {
-						discharge_sum.add(catchment_discharges[i]);
-					}
-					// now calculate the discharge_sum for the target ts resolution
-
 					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.get_time_axis());
-					shyft::timeseries::average_accessor<pts_t, timeaxis_t> discharge_sum_accessor(discharge_sum, t.ts.get_time_axis());
+					pts_t property_sum;
+                    switch(t.catchment_property){
+                    case DISCHARGE:
+                        property_sum=compute_discharge_sum(t,catchment_d);
+                        break;
+                    case SNOW_COVERED_AREA:
+                        //property_sum=compute_sca_sum(t,catchment_sca);
+                        property_sum=compute_sca_sum(t,catchment_sca);
+                        break;
+                    case SNOW_WATER_EQUIVALENT:
+                        property_sum=compute_swe_sum(t,catchment_swe);
+                        break;
+                    }
+					shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.get_time_axis());
+
+					/*pts_ts
+                        discharge_sum(model.time_axis, 0, shyft::timeseries::POINT_AVERAGE_VALUE);
+
+					// now calculate the discharge_sum for the target ts resolution
+*/
 					if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
-						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, discharge_sum_accessor); 
+						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
 						goal_function_value += partial_nash_sutcliffe_gf* t.scale_factor;// add scaled contribution from each target
 					} else {
 						// ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
                         // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
                         double EDs = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
-                                                                                                        discharge_sum_accessor,
+                                                                                                        property_sum_accessor,
                                                                                                         t.s_r,
                                                                                                         t.s_a,
                                                                                                         t.s_b);

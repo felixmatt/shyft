@@ -541,7 +541,7 @@ namespace shyft {
     template <typename cell>
     struct hbv_snow_cell_state_statistics {
         shared_ptr<vector<cell>> cells;
-        hbv_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
+        hbv_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) : cells(move(cells)) {}
 
         result_ts_t_ swe(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::

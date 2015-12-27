@@ -405,7 +405,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     optimizer<region_model_t, parameter_accessor_t , pts_t > rm_opt(rm, target_specs, lower, upper);
     rm_opt.set_verbose_level(1);
 	auto tz = ec::utctime_now();
-    auto x_optimized = rm_opt.optimize(x);
+    auto x_optimized = rm_opt.optimize(x,2500,0.1,5e-6);
 	auto used = ec::utctime_now() - tz;
     cout<< "results: " << used << " seconds, nthreads = "<< rm.ncore << endl;
     cout<< " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;
