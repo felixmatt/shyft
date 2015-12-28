@@ -230,10 +230,8 @@ namespace shyft {
                 // Then, clone from c
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
                 set_region_parameter(*(c.region_parameter));
-                for_each(c.catchment_parameters.cbegin(), c.catchment_parameters.cend(),
-                    [this](const typename std::map<size_t, parameter_t_>::value_type& pair) {
-                        this->set_catchment_parameter(pair.first, *(pair.second));
-                    });
+                for(const auto& pair:c.catchment_parameters)
+                    set_catchment_parameter(pair.first, *(pair.second));
             }
 
 
@@ -253,10 +251,8 @@ namespace shyft {
                          const std::map<size_t, parameter_t>& catchment_parameters)
              : cells(cells) {
                 set_region_parameter(region_param);
-                for_each(catchment_parameters.cbegin(), catchment_parameters.cend(),
-                    [this](const typename std::map<size_t, parameter_t>::value_type& pair) {
-                        this->set_catchment_parameter(pair.first, pair.second);
-                    });
+                for(const auto & pair:catchment_parameters)
+                     set_catchment_parameter(pair.first, pair.second);
                 ncore = thread::hardware_concurrency()*4;
             }
             region_model(const region_model& model) { clone(model); }
@@ -269,6 +265,13 @@ namespace shyft {
 			#endif
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
+            /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
+            size_t number_of_catchments() const {
+                size_t max_catchment_id=0;
+                for(const auto&c:*cells)
+                    if(c.geo.catchment_id()>max_catchment_id) max_catchment_id=c.geo.catchment_id();
+                return max_catchment_id+1;
+            }
             /** \brief run_interpolation interpolates region_environment temp,precip,rad.. point sources
             * to a value representative for the cell.mid_point().
             *
@@ -289,13 +292,10 @@ namespace shyft {
             template < class RE, class IP>
             void run_interpolation(const IP& interpolation_parameter, const timeaxis_t& time_axis, const RE& env) {
                 #ifndef SWIG
-                size_t max_catchment_id = 0;
-                for_each(begin(*cells), end(*cells), [this, &time_axis, &max_catchment_id](cell_t& c) {
+                for(auto&c:*cells){
                     c.init_env_ts(time_axis);
-                    if (c.geo.catchment_id() > max_catchment_id)
-                        max_catchment_id = c.geo.catchment_id();
-                });
-                n_catchments = max_catchment_id + 1;// keep this/assume invariant..
+                }
+                n_catchments = number_of_catchments();// keep this/assume invariant..
                 this->time_axis = time_axis;
                 using namespace shyft::core;
                 using namespace std;
@@ -443,11 +443,9 @@ namespace shyft {
             void set_region_parameter(const parameter_t &p) {
                 if (region_parameter == nullptr) {
                     region_parameter = parameter_t_(new parameter_t(p));
-                    for_each(begin(*cells), end(*cells),
-                        [this](cell_t& c) {
-                            if (!has_catchment_parameter(c.geo.catchment_id()))
-                                c.set_parameter(region_parameter);
-                    });
+                    for(auto& c:*cells)
+                        if (!has_catchment_parameter(c.geo.catchment_id()))
+                            c.set_parameter(region_parameter);
                 } else {
                     (*region_parameter) = p;
                 }
@@ -468,11 +466,9 @@ namespace shyft {
                 if (catchment_parameters.find(catchment_id) == catchment_parameters.end()) {
                     auto shared_p = parameter_t_(new parameter_t(p));// add to map, a copy of p
                     catchment_parameters[catchment_id] = shared_p;
-                    for_each(begin(*cells), end(*cells),
-                        [this, catchment_id, &shared_p](cell_t& c) {
-                            if (c.geo.catchment_id() == catchment_id)
-                                c.set_parameter(shared_p);
-                    });
+                    for(auto &c:*cells)
+                        if (c.geo.catchment_id() == catchment_id)
+                            c.set_parameter(shared_p);
                 } else {
                     *(catchment_parameters[catchment_id]) = p; //copy values into existing parameters
                 }
@@ -485,11 +481,9 @@ namespace shyft {
                 auto it = catchment_parameters.find(catchment_id);
                 if (it != catchment_parameters.end()) {
                     catchment_parameters.erase(catchment_id);// get rid of it, and update the affected cells with the global parameter
-                    for_each(begin(*cells), end(*cells),
-                        [this, catchment_id](cell_t& c) {
+                    for(auto & c:*cells)
                         if (c.geo.catchment_id() == catchment_id)
-                            c.set_parameter(this->region_parameter);
-                    });
+                            c.set_parameter(region_parameter);
                 }
             }
             /** \brief returns true if there exist a specific parameter override for the specified 0-based catchment_id*/
@@ -502,9 +496,10 @@ namespace shyft {
             * \param catchment_id 0 based catchment id as placed on each cell
             * \returns reference to the real parameter structure for the catchment_id if exists, otherwise the global parameters
             */
-            parameter_t& get_catchment_parameter(size_t catchment_id) {
-                if (catchment_parameters.find(catchment_id) != catchment_parameters.end())
-                    return *(catchment_parameters[catchment_id]);
+            parameter_t& get_catchment_parameter(size_t catchment_id) const {
+                auto search=catchment_parameters.find(catchment_id);
+                if ( search != catchment_parameters.end())
+                    return *((*search).second);
                 else
                     return *region_parameter;
             }
@@ -536,9 +531,8 @@ namespace shyft {
             *\param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.
             */
             void get_states(std::vector<state_t>& end_states) const {
-                end_states.clear();
-                end_states.reserve(std::distance(begin(*cells), end(*cells)));
-                for_each(begin(*cells), end(*cells), [&end_states](cell_t& cell) { end_states.emplace_back(cell.state); });
+                end_states.clear();end_states.reserve(std::distance(begin(*cells), end(*cells)));
+                for(const auto& cell:*cells) end_states.emplace_back(cell.state);
             }
 
             /**\brief set current state for all the cells in the model.
@@ -549,9 +543,7 @@ namespace shyft {
                 if (states.size() != size())
                     throw runtime_error("Length of the state vector must equal number of cells");
                 auto state_iter = begin(states);
-                for_each(begin(*cells), end(*cells), [&state_iter](cell_t& cell) {
-                    cell.set_state(*(state_iter++));
-                });
+                for(auto& cell:*cells) cell.set_state(*(state_iter++));
             }
 
             /** \brief enable state collection for specified or all cells
@@ -594,14 +586,15 @@ namespace shyft {
         protected:
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *
-             * \param
-             * \param
+             * \param time_axis forwarded to the cell.run(time_axis)
+             * \param beg iterator to first cell in range
+             * \param endc iterator to end cell in range (one past last element)
              */
             void single_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc) {
-                for_each(beg, endc, [this, &time_axis](cell_t& cell) {
-                    if (catchment_filter.size() == 0 || (cell.geo.catchment_id() < catchment_filter.size() && catchment_filter[cell.geo.catchment_id()]))
+                for(auto& cell:boost::make_iterator_range(beg,endc)) {
+                     if (catchment_filter.size() == 0 || (cell.geo.catchment_id() < catchment_filter.size() && catchment_filter[cell.geo.catchment_id()]))
                         cell.run(time_axis);
-                });
+                }
             }
             /** \brief uses async to execute the single_run, partitioning the cell range into thread-cell count
              *
@@ -613,26 +606,26 @@ namespace shyft {
              * \param thread_cell_count number of cells given to each async thread
              */
             void parallel_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
-                size_t len = std::distance(beg, endc);
+                size_t len = distance(beg, endc);
                 if(len == 0)
                     return;
                 if(thread_cell_count == 0)
                     throw runtime_error("parallel_run:cell pr thread is zero ");
-                std::vector<std::future<void>> calcs;
+                vector<future<void>> calcs;
                 for (size_t i = 0; i < len;) {
                     size_t n = thread_cell_count;
                     if (i + n > len)
                         n = len - i;
                     calcs.emplace_back(
-                        std::async(std::launch::async, [this, &time_axis, beg, n]() {
+                        async(launch::async, [this, &time_axis, beg, n]() {
                             this->single_run(time_axis, beg, beg + n); }
                         )
                     );
                     beg = beg + n;
                     i = i + n;
                 }
-                for_each(begin(calcs), end(calcs), [](std::future<void>& f) {f.get(); });
-
+                for(auto &f:calcs)
+                    f.get();
                 return;
             }
         };

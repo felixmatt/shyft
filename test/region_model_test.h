@@ -8,5 +8,5 @@
 class region_model_test : public CxxTest::TestSuite {
   public:
     void test_build(void);
-
+    void test_region_vs_catchment_parameters(void);
 };

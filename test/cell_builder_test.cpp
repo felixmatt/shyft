@@ -378,7 +378,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     using namespace shyft::core::model_calibration;
     typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
     typedef target_specification<pts_t> target_specification_t;
-    target_specification_t spec1(sum_discharge2, catchment_ids, 1.0, KLING_GUPTA);
+    target_specification_t spec1(sum_discharge2, catchment_ids, 1.0);
     vector<target_specification_t> target_specs;
     target_specs.push_back(spec1);
     parameter_accessor_t& pa(*global_parameter);
@@ -405,7 +405,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     optimizer<region_model_t, parameter_accessor_t , pts_t > rm_opt(rm, target_specs, lower, upper);
     rm_opt.set_verbose_level(1);
 	auto tz = ec::utctime_now();
-    auto x_optimized = rm_opt.optimize(x,2500,0.1,5e-6);
+    auto x_optimized = rm_opt.optimize(x,2500,0.2,5e-6);
 	auto used = ec::utctime_now() - tz;
     cout<< "results: " << used << " seconds, nthreads = "<< rm.ncore << endl;
     cout<< " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;

@@ -217,12 +217,14 @@ namespace shyft{
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes (zero based) that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
-			target_spec_calc_type calc_mode;
-			catchment_property_type catchment_property;
+			target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
+			catchment_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT
 			double s_r; ///< KG-scalefactor for correlation
 			double s_a; ///< KG-scalefactor for alpha (variance)
 			double s_b; ///< KG-scalefactor for beta (bias)
 		};
+
+
 
 
 		/** \brief The optimizer for parameters in a \ref shyft::core::region_model
@@ -292,6 +294,7 @@ namespace shyft{
 				}
 				return r;
 			}
+
 #endif
 		public:
 			/**\brief construct an opt model for ptgsk, use p_min=p_max to disable optimization for a parameter
@@ -326,7 +329,7 @@ namespace shyft{
 				// 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
                 auto cells = model.get_cells();
                 initial_state.reserve((*cells).size());
-                for_each(begin(*cells), end(*cells), [this] (const cell_t &cell) { initial_state.emplace_back(cell.state); } );
+                for(const auto& cell:*cells) initial_state.emplace_back(cell.state);
            }
 
             state_t get_initial_state(size_t idx) {
@@ -411,7 +414,7 @@ namespace shyft{
 				return run(reduce_p_vector(full_vector_of_parameters));// then run with parameters as if from optimize
 			}
 #ifndef SWIG
-
+            friend class calibration_test;// to enable testing of individual methods
 			/** called by bobyqua: */
             double operator() (const column_vector& p_s) { return run(from_scaled(p_s)); }
             double operator() (const vector<double>&p_s) { return run(from_scaled(p_s)); }
@@ -451,46 +454,98 @@ namespace shyft{
                 return p;
             }
 		  private:
-
-            pts_t compute_discharge_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
-                pts_t discharge_sum(model.time_axis,0.0);
+           /** when doing catchment area related optimization, e.g. snow sca/swe
+             *  we need to
+             *  keep track of the area of each catchment so that we get
+             *  true average values
+             */
+            struct area_ts {
+                double area;///< area in m^2
+                pts_t ts; ///< ts representing the property for the area, e.g. sca, swe
+                area_ts(double area_m2,pts_t ts):area(area_m2),ts(move(ts)){}
+                area_ts():area(0.0) {}                              // maybe we could drop this and rely on defaults ?
+                area_ts(area_ts&&c):area(c.area),ts(move(ts)) {}
+                area_ts(const area_ts&c):area(c.area),ts(c.ts) {}
+                area_ts& operator=(const area_ts&c ) {
+                    if(&c != this) {
+                        area=c.area;
+                        ts=c.ts;
+                    }
+                    return *this;
+                }
+                area_ts& operator=(area_ts && c) {
+                    if(&c != this) {
+                        ts=move(c.ts);
+                        area=c.area;
+                    }
+                    return *this;
+                }
+            };
+            pts_t compute_discharge_sum(const target_specification_t& t,vector<pts_t>& catchment_d) const {
                 if(catchment_d.empty())
                     model.catchment_discharges(catchment_d);
+                pts_t discharge_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
                 for(auto i : t.catchment_indexes)
                     discharge_sum.add(catchment_d[i]);
                 return discharge_sum;
             }
 
-            template<class T,class=void>
-            struct detect_snow_sca:false_type{};
-
-            template<class T>
-            struct detect_snow_sca<T,decltype(T::snow_sca,void())>:true_type{};
-
-            template<class rc_t = response_collector_t>
-            enable_if_t<detect_snow_sca<rc_t>::value,pts_t> compute_sca_sum(target_specification_t& t,vector<pts_t>& catchment_sca) const {
-                if(catchment_sca.empty()){
-                    catchment_sca=vector<pts_t>(model.n_catchments,pts_t(model.time_axis, 0.0));
-                    vector<double> ca(model.n_catchments,0.0);
-                    for(const auto& c: *model.cells) {
-                        if (is_calculated(c.geo.catchment_id())){
-                            catchment_sca[c.geo.catchment_id()].add_scale(c.rc.snow_sca,c.geo.area());
-                            ca[c.geo.catchment_id()]+=c.geo.area(); //using entire cell geo area for now.
-                        }
+            /** \brief extracts vector of area_ts for all calculated catchments using the
+             * given property function tsf that should have signature pts_t (const cell& c)
+             * \note that this function sum together contributions at cell-level.
+             * TODO: Avoid duplicate code, - use average_catchment_feature(*model.cells, catchment_index, []() return c.rc.snow_sca) but it returns a shared_ptr..
+             */
+            template<class property_ts_function>
+            vector<area_ts> extract_area_ts_property(property_ts_function&& tsf) {
+                vector<area_ts> r(model.n_catchments,area_ts(0.0,pts_t(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE)));
+                for(const auto& c: *model.cells) {
+                    if (model.is_calculated(c.geo.catchment_id())){
+                        r[c.geo.catchment_id()].ts.add_scale(tsf(c),c.geo.area());//the only ref. to snow_sca
+                        r[c.geo.catchment_id()] += c.geo.area(); //using entire cell geo area for now.
                     }
-                    for(size_t i=0;i<model.n_catchments;++i)
-                        if(model.is_calculated(i))
-                            catchment_sca[i].scale_by(1/ca[i]);
-
                 }
-                return pts_t();
+                for(size_t i=0;i<model.n_catchments;++i)
+                    if(model.is_calculated(i))
+                        r[i].ts.scale_by(1/r[i].area);
+                return r;
             }
+            /** \brief returns the area weighted sum of vector<area_ts> according to t.catchment_indexes
+            */
+            pts_t compute_weighted_area_ts_average(const target_specification_t& t, const vector<area_ts>& ats) const {
+                pts_t ts_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
+                double a_sum;
+                for(auto i:t.catchment_indexes) {
+                    ts_sum.add_scale(ats[i].ts,ats[i].area);
+                    a_sum += ats[i].area;
+                }
+                ts_sum.scale_by(1/a_sum);
+                return ts_sum;
+            }
+
+            template<class T,class=void>            // we only want compute_sca_sum IF the response-collector do have snow_sca attribute
+            struct detect_snow_sca:false_type{};    // detect_snow_sca, default it to false,
+
+            template<class T>                       // then specialize it for T that have snow_sca
+            struct detect_snow_sca<T,decltype(T::snow_sca,void())>:true_type{}; // to true.
+
+            template<class rc_t = response_collector_t> // finally,
+              enable_if_t<detect_snow_sca<rc_t>::value,pts_t> // use enable_if_t  detect_snow_sca to enable this type
+            compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_sca) const {
+                if(catchment_sca.empty())
+                    catchment_sca=extract_area_ts_property([](const cell_t&c){return c.rc.snow_sca;});
+                return compute_weighted_area_ts_average(t,catchment_sca);
+            }
+
             template<class rc_t = response_collector_t>
-            enable_if_t<!detect_snow_sca<rc_t>::value,pts_t> compute_sca_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
+              enable_if_t<!detect_snow_sca<rc_t>::value,pts_t>
+            compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
+                // To support dynamic typing and python: If a cell.rc do not have snow_sca, but we pass in a criteria/target
+                // function that do specify snow_sca, we throw a runtime error.
+                // TODO: verify this in the constructor and throw as early as possible
                 throw runtime_error("resource collector doesn't have snow_sca");
             }
 
-            template<class T,class=void>
+            template<class T,class=void> // ref similar pattern for template specific generation of snow_sca above.
             struct detect_snow_swe:false_type{};
 
             template<class T>
@@ -498,25 +553,13 @@ namespace shyft{
 
 
             template<class rc_t = response_collector_t>
-            enable_if_t<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(target_specification_t& t,vector<pts_t>& catchment_swe) const {
-                if(catchment_swe.empty()){
-                    catchment_swe=vector<pts_t>(model.n_catchments,ts_t(model.time_axis, 0.0));
-                    vector<double> ca(model.n_catchments,0.0);
-                    for(const auto& c: *model.cells) {
-                        if (model.is_calculated(c.geo.catchment_id())){
-                            catchment_swe[c.geo.catchment_id()].add_scale(c.rc.snow_sca,c.geo.area());
-                            ca[c.geo.catchment_id()]+=c.geo.area(); //using entire cell geo area for now.
-                        }
-                    }
-                    for(size_t i=0;i<model.n_catchments;++i)
-                        if(model.is_calculated(i))
-                            catchment_swe[i].scale_by(1/ca[i]);
-                }
-
-                return pts_t();
+            enable_if_t<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_swe) const {
+                if(catchment_swe.empty())
+                    catchment_swe=extract_area_ts_property([](const cell_t&c){return c.rc.snow_swe;});
+                return compute_weighted_area_ts_average(t,catchment_swe);
             }
             template<class rc_t = response_collector_t>
-            enable_if_t<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(target_specification_t& t,vector<pts_t>& catchment_d) const {
+            enable_if_t<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
                 throw runtime_error("resource collector doesn't have snow_swe");
             }
 
@@ -533,12 +576,10 @@ namespace shyft{
 				reset_states();
 				model.run_cells();
 				double goal_function_value = 0.0;// overall goal-function, intially zero
-				double scale_factor_sum = 0.0;
-				//TODO: extract all catchment results.. from the model..
-				vector<pts_t> catchment_d,catchment_sca,catchment_swe;
-				//extract snow covered area / snow-water-equivalent
-				//model.catchment_discharges(catchment_discharges);
-				for (auto& t : targets) {
+				double scale_factor_sum = 0.0; // each target-spec have a weight, -use this to sum up weights
+				vector<pts_t> catchment_d;
+				vector<area_ts> catchment_sca,catchment_swe;// "catchment" level simulated discharge,sca,swe
+				for (const auto& t : targets) {
 					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.get_time_axis());
 					pts_t property_sum;
                     switch(t.catchment_property){
@@ -546,7 +587,6 @@ namespace shyft{
                         property_sum=compute_discharge_sum(t,catchment_d);
                         break;
                     case SNOW_COVERED_AREA:
-                        //property_sum=compute_sca_sum(t,catchment_sca);
                         property_sum=compute_sca_sum(t,catchment_sca);
                         break;
                     case SNOW_WATER_EQUIVALENT:

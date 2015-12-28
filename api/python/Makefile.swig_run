@@ -11,7 +11,7 @@ pt_hs_k_dependencies =  __init__.i $(api_dependencies) $(model_dependencies) ../
 
 all: __init___wrap.cxx  pt_gs_k_wrap.cxx  pt_ss_k_wrap.cxx pt_hs_k_wrap.cxx
 
-__init___wrap.cxx  : __init__.i $(MAKEFILE) $(api_dependencies);
+__init___wrap.cxx  : __init__.i $(MAKEFILE) $(api_dependencies) $(model_dependencies);
 	$(Generator)  __init__.i
 
 pt_gs_k_wrap.cxx  : pt_gs_k.i $(MAKEFILE) $(pt_gs_k_dependencies);
