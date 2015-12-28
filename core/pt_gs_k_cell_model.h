@@ -77,24 +77,35 @@ namespace shyft {
 
             /** \brief a collector that collects/keep discharge only */
             struct discharge_collector {
-                double destination_area;
+                double cell_area;///< in [m²]
                 pts_t avg_discharge; ///< Discharge given in [m³/s] as the average of the timestep
                 response_t end_response;///<< end_response, at the end of collected
-                discharge_collector() : destination_area(0.0) {}
-                discharge_collector(const double destination_area) : destination_area(destination_area) {}
-                discharge_collector(const double destination_area, const timeaxis_t& time_axis)
-                    : destination_area(destination_area), avg_discharge(time_axis, 0.0) {}
+                bool collect_snow;
+                pts_t snow_sca;
+                pts_t snow_swe;
+                discharge_collector() : cell_area(0.0),collect_snow(false) {}
+                discharge_collector(const double cell_area) : cell_area(cell_area),collect_snow(false) {}
+                discharge_collector(const double cell_area, const timeaxis_t& time_axis)
+                    : cell_area(cell_area),
+                      avg_discharge(time_axis, 0.0),collect_snow(false),
+                      snow_sca(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0),
+                      snow_swe(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0) {}
 
                 void initialize(const timeaxis_t& time_axis, double area) {
-                    destination_area = area;
+                    cell_area = area;
                     avg_discharge = pts_t(time_axis, 0.0);
+                    auto ta = collect_snow ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+                    snow_sca=pts_t(ta,0.0);
+                    snow_swe=pts_t(ta,0.0);
                 }
-
 
                 void collect(size_t idx, const response_t& response) {
-                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); // q_avg is given in mm, so compute the totals
+                    avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, cell_area)); // q_avg is given in mm, so compute the totals
+                    if(collect_snow) {
+                        snow_sca.set(idx,response.gs.sca);
+                        snow_swe.set(idx,response.gs.storage);
+                    }
                 }
-
                 void set_end_response(const response_t& response) {end_response=response;}
             };
             /**\brief a state null collector
@@ -207,6 +218,7 @@ namespace shyft {
             ::set_state_collection(bool on_or_off) {
             sc.collect_state = on_or_off;
         }
+
         //specialize run method for discharge_collector
         template<>
         inline void cell<pt_gs_k::parameter_t, environment_t, pt_gs_k::state_t,
@@ -228,11 +240,19 @@ namespace shyft {
                 sc,
                 rc);
         }
+
         template<>
         inline void cell<pt_gs_k::parameter_t, environment_t, pt_gs_k::state_t,
                          pt_gs_k::null_collector, pt_gs_k::discharge_collector>
             ::set_state_collection(bool on_or_off) {
             /* not possible always off.*/
+        }
+
+        template<>
+        inline void cell<pt_gs_k::parameter_t, environment_t, pt_gs_k::state_t,
+                         pt_gs_k::null_collector, pt_gs_k::discharge_collector>
+            ::set_snow_sca_swe_collection(bool on_or_off) {
+            rc.collect_snow=on_or_off;// possible, if true, we do collect both swe and sca, default is off
         }
     }
 }

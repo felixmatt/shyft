@@ -119,6 +119,8 @@ namespace shyft {
 			void   set_state(const S& s) { state = s; }
 			///< collecting the state during run could be very useful to understand models
 			void set_state_collection(bool on) {}
+			///< collecting the snow sca and swe on for calibration scenarios, default throws
+			void set_snow_sca_swe_collection(bool on) {throw runtime_error("cell-type does not support snow sca/swe result collection");}
 			/// run the cell method stack for  a specified time-axis, to be specialized by cell type
 			void run(const timeaxis_t& t) {}
 		};

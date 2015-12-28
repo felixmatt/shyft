@@ -402,6 +402,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
             x[i] = (lower[i] + upper[i])*0.5;
         }
 	}
+	rm.set_snow_sca_swe_collection(-1,true);// just to test that this compiles, and runs, currently no effect (except waste memory&cpu)
+	// if we add snow targets, then the above setting will apply (but I guess we do that automatically in the optimizer ct).
     optimizer<region_model_t, parameter_accessor_t , pts_t > rm_opt(rm, target_specs, lower, upper);
     rm_opt.set_verbose_level(1);
 	auto tz = ec::utctime_now();

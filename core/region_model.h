@@ -556,8 +556,13 @@ namespace shyft {
                     if (catchment_id == -1 || (int)cell.geo.catchment_id() == catchment_id )
                         cell.set_state_collection(on_or_off);
             }
+            void set_snow_sca_swe_collection(int catchment_id,bool on_or_off) {
+                for(auto& cell:*cells)
+                    if (catchment_id == -1 || (int)cell.geo.catchment_id() == catchment_id )
+                        cell.set_snow_sca_swe_collection(on_or_off);
+            }
             /** \return cells as shared_ptr<vector<cell_t>> */
-            cell_vec_t_ get_cells() { return cells; }
+            cell_vec_t_ get_cells() const { return cells; }
 
             /** \return number of cells */
             size_t size() const { return distance(begin(*cells), end(*cells)); }
