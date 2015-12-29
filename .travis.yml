@@ -73,6 +73,9 @@ before_script:
   - cmake ..
 
 script:
+  - export CXX="g++-5" CC="gcc-5"
+  - gcc --version
+  - g++-5 --version
   - make -j 3 VERBOSE=1  # 3 paralel compiler processes can take up to 5 GB RAM!
   - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
   - make test
