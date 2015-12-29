@@ -5,11 +5,23 @@ env:
   global:
     - SHYFT_DEPENDENCIES_DIR=$HOME/shyft-dependencies
 
+addons:
+    apt:
+        sources:
+            - llvm-toolchain-precise
+            - ubuntu-toolchain-r-test
+        packages:
+            - clang-3.7
+            - g++-5
+            - gcc-5
+            - liblapack-dev
+
 install:
-  - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update -qq
-  - sudo apt-get --assume-yes install liblapack-dev
-  - sudo apt-get --assume-yes install gcc-5
+  #- sudo apt-get update -qq
+  #- sudo apt-get --assume-yes install liblapack-dev
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
+  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+
 
 cache:
   directories:
@@ -45,7 +57,7 @@ before_install:
   - source activate shyft_env
   #- conda install -c https://conda.anaconda.org/minrk swig  # hits a bug in conda
   #- conda install swig
-  - pip install descartes
+  #- pip install descartes
   - python -V
 
   # The data repository dependency
