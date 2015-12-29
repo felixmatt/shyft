@@ -227,6 +227,9 @@ namespace shyft{
 
         #ifndef SWIG
         ///< template helper classes to be used in enable_if_t in the optimizer for snow swe/sca:
+        template< bool B, class T = void >
+        using enable_if_tx = typename enable_if<B,T>::type;
+
             #pragma GCC diagnostic push
             #pragma GCC diagnostic ignored "-Wunused-value"
             template<class T,class=void>            // we only want compute_sca_sum IF the response-collector do have snow_sca attribute
@@ -544,7 +547,7 @@ namespace shyft{
 
 
             template<class rc_t = response_collector_t> // finally,
-              enable_if_t<detect_snow_sca<rc_t>::value,pts_t> // use enable_if_t  detect_snow_sca to enable this type
+              enable_if_tx<detect_snow_sca<rc_t>::value,pts_t> // use enable_if_t  detect_snow_sca to enable this type
             compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_sca) const {
                 if(catchment_sca.empty())
                     catchment_sca=extract_area_ts_property([](const cell_t&c) {return c.rc.snow_sca;});
@@ -552,7 +555,7 @@ namespace shyft{
             }
 
             template<class rc_t = response_collector_t>
-              enable_if_t<!detect_snow_sca<rc_t>::value,pts_t>
+              enable_if_tx<!detect_snow_sca<rc_t>::value,pts_t>
             compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
                 // To support dynamic typing and python: If a cell.rc do not have snow_sca, but we pass in a criteria/target
                 // function that do specify snow_sca, we throw a runtime error.
@@ -563,13 +566,13 @@ namespace shyft{
 
 
             template<class rc_t = response_collector_t>
-            enable_if_t<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_swe) const {
+            enable_if_tx<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_swe) const {
                 if(catchment_swe.empty())
                     catchment_swe=extract_area_ts_property([](const cell_t&c){return c.rc.snow_swe;});
                 return compute_weighted_area_ts_average(t,catchment_swe);
             }
             template<class rc_t = response_collector_t>
-            enable_if_t<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
+            enable_if_tx<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
                 throw runtime_error("resource collector doesn't have snow_swe");
             }
 
