@@ -23,3 +23,101 @@ pt_ss_k_wrap.cxx  : pt_ss_k.i $(MAKEFILE) $(pt_ss_k_dependencies);
 pt_hs_k_wrap.cxx  : pt_hs_k.i $(MAKEFILE) $(pt_hs_k_dependencies);
 	$(Generator)  pt_hs_k.i
 
+__init___wrap.cxx: \
+  pyfragments.swg \
+  numpy.i \
+  ../../core/utctime_utilities.h \
+  ../../core/geo_point.h \
+  ../../core/geo_cell_data.h \
+  ../../core/timeseries.h \
+  ../../core/priestley_taylor.h \
+  ../../core/actual_evapotranspiration.h \
+  ../../core/gamma_snow.h \
+  ../../core/hbv_snow.h \
+  ../../core/skaugen.h \
+  ../../core/kirchner.h \
+  ../../core/precipitation_correction.h \
+  ../../core/cell_model.h \
+  ../../core/inverse_distance.h \
+  ../../core/bayesian_kriging.h \
+  ../../core/region_model.h \
+  ../../core/model_calibration.h \
+  ../api.h
+
+pt_gs_k_wrap.cxx: \
+  pyfragments.swg \
+  pt_gs_k.i \
+  numpy.i \
+  __init__.i \
+  ../../core/utctime_utilities.h \
+  ../../core/geo_point.h \
+  ../../core/geo_cell_data.h \
+  ../../core/timeseries.h \
+  ../../core/priestley_taylor.h \
+  ../../core/actual_evapotranspiration.h \
+  ../../core/gamma_snow.h \
+  ../../core/hbv_snow.h \
+  ../../core/skaugen.h \
+  ../../core/kirchner.h \
+  ../../core/precipitation_correction.h \
+  ../../core/cell_model.h \
+  ../../core/inverse_distance.h \
+  ../../core/bayesian_kriging.h \
+  ../../core/region_model.h \
+  ../../core/model_calibration.h \
+  ../api.h \
+  ../../core/pt_gs_k.h \
+  ../../core/pt_gs_k_cell_model.h \
+  ../pt_gs_k.h
+
+pt_hs_k_wrap.cxx: \
+  pyfragments.swg \
+  pt_hs_k.i \
+  numpy.i \
+  __init__.i \
+  ../../core/utctime_utilities.h \
+  ../../core/geo_point.h \
+  ../../core/geo_cell_data.h \
+  ../../core/timeseries.h \
+  ../../core/priestley_taylor.h \
+  ../../core/actual_evapotranspiration.h \
+  ../../core/gamma_snow.h \
+  ../../core/hbv_snow.h \
+  ../../core/skaugen.h \
+  ../../core/kirchner.h \
+  ../../core/precipitation_correction.h \
+  ../../core/cell_model.h \
+  ../../core/inverse_distance.h \
+  ../../core/bayesian_kriging.h \
+  ../../core/region_model.h \
+  ../../core/model_calibration.h \
+  ../api.h \
+  ../../core/pt_hs_k.h \
+  ../../core/pt_hs_k_cell_model.h \
+  ../pt_hs_k.h
+
+pt_ss_k_wrap.cxx: \
+  pyfragments.swg \
+  pt_ss_k.i \
+  numpy.i \
+  __init__.i \
+  ../../core/utctime_utilities.h \
+  ../../core/geo_point.h \
+  ../../core/geo_cell_data.h \
+  ../../core/timeseries.h \
+  ../../core/priestley_taylor.h \
+  ../../core/actual_evapotranspiration.h \
+  ../../core/gamma_snow.h \
+  ../../core/hbv_snow.h \
+  ../../core/skaugen.h \
+  ../../core/kirchner.h \
+  ../../core/precipitation_correction.h \
+  ../../core/cell_model.h \
+  ../../core/inverse_distance.h \
+  ../../core/bayesian_kriging.h \
+  ../../core/region_model.h \
+  ../../core/model_calibration.h \
+  ../api.h \
+  ../../core/pt_ss_k.h \
+  ../../core/pt_ss_k_cell_model.h \
+  ../pt_ss_k.h

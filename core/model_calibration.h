@@ -151,7 +151,7 @@ namespace shyft{
 		};
 		/** \brief calc_type to provide simple start of more than NS critera, first extension is diff of sum 2 */
 		enum target_spec_calc_type {
-			NASH_SUTCLIFFE ,
+			NASH_SUTCLIFFE , // obsolete, should be replaced by using KLING_GUPTA
 			KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
 		};
 

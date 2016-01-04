@@ -6,7 +6,6 @@ import numpy as np
 
 
 class ShyftApi(unittest.TestCase):
-
     def test_pt_hs_k_param(self):
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
@@ -101,7 +100,10 @@ class ShyftApi(unittest.TestCase):
         # tsa_staircase = tst.to_average_staircase(start,dt,24,tsp,False) # nans infects the complete interval to nan
         # tsa_staircase2 = tst.to_average_staircase(start,dt,24,tsp,True) # skip nans, nans are 0
         # stuff it into the target spec.
-        t2 = api.TargetSpecificationPts(tsa, api.IntVector([0, 2, 3]), 0.7, api.KLING_GUPTA)
+        # also show how to specify snow-calibration
+        t2 = api.TargetSpecificationPts(tsa, api.IntVector([0, 2, 3]), 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA)
+        t2.catchment_property = api.SNOW_WATER_EQUIVALENT
+        self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
         t.ts = tsa
         tv = api.TargetSpecificationVector([t, t2])
         # now verify we got something ok
