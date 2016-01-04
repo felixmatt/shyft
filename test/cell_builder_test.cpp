@@ -216,8 +216,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     auto snow_swe=ec::cell_statistics::average_catchment_feature(*rm.get_cells(),all_catchment_ids,[](const cell_t &c){return c.rc.snow_swe;});
 
     cout << "4. Print results"<<endl;
-    size_t i0=3*30;
-    size_t n_steps=3*30;
+    size_t i0=8*30;
+    size_t n_steps=8*30;
     cout<<  "discharge:"<<endl;print(cout,*sum_discharge,i0,n_steps);
     cout << "snow_sca :"<<endl;print(cout,*snow_sca,i0,n_steps);
     cout << "snow_swe :"<<endl;print(cout,*snow_swe,i0,n_steps);
@@ -229,16 +229,16 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     cout << "5. b Done, now compute new sum" << endl;
     rm.set_states(s0);// so that we start at same state.
     rm.run_cells();// this time only two catchments
-    pts_t sum_discharge2(ta, 0.0);
     cout << "6. Done, now compute new sum" << endl;
-    for(auto &cx:*cells) {
-        if(find(begin(catchment_ids), end(catchment_ids), cx.geo.catchment_id())!= end(catchment_ids))
-            sum_discharge2.add(cx.rc.avg_discharge);
-    }
+    auto sum_discharge2=ec::cell_statistics::sum_catchment_feature(*rm.get_cells(),catchment_ids,[](const cell_t&c) {return c.rc.avg_discharge;});
+    auto snow_sca2=ec::cell_statistics::average_catchment_feature(*rm.get_cells(),catchment_ids,[](const cell_t &c){return c.rc.snow_sca;});
+    auto snow_swe2=ec::cell_statistics::average_catchment_feature(*rm.get_cells(),catchment_ids,[](const cell_t &c){return c.rc.snow_swe;});
+
     cout << "7. Sum discharge for "<< internal_to_catchment_id[catchment_ids[0]] << " and " << internal_to_catchment_id[catchment_ids[1]] << " is:" << endl;
-    for(size_t i=0;i< (n<30?n:30);++i) {
-        cout << (i == 0 ? "\t" : ",") << sum_discharge2.value(i);
-    }
+
+    cout<<  "discharge:"<<endl;print(cout,*sum_discharge2,i0,n_steps);
+    cout << "snow_sca :"<<endl;print(cout,*snow_sca2,i0,n_steps);
+    cout << "snow_swe :"<<endl;print(cout,*snow_swe2,i0,n_steps);
 
     cout << endl << "Done test read and run region-model" << endl;
     rm.set_states(s0);// get back initial state
@@ -246,9 +246,15 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     using namespace shyft::core::model_calibration;
     typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
     typedef target_specification<pts_t> target_specification_t;
-    target_specification_t spec1(sum_discharge2, catchment_ids, 1.0);
+    target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0,KLING_GUPTA,1.0,1.0,1.0,DISCHARGE);
+    target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0,KLING_GUPTA,1.0,1.0,1.0,SNOW_COVERED_AREA);
+    target_specification_t snow_swe_target(*snow_swe2, catchment_ids, 1.0,KLING_GUPTA,1.0,1.0,1.0,SNOW_WATER_EQUIVALENT);
+
     vector<target_specification_t> target_specs;
-    target_specs.push_back(spec1);
+    target_specs.push_back(discharge_target);
+    target_specs.push_back(snow_sca_target);
+    target_specs.push_back(snow_swe_target);
+
     parameter_accessor_t& pa(*global_parameter);
         // Define parameter ranges
     const size_t n_params = pa.size();
@@ -264,9 +270,10 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     }
        // Perturb parameter set
     std::vector<double> x(n_params);
-    //std::default_random_engine rnd; rnd.seed(1023);
+    //SiH: We don't use random, would like to repeat exactly (if possible) the tests.
+    // std::default_random_engine rnd; rnd.seed(1023);
 	for (size_t i = 0; i < n_params; ++i) {
-        if(calibrate_parameter[i]) {
+        if(calibrate_parameter[i]) { // put the parameter outside optimal value
             x[i] = 0.9*(lower[i] + upper[i])*0.5;//lower[i]< upper[i] ? std::uniform_real_distribution<double>(lower[i], upper[i])(rnd) : std::uniform_real_distribution<double>(upper[i], lower[i])(rnd);
         } else {
             x[i] = (lower[i] + upper[i])*0.5;

@@ -1,10 +1,10 @@
+#pragma once
 #include <dlib/optimization.h>
 #include <dlib/statistics.h>
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"
 #include "sceua_optimizer.h"
-#pragma once
 
 namespace shyft{
 	namespace core {
@@ -179,17 +179,18 @@ namespace shyft{
 #ifndef SWIG
 			target_specification(const target_specification& c)
               : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
-                calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+                calc_mode(c.calc_mode),catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
 			target_specification(target_specification&&c)
               : ts(std::move(c.ts)),
                 catchment_indexes(std::move(c.catchment_indexes)),
-                scale_factor(c.scale_factor), calc_mode(c.calc_mode),
+                scale_factor(c.scale_factor), calc_mode(c.calc_mode),catchment_property(c.catchment_property),
                 s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
 			target_specification& operator=(target_specification&& c) {
 				ts = std::move(c.ts);
 				catchment_indexes = move(c.catchment_indexes);
 				scale_factor = c.scale_factor;
 				calc_mode = c.calc_mode;
+				catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
 				return *this;
 			}
@@ -199,6 +200,7 @@ namespace shyft{
                 catchment_indexes = c.catchment_indexes;
                 scale_factor = c.scale_factor;
                 calc_mode = c.calc_mode;
+                catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
                 return *this;
 			}
@@ -607,35 +609,33 @@ namespace shyft{
                         break;
                     }
 					shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.get_time_axis());
-
-					/*pts_ts
-                        discharge_sum(model.time_axis, 0, shyft::timeseries::POINT_AVERAGE_VALUE);
-
-					// now calculate the discharge_sum for the target ts resolution
-*/
+                    double partial_goal_function_value;
 					if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
-						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
-						goal_function_value += partial_nash_sutcliffe_gf* t.scale_factor;// add scaled contribution from each target
+						partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
 					} else {
 						// ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
                         // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
-                        double EDs = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
+                        partial_goal_function_value /* EDs */ = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
                                                                                                         property_sum_accessor,
                                                                                                         t.s_r,
                                                                                                         t.s_a,
                                                                                                         t.s_b);
-                        goal_function_value += t.scale_factor*EDs;
 					}
-					scale_factor_sum += t.scale_factor;
+					if(isfinite(partial_goal_function_value)) {
+                        scale_factor_sum += t.scale_factor;
+                        goal_function_value += t.scale_factor*partial_goal_function_value;
+					} else if (print_progress_level>0) {
+					    cout<<"warning: goal-function "<<t.catchment_property<<": evaluated as nan"<<endl;
+					}
 				}
 				goal_function_value /= scale_factor_sum;
 				if (print_progress_level > 0) {
-					std::cout << "ParameterVector(";
+					cout << "ParameterVector(";
 					for (size_t i = 0; i < parameter_accessor.size(); ++i) {
-						std::cout << parameter_accessor.get(i);
+						cout << parameter_accessor.get(i);
 						if (i < parameter_accessor.size() - 1)cout << ", ";
 					}
-					std::cout << ") = " << goal_function_value << " (NS or KG)" <<endl;
+					cout << ") = " << goal_function_value << " (NS or KG)" <<endl;
 				}
 				return goal_function_value;
 			}
