@@ -148,8 +148,12 @@ void cell_builder_test::test_io_performance() {
     TS_ASSERT_EQUALS(rad.size(), 1);
     auto dt = shyft::core::utctime_now()-t0;
     TS_ASSERT_LESS_THAN(dt, 10);
-
-
+}
+template<class ts_t>
+static void print(ostream&os,const ts_t& ts,size_t i0,size_t max_sz) {
+    for(size_t i =i0;i<min(i0+max_sz,ts.size());++i)
+        os<<(i==i0?"\n":",")<<ts.value(i);
+    os<<endl;
 }
 void cell_builder_test::test_read_and_run_region_model(void) {
     if(!getenv("SHYFT_FULL_TEST")) {
@@ -185,8 +189,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << " - ncore set to " << rm.ncore << endl;
     auto cal = ec::calendar();
     auto start = cal.time(ec::YMDhms(2010, 9, 1, 0, 0, 0));
-    auto dt = ec::deltahours(1);
-	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "20");
+    auto dt = ec::deltahours(3);
+	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
     size_t n = 24*ndays;//365;// 365 takes 20 seconds at cell stage 8core
     et::timeaxis ta(start, dt, n);
     ec::interpolation_parameter ip;
@@ -200,27 +204,27 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     vector<shyft::core::pt_gs_k::state_t> s0;
     rm.get_states(s0);
     auto t0 = ec::utctime_now();
-
-	vector<int> catchment_ids{ 0, 2 };
-	rm.set_catchment_calculation_filter(catchment_ids);
-
+    vector<int> all_catchment_ids;
+	//rm.set_catchment_calculation_filter(catchment_ids);
+    rm.set_snow_sca_swe_collection(-1,true);
     rm.run_cells();
 
 
 	cout << "3. b Done with cellstep :" << ec::utctime_now()-t0 << " [s]" << endl;
-    pts_t sum_discharge(ta, 0.0);
-    for(auto &c:*cells) {
-        if(rm.is_calculated(c.geo.catchment_id()))
-			sum_discharge.add(c.rc.avg_discharge);
-    }
-    cout << "4. Print Sum discharge" << endl;
-    for(size_t i=0;i< (n<30?n:30);++i) {
-        cout << (i == 0 ? "\t" : ",") << sum_discharge.value(i);
-    }
-    cout << endl << "5. now a run with just two catchments" << endl;
+    auto sum_discharge=ec::cell_statistics::sum_catchment_feature(*rm.get_cells(),all_catchment_ids,[](const cell_t&c) {return c.rc.avg_discharge;});
+    auto snow_sca=ec::cell_statistics::average_catchment_feature(*rm.get_cells(),all_catchment_ids,[](const cell_t &c){return c.rc.snow_sca;});
+    auto snow_swe=ec::cell_statistics::average_catchment_feature(*rm.get_cells(),all_catchment_ids,[](const cell_t &c){return c.rc.snow_swe;});
 
-	//vector<int> catchment_ids{0, 2};
-    //rm.set_catchment_calculation_filter(catchment_ids);
+    cout << "4. Print results"<<endl;
+    size_t i0=3*30;
+    size_t n_steps=3*30;
+    cout<<  "discharge:"<<endl;print(cout,*sum_discharge,i0,n_steps);
+    cout << "snow_sca :"<<endl;print(cout,*snow_sca,i0,n_steps);
+    cout << "snow_swe :"<<endl;print(cout,*snow_swe,i0,n_steps);
+
+    cout << endl << "5. now a run with just two catchments" << endl;
+	vector<int> catchment_ids{ 0, 2 };
+    rm.set_catchment_calculation_filter(catchment_ids);
 
     cout << "5. b Done, now compute new sum" << endl;
     rm.set_states(s0);// so that we start at same state.
@@ -250,18 +254,20 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     const size_t n_params = pa.size();
     std::vector<double> lower; lower.reserve(n_params);
     std::vector<double> upper; upper.reserve(n_params);
-    const size_t n_calib_params = 4;
+
+    vector<bool> calibrate_parameter(n_params,false);
+    for(auto i: vector<int>{0,4,14,16}) calibrate_parameter[i]=true;
     for (size_t i = 0; i < n_params; ++i) {
         double v = pa.get(i);
-        lower.emplace_back(i < n_calib_params?0.7*v:v);
-        upper.emplace_back(i< n_calib_params?1.2*v:v);
+        lower.emplace_back(calibrate_parameter[i] ?0.7*v:v);
+        upper.emplace_back(calibrate_parameter[i] ?1.2*v:v);
     }
        // Perturb parameter set
     std::vector<double> x(n_params);
-    std::default_random_engine rnd; rnd.seed(1023);
+    //std::default_random_engine rnd; rnd.seed(1023);
 	for (size_t i = 0; i < n_params; ++i) {
-        if(i<n_calib_params) {
-            x[i] = lower[i]< upper[i] ? std::uniform_real_distribution<double>(lower[i], upper[i])(rnd) : std::uniform_real_distribution<double>(upper[i], lower[i])(rnd);
+        if(calibrate_parameter[i]) {
+            x[i] = 0.9*(lower[i] + upper[i])*0.5;//lower[i]< upper[i] ? std::uniform_real_distribution<double>(lower[i], upper[i])(rnd) : std::uniform_real_distribution<double>(upper[i], lower[i])(rnd);
         } else {
             x[i] = (lower[i] + upper[i])*0.5;
         }
@@ -271,13 +277,13 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     optimizer<region_model_t, parameter_accessor_t , pts_t > rm_opt(rm, target_specs, lower, upper);
     rm_opt.set_verbose_level(1);
 	auto tz = ec::utctime_now();
-    auto x_optimized = rm_opt.optimize(x,2500,0.2,5e-6);
+    auto x_optimized = rm_opt.optimize(x,2500,0.2,5e-4);
 	auto used = ec::utctime_now() - tz;
     cout<< "results: " << used << " seconds, nthreads = "<< rm.ncore << endl;
     cout<< " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;
     cout<< " x-parameters before and after" << endl;
     for(size_t i=0;i<x.size();++i) {
-        cout << "(" << i << ") = " << x[i] << " -> " << x_optimized[i] << endl;
+        cout << "'" << pa.get_name(i) << "' = " << x[i] << " -> " << x_optimized[i] << endl;
     }
     cout << " done" << endl;
 }
