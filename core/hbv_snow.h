@@ -27,13 +27,13 @@
 namespace shyft {
     namespace core {
         namespace hbv_snow {
-
+            using namespace std;
             #ifndef SWIG
 
             /** \brief integrate function f given as linear interpolated between the f_i(x_i) from a to b for a, b in x.
              * If f_rhs_is_zero is set, f(b) = 0, unless b = x[i] for some i in [0,n).
              */
-            inline double integrate(std::vector<double> f, std::vector<double> x, size_t n, double a, double b, bool f_b_is_zero=false) {
+            inline double integrate(vector<double> f, vector<double> x, size_t n, double a, double b, bool f_b_is_zero=false) {
                 size_t left = 0;
                 double area = 0.0;
                 double f_l = 0.0;
@@ -67,8 +67,8 @@ namespace shyft {
             #endif // SWIG
 
             struct parameter {
-                std::vector<double> s;///<snow redistribution factors
-                std::vector<double> intervals;///< snow quantiles list 0, 0.25 0.5 1.0
+                vector<double> s;///<snow redistribution factors
+                vector<double> intervals;///< snow quantiles list 0, 0.25 0.5 1.0
                 double tx;
                 double cx;
                 double ts;
@@ -89,19 +89,16 @@ namespace shyft {
                       set_std_distribution_and_quantiles();
                 }
                 #ifndef SWIG
-                parameter(std::vector<double>& s, std::vector<double>& intervals,
+                parameter(vector<double>& s, vector<double>& intervals,
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
                 #endif // SWIG
 
-                void set_snow_redistribution_factors(const std::vector<double>& values) { s = values; }
-                void set_snow_quantiles(const std::vector<double>& values) { intervals = values; }
+                void set_snow_redistribution_factors(const vector<double>& values) { s = values; }
+                void set_snow_quantiles(const vector<double>& values) { intervals = values; }
             };
 
 
-            struct response {
-                double outflow = 0.0;
-            };
 
 
             struct state {
@@ -111,6 +108,10 @@ namespace shyft {
                 state(double swe=0.0, double sca=0.0)
                   : swe(swe), sca(sca) { /* Do nothing */ }
             };
+            struct response {
+                double outflow = 0.0;
+                state snow_state;///< SiH we need the state for response during calibration, maybe we should reconsider calibration-pattern ?
+            };
 
 
             /** \brief Generalized quantile based HBV Snow model method
@@ -119,8 +120,8 @@ namespace shyft {
              * quantiles have to partition the unity, include the end points 0 and 1 and must be given in ascending order.
              *
              * \tparam P Parameter type, implementing the interface:
-             *    - P.s() const --> std::vector<double>, snowfall redistribution vector
-             *    - P.intervals() const --> std::vector<double>, starting points for the quantiles
+             *    - P.s() const --> vector<double>, snowfall redistribution vector
+             *    - P.intervals() const --> vector<double>, starting points for the quantiles
              *    - P.lw() const --> double, max liquid water content of the snow
              *    - P.tx() const --> double, threshold temperature determining if precipitation is rain or snow
              *    - P.cx() const --> double, temperature index, i.e., melt = cx(t - ts) in mm per degree C
@@ -135,10 +136,10 @@ namespace shyft {
             template<class P, class S>
             struct calculator {
 
-                std::vector<double> sd;
-                std::vector<double> I;
-                std::vector<double> sp;
-                std::vector<double> sw;
+                vector<double> sd;
+                vector<double> I;
+                vector<double> sp;
+                vector<double> sw;
                 size_t I_n;
 
                 calculator(const P& p, S& state) {
@@ -154,8 +155,8 @@ namespace shyft {
                     double swe = state.swe;
                     double sca = state.sca;
 
-                    sp = std::vector<double>(I_n, 0.0);
-                    sw = std::vector<double>(I_n, 0.0);
+                    sp = vector<double>(I_n, 0.0);
+                    sw = vector<double>(I_n, 0.0);
                     if (swe <= 1.0e-3 || sca <= 1.0e-3) {
                         state.swe = state.sca  = 0.0;
                     } else {
@@ -172,7 +173,7 @@ namespace shyft {
                                 sp[i] *= corr2;
                             }
                         } else
-                            sw = std::vector<double>(I_n, 0.0);
+                            sw = vector<double>(I_n, 0.0);
                     }
                 }
 
@@ -195,7 +196,7 @@ namespace shyft {
                     if (sp > potmelt) {
                         sw += potmelt + rain;
                         sp -= potmelt;
-                        sw = std::min(sw, sp*lw);
+                        sw = min(sw, sp*lw);
                     } else if (sp > 0.0)
                         sp = sw = 0.0;
                 }
@@ -224,8 +225,8 @@ namespace shyft {
                     swe += snow + sca*rain;
                     if (swe < 0.1) {
                         r.outflow = total_water;
-                        std::fill(begin(sp), end(sp), 0.0);
-                        std::fill(begin(sw), end(sw), 0.0);
+                        fill(begin(sp), end(sp), 0.0);
+                        fill(begin(sw), end(sw), 0.0);
                         s.swe = 0.0;
                         s.sca = 0.0;
                         return;
@@ -282,9 +283,9 @@ namespace shyft {
 
                     if (total_water < swe) {
                         if (total_water - swe < -1.0e-10) {// we do have about 15-16 digits accuracy
-                            std::ostringstream buff;
+                            ostringstream buff;
                             buff << "Negative outflow: total_water (" << total_water << ") - swe (" << swe << ") = " << total_water - swe;
-                            throw std::runtime_error(buff.str());
+                            throw runtime_error(buff.str());
                         } else
                             swe = total_water;
                     }

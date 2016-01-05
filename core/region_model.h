@@ -556,6 +556,11 @@ namespace shyft {
                     if (catchment_id == -1 || (int)cell.geo.catchment_id() == catchment_id )
                         cell.set_state_collection(on_or_off);
             }
+            /** \brief enable/disable collection of snow sca|sca for calibration purposes
+             * \param cachment_id to enable snow calibration for, -1 means turn on/off for all
+             * \param on_or_off true|or false.
+             * \note if the underlying cell do not support snow sca|swe collection, this
+             */
             void set_snow_sca_swe_collection(int catchment_id,bool on_or_off) {
                 for(auto& cell:*cells)
                     if (catchment_id == -1 || (int)cell.geo.catchment_id() == catchment_id )

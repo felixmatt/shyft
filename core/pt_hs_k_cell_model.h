@@ -39,7 +39,7 @@ namespace shyft {
                 all_response_collector() : destination_area(0.0) {}
                 all_response_collector(const double destination_area) : destination_area(destination_area) {}
                 all_response_collector(const double destination_area, const timeaxis_t& time_axis)
-                 : destination_area(destination_area), avg_discharge(time_axis, 0.0), 
+                 : destination_area(destination_area), avg_discharge(time_axis, 0.0),
                    snow_outflow(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
 
                 /**\brief called before run to allocate space for results */
@@ -74,19 +74,32 @@ namespace shyft {
                 double destination_area;
                 pts_t avg_discharge; ///< Discharge given in [m³/s] as the average of the timestep
                 response_t end_response;///<< end_response, at the end of collected
-                discharge_collector() : destination_area(0.0) {}
-                discharge_collector(const double destination_area) : destination_area(destination_area) {}
+                bool collect_snow;
+                pts_t snow_sca;
+                pts_t snow_swe;
+
+                discharge_collector() : destination_area(0.0),collect_snow(false) {}
+                discharge_collector(const double destination_area) : destination_area(destination_area),collect_snow(false) {}
                 discharge_collector(const double destination_area, const timeaxis_t& time_axis)
-                 : destination_area(destination_area), avg_discharge(time_axis, 0.0) {}
+                 : destination_area(destination_area), avg_discharge(time_axis, 0.0),collect_snow(false),
+                    snow_sca(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0),
+                    snow_swe(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0) {}
 
                 void initialize(const timeaxis_t& time_axis, double area) {
                     destination_area = area;
                     avg_discharge = pts_t(time_axis, 0.0);
+                    auto ta = collect_snow ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+                    snow_sca=pts_t(ta,0.0);
+                    snow_swe=pts_t(ta,0.0);
                 }
 
 
                 void collect(size_t idx, const response_t& response) {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); // q_avg is given in mm, so compute the totals
+                    if(collect_snow) {
+                        snow_sca.set(idx,response.snow.snow_state.sca);
+                        snow_swe.set(idx,response.snow.snow_state.swe);
+                    }
                 }
 
                 void set_end_response(const response_t& response) {end_response = response;}
@@ -196,6 +209,12 @@ namespace shyft {
                 state,
                 sc,
                 rc);
+        }
+        template<>
+        inline void cell<pt_hs_k::parameter_t, environment_t, pt_hs_k::state_t,
+                         pt_hs_k::null_collector, pt_hs_k::discharge_collector>
+            ::set_snow_sca_swe_collection(bool on_or_off) {
+            rc.collect_snow=on_or_off;// possible, if true, we do collect both swe and sca, default is off
         }
     } // core
 } // shyft

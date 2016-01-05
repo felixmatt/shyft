@@ -362,10 +362,16 @@ namespace shyft{
 				p_max(p_max), print_progress_level(0) {
                 // 0. figure out n_catchments, asking the model
                 n_catchments=model.number_of_catchments();
-				// 1. figure out the catchment indexes to evaluate.
+				// 1. figure out the catchment indexes to evaluate..
+				//    and if we need to turn on snow collection
+
 				vector<int> catchment_indexes;
+				model.set_snow_sca_swe_collection(-1,false);//turn off all snow by default.
 				for (const auto&t : targets) {
 					catchment_indexes.insert(catchment_indexes.end(), begin(t.catchment_indexes), end(t.catchment_indexes));
+					if(t.catchment_property!=DISCHARGE)
+                        for(auto cid:t.catchment_indexes)
+                            model.set_snow_sca_swe_collection(cid,true);//turn on for those with something like snow enabled
 				}
 				if (catchment_indexes.size() > 1) {
 					sort(begin(catchment_indexes), end(catchment_indexes));
