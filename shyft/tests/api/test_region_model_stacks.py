@@ -13,21 +13,21 @@ try:
     range
 except NameError:
     range = range
-    
-class RegionModel(unittest.TestCase):
 
+
+class RegionModel(unittest.TestCase):
     @staticmethod
-    def build_model(model_t,parameter_t, model_size, num_catchments=1):
+    def build_model(model_t, parameter_t, model_size, num_catchments=1):
 
         cells = model_t.cell_t.vector_t()
-        cell_area = 1000*1000
+        cell_area = 1000 * 1000
         region_parameter = parameter_t()
         for i in range(model_size):
-            loc = (10000*random.random(2)).tolist() + \
-                (500*random.random(1)).tolist()
+            loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
             geo_cell_data = api.GeoCellData(gp, cell_area,
                                             random.randint(0, num_catchments))
+            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.0, lake=0.0, reservoir=0.1, forest=0.1)
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
             cells.append(cell)
@@ -47,7 +47,7 @@ class RegionModel(unittest.TestCase):
         kirchner = {"q": 0.25}
         pt.update({(k, v) for k, v in iteritems(kwargs) if k in pt})
         gs.update({(k, v) for k, v in iteritems(kwargs) if k in gs})
-        kirchner.update({(k, v) for k, v in iteritems( kwargs) if k in kirchner})
+        kirchner.update({(k, v) for k, v in iteritems(kwargs) if k in kirchner})
         state = pt_gs_k.PTGSKState()
         state.gs.albedo = gs["albedo"]
         state.gs.lwc = gs["lwc"]
@@ -60,7 +60,7 @@ class RegionModel(unittest.TestCase):
         state.kirchner.q = kirchner["q"]
         return pt_gs_k.PTGSKStateIo().to_string(state)
 
-    def _create_constant_geo_ts(self, geoTsType, geo_point, utc_period, value):
+    def _create_constant_geo_ts(self, geo_ts_type, geo_point, utc_period, value):
         """Create a time point ts, with one value at the start
         of the supplied utc_period."""
         tv = api.UtcTimeVector()
@@ -68,29 +68,29 @@ class RegionModel(unittest.TestCase):
         vv = api.DoubleVector()
         vv.push_back(value)
         cts = api.TsFactory().create_time_point_ts(utc_period, tv, vv)
-        return geoTsType(geo_point, cts)
+        return geo_ts_type(geo_point, cts)
 
     def create_dummy_region_environment(self, time_axis, mid_point):
         re = api.ARegionEnvironment()
         re.precipitation = api.PrecipitationSourceVector()
         re.precipitation.append(self._create_constant_geo_ts(
-            api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
+                api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
 
         re.temperature = api.TemperatureSourceVector()
         re.temperature.append(self._create_constant_geo_ts(
-            api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
+                api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
 
         re.wind_speed = api.WindSpeedSourceVector()
         re.wind_speed.append(self._create_constant_geo_ts(
-            api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
+                api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
 
         re.rel_hum = api.RelHumSourceVector()
         re.rel_hum.append(self._create_constant_geo_ts(
-            api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
+                api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
 
         re.radiation = api.RadiationSourceVector()
         re.radiation.append(self._create_constant_geo_ts(
-            api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
+                api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
         return re
 
     def test_pt_ss_k_model_init(self):
@@ -103,13 +103,22 @@ class RegionModel(unittest.TestCase):
         num_cells = 20
         model_type = pt_hs_k.PTHSKModel
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
+        self.assertEqual(model.size(),num_cells)
 
-        
     def test_model_initialize_and_run(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
-        model = self.build_model(model_type,pt_gs_k.PTGSKParameter, num_cells)
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        # now modify snow_cv forest_factor to 0.1
+        region_parameter = model.get_region_parameter()
+        region_parameter.gs.snow_cv_forest_factor = 0.1
+        region_parameter.gs.snow_cv_altitude_factor = 0.0001
+        self.assertEqual(region_parameter.gs.snow_cv_forest_factor, 0.1)
+        self.assertEqual(region_parameter.gs.snow_cv_altitude_factor, 0.0001)
+
+        self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv+0.1)
+        self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv+0.1+0.1)
         cal = api.Calendar()
         time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
                                  api.deltahours(1), 240)
@@ -126,9 +135,9 @@ class RegionModel(unittest.TestCase):
         model_interpolation_parameter.use_idw_for_temperature = True
 
         model.run_interpolation(
-            model_interpolation_parameter, time_axis,
-            self.create_dummy_region_environment(time_axis,
-                                                 model.get_cells()[int(num_cells/2)].geo.mid_point()))
+                model_interpolation_parameter, time_axis,
+                self.create_dummy_region_environment(time_axis,
+                                                     model.get_cells()[int(num_cells / 2)].geo.mid_point()))
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
@@ -151,42 +160,39 @@ class RegionModel(unittest.TestCase):
     def test_model_state_io(self):
         num_cells = 2
         for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-            model = self.build_model(model_type,pt_gs_k.PTGSKParameter, num_cells)
+            model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
             state_list = []
             x = ""
             for i in range(num_cells):
-                state_list.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
+                state_list.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
             initial_states = x.join(state_list)
-            sio=model_type.state_t.serializer_t()
-            state_vector=sio.vector_from_string(initial_states)
+            sio = model_type.state_t.serializer_t()
+            state_vector = sio.vector_from_string(initial_states)
             model.set_states(state_vector)
-            m_state_vector=model_type.state_t.vector_t()
+            m_state_vector = model_type.state_t.vector_t()
             model.get_states(m_state_vector)
-            retrieved_states=sio.to_string(m_state_vector)
-            self.assertEqual(initial_states,retrieved_states)
+            retrieved_states = sio.to_string(m_state_vector)
+            self.assertEqual(initial_states, retrieved_states)
 
     def test_set_too_few_model_states(self):
         num_cells = 20
         for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-            model = self.build_model(model_type, pt_gs_k.PTGSKParameter,num_cells)
+            model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
             states = []
             x = ""
             for i in range(num_cells - 1):
-                states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
+                states.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
             statestr = x.join(states)
-            sio=model_type.state_t.serializer_t()
-            state_vector=sio.vector_from_string(statestr)
+            sio = model_type.state_t.serializer_t()
+            state_vector = sio.vector_from_string(statestr)
 
-            self.assertRaises(RuntimeError, model.set_states,state_vector)
+            self.assertRaises(RuntimeError, model.set_states, state_vector)
             for i in range(num_cells + 1):
-                states.append(self.build_mock_state_dict(q=(i + 1)*0.5/num_cells))
+                states.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
             statestr = x.join(states)
-            state_vector=sio.vector_from_string(statestr)
+            state_vector = sio.vector_from_string(statestr)
 
-            self.assertRaises(RuntimeError, model.set_states,state_vector)
-
-
-
+            self.assertRaises(RuntimeError, model.set_states, state_vector)
 
 
 if __name__ == "__main__":

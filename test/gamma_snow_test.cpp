@@ -141,7 +141,7 @@ void gamma_snow_test::test_warm_winter_effect() {
     size_t num_days = 100;
 	bool verbose = getenv("SHYFT_VERBOSE");
     for (size_t i = 0; i < 24*num_days; ++i) {
-        gs.step(states, response, dt*24*232+i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum);
+        gs.step(states, response, dt*24*232+i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum,0.0,0.0);
 
 		if (verbose && (i % 10 == 0)) {
             std::cout << "Time step: " << i << ", ";
@@ -170,7 +170,7 @@ void gamma_snow_test::test_step() {
 
     const std::clock_t start = std::clock();
     for (size_t i=0; i<365; ++i) {
-        gs.step(states, response, i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum);
+        gs.step(states, response, i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum,0.0,0.0);
     }
     const std::clock_t total = std::clock() - start;
     std::cout << "Final result: " << response.outflow << std::endl;
@@ -199,17 +199,26 @@ void gamma_snow_test::test_output_independent_of_timestep() {
         gs::response response1h;
         double output_hour=0;
         for(size_t i=0;i<3;++i) {
-            gs.step(state1h,response1h,i*dt,dt,param,temp,rad,prec,wind_speed,rel_hum);
+            gs.step(state1h,response1h,i*dt,dt,param,temp,rad,prec,wind_speed,rel_hum,0.0,0.0);
             output_hour+=response1h.outflow; // mm_h
         }
         output_hour/=3.0; // avg hour output
         gs::state state3h(initial_state);
         gs::response response3h;
-        gs.step(state3h,response3h,0*dt3h,dt3h,param,temp,rad,prec,wind_speed,rel_hum);
+        gs.step(state3h,response3h,0*dt3h,dt3h,param,temp,rad,prec,wind_speed,rel_hum,0.0,0.0);
         // require same output on the average, and same lwc
         TS_ASSERT_DELTA(output_hour,response3h.outflow,0.00001);
         TS_ASSERT_DELTA(state1h.lwc,state3h.lwc,0.000001);
         TS_ASSERT_DELTA(response1h.storage,response3h.storage,0.00001);
     }
 
+}
+void gamma_snow_test::test_forest_altitude_dependent_snow_cv() {
+    gs::parameter p;
+    TS_ASSERT_DELTA(p.effective_snow_cv(1.0,1000),p.snow_cv,0.0000001);// assume default no effect, backward compatible
+    p.snow_cv_forest_factor=0.1; // forest fraction 1.0 should add 0.1 to the snow_cv
+    p.snow_cv_altitude_factor=0.0001;// at 1000m, add 0.1 to the factor
+    TS_ASSERT_DELTA(p.effective_snow_cv(0.0,0.0),p.snow_cv,0.0000001);// verify no increase of forest=0 and altitude=0
+    TS_ASSERT_DELTA(p.effective_snow_cv(1.0,0.0),p.snow_cv+0.1,0.0000001);// verify increase in forest direction
+    TS_ASSERT_DELTA(p.effective_snow_cv(0.0,1000.0),p.snow_cv +0.1, 0.0000001);// verify increase in altitude direction
 }

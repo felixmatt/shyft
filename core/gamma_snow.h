@@ -48,19 +48,29 @@ namespace shyft {
                 double snowfall_reset_depth = 5.0;
                 double glacier_albedo = 0.4; // TODO: Remove from GammaSnow and put into glacier method parameter?
                 bool calculate_iso_pot_energy = false;
+                double snow_cv_forest_factor=0.0;///< [ratio] the effective snow_cv gets an additional value of geo.forest_fraction()*snow_cv_forest_factor
+                double snow_cv_altitude_factor=0.0;///< [1/m] the effective snow_cv gets an additional value of altitude[m]* snow_cv_altitude_factor
                 parameter(size_t winter_end_day_of_year = 100,double initial_bare_ground_fraction = 0.04,double snow_cv = 0.4,double tx = -0.5,
                           double wind_scale = 2.0,double wind_const = 1.0,double max_water = 0.1,double surface_magnitude = 30.0,double max_albedo = 0.9,
                           double min_albedo = 0.6,double fast_albedo_decay_rate = 5.0,double slow_albedo_decay_rate = 5.0,double snowfall_reset_depth = 5.0,
                           double glacier_albedo = 0.4, // TODO: Remove from GammaSnow and put into glacier method parameter?
-                          bool calculate_iso_pot_energy = false
+                          bool calculate_iso_pot_energy = false,
+                          double snow_cv_forest_factor=0.0,
+                          double snow_cv_altitude_factor=0.0
 
                           ):winter_end_day_of_year(winter_end_day_of_year),initial_bare_ground_fraction(initial_bare_ground_fraction),snow_cv(snow_cv),tx(tx),
                           wind_scale(wind_scale),wind_const(wind_const),max_water(max_water),surface_magnitude(surface_magnitude),max_albedo(max_albedo),
                           min_albedo(min_albedo),fast_albedo_decay_rate(fast_albedo_decay_rate),slow_albedo_decay_rate (slow_albedo_decay_rate),
                           snowfall_reset_depth(snowfall_reset_depth),
                           glacier_albedo(glacier_albedo) , // TODO: Remove from GammaSnow and put into glacier method parameter?
-                          calculate_iso_pot_energy(calculate_iso_pot_energy)
+                          calculate_iso_pot_energy(calculate_iso_pot_energy),
+                          snow_cv_forest_factor(snow_cv_forest_factor),
+                          snow_cv_altitude_factor(snow_cv_altitude_factor)
                           {}
+                /** \returns the effective snow cv, taking the forest_fraction and altitude into the equations using corresponding factors */
+                double effective_snow_cv(double forest_fraction,double altitude) const {
+                    return snow_cv+ forest_fraction*snow_cv_forest_factor + altitude*snow_cv_altitude_factor;
+                }
                 /** \returns true if specified t is within the snow season, e.g. sept.. winder_end_day_of_year */
                 bool is_snow_season(utctime t) const {
                     return cal.month(t) >= 9 || cal.day_of_year(t) < winter_end_day_of_year;
@@ -74,7 +84,7 @@ namespace shyft {
 
             struct state {
                 state (double albedo=0.4, double lwc=0.1, double surface_heat=30000.0,
-                       double alpha=1.26, double sdc_melt_mean=0.0, double acc_melt=0.0, 
+                       double alpha=1.26, double sdc_melt_mean=0.0, double acc_melt=0.0,
                        double iso_pot_energy=0.0, double temp_swe=0.0)
                   :
                     albedo(albedo), lwc(lwc), surface_heat(surface_heat), alpha(alpha), sdc_melt_mean(sdc_melt_mean),
@@ -219,8 +229,8 @@ namespace shyft {
                     else throw std::runtime_error("corr_lwc did not converge"); // No convergence in max_iter iterations!
                   }
 
-                  void calc_snow_state(const double shape, const double scale, const double y0, const double lambda, 
-                                       const double lwd, const double max_water_frac, const double temp_swe, 
+                  void calc_snow_state(const double shape, const double scale, const double y0, const double lambda,
+                                       const double lwd, const double max_water_frac, const double temp_swe,
                                        double& swe, double& sca) const {
                       double y = 0.0;
                       double y1 = 0.0;
@@ -279,10 +289,12 @@ namespace shyft {
                   * \param prec precipitation in mm/h
                   * \param wind_speed in m/s
                   * \param rel_hum 0..1
+                  * \param forest_fraction 0..1, influences calculation of effective snow_cv
+                  * \param altitude 0..x [m], influences calculation of effective_snow_cv
                   */
                 void step(S& s, R& r, shyft::timeseries::utctime t, shyft::timeseries::utctimespan dt,
                           const P& p, const double T, const double rad, const double prec_mm_h,
-                          const double wind_speed, const double rel_hum) const {
+                          const double wind_speed, const double rel_hum, const double forest_fraction,const double altitude) const {
                     // Some special cases treated first for efficiency
 
                     // Read state vars needed early (possible early return)
@@ -326,9 +338,9 @@ namespace shyft {
                     // Local variables
                     const double min_albedo = p.min_albedo;
                     const double max_albedo = p.max_albedo;
-                    const double snow_cv = p.snow_cv;
+                    const double snow_cv = p.effective_snow_cv(forest_fraction,altitude);
                     const double albedo_range = max_albedo -  min_albedo;
-                    const double dt_in_days = dt/86400.0;
+                    const double dt_in_days = dt/double(calendar::DAY);
                     const double slow_albedo_decay_rate = 0.5*albedo_range*dt_in_days/p.slow_albedo_decay_rate;
                     const double fast_albedo_decay_rate = pow(2.0, -dt_in_days/p.fast_albedo_decay_rate);
 
