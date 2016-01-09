@@ -10,6 +10,7 @@ class gamma_snow_test: public CxxTest::TestSuite {
     void test_step();
     void test_warm_winter_effect();
     void test_output_independent_of_timestep();
+    void test_forest_altitude_dependent_snow_cv();
 };
 
 /* vim: set filetype=cpp: */

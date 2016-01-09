@@ -30,7 +30,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="api_test" />
+				<Option parameters="gamma_snow_test" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />

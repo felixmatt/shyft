@@ -1,5 +1,9 @@
 %module(package="shyft.api") pt_hs_k
 
+%feature("autodoc", "2");
+%feature("kwargs");
+%feature("naturalvar");
+
 #define SWIG_FILE_WITH_INIT
 %begin %{ // gcc win-compile needs this to avoid problems in cmath, fix: to include first
 #include <cmath>
