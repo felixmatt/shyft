@@ -191,7 +191,7 @@ class SimulationTestCase(unittest.TestCase):
         f_vs = np.array([found_discharge.value(i) for i in range(found_discharge.size())])
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         self.assertTrue(np.linalg.norm(t_ts - f_ts) < 1.0e-10)
-        self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-4)
+        self.assertTrue(np.linalg.norm(t_vs - f_vs) < 1.0e-3)
 
     def test_pt_gs_k_calibration(self):
         self.run_calibration(pt_gs_k.PTGSKOptModel)

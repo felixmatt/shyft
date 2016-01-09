@@ -95,7 +95,7 @@ namespace shyft {
                     "alpha_0", "d_range", "unit_size", "max_water_fraction",
                     "tx", "cx", "ts", "cfr", "p_corr_scale_factor"};
                 if (i >= size())
-                    throw runtime_error("pt_gs_k parameter accessor:.get_name(i) Out of range.");
+                    throw runtime_error("pt_ss_k parameter accessor:.get_name(i) Out of range.");
                 return names[i];
             }
 

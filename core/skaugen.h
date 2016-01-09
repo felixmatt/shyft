@@ -118,8 +118,10 @@ namespace shyft {
 
 
             struct response {
-                double outflow = 0.0;
-                double total_stored_water = 0.0;
+                double outflow = 0.0;///< m³/s
+                double total_stored_water = 0.0;// def. as sca*(swe+lwc)
+                double sca =0.0;// fraction, sih-note: we need it for snow calibration collection
+                double swe= 0.0;// mm, as noted above, for calibration, def. as (swe+lwc)
             };
 
             template<class P, class S, class R>
@@ -151,6 +153,7 @@ namespace shyft {
                         // Set state and response and return
                         r.outflow = rain + s.sca*(s.swe + s.free_water) + s.residual;
                         r.total_stored_water = 0.0;
+
                         s.residual = 0.0;
                         if (r.outflow < 0.0) {
                             s.residual = r.outflow;
@@ -162,6 +165,8 @@ namespace shyft {
                         s.swe = 0.0;
                         s.free_water = 0.0;
                         s.num_units = 0;
+                        r.sca=s.sca;
+                        r.swe=s.swe;
                         return;
                     }
 
@@ -207,7 +212,7 @@ namespace shyft {
                         swe = nnn*unit_size;
                     }
 
-                    // Melting 
+                    // Melting
                     if (pot_melt > unit_size) {
                         u = lrint(pot_melt/unit_size);
                         if (nnn < u + 2) {
@@ -310,6 +315,8 @@ namespace shyft {
 
                     r.outflow = discharge;
                     r.total_stored_water = sca*(swe + lwc);
+                    r.swe=(swe+lwc);//sih: needed for calibration, and most likely what other routines consider as swe
+                    r.sca=sca; //sih: needed for calibration on snow sca
                     s.nu = nu;
                     s.alpha = alpha;
                     s.sca = sca;

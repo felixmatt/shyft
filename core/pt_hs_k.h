@@ -150,8 +150,7 @@ namespace shyft {
             auto rad_accessor = rad_accessor_t(rad, time_axis);
 
             // Get the initial states
-            auto &snow_state = state.snow;
-            double q = state.kirchner.q;
+            //double q = state.kirchner.q;
             R response;
 
             // Initialize the method stack
@@ -174,32 +173,28 @@ namespace shyft {
                 //
 
                 // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                double pot_evap = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan();
-                response.pt.pot_evapotranspiration=pot_evap;
+                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan();
 
                 // HBVSnow
-                hbv_snow.step(snow_state, response.snow, period.start, period.end, parameter.snow, prec, temp);
+                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.snow, prec, temp);
 
                 // Communicate snow
                 // At my pos xx mm of snow moves in direction d.
 
                 // Actual Evapotranspiration
-                double act_evap = actual_evapotranspiration::calculate_step(q, pot_evap, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
-                response.ae.ae = act_evap;
+                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
 
                 // Use responses from PriestleyTaylor and HBVSnow in Kirchner
-                double q_avg;
-                kirchner.step(period.start, period.end, q, q_avg, response.snow.outflow, act_evap);
-                state.kirchner.q=q; // Save discharge state variable
-                response.kirchner.q_avg=q_avg;
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae);
 
                 //
                 // Adjust land response for lakes and reservoirs (Treat them the same way for now)
                 //
                 double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
-                double lake_corrected_discharge = prec*total_lake_fraction + (1.0 - total_lake_fraction)*q_avg;
+                double lake_corrected_discharge = prec*total_lake_fraction + (1.0 - total_lake_fraction)*response.kirchner.q_avg;
 
                 response.total_discharge = lake_corrected_discharge;
+                response.snow.snow_state=state.snow;//< note/sih: we need snow in the response due to calibration
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);

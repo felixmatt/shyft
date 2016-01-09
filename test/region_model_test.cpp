@@ -161,3 +161,53 @@ void region_model_test::test_build(void) {
     TS_ASSERT(p1.kirchner.c1 != p2.kirchner.c1);
 
 }
+
+void region_model_test::test_region_vs_catchment_parameters(void) {
+    using cell_t=pt_gs_k::cell_complete_response_t;
+    using region_model_t=em::region_model<cell_t>;
+    using parameter_t=cell_t::parameter_t;
+
+    // The model stack needs its parameters:
+    parameter_t gp;
+
+    // And there has to be a start state
+    gs::state gss;
+    kr::state ks;ks.q = 30.0;
+    pt_gs_k::state_t state{gss, ks};
+
+    // most important, there is cells, that are geo-located, have area, mid-point,catchment-id
+    ec::geo_cell_data gc1(ec::geo_point(500.0,  50.0,   10.0), 1000.0* 100.0, 0);
+    ec::geo_cell_data gc2(ec::geo_point(1500.0, 500.0, 100.0), 1000.0*1000.0, 1);
+
+    cell_t c1,c2;
+    c1.geo=gc1;
+    c2.geo=gc2;
+
+    auto cells = make_shared<std::vector<cell_t>> ();//ptgsk_cells;
+    cells->push_back(c1);
+    cells->push_back(c2);
+    region_model_t rm(cells,gp);
+    TS_ASSERT_EQUALS(rm.number_of_catchments(),2);
+    TS_ASSERT(rm.has_catchment_parameter(0)==false);
+    TS_ASSERT(rm.has_catchment_parameter(1)==false); // by default, all should share the global rm parameter
+    parameter_t c1p;                                 // now, put a specific parameter to catchment 0
+    c1p.kirchner.c1 = -2.5;
+    rm.set_catchment_parameter(0,c1p);
+    TS_ASSERT(rm.has_catchment_parameter(0)==true);
+    TS_ASSERT(rm.has_catchment_parameter(1)==false);
+    rm.remove_catchment_parameter(0);
+    TS_ASSERT(rm.has_catchment_parameter(0)==false);
+    TS_ASSERT(rm.has_catchment_parameter(1)==false);
+    TS_ASSERT((*cells)[0].parameter==(*cells)[1].parameter );//ensure they now share the common region-model parameter
+    // now test alternate constructor that takes catchment-parameter map as input
+    map<size_t, parameter_t> catchment_params;
+    c1p.kirchner.c1 = -2.59;
+    catchment_params[1] = c1p;
+    rm=region_model_t(cells,gp,catchment_params);// so catchment-id 1 should have different parameters!
+    TS_ASSERT(rm.has_catchment_parameter(0)==false);
+    TS_ASSERT(rm.has_catchment_parameter(1)==true);
+    TS_ASSERT_DELTA(rm.get_region_parameter().kirchner.c1,gp.kirchner.c1,0.000001);// should equal our global constant
+    TS_ASSERT_DELTA(rm.get_catchment_parameter(1).kirchner.c1,c1p.kirchner.c1,0.00001);// should equal our special catch-id 1 parameter
+
+
+}

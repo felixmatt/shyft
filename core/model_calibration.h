@@ -1,10 +1,10 @@
+#pragma once
 #include <dlib/optimization.h>
 #include <dlib/statistics.h>
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"
 #include "sceua_optimizer.h"
-#pragma once
 
 namespace shyft{
 	namespace core {
@@ -151,8 +151,15 @@ namespace shyft{
 		};
 		/** \brief calc_type to provide simple start of more than NS critera, first extension is diff of sum 2 */
 		enum target_spec_calc_type {
-			NASH_SUTCLIFFE ,
+			NASH_SUTCLIFFE , // obsolete, should be replaced by using KLING_GUPTA
 			KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
+		};
+
+		/** \brief property_type for target specification */
+		enum catchment_property_type {
+            DISCHARGE,
+            SNOW_COVERED_AREA,
+            SNOW_WATER_EQUIVALENT
 		};
 
 		/** \brief The target specification contains:
@@ -168,21 +175,22 @@ namespace shyft{
 		struct target_specification {
 			typedef PS target_time_series_t;
 			target_specification()
-              : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), s_r(1.0), s_a(1.0), s_b(1.0) {}
+              : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {}
 #ifndef SWIG
 			target_specification(const target_specification& c)
-              : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor), 
-                calc_mode(c.calc_mode), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
-			target_specification(target_specification&&c) 
+              : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
+                calc_mode(c.calc_mode),catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+			target_specification(target_specification&&c)
               : ts(std::move(c.ts)),
                 catchment_indexes(std::move(c.catchment_indexes)),
-                scale_factor(c.scale_factor), calc_mode(c.calc_mode),
+                scale_factor(c.scale_factor), calc_mode(c.calc_mode),catchment_property(c.catchment_property),
                 s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
 			target_specification& operator=(target_specification&& c) {
 				ts = std::move(c.ts);
 				catchment_indexes = move(c.catchment_indexes);
 				scale_factor = c.scale_factor;
 				calc_mode = c.calc_mode;
+				catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
 				return *this;
 			}
@@ -192,6 +200,7 @@ namespace shyft{
                 catchment_indexes = c.catchment_indexes;
                 scale_factor = c.scale_factor;
                 calc_mode = c.calc_mode;
+                catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
                 return *this;
 			}
@@ -204,18 +213,68 @@ namespace shyft{
              */
 			target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                                  target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r=1.0,
-                                 double s_a=1.0, double s_b=1.0)
+                                 double s_a=1.0, double s_b=1.0, catchment_property_type catchment_property_ = DISCHARGE)
               : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
-                calc_mode(calc_mode), s_r(s_r), s_a(s_a), s_b(s_b) {}
+                calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b) {}
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes (zero based) that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
-			target_spec_calc_type calc_mode;
+			target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
+			catchment_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT
 			double s_r; ///< KG-scalefactor for correlation
 			double s_a; ///< KG-scalefactor for alpha (variance)
 			double s_b; ///< KG-scalefactor for beta (bias)
 		};
 
+
+        #ifndef SWIG
+        ///< template helper classes to be used in enable_if_t in the optimizer for snow swe/sca:
+        template< bool B, class T = void >
+        using enable_if_tx = typename enable_if<B,T>::type;
+
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wunused-value"
+            template<class T,class=void>            // we only want compute_sca_sum IF the response-collector do have snow_sca attribute
+            struct detect_snow_sca:false_type{};    // detect_snow_sca, default it to false,
+
+            template<class T>                       // then specialize it for T that have snow_sca
+            struct detect_snow_sca<T,decltype(T::snow_sca,void())>:true_type{}; // to true.
+
+            template<class T,class=void> // ref similar pattern for template specific generation of snow_sca above.
+            struct detect_snow_swe:false_type{};
+
+            template<class T>
+            struct detect_snow_swe<T,decltype(T::snow_swe,void())>:true_type{};
+            #pragma GCC diagnostic pop
+            /** when doing catchment area related optimization, e.g. snow sca/swe
+             *  we need to
+             *  keep track of the area of each catchment so that we get
+             *  true average values
+             */
+            struct area_ts {
+                double area;///< area in m^2
+                pts_t ts; ///< ts representing the property for the area, e.g. sca, swe
+                area_ts(double area_m2,pts_t ts):area(area_m2),ts(move(ts)){}
+                area_ts():area(0.0) {}                              // maybe we could drop this and rely on defaults ?
+                area_ts(area_ts&&c):area(c.area),ts(move(ts)) {}
+                area_ts(const area_ts&c):area(c.area),ts(c.ts) {}
+                area_ts& operator=(const area_ts&c ) {
+                    if(&c != this) {
+                        area=c.area;
+                        ts=c.ts;
+                    }
+                    return *this;
+                }
+                area_ts& operator=(area_ts && c) {
+                    if(&c != this) {
+                        ts=move(c.ts);
+                        area=c.area;
+                    }
+                    return *this;
+                }
+            };
+
+        #endif // SWIG
 
 		/** \brief The optimizer for parameters in a \ref shyft::core::region_model
 		 * provides needed functionality to orchestrate a search for the optimal parameters so that the goal function
@@ -249,6 +308,7 @@ namespace shyft{
             typedef typename M::state_t state_t;
             typedef typename M::parameter_t parameter_t;
             typedef typename M::cell_t cell_t;
+            typedef typename cell_t::response_collector_t response_collector_t;
           private:
 #ifndef SWIG
 		public:
@@ -262,6 +322,7 @@ namespace shyft{
             vector<double> p_max;
             vector<state_t> initial_state;
 			int print_progress_level;
+			size_t n_catchments;///< optimized counted number of model.catchments available
 			//Need to handle expanded/reduced parameter vector based on min..max range to optimize speed for bobyqa
 			bool is_active_parameter(size_t i) const { return fabs(p_max[i] - p_min[i]) > 0.000001; }
 			vector<double> reduce_p_vector(const vector<double>& fp) const {
@@ -283,6 +344,7 @@ namespace shyft{
 				}
 				return r;
 			}
+
 #endif
 		public:
 			/**\brief construct an opt model for ptgsk, use p_min=p_max to disable optimization for a parameter
@@ -298,11 +360,18 @@ namespace shyft{
                 targets(targetsA),
                 p_min(p_min),
 				p_max(p_max), print_progress_level(0) {
+                // 0. figure out n_catchments, asking the model
+                n_catchments=model.number_of_catchments();
+				// 1. figure out the catchment indexes to evaluate..
+				//    and if we need to turn on snow collection
 
-				// 1. figure out the catchment indexes to evaluate.
 				vector<int> catchment_indexes;
+				model.set_snow_sca_swe_collection(-1,false);//turn off all snow by default.
 				for (const auto&t : targets) {
 					catchment_indexes.insert(catchment_indexes.end(), begin(t.catchment_indexes), end(t.catchment_indexes));
+					if(t.catchment_property!=DISCHARGE)
+                        for(auto cid:t.catchment_indexes)
+                            model.set_snow_sca_swe_collection(cid,true);//turn on for those with something like snow enabled
 				}
 				if (catchment_indexes.size() > 1) {
 					sort(begin(catchment_indexes), end(catchment_indexes));
@@ -317,7 +386,7 @@ namespace shyft{
 				// 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
                 auto cells = model.get_cells();
                 initial_state.reserve((*cells).size());
-                for_each(begin(*cells), end(*cells), [this] (const cell_t &cell) { initial_state.emplace_back(cell.state); } );
+                for(const auto& cell:*cells) initial_state.emplace_back(cell.state);
            }
 
             state_t get_initial_state(size_t idx) {
@@ -402,7 +471,7 @@ namespace shyft{
 				return run(reduce_p_vector(full_vector_of_parameters));// then run with parameters as if from optimize
 			}
 #ifndef SWIG
-
+            friend class calibration_test;// to enable testing of individual methods
 			/** called by bobyqua: */
             double operator() (const column_vector& p_s) { return run(from_scaled(p_s)); }
             double operator() (const vector<double>&p_s) { return run(from_scaled(p_s)); }
@@ -442,6 +511,79 @@ namespace shyft{
                 return p;
             }
 		  private:
+
+            pts_t compute_discharge_sum(const target_specification_t& t,vector<pts_t>& catchment_d) const {
+                if(catchment_d.empty())
+                    model.catchment_discharges(catchment_d);
+                pts_t discharge_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
+                for(auto i : t.catchment_indexes)
+                    discharge_sum.add(catchment_d[i]);
+                return discharge_sum;
+            }
+
+            /** \brief extracts vector of area_ts for all calculated catchments using the
+             * given property function tsf that should have signature pts_t (const cell& c)
+             * \note that this function sum together contributions at cell-level.
+             * TODO: Avoid duplicate code, - use average_catchment_feature(*model.cells, catchment_index, []() return c.rc.snow_sca) but it returns a shared_ptr..
+             */
+            template<class property_ts_function>
+            vector<area_ts> extract_area_ts_property( property_ts_function && tsf) const {
+                vector<area_ts> r(n_catchments,area_ts(0.0,pts_t(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE)));
+                for(const auto& c: *model.get_cells()) {
+                    if (model.is_calculated(c.geo.catchment_id())){
+                        r[c.geo.catchment_id()].ts.add_scale(tsf(c),c.geo.area());//the only ref. to snow_sca
+                        r[c.geo.catchment_id()].area += c.geo.area(); //using entire cell geo area for now.
+                    }
+                }
+                for(size_t i=0;i<n_catchments;++i)
+                    if(model.is_calculated(i))
+                        r[i].ts.scale_by(1/r[i].area);
+                return r;
+            }
+            /** \brief returns the area weighted sum of vector<area_ts> according to t.catchment_indexes
+            */
+            pts_t compute_weighted_area_ts_average(const target_specification_t& t, const vector<area_ts>& ats) const {
+                pts_t ts_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
+                double a_sum=0.0;
+                for(auto i:t.catchment_indexes) {
+                    ts_sum.add_scale(ats[i].ts,ats[i].area);
+                    a_sum += ats[i].area;
+                }
+                ts_sum.scale_by(1/a_sum);
+                return ts_sum;
+            }
+
+
+            template<class rc_t = response_collector_t> // finally,
+              enable_if_tx<detect_snow_sca<rc_t>::value,pts_t> // use enable_if_t  detect_snow_sca to enable this type
+            compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_sca) const {
+                if(catchment_sca.empty())
+                    catchment_sca=extract_area_ts_property([](const cell_t&c) {return c.rc.snow_sca;});
+                return compute_weighted_area_ts_average(t,catchment_sca);
+            }
+
+            template<class rc_t = response_collector_t>
+              enable_if_tx<!detect_snow_sca<rc_t>::value,pts_t>
+            compute_sca_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
+                // To support dynamic typing and python: If a cell.rc do not have snow_sca, but we pass in a criteria/target
+                // function that do specify snow_sca, we throw a runtime error.
+                // TODO: verify this in the constructor and throw as early as possible
+                throw runtime_error("resource collector doesn't have snow_sca");
+            }
+
+
+
+            template<class rc_t = response_collector_t>
+            enable_if_tx<detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_swe) const {
+                if(catchment_swe.empty())
+                    catchment_swe=extract_area_ts_property([](const cell_t&c){return c.rc.snow_swe;});
+                return compute_weighted_area_ts_average(t,catchment_swe);
+            }
+            template<class rc_t = response_collector_t>
+            enable_if_tx<!detect_snow_swe<rc_t>::value,pts_t> compute_swe_sum(const target_specification_t& t,vector<area_ts>& catchment_d) const {
+                throw runtime_error("resource collector doesn't have snow_swe");
+            }
+
 			/**\brief from operator(), called by min_bobyqa, for each iteration, so p is bobyqa parameter vector
 			* notice that the function returns the value of the goal function,
 			* as specified by the target specification. The flexibility is rather large:
@@ -455,42 +597,51 @@ namespace shyft{
 				reset_states();
 				model.run_cells();
 				double goal_function_value = 0.0;// overall goal-function, intially zero
-				double scale_factor_sum = 0.0;
-				//TODO: extract all catchment results.. from the model..
-				vector<pts_t> catchment_discharges;
-				model.catchment_discharges(catchment_discharges);
-				for (auto& t : targets) {
-					pts_t discharge_sum(model.time_axis, 0, shyft::timeseries::POINT_AVERAGE_VALUE);
-					for (auto i : t.catchment_indexes) {
-						discharge_sum.add(catchment_discharges[i]);
-					}
-					// now calculate the discharge_sum for the target ts resolution
-
+				double scale_factor_sum = 0.0; // each target-spec have a weight, -use this to sum up weights
+				vector<pts_t> catchment_d;
+				vector<area_ts> catchment_sca,catchment_swe;// "catchment" level simulated discharge,sca,swe
+				for (const auto& t : targets) {
 					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.get_time_axis());
-					shyft::timeseries::average_accessor<pts_t, timeaxis_t> discharge_sum_accessor(discharge_sum, t.ts.get_time_axis());
+					pts_t property_sum;
+                    switch(t.catchment_property){
+                    case DISCHARGE:
+                        property_sum=compute_discharge_sum(t,catchment_d);
+                        break;
+                    case SNOW_COVERED_AREA:
+                        property_sum=compute_sca_sum(t,catchment_sca);
+                        break;
+                    case SNOW_WATER_EQUIVALENT:
+                        property_sum=compute_swe_sum(t,catchment_swe);
+                        break;
+                    }
+					shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.get_time_axis());
+                    double partial_goal_function_value;
 					if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
-						double partial_nash_sutcliffe_gf = nash_sutcliffe_goal_function(target_accessor, discharge_sum_accessor); 
-						goal_function_value += partial_nash_sutcliffe_gf* t.scale_factor;// add scaled contribution from each target
+						partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
 					} else {
 						// ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
                         // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
-                        double EDs = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
-                                                                                                        discharge_sum_accessor,
+                        partial_goal_function_value /* EDs */ = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
+                                                                                                        property_sum_accessor,
                                                                                                         t.s_r,
                                                                                                         t.s_a,
                                                                                                         t.s_b);
-                        goal_function_value += t.scale_factor*EDs;
 					}
-					scale_factor_sum += t.scale_factor;
+					if(isfinite(partial_goal_function_value)) {
+                        scale_factor_sum += t.scale_factor;
+                        goal_function_value += t.scale_factor*partial_goal_function_value;
+					} else if (print_progress_level>0) {
+					    cout<<"warning: goal-function "<<t.catchment_property<<": evaluated as nan"<<endl;
+					}
 				}
 				goal_function_value /= scale_factor_sum;
 				if (print_progress_level > 0) {
-					std::cout << "ParameterVector(";
+					cout << "ParameterVector(";
 					for (size_t i = 0; i < parameter_accessor.size(); ++i) {
-						std::cout << parameter_accessor.get(i);
+						cout << parameter_accessor.get(i);
 						if (i < parameter_accessor.size() - 1)cout << ", ";
 					}
-					std::cout << ") = " << goal_function_value << " (NS or KG)" <<endl;
+					cout << ") = " << goal_function_value << " (NS or KG)" <<endl;
 				}
 				return goal_function_value;
 			}

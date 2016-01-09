@@ -19,7 +19,6 @@
 class cell_builder_test : public CxxTest::TestSuite {
   public:
     void test_read_geo_region_data_from_files(void);
-    void test_build_geo_cell_data_from_geo_region_data(void);
     void test_io_performance(void);
     void test_read_geo_point_map(void);
     void test_read_geo_located_ts(void);

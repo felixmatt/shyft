@@ -88,6 +88,7 @@ namespace shyft {
 			typedef P parameter_t;///< export the parameter type so we can use it elsewhere
 			typedef E env_ts_t;   ///< export the env_ts type so we can use it elsewhere
 			typedef S state_t;    ///< export the state type ..
+			typedef RC response_collector_t;
             typedef typename E::timeaxis_t timeaxis_t;///<export the timeaxis_t
 			// these are the type of data the cell keeps:
 			geo_cell_data geo;///< all needed (static) geo-related information goes here
@@ -118,6 +119,8 @@ namespace shyft {
 			void   set_state(const S& s) { state = s; }
 			///< collecting the state during run could be very useful to understand models
 			void set_state_collection(bool on) {}
+			///< collecting the snow sca and swe on for calibration scenarios, default throws
+			void set_snow_sca_swe_collection(bool on) {/*default simply ignore*/}
 			/// run the cell method stack for  a specified time-axis, to be specialized by cell type
 			void run(const timeaxis_t& t) {}
 		};
@@ -178,7 +181,7 @@ namespace shyft {
              * \tparam cell the cell type, assumed to have geo.catchment_id()
              * \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
              * \param cells that we want to perform calculation on
-             * \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed 
+             * \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
              * \param cell_ts, a callable that fetches the cell feature we want to sum
              * \throw runtime_error if number of cells are zero
              * \return feature sum, as a ts, a  shared_ptr<pts_ts>
