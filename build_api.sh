@@ -4,7 +4,7 @@
 #  compile dependencies are in place
 #  swig >=3.07
 #  python 3.x (anaconda tested, other possible as long as we do have numpy for compile)
-#  boost 1.59
+#  boost 1.60
 #  dlib
 #  armadillo (including blas/lapack, other options easily availabe)
 # notice that you can override 
@@ -22,7 +22,7 @@ py_include="${py_include:--I/opt/anaconda/include/python3.4m -I/opt/anaconda/lib
 py_lib="${py_lib:--L/opt/anaconda/lib}"
 
 armadillo_libs="${armadillo_libs:--lblas -llapack}"
-armadillo_defs="${armadillo_defs:--DARMA_DONT_USE_WRAPPER}"
+armadillo_defs="${armadillo_defs:--DARMA_DONT_USE_WRAPPER -DARMA_DONT_PRINT_ERRORS -DARMA_NO_DEBUG}"
 
 boost_libs="${boost_libs:-}"
 boost_include="${boost_include:-}"

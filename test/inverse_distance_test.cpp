@@ -13,6 +13,7 @@
 	const double NAN=  *( double* )nanx;
 #endif
 #endif
+#include <armadillo>
 
 using namespace shyft::core::inverse_distance;
 
@@ -109,6 +110,7 @@ namespace shyfttest_idw {
             : max_distance(max_distance), max_members(max_number_of_neigbours) {}
         double max_distance;
         size_t max_members;
+        bool gradient_by_equation=false;// just use min/max for existing tests(bw compatible)
         double default_gradient() const {return  -0.006;}  // C/m decrease 0.6 degC/100m
         double precipitation_scale_factor() const { return 1.0 + 2.0/100.0; } // 2 pct /100m
         double distance_measure_factor=2.0; // Square distance
@@ -527,4 +529,50 @@ void inverse_distance_test::test_performance() {
 
 }
 
+static inline
+arma::vec3 p_vec(geo_point a, geo_point b) {
+        return arma::vec3({b.x-a.x,b.y-a.y,b.z-a.z});
+}
+
+
+void inverse_distance_test::test_temperature_gradient_model() {
+    using namespace arma;
+    geo_point   p0(   0,    0,  10),// 10 deg.
+                p1(1000,    0, 110),// 9.4 deg.
+                p2(   0, 1000, 110),
+                p3(1000, 1000, 220),
+                px( 500,  500,  50);
+    vec3 dTv({0.001 , 0.002, +0.1/100}); // temp. gradient in x, y, z direction
+    auto dT=dTv.t();
+    double t0=10.0;
+    auto p01=p_vec(p0,p1);
+    auto p02=p_vec(p0,p2);
+    auto p03=p_vec(p0,p3);
+    mat33  P(temperature_gradient_scale_computer::p_mat(p0,p1,p2,p3));
+    auto t1= t0 + as_scalar(dT*p01);
+    auto t2= t0 + as_scalar(dT*p02);
+    auto t3= t0 + as_scalar(dT*p03);
+    temperature_parameter p(-0.0065,5,5*1000,true);// turn on using equations to solve gradient
+    temperature_gradient_scale_computer sc(p);
+    vector<Source> s;
+    s.emplace_back(p0,t0);
+    s.emplace_back(p1,t1);
+    s.emplace_back(p2,t2);
+    s.emplace_back(p3,t3);
+    utctime tx=calendar().time(YMDhms(2000,1,1));
+    sc.add(s[0],tx);
+    TS_ASSERT_DELTA(sc.compute(),p.default_gradient(),0.000001);// with one point, default should be returned
+    sc.add(s[1],tx);
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// with more than one, use min/max method
+    sc.add(s[2],tx);
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// still min/max method
+    sc.add(s[2],tx);// add redundant point, gives singularity, so we should fallback to min-max method.
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// still min/max method
+    sc.clear();//forget all points
+    for(size_t i=0;i<s.size();++i)
+        sc.add(s[i],tx);//fill up with distinct points
+    TS_ASSERT_DELTA(sc.compute(),as_scalar(dTv(2)),0.00001);// now we should get the correct linear vertical
+
+
+}
 /* vim: set filetype=cpp: */

@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <exception>
 #include <functional>
-
+#include <armadillo>
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "geo_point.h"
@@ -37,12 +37,16 @@ namespace shyft {
 
 	        /** \brief For temperature inverse distance, also provide default temperature gradient to be used
 	         * when the gradient can not be computed.
+	         * \note if gradient_by_equation is set true, and number of points >3, the temperature gradient computer
+	         *  will try to use the 4 closes points and determine the 3d gradient including the vertical gradient.
+             *   (in scenarios with constant gradients(vertical/horizontal), this is accurate)
 			 * \sa temperature_model
 	         */
 	        struct temperature_parameter :public parameter {
 	            double default_temp_gradient;///< unit [degC/m]
-	            temperature_parameter(double default_gradient = -0.006, size_t max_members = 20, double max_distance = 200000.0)
-	                : parameter(max_members, max_distance), default_temp_gradient(default_gradient) {}
+	            bool   gradient_by_equation;///< if true, gradient is computed using 4 closest neighbors, solving equations to find temperature gradients.
+	            temperature_parameter(double default_gradient = -0.006, size_t max_members = 20, double max_distance = 200000.0,bool gradient_by_equation=false)
+	                : parameter(max_members, max_distance), default_temp_gradient(default_gradient),gradient_by_equation(gradient_by_equation) {}
 	            double default_gradient() const { return default_temp_gradient; }
 	        };
 
@@ -245,6 +249,18 @@ namespace shyft {
 			* and then use d t/dz
 			*/
 			struct temperature_gradient_scale_computer {
+                static inline
+                arma::mat33 p_mat(const geo_point& p0,const geo_point& p1, const geo_point& p2, const geo_point& p3) {
+                    arma::mat33 r;
+                    r(0,0)= p1.x-p0.x;r(0,1)=p1.y-p0.y;r(0,2)=p1.z-p0.z;
+                    r(1,0)= p2.x-p0.x;r(1,1)=p2.y-p0.y;r(1,2)=p2.z-p0.z;
+                    r(2,0)= p3.x-p0.x;r(2,1)=p3.y-p0.y;r(2,2)=p3.z-p0.z;
+                    return r;
+                }
+                static inline
+                arma::vec3 dt_vec(double t0,double t1, double t2,double t3) {
+                    return arma::vec3({t1-t0,t2-t0,t3-t0});
+                }
 
 			    struct temp_point{
 			        temp_point(const geo_point p,double t):point(p),temperature(t){}
@@ -253,11 +269,20 @@ namespace shyft {
                 };
 				static bool is_source_based() { return true; }
 				template <typename P>
-				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()) { pt.reserve(p.max_members); }
+				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()),gradient_by_equation(p.gradient_by_equation) { pt.reserve(p.max_members); }
 				template<typename T,typename S> void add(const S &s, T tx) {
 				    pt.emplace_back(s.mid_point(),s.value(tx));
 				}
 				double compute() const {
+				    using namespace arma;
+				    if(gradient_by_equation && pt.size()>3) { // try with full gradient approach
+                        try {
+                            vec temperature_gradient;
+                            if(solve(temperature_gradient,p_mat(pt[0].point,pt[1].point,pt[2].point,pt[3].point),dt_vec(pt[0].temperature,pt[1].temperature,pt[2].temperature,pt[3].temperature)))
+                                return as_scalar(temperature_gradient(2));
+                        } catch( ... ) { // singular matrix, fallback to use second strategy
+                        }
+				    }
 				    if(pt.size()>1) {
                         size_t n=pt.size();
                         size_t mx_i=0;size_t mn_i=0;
@@ -280,6 +305,7 @@ namespace shyft {
 			private:
 				double default_gradient;
 				vector<temp_point> pt;
+				bool gradient_by_equation; ///< if true, and 4 or more points, use equation to accurately determine the gradient
 			};
 
 			/** \brief temperature_gradient_scale_computer that always returns default gradient

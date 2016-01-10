@@ -120,6 +120,7 @@
 			<Add option="-I$(#python.include)" />
 			<Add option="-I$(#numpy.include)" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DARMA_DONT_PRINT_ERRORS" />
 			<Add directory=".." />
 			<Add directory="../../../dlib" />
 			<Add directory="../.." />
