@@ -49,8 +49,8 @@ namespace shyfttest_idw {
         // for testing
         void set_value(double vx) {v=vx;}
         void value_at_t(utctime tx,double vx) {t_special=tx;v_special=vx;}
-        static std::vector<Source> GenerateTestSources(const TimeAxis& time_axis,size_t n, double x, double y, double radius) {
-            std::vector<Source> r; r.reserve(n);
+        static vector<Source> GenerateTestSources(const TimeAxis& time_axis,size_t n, double x, double y, double radius) {
+            vector<Source> r; r.reserve(n);
             const double pi = 3.1415;
             double delta= 2*pi/n;
             for(double angle=0; angle < 2*pi; angle += delta) {
@@ -59,12 +59,26 @@ namespace shyfttest_idw {
                 double za = (xa + ya)/1000.0;
                 r.emplace_back(geo_point(xa, ya, za), 10.0 + za*-0.006);// reasonable temperature, dependent on height
             }
-            return r;
+            return move(r);
+        }
+        static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis,size_t nx,size_t ny, double x, double y, double dxy) {
+            vector<Source> r; r.reserve(nx*ny);
+            const double max_dxy= dxy*(nx+ny);
+            for(size_t i=0;i<nx;++i) {
+                double xa = x + i*dxy;
+                for(size_t j=0; j < ny; ++j) {
+                    double ya = y + j*dxy;
+                    double za = 1000.0*(xa + ya)/max_dxy;
+                    r.emplace_back(geo_point(xa, ya, za), 10.0 + za*-0.006);// reasonable temperature, dependent on height
+                }
+            }
+            return move(r);
         }
     };
 
     struct MCell
     {
+        MCell():point(),v(-1.0),set_count(0),slope(1.0){}
         MCell(geo_point p) : point(p), v(-1.0), set_count(0), slope(1.0) {}
         geo_point point;
         double v;
@@ -78,14 +92,14 @@ namespace shyfttest_idw {
             set_count++;
             v = vt;
         }
-        static std::vector<MCell> GenerateTestGrid(size_t nx,size_t ny)
+        static vector<MCell> GenerateTestGrid(size_t nx,size_t ny)
         {
-            std::vector<MCell> r; r.reserve(nx*ny);
+            vector<MCell> r; r.reserve(nx*ny);
             const double z_min=100.0, z_max=800.0, dz=(z_max-z_min)/(nx+ny);
             for(size_t x=0; x < nx; ++x)
                 for(size_t y=0; y < ny; ++y)
                     r.emplace_back(geo_point(500.0 + x*1000, 500.0 + y*1000, z_min + (x + y)*dz));
-            return r;
+            return move(r);
         }
     };
 
@@ -261,7 +275,7 @@ void inverse_distance_test::test_one_source_one_dest_calculation() {
     TimeAxis ta(Tstart,dt,n);//hour, 10 steps
     vector<Source> s(Source::GenerateTestSources(ta,n_sources,0.5*nx*1000,0.5*ny*1000,0.25*0.5*(nx+ny)*1000));// 40 sources, radius 50km, starting at 100,100 km center
     vector<MCell> d(MCell::GenerateTestGrid(nx,ny));// 200x200 km
-    Parameter p(2.75*0.5*(nx+ny)*1000,1+n_sources/2);
+    Parameter p(2.75*0.5*(nx+ny)*1000,max(8,1+n_sources/2));
 
     //
     // Act
@@ -474,16 +488,22 @@ void inverse_distance_test::test_performance() {
     //
     // Arrange
     //
-    utctime Tstart=3600L*24L*365L*44L;
+    utctime Tstart=calendar().time(YMDhms(2000,1,1));
     utctimespan dt=3600L;
-    int n=24;//24*10;
-    const int nx=20;
-    const int ny=200;
-    const int n_sources=40;
+    int n=24*36;// number of timesteps
+    const int n_xy=3;// number for xy-squares for sources
+    const int nx=3*n_xy;// 3 times more for grid-cells, typical arome -> cell
+    const int ny=3*n_xy;
+
+    const int s_nx=n_xy;
+    const int s_ny=n_xy;
+
+    const int n_sources=(s_nx*s_ny);
+    double s_dxy=3*1000;// arome typical 3 km.
     TimeAxis ta(Tstart,dt,n);//hour, 10 steps
-    vector<Source> s(Source::GenerateTestSources(ta,n_sources,0.5*nx*1000,0.5*ny*1000,0.25*0.5*(nx+ny)*1000));
-    vector<MCell> d(MCell::GenerateTestGrid(nx,ny));// 200x200 km
-    Parameter p(2.75*0.5*(nx+ny)*1000,n_sources/2);
+    vector<Source> s(move(Source::GenerateTestSourceGrid(ta,s_nx,s_ny,-0.5*1000,-0.5*1000,s_dxy)));
+    vector<MCell> d(move(MCell::GenerateTestGrid(nx,ny)));
+    Parameter p(s_dxy*2,min(8,n_sources/2));// for practical purposes, 8 neighbours or less.
 
     //
     // Act

@@ -39,7 +39,8 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  utctime_utilities_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  inverse_distance_test" />
+					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
 		</Build>
