@@ -16,6 +16,7 @@ public:
     void test_using_up_to_max_sources();
     void test_handling_different_sources_pr_timesteps();
     void test_performance();
+    void test_temperature_gradient_model();
 };
 
 /* vim: set filetype=cpp: */

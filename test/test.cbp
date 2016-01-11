@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="api_test" />
+				<Option parameters="inverse_distance_test test_temperature_gradient_model" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  region_model_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  inverse_distance_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -39,19 +39,21 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  utctime_utilities_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  inverse_distance_test test_temperature_gradient_model" />
+					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-std=c++1y" />
 			<Add option="-Wall" />
+			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -Winvalid-pch -pthread" />
 			<Add option="-D__UNIT_TEST__" />
 			<Add option="-DVERBOSE=0" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add option="-DCXXTEST_HAVE_EH" />
 			<Add option="-DCXXTEST_HAVE_STD" />
+			<Add option="-DARMA_DONT_PRINT_ERRORS" />
 			<Add directory="../../cxxtest" />
 			<Add directory=".." />
 			<Add directory="../../dlib" />

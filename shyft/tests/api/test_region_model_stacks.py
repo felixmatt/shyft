@@ -125,6 +125,8 @@ class RegionModel(unittest.TestCase):
         model_interpolation_parameter = api.InterpolationParameter()
         # degC/m, so -0.5 degC/100m
         model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
+        # if possible use closest neighbor points and solve gradient using equation,(otherwise default min/max height)
+        model_interpolation_parameter.temperature_idw.gradient_by_equation = True
         # Max number of temperature sources used for one interpolation
         model_interpolation_parameter.temperature_idw.max_members = 6
         # 20 km is max distance

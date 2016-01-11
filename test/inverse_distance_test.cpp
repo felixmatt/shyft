@@ -13,6 +13,7 @@
 	const double NAN=  *( double* )nanx;
 #endif
 #endif
+#include <armadillo>
 
 using namespace shyft::core::inverse_distance;
 
@@ -49,8 +50,8 @@ namespace shyfttest_idw {
         // for testing
         void set_value(double vx) {v=vx;}
         void value_at_t(utctime tx,double vx) {t_special=tx;v_special=vx;}
-        static std::vector<Source> GenerateTestSources(const TimeAxis& time_axis,size_t n, double x, double y, double radius) {
-            std::vector<Source> r; r.reserve(n);
+        static vector<Source> GenerateTestSources(const TimeAxis& time_axis,size_t n, double x, double y, double radius) {
+            vector<Source> r; r.reserve(n);
             const double pi = 3.1415;
             double delta= 2*pi/n;
             for(double angle=0; angle < 2*pi; angle += delta) {
@@ -59,12 +60,26 @@ namespace shyfttest_idw {
                 double za = (xa + ya)/1000.0;
                 r.emplace_back(geo_point(xa, ya, za), 10.0 + za*-0.006);// reasonable temperature, dependent on height
             }
-            return r;
+            return move(r);
+        }
+        static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis,size_t nx,size_t ny, double x, double y, double dxy) {
+            vector<Source> r; r.reserve(nx*ny);
+            const double max_dxy= dxy*(nx+ny);
+            for(size_t i=0;i<nx;++i) {
+                double xa = x + i*dxy;
+                for(size_t j=0; j < ny; ++j) {
+                    double ya = y + j*dxy;
+                    double za = 1000.0*(xa + ya)/max_dxy;
+                    r.emplace_back(geo_point(xa, ya, za), 10.0 + za*-0.006);// reasonable temperature, dependent on height
+                }
+            }
+            return move(r);
         }
     };
 
     struct MCell
     {
+        MCell():point(),v(-1.0),set_count(0),slope(1.0){}
         MCell(geo_point p) : point(p), v(-1.0), set_count(0), slope(1.0) {}
         geo_point point;
         double v;
@@ -78,14 +93,14 @@ namespace shyfttest_idw {
             set_count++;
             v = vt;
         }
-        static std::vector<MCell> GenerateTestGrid(size_t nx,size_t ny)
+        static vector<MCell> GenerateTestGrid(size_t nx,size_t ny)
         {
-            std::vector<MCell> r; r.reserve(nx*ny);
+            vector<MCell> r; r.reserve(nx*ny);
             const double z_min=100.0, z_max=800.0, dz=(z_max-z_min)/(nx+ny);
             for(size_t x=0; x < nx; ++x)
                 for(size_t y=0; y < ny; ++y)
                     r.emplace_back(geo_point(500.0 + x*1000, 500.0 + y*1000, z_min + (x + y)*dz));
-            return r;
+            return move(r);
         }
     };
 
@@ -95,6 +110,7 @@ namespace shyfttest_idw {
             : max_distance(max_distance), max_members(max_number_of_neigbours) {}
         double max_distance;
         size_t max_members;
+        bool gradient_by_equation=false;// just use min/max for existing tests(bw compatible)
         double default_gradient() const {return  -0.006;}  // C/m decrease 0.6 degC/100m
         double precipitation_scale_factor() const { return 1.0 + 2.0/100.0; } // 2 pct /100m
         double distance_measure_factor=2.0; // Square distance
@@ -261,7 +277,7 @@ void inverse_distance_test::test_one_source_one_dest_calculation() {
     TimeAxis ta(Tstart,dt,n);//hour, 10 steps
     vector<Source> s(Source::GenerateTestSources(ta,n_sources,0.5*nx*1000,0.5*ny*1000,0.25*0.5*(nx+ny)*1000));// 40 sources, radius 50km, starting at 100,100 km center
     vector<MCell> d(MCell::GenerateTestGrid(nx,ny));// 200x200 km
-    Parameter p(2.75*0.5*(nx+ny)*1000,1+n_sources/2);
+    Parameter p(2.75*0.5*(nx+ny)*1000,max(8,1+n_sources/2));
 
     //
     // Act
@@ -474,16 +490,22 @@ void inverse_distance_test::test_performance() {
     //
     // Arrange
     //
-    utctime Tstart=3600L*24L*365L*44L;
+    utctime Tstart=calendar().time(YMDhms(2000,1,1));
     utctimespan dt=3600L;
-    int n=24;//24*10;
-    const int nx=20;
-    const int ny=200;
-    const int n_sources=40;
+    int n=24*36;// number of timesteps
+    const int n_xy=3;// number for xy-squares for sources
+    const int nx=3*n_xy;// 3 times more for grid-cells, typical arome -> cell
+    const int ny=3*n_xy;
+
+    const int s_nx=n_xy;
+    const int s_ny=n_xy;
+
+    const int n_sources=(s_nx*s_ny);
+    double s_dxy=3*1000;// arome typical 3 km.
     TimeAxis ta(Tstart,dt,n);//hour, 10 steps
-    vector<Source> s(Source::GenerateTestSources(ta,n_sources,0.5*nx*1000,0.5*ny*1000,0.25*0.5*(nx+ny)*1000));
-    vector<MCell> d(MCell::GenerateTestGrid(nx,ny));// 200x200 km
-    Parameter p(2.75*0.5*(nx+ny)*1000,n_sources/2);
+    vector<Source> s(move(Source::GenerateTestSourceGrid(ta,s_nx,s_ny,-0.5*1000,-0.5*1000,s_dxy)));
+    vector<MCell> d(move(MCell::GenerateTestGrid(nx,ny)));
+    Parameter p(s_dxy*2,min(8,n_sources/2));// for practical purposes, 8 neighbours or less.
 
     //
     // Act
@@ -507,4 +529,50 @@ void inverse_distance_test::test_performance() {
 
 }
 
+static inline
+arma::vec3 p_vec(geo_point a, geo_point b) {
+        return arma::vec3({b.x-a.x,b.y-a.y,b.z-a.z});
+}
+
+
+void inverse_distance_test::test_temperature_gradient_model() {
+    using namespace arma;
+    geo_point   p0(   0,    0,  10),// 10 deg.
+                p1(1000,    0, 110),// 9.4 deg.
+                p2(   0, 1000, 110),
+                p3(1000, 1000, 220),
+                px( 500,  500,  50);
+    vec3 dTv({0.001 , 0.002, +0.1/100}); // temp. gradient in x, y, z direction
+    auto dT=dTv.t();
+    double t0=10.0;
+    auto p01=p_vec(p0,p1);
+    auto p02=p_vec(p0,p2);
+    auto p03=p_vec(p0,p3);
+    mat33  P(temperature_gradient_scale_computer::p_mat(p0,p1,p2,p3));
+    auto t1= t0 + as_scalar(dT*p01);
+    auto t2= t0 + as_scalar(dT*p02);
+    auto t3= t0 + as_scalar(dT*p03);
+    temperature_parameter p(-0.0065,5,5*1000,true);// turn on using equations to solve gradient
+    temperature_gradient_scale_computer sc(p);
+    vector<Source> s;
+    s.emplace_back(p0,t0);
+    s.emplace_back(p1,t1);
+    s.emplace_back(p2,t2);
+    s.emplace_back(p3,t3);
+    utctime tx=calendar().time(YMDhms(2000,1,1));
+    sc.add(s[0],tx);
+    TS_ASSERT_DELTA(sc.compute(),p.default_gradient(),0.000001);// with one point, default should be returned
+    sc.add(s[1],tx);
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// with more than one, use min/max method
+    sc.add(s[2],tx);
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// still min/max method
+    sc.add(s[2],tx);// add redundant point, gives singularity, so we should fallback to min-max method.
+    TS_ASSERT_DELTA(sc.compute(),(t1-t0)/(p1.z-p0.z),0.000001);// still min/max method
+    sc.clear();//forget all points
+    for(size_t i=0;i<s.size();++i)
+        sc.add(s[i],tx);//fill up with distinct points
+    TS_ASSERT_DELTA(sc.compute(),as_scalar(dTv(2)),0.00001);// now we should get the correct linear vertical
+
+
+}
 /* vim: set filetype=cpp: */

@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <exception>
 #include <functional>
-
+#include <armadillo>
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "geo_point.h"
@@ -15,6 +15,7 @@
 namespace shyft {
     namespace core {
 		namespace inverse_distance {
+                using namespace std;
 
 	        /** \brief parameter is a simple place-holder for IDW parameters
 			 *
@@ -36,12 +37,16 @@ namespace shyft {
 
 	        /** \brief For temperature inverse distance, also provide default temperature gradient to be used
 	         * when the gradient can not be computed.
+	         * \note if gradient_by_equation is set true, and number of points >3, the temperature gradient computer
+	         *  will try to use the 4 closes points and determine the 3d gradient including the vertical gradient.
+             *   (in scenarios with constant gradients(vertical/horizontal), this is accurate)
 			 * \sa temperature_model
 	         */
 	        struct temperature_parameter :public parameter {
 	            double default_temp_gradient;///< unit [degC/m]
-	            temperature_parameter(double default_gradient = -0.006, size_t max_members = 20, double max_distance = 200000.0)
-	                : parameter(max_members, max_distance), default_temp_gradient(default_gradient) {}
+	            bool   gradient_by_equation;///< if true, gradient is computed using 4 closest neighbors, solving equations to find temperature gradients.
+	            temperature_parameter(double default_gradient = -0.006, size_t max_members = 20, double max_distance = 200000.0,bool gradient_by_equation=false)
+	                : parameter(max_members, max_distance), default_temp_gradient(default_gradient),gradient_by_equation(gradient_by_equation) {}
 	            double default_gradient() const { return default_temp_gradient; }
 	        };
 
@@ -126,7 +131,6 @@ namespace shyft {
 								   F&& dest_set_value) // in short, a setter function for the result..
 								   //std::function< void(typename D::value_type& ,size_t ,double ) > dest_set_value ) // in short, a setter function for the result..
 			{
-				using namespace std;
 				typedef typename S::value_type const * source_pointer;
 				typedef typename S::value_type source_t;
 
@@ -190,6 +194,7 @@ namespace shyft {
 				//
 				vector<double> destination_scale; destination_scale.reserve(destination_count);
 				bool first_time_scale_calc=true;
+				typename M::scale_computer gc(parameter);
 
 				for (size_t i=0; i < timeAxis.size(); ++i) {
 					auto period_i = timeAxis(i);
@@ -198,16 +203,13 @@ namespace shyft {
 					if( M::scale_computer::is_source_based() || first_time_scale_calc) {
 						destination_scale.clear();
 						for(size_t j=0; j < cell_neighbours.size(); ++j) {
-							auto cell_neighbor = cell_neighbours[j];
-							typename M::scale_computer gc(parameter);
-							for_each(begin(cell_neighbor), end(cell_neighbor),
-								[&, period_i]
-								(const source_weight &sw) {
-									 double source_value=sw.source->value(period_i);
-									 if(isfinite(source_value)) // only use valid source values
-									   gc.add(*(sw.source), period_i);
-								}
-							);
+							const auto &cell_neighbor = cell_neighbours[j];
+                            gc.clear();// reset the scale computer
+							for(const auto & sw:cell_neighbor) {
+                                double source_value=sw.source->value(period_i);
+								if(isfinite(source_value)) // only use valid source values
+                                    gc.add(*(sw.source), period_i);
+							}
 							destination_scale.emplace_back(gc.compute());//could pass (destination_begin +j)->mid_point(), so we know the dest position ?
 							first_time_scale_calc=false;// all models except temperature(due to gradient) are one time only,
 						}
@@ -220,17 +222,13 @@ namespace shyft {
 						auto &cell_neighbor = cell_neighbours[j];
 						auto destination = destination_begin + j;
 						double computed_scale = destination_scale[j];
-
-						for_each(begin(cell_neighbor), end(cell_neighbor),
-							[&, period_i]
-							(const source_weight &sw) {
-								double source_value = sw.source->value(period_i);
-								if(isfinite(source_value)) { // only use valid source values
-									sum_weight_value += sw.weight*M::transform(source_value, computed_scale, *(sw.source), *destination);
-									sum_weights += sw.weight;
-								}
-							}
-						);
+                        for(const auto& sw:cell_neighbor) {
+                            double source_value = sw.source->value(period_i);
+                            if(isfinite(source_value)) { // only use valid source values
+                                sum_weight_value += sw.weight*M::transform(source_value, computed_scale, *(sw.source), *destination);
+                                sum_weights += sw.weight;
+                            }
+                        }
 						dest_set_value(*destination,period_i,sum_weight_value/sum_weights);
 					}
 				}
@@ -238,12 +236,34 @@ namespace shyft {
 #ifndef SWIG
 			/** \brief temperature_gradient_scale_computer
 			* based on a number of geo-located temperature-sources, compute the temperature gradient.
+			* The algorithm uses the two valid points with highest/lowest z among the surrounding points.
+			* The minimum z-distance is set to 50m to ensure stable calculations.
+			* If the available points are less than two, or they do not meet the z-distance criteria,
+			* the default gradient is returned.
 			*
-			* Usage in the context of IDW-models,
-			* Linear least square calculation of temperature gradient,
-			* see http://mathworld.wolfram.com/LastSqueresFitting.html
+			* Improved methods could be implemented, like  using
+			* the points that have smallest horizontal distance
+			* (to minimize horizontal change vs. vertical change)
+			* or even better, utilize multiple nearby points
+			* to calculate the general temp.gradient (d t/dx, d t/dy, d t/dz )
+			* and then use d t/dz
 			*/
 			struct temperature_gradient_scale_computer {
+                static inline
+                arma::mat33 p_mat(const geo_point& p0,const geo_point& p1, const geo_point& p2, const geo_point& p3) {
+                    arma::mat33 r;
+                    r(0,0)= p1.x-p0.x;r(0,1)=p1.y-p0.y;r(0,2)=p1.z-p0.z;
+                    r(1,0)= p2.x-p0.x;r(1,1)=p2.y-p0.y;r(1,2)=p2.z-p0.z;
+                    r(2,0)= p3.x-p0.x;r(2,1)=p3.y-p0.y;r(2,2)=p3.z-p0.z;
+                    return r;
+                }
+                static inline
+                arma::vec3 dt_vec(double t0,double t1, double t2,double t3) {
+					arma::vec3 r({t1-t0,t2-t0,t3-t0});
+					//arma::vec3 r;r(0) = t1 - t0;r(1) = t2 - t0;r(2) = t3 - t0;
+					return r;
+                }
+
 			    struct temp_point{
 			        temp_point(const geo_point p,double t):point(p),temperature(t){}
 			        geo_point point;
@@ -251,33 +271,32 @@ namespace shyft {
                 };
 				static bool is_source_based() { return true; }
 				template <typename P>
-				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()) { clear(); }
+				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()),gradient_by_equation(p.gradient_by_equation) { pt.reserve(p.max_members); }
 				template<typename T,typename S> void add(const S &s, T tx) {
 				    pt.emplace_back(s.mid_point(),s.value(tx));
 				}
 				double compute() const {
+				    using namespace arma;
+				    if(gradient_by_equation && pt.size()>3) { // try with full gradient approach
+                        try {
+                            vec temperature_gradient;
+                            if(solve(temperature_gradient,p_mat(pt[0].point,pt[1].point,pt[2].point,pt[3].point),dt_vec(pt[0].temperature,pt[1].temperature,pt[2].temperature,pt[3].temperature),solve_opts::no_approx))
+                                return as_scalar(temperature_gradient(2));
+                        } catch( ... ) { // singular matrix, fallback to use second strategy
+                        }
+				    }
 				    if(pt.size()>1) {
-                        double s_h=0;
-                        double s_ht=0;
-                        double s_t=0;
-                        double s_hh=0;
                         size_t n=pt.size();
                         size_t mx_i=0;size_t mn_i=0;
                         for(size_t i=0;i<n;++i) {
-                            double t=pt[i].temperature;
                             double h=pt[i].point.z;
-                            s_h += h; s_ht += h*t; s_t += t; s_hh += h*h;
                             if(h<pt[mn_i].point.z)mn_i=i;
                             else if(h>pt[mx_i].point.z)mx_i=i;
                         }
                         double mi_mx_dz=pt[mx_i].point.z - pt[mn_i].point.z;
                         const double minimum_z_distance=50.0;
                         if(mi_mx_dz > minimum_z_distance) {
-                            //double linear_best_fit= (n*s_ht - s_h*s_t) / (n*s_hh - s_h*s_h) ;
-                            // min -max z ?
-                            //double mi_mx_grad=
                             return ( pt[mx_i].temperature - pt[mn_i].temperature)/(mi_mx_dz);
-                            //return linear_best_fit;
                         }
                         return default_gradient;
 				    } else {
@@ -287,7 +306,8 @@ namespace shyft {
 				void clear() { pt.clear(); }
 			private:
 				double default_gradient;
-				std::vector<temp_point> pt;
+				vector<temp_point> pt;
+				bool gradient_by_equation; ///< if true, and 4 or more points, use equation to accurately determine the gradient
 			};
 
 			/** \brief temperature_gradient_scale_computer that always returns default gradient
@@ -354,6 +374,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
+					void clear() { }
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -382,6 +403,7 @@ namespace shyft {
 					scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
 					void add(const S &, utctime) {}
 					double compute() const { return precipitation_gradient; }
+					void clear() { }
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -406,6 +428,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
+					void clear() { }
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -428,6 +451,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
+					void clear() { }
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
