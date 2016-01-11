@@ -259,7 +259,9 @@ namespace shyft {
                 }
                 static inline
                 arma::vec3 dt_vec(double t0,double t1, double t2,double t3) {
-                    return arma::vec3({t1-t0,t2-t0,t3-t0});
+					arma::vec3 r({t1-t0,t2-t0,t3-t0});
+					//arma::vec3 r;r(0) = t1 - t0;r(1) = t2 - t0;r(2) = t3 - t0;
+					return r;
                 }
 
 			    struct temp_point{
@@ -278,7 +280,7 @@ namespace shyft {
 				    if(gradient_by_equation && pt.size()>3) { // try with full gradient approach
                         try {
                             vec temperature_gradient;
-                            if(solve(temperature_gradient,p_mat(pt[0].point,pt[1].point,pt[2].point,pt[3].point),dt_vec(pt[0].temperature,pt[1].temperature,pt[2].temperature,pt[3].temperature)))
+                            if(solve(temperature_gradient,p_mat(pt[0].point,pt[1].point,pt[2].point,pt[3].point),dt_vec(pt[0].temperature,pt[1].temperature,pt[2].temperature,pt[3].temperature),solve_opts::no_approx))
                                 return as_scalar(temperature_gradient(2));
                         } catch( ... ) { // singular matrix, fallback to use second strategy
                         }
