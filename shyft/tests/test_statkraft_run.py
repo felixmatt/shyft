@@ -97,7 +97,7 @@ try:
             avg_gs_lwc = model.gamma_snow_state.lwc(cids)  # sca skaugen|gamma
             self.assertIsNotNone(avg_gs_lwc)
             # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-            avg_gs_output = model.gamma_snow_response.output(cids)
+            avg_gs_output = model.gamma_snow_response.outflow(cids)
             self.assertIsNotNone(avg_gs_output)
             print("done. now save to db")
             # SmGTsRepository(PROD,FC_PROD)
