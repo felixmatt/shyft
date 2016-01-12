@@ -102,9 +102,9 @@ try:
             print("done. now save to db")
             # SmGTsRepository(PROD,FC_PROD)
             save_list = [
-                TsStoreItem(u'/test/sih/shyft/tistel/discharge_m3s', lambda m: m.statistics.discharge(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/temperature', lambda m: m.statistics.temperature(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/precipitation', lambda m: m.statistics.precipitation(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/discharge_m3s', lambda m: m.statistics.discharge(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/temperature', lambda m: m.statistics.temperature(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/precipitation', lambda m: m.statistics.precipitation(cids)),
             ]
 
             tss = TimeseriesStore(SmGTsRepository(PREPROD, FC_PREPROD), save_list)
@@ -118,12 +118,12 @@ try:
             ptgsk.run_forecast(fc_time_axis, fc_time_axis.start(), endstate)  # now forecast
             print("Done forecast")
             fc_save_list = [
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_discharge_m3s', lambda m: m.statistics.discharge(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_temperature', lambda m: m.statistics.temperature(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_precipitation', lambda m: m.statistics.precipitation(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_radiation', lambda m: m.statistics.radiation(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_rel_hum', lambda m: m.statistics.rel_hum(cids)),
-                TsStoreItem(u'/test/sih/shyft/tistel/fc_wind_speed', lambda m: m.statistics.wind_speed(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_discharge_m3s', lambda m: m.statistics.discharge(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_temperature', lambda m: m.statistics.temperature(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_precipitation', lambda m: m.statistics.precipitation(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_radiation', lambda m: m.statistics.radiation(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_rel_hum', lambda m: m.statistics.rel_hum(cids)),
+                TsStoreItem(u'/test/x/shyft/tistel/fc_wind_speed', lambda m: m.statistics.wind_speed(cids)),
 
             ]
             TimeseriesStore(SmGTsRepository(PREPROD, FC_PREPROD), fc_save_list).store_ts(ptgsk.region_model)
