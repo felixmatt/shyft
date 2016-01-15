@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -86,7 +86,7 @@
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\cxxtest\cxxtest-4.3;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(SolutionDir)..\dlib</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
