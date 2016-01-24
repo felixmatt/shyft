@@ -1,6 +1,10 @@
 #include "test_pch.h"
 #include "pt_gs_k_test.h"
 #include "core/pt_gs_k.h"
+#include "core/cell_model.h"
+#include "core/pt_gs_k_cell_model.h"
+#include "core/geo_cell_data.h"
+#include "core/geo_point.h"
 #include "mocks.h"
 #include "core/timeseries.h"
 #include "core/utctime_utilities.h"
@@ -157,4 +161,49 @@ void pt_gs_k_test::test_raster_call_stack()
 
 }
 
-// TODO: Write a mass balance test for checking that the fraction calculations are correct.
+void pt_gs_k_test::test_mass_balance() {
+    calendar cal;
+    utctime t0 = cal.time(YMDhms(2014, 8, 1, 0, 0, 0));
+    utctimespan dt=deltahours(1);
+    const int n=1;
+    timeaxis tax(t0,dt,n);
+
+    pt::parameter pt_param;
+    gs::parameter gs_param;
+    ae::parameter ae_param;
+    kr::parameter k_param;
+    pc::parameter p_corr_param;
+    parameter parameter{pt_param, gs_param, ae_param, k_param, p_corr_param};
+
+    pts_t temp(tax,15.0);
+    pts_t prec(tax,3.0);
+    pts_t rel_hum(tax,0.8);
+    pts_t wind_speed(tax,2.0);
+    pts_t radiation(tax,300.0);
+
+    kr::state kirchner_state{5.0};// 5 mm in storage/state
+    gs::state gs_state;// zero snow (0.6, 1.0, 0.0, 1.0/(gs_param.snow_cv*gs_param.snow_cv), 10.0, -1.0, 0.0, 0.0);
+    gs_state.lwc=0.0;
+    gs_state.acc_melt=-1; // zero snow, precipitation goes straight through
+    state state{gs_state, kirchner_state};
+    pt_gs_k::state_collector sc;
+    pt_gs_k::all_response_collector rc;
+    const double cell_area=1000*1000;
+    sc.collect_state=true;
+    sc.initialize(tax,cell_area);
+    rc.initialize(tax,cell_area);
+    geo_cell_data gcd(geo_point(1000,1000,100));
+    pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+
+    // test strategy:
+    // let it rain constantly, let's say 3 mm/h,
+    //   when t goes to +oo the kirchner output should be 3 mm/h - act. evapotrans..
+    //   so precipitation goes in to the system, and out goes actual evapotranspiration and kirchner response q.
+    for(size_t i=0;i<10000;i++) {
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+    }
+    TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
+
+}
+
+
