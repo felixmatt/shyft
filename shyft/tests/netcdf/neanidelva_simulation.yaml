@@ -1,0 +1,14 @@
+---
+neanidelva:
+  region_config_file: neanidelva_region.yaml
+  model_config_file: neanidelva_model.yaml
+  datasets_config_file: neanidelva_datasets.yaml
+  start_datetime: 2013-09-01T00:00:00
+  run_time_step: 3600  # 1 hour time step
+  number_of_steps: 8760   # 1 month
+  #region_id: 1          # this is optional (default 0)
+  #interpolation_id: 2   # this is optional (default 0)
+  epsg: 32633
+  model_t: pt_gs_k.PTGSKModel  # model to construct
+
+...
