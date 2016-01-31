@@ -127,8 +127,9 @@ class YamlStateRepository(StateRepository):
                                        "".format(self._filename_item_separator))
         version = 0
         state_id = ""
-        # ms does not tolerate : in filenames
-        utc_timestamp_str = api.Calendar().to_string(utc_timestamp).replace(":", ".")
+        # ms does not tolerate : in filenames, and make dash to dots.
+        dt = api.Calendar().calendar_units(utc_timestamp)
+        utc_timestamp_str = "{:04d}.{:02d}.{:02d}T{:02d}.{:02d}.{:02d}".format(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
         while True:
             version += 1
             state_id = "{}{}{}{}{}.yaml".format(region_model_id,
