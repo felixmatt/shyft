@@ -138,13 +138,13 @@ namespace shyft {
             switch (deltaT) {
                 case YEAR: {
                     auto c=calendar_units(t);
-                    c.year += dt/YEAR;// gives signed number of units.
+                    c.year += int(dt/YEAR);// gives signed number of units.
                     return time(c);
                 } break;
                 case MONTH:{
                     auto c=calendar_units(t);
                     // calculate number of years..
-                    int nyears= dt/MONTH/12; // with correct sign
+                    int nyears= int(dt/MONTH/12); // with correct sign
                     c.year +=  nyears; // done with years, now single step remaining months.
                     int nmonths= n-nyears*12;// remaining months to deal with
                     c.month += nmonths;// just add them
@@ -188,13 +188,13 @@ namespace shyft {
                 case calendar::YEAR:
                 case calendar::WEEK:
                 case calendar::DAY:{
-                    auto t2x=add(t1,deltaT,n_units);
+                    auto t2x=add(t1,deltaT,long(n_units));
                     if(t2x>t2) { // got one step to far
                         --n_units;// reduce n_units, and calculate remainder
-                        remainder= t2 - add(t1,deltaT,n_units);
+                        remainder= t2 - add(t1,deltaT,long(n_units));
                     } else if(t2x<t2) {// got one step short, there might be a hope for one more
                         ++n_units;// try adding one unit
-                        auto t2xx= add(t1,deltaT,n_units);//calc new t2x
+                        auto t2xx= add(t1,deltaT,long(n_units));//calc new t2x
                         if(t2xx>t2) { // to much ?
                             --n_units;// reduce, and
                             remainder = t2 - t2x;// remainder is as with previous t2x

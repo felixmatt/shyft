@@ -20,7 +20,7 @@ namespace shyft {
 		 * context, and at the cost of compile time (also consider the python/api part).
          */
 
-		#ifdef WIN32
+		#ifdef _WIN32
 		typedef long long utctime;          /// time_t is typedef'd as a __time64_t, which is an __int64., happens to be equal to EnkiTime
 		typedef long long utctimespan;      /// utctimespan is typdedef'd as a utctime (thus __int64)
 
@@ -121,7 +121,7 @@ namespace shyft {
                  */
                 template<typename Tz>
                 tz_table(const Tz& tz ,int start_year=1905,size_t n_years=200):start_year(start_year) {
-                    for(size_t y=start_year;y<start_year+n_years;++y) {
+                    for(int y=start_year;y<start_year+n_years;++y) {
                         dst.emplace_back(tz.dst_start(y),tz.dst_end(y));
                         dt.push_back(tz.dst_offset(y));
                     }
@@ -255,7 +255,7 @@ namespace shyft {
 			static const utctimespan SECOND = 1L;
 
 			static const int UnixDay = 2440588;///< Calc::julian_day_number(ymd(1970,01,01));
-			static const utctime UnixSecond = 86400L * (utctime)UnixDay;///<Calc::julian_day_number(ymd(1970,01,01));
+			static const utctime UnixSecond = 86400LL * (utctime)UnixDay;///<Calc::julian_day_number(ymd(1970,01,01));
 
 			// Snapped from boost gregorian_calendar.ipp
 			static inline unsigned long day_number(const YMDhms& ymd) {
