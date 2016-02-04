@@ -92,8 +92,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         
 
         # Transform from source coordinates to target coordinates
-        #xx, yy = transform(data_proj, target_proj, *np.meshgrid(x[x_mask], y[y_mask]))
-        xx, yy = transform(data_proj, target_proj, x[xy_mask], y[xy_mask])
+        xx, yy = transform(data_proj, target_proj, x, y)
 
         #return xx, yy, (x_mask, y_mask), (x_inds, y_inds)
         return xx, yy, xy_mask, (x_inds, y_inds)
@@ -119,7 +118,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
 
         with Dataset(self._data_file) as dset:
             Vars = dset.variables
-            c_ids = Vars["catchment_id"]
+            c_ids = Vars["catchment_id"][:]
             xcoord = Vars['x'][:]
             ycoord = Vars['y'][:]
             m_catch = np.ones(len(c_ids), dtype=bool)
