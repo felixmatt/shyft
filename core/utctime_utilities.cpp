@@ -68,7 +68,8 @@ namespace shyft {
             if (t == no_utctime)  return YMDhms();
             if (t == max_utctime) return YMDhms::max();
             if (t == min_utctime) return YMDhms::min();
-            t += tz_info->utc_offset(t);
+            auto tz_dt=tz_info->utc_offset(t);
+            t += tz_dt;
             auto jdn = day_number(t);
             auto x = from_day_number(jdn);
             YMDhms r;
@@ -153,12 +154,10 @@ namespace shyft {
                     return time(c);
                 } break;
                 default: break;
-
             }
-            auto utc_diff_1=tz_info->utc_offset(t - (dt>0?0:deltahours(1)));//assuming dst=1h!
-            utctime r;
-            r= t+ dt;
-            auto utc_diff_2=tz_info->utc_offset(r-(dt>0?deltahours(1):0));//assuming dst=1h!
+            utctime r= t+dt;
+            auto utc_diff_1=tz_info->utc_offset(t);
+            auto utc_diff_2=tz_info->utc_offset(r);
             return r + (utc_diff_1-utc_diff_2);
             // explanation: if t and r are in different dst, compensate for difference
             // e.g.: t+ calendar day, in dst, will be 23, 24 or 25 hours long, this way
@@ -171,7 +170,6 @@ namespace shyft {
             //      r= mm:dd+1 00:00 utcdiff(r) is +2h (since we are in summer time)
             //      ret r +( 1h - 2h), eg. sub one hour, and we get a 23h day.
         };
-
 
         utctimespan calendar::diff_units(utctime t1, utctime t2, utctimespan deltaT, utctimespan &remainder) const {
             if (t1 == no_utctime || t2 == no_utctime || deltaT == 0L) {

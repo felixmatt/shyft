@@ -173,6 +173,15 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
     TS_ASSERT_EQUALS(rem,utctimespan(0));// no remainder
     TS_ASSERT_EQUALS(deltahours(23),(t1-t0));// the miracle, it's 23 hours.
     TS_ASSERT_EQUALS(t0,t2);
+    // case 1: into the details
+    utctime t1_1=cet.add(t0,deltahours(1),1);
+    utctime t1_2=cet.add(t0,deltahours(2),1);
+    utctime t1_3=cet.add(t0,deltahours(3),1);
+    TS_ASSERT_EQUALS(t1_1,t0+deltahours(1));
+    TS_ASSERT_EQUALS(t1_2,t0+deltahours(1));
+    TS_ASSERT_EQUALS(YMDhms(2016,3,27,1),cet.calendar_units(t1_2));
+    TS_ASSERT_EQUALS(t1_3,t0+deltahours(2));
+
     /// case 2: 25 hour, summer->winter
     t0 = cet.time(YMDhms(2016,10,30));
     t1 = cet.add(t0,calendar::DAY,1);
@@ -182,6 +191,19 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
     TS_ASSERT_EQUALS(rem,utctimespan(0));// no remainder
     TS_ASSERT_EQUALS(deltahours(25),(t1-t0));// the miracle, it's 25 hours.
     TS_ASSERT_EQUALS(t0,t2);
+    /// case 2: into the details
+    t1_1=cet.add(t0,deltahours(1),1);
+    t1_2=cet.add(t0,deltahours(2),1);
+    t1_3=cet.add(t0,deltahours(3),1);
+    utctime
+    t1_4=cet.add(t0,deltahours(4),1);
+    TS_ASSERT_EQUALS(t1_1,t0+deltahours(1));TS_ASSERT_EQUALS(YMDhms(2016,10,30,1),cet.calendar_units(t1_1));
+    TS_ASSERT_EQUALS(t1_2,t0+deltahours(2));TS_ASSERT_EQUALS(YMDhms(2016,10,30,2),cet.calendar_units(t1_2));
+    TS_ASSERT_EQUALS(t1_3,t0+deltahours(4));TS_ASSERT_EQUALS(YMDhms(2016,10,30,3),cet.calendar_units(t1_3));
+    TS_ASSERT_EQUALS(t1_4,t0+deltahours(5));
+    auto xx=cet.calendar_units(t1_4);
+    TS_ASSERT_EQUALS(YMDhms(2016,10,30,4),xx);
+
 
 }
 
