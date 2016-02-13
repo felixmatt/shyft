@@ -121,7 +121,7 @@ namespace shyft {
                  */
                 template<typename Tz>
                 tz_table(const Tz& tz ,int start_year=1905,size_t n_years=200):start_year(start_year) {
-                    for(int y=start_year;y<start_year+n_years;++y) {
+                    for(int y=start_year;y<int(start_year+n_years);++y) {
                         dst.emplace_back(tz.dst_start(y),tz.dst_end(y));
                         dt.push_back(tz.dst_offset(y));
                     }
