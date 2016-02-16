@@ -3,31 +3,31 @@ sources:
   - repository: source_repo1
     class: shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
     params:
-      data_dir: D:/users/ysa/shyft_fork/shyft-data
+      data_dir: D:/users/ysa/shyft_main/shyft-data
       stations_met: netcdf/orchestration-testdata/precipitation.nc
       selection_criteria: null
   - repository: source_repo1
     class: shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
     params:
-      data_dir: D:/users/ysa/shyft_fork/shyft-data
+      data_dir: D:/users/ysa/shyft_main/shyft-data
       stations_met: netcdf/orchestration-testdata/temperature.nc
       selection_criteria: null
   - repository: source_repo1
     class: shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
     params:
-      data_dir: D:/users/ysa/shyft_fork/shyft-data
+      data_dir: D:/users/ysa/shyft_main/shyft-data
       stations_met: netcdf/orchestration-testdata/wind_speed.nc
       selection_criteria: null
   - repository: source_repo1
     class: shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
     params:
-      data_dir: D:/users/ysa/shyft_fork/shyft-data
+      data_dir: D:/users/ysa/shyft_main/shyft-data
       stations_met: netcdf/orchestration-testdata/relative_humidity.nc
       selection_criteria: null
   - repository: source_repo1
     class: shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
     params:
-      data_dir: D:/users/ysa/shyft_fork/shyft-data
+      data_dir: D:/users/ysa/shyft_main/shyft-data
       stations_met: netcdf/orchestration-testdata/radiation.nc
       selection_criteria: null
 ...
