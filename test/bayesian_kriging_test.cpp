@@ -197,10 +197,10 @@ void bayesian_kriging_test::test_build_covariance_matrices() {
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
 	arma::mat K, k;
 	utils::build_covariance_matrices(begin(sources), end(sources), begin(destinations), end(destinations), params, K, k);
-	TS_ASSERT_EQUALS(K.n_rows, 9);
-	TS_ASSERT_EQUALS(K.n_cols, 9);
-	TS_ASSERT_EQUALS(k.n_rows, 9);
-	TS_ASSERT_EQUALS(k.n_cols, 15 * 15);
+	TS_ASSERT_EQUALS(K.n_rows, (size_t)9);
+	TS_ASSERT_EQUALS(K.n_cols, (size_t)9);
+	TS_ASSERT_EQUALS(k.n_rows, (size_t)9);
+	TS_ASSERT_EQUALS(k.n_cols, (size_t)15 * 15);
 }
 
 void bayesian_kriging_test::test_build_elevation_matrices() {
@@ -212,10 +212,10 @@ void bayesian_kriging_test::test_build_elevation_matrices() {
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
 	arma::mat S_e, D_e;
 	utils::build_elevation_matrices(begin(sources), end(sources), begin(destinations), end(destinations), S_e, D_e);
-	TS_ASSERT_EQUALS(S_e.n_cols, 2);
-	TS_ASSERT_EQUALS(S_e.n_rows, 9);
-	TS_ASSERT_EQUALS(D_e.n_cols, 15 * 15);
-	TS_ASSERT_EQUALS(D_e.n_rows, 2);
+	TS_ASSERT_EQUALS(S_e.n_cols, (size_t)2);
+	TS_ASSERT_EQUALS(S_e.n_rows, (size_t)9);
+	TS_ASSERT_EQUALS(D_e.n_cols, (size_t)15 * 15);
+	TS_ASSERT_EQUALS(D_e.n_rows, (size_t)2);
 }
 
 void bayesian_kriging_test::test_interpolation() {

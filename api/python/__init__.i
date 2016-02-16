@@ -39,7 +39,7 @@
     #define SWIG_FILE_WITH_INIT
     #define SWIG_PYTHON_EXTRA_NATIVE_CONTAINERS
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
+    #include "core/core_pch.h"
     #include "core/utctime_utilities.h"
 
     #include "api/api.h"
@@ -68,6 +68,7 @@
     %include <windows.i>
     %include <std_string.i>
     %include <std_vector.i>
+    %include <std_map.i>
     %include <stl.i>
     %include <exception.i>
 
@@ -90,6 +91,7 @@
 %shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::timeseries::timeaxis,shyft::timeseries::sin_fx>>)
 //%shared_ptr( shyft::core::pts_t )
 %shared_ptr( shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis> )
+%shared_ptr( shyft::core::time_zone::tz_info<shyft::core::time_zone::tz_table> )
 
 // -- Now we let SWIG parse and interpret the types in enki_api.h
 // swig will do its best to reflect all types/methods exposed there into the python wrapper.
@@ -203,6 +205,15 @@
     %include "core/model_calibration.h"
 
     %include "api.h"
+
+namespace shyft {
+  namespace core {
+     namespace time_zone {
+         %template(TzTableInfo) tz_info<shyft::core::time_zone::tz_table>;
+         //%template(NameToTzInfoMap) std::map<string,shared_ptr<shyft::core::time_zone::tz_info<shyft::core::time_zone::tz_table> >>;
+     }
+  }
+}
 
 namespace shyft {
   namespace core {

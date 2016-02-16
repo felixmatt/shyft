@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="inverse_distance_test test_temperature_gradient_model" />
+				<Option parameters="utctime_utilities_test test_calendar_to_string" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  inverse_distance_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  utctime_utilities_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
