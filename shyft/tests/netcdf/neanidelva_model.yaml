@@ -20,26 +20,26 @@ parameters:
       constant_wind_speed: 2.0
     gamma_snow:
       calculate_iso_pot_energy: false
-      fast_albedo_decay_rate: 15.0
+      fast_albedo_decay_rate: 6.752787747748934
       glacier_albedo: 0.4
       initial_bare_ground_fraction: 0.04
       max_albedo: 0.9
       max_water: 0.1
       min_albedo: 0.6
-      slow_albedo_decay_rate: 39.97512301764357
+      slow_albedo_decay_rate: 37.17325702015658
       snow_cv: 0.4
-      snow_tx: 1.243763960932693
+      tx: -0.5752881492890207
       snowfall_reset_depth: 5.0
       surface_magnitude: 30.0
       wind_const: 1.0
-      wind_scale: 3.0876493295554357
+      wind_scale: 1.8959672005350063
       winter_end_day_of_year: 100
     hbv_snow:
         foo: 10.0
     kirchner:
-      c1: -2.8103544023507725
-      c2: 0.37707633358669956
-      c3: -0.0500514482805071
+      c1: -3.336197322290274
+      c2: 0.33433661533385695
+      c3: -0.12503959620315988
     p_corr_scale_factor: 1.0
     priestley_taylor:
       albedo: 0.2

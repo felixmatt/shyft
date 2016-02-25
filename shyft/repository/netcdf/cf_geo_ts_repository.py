@@ -10,6 +10,7 @@ from netCDF4 import Dataset
 from pyproj import Proj
 from pyproj import transform
 from shyft import api
+from shyft import shyftdata_dir
 from .. import interfaces
 from .time_conversion import convert_netcdf_time
 
@@ -30,36 +31,37 @@ class CFDataRepository(interfaces.GeoTsRepository):
         """
         self._rconf = region_config
         epsg = self._rconf.domain()["EPSG"]
-        directory = params['data_dir']
+        #epsg = self._rconf["EPSG"]
+        #directory = params['data_dir']
         filename = params["stations_met"]
         
-        if not path.isdir(directory):
-            raise CFDataRepositoryError("No such directory '{}'".format(directory))
+        #if not path.isdir(directory):
+        #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
-            filename = path.join(directory, filename)
+            filename = path.join(shyftdata_dir, filename)
         if not path.isfile(filename):
             raise CFDataRepositoryError("No such file '{}'".format(filename))
             
-        self._filename = filename # path.join(directory, filename)
+        self._filename = filename
         self.allow_subset = True # allow_subset
-
-        
         self.elevation_file = None
 
         self.shyft_cs = "+init=EPSG:{}".format(epsg)
         self._x_padding = 5000.0 # x_padding
         self._y_padding = 5000.0 # y_padding
         self._bounding_box = None # bounding_box
+        self.selection_criteria = None
 
         # Field names and mappings netcdf_name: shyft_name
         self._nc_shyft_map = {"relative_humidity": "relative_humidity",
-                                 "temperature": "temperature",
-                                 "z": "z",
-                                 "precipitation": "precipitation",
-                                 "precipitation_amount_acc": "precipitation",
-                                 "wind_speed": "wind_speed",
-                                 "global_radiation":"radiation"}
+                              "temperature": "temperature",
+                              "z": "z",
+                              "precipitation": "precipitation",
+                              "precipitation_amount_acc": "precipitation",
+                              "wind_speed": "wind_speed",
+                              "global_radiation":"radiation",
+                              "discharge": "discharge"}
 
         self._shift_fields = ("precipitation_amount_acc",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
@@ -69,6 +71,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
+
+        self.vector_type_map = {"discharge": api.TsVector}
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
@@ -156,7 +160,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
             time_series[key] = np.array([construct(data[:,j]) for j in range(J)])                                
         return time_series
 
-    def _limit(self, x, y, data_cs, target_cs):
+    def _limit(self, x, y, data_cs, target_cs, ts_id):
         """
         Parameters
         ----------
@@ -186,35 +190,41 @@ class CFDataRepository(interfaces.GeoTsRepository):
         data_proj = Proj(data_cs)
         target_proj = Proj(target_cs)
 
-        # Find bounding box in netcdf projection
-        bbox = self.bounding_box
-        bb_proj = transform(target_proj, data_proj, bbox[0], bbox[1])
-        x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
-        y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
+        if(list(self.selection_criteria)[0]=='bbox'):
+            # Find bounding box in netcdf projection
+            bbox = self.bounding_box
+            bb_proj = transform(target_proj, data_proj, bbox[0], bbox[1])
+            x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
+            y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
-        # Limit data
-        x_upper = x >= x_min
-        x_lower = x <= x_max
-        y_upper = y >= y_min
-        y_lower = y <= y_max
-        if sum(x_upper == x_lower) < 2:
-            if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
-                raise CFDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-            x_upper[np.argmax(x_upper) - 1] = True
-            x_lower[np.argmin(x_lower)] = True
-        if sum(y_upper == y_lower) < 2:
-            if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
-                raise CFDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
-            y_upper[np.argmax(y_upper) - 1] = True
-            y_lower[np.argmin(y_lower)] = True
+            # Limit data
+            x_upper = x >= x_min
+            x_lower = x <= x_max
+            y_upper = y >= y_min
+            y_lower = y <= y_max
+            if sum(x_upper == x_lower) < 2:
+                if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
+                    raise CFDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
+                x_upper[np.argmax(x_upper) - 1] = True
+                x_lower[np.argmin(x_lower)] = True
+            if sum(y_upper == y_lower) < 2:
+                if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
+                    raise CFDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
+                y_upper[np.argmax(y_upper) - 1] = True
+                y_lower[np.argmin(y_lower)] = True
 
-        x_inds = np.nonzero(x_upper == x_lower)[0]
-        y_inds = np.nonzero(y_upper == y_lower)[0]
+            x_inds = np.nonzero(x_upper == x_lower)[0]
+            y_inds = np.nonzero(y_upper == y_lower)[0]
 
-        # Masks
-        x_mask = x_upper == x_lower
-        y_mask = y_upper == y_lower
-        xy_mask = ((x_mask)&(y_mask))
+            # Masks
+            x_mask = x_upper == x_lower
+            y_mask = y_upper == y_lower
+            xy_mask = ((x_mask)&(y_mask))
+
+        if(list(self.selection_criteria)[0]=='unique_id'):
+            xy_mask = np.array([id in self.selection_criteria['unique_id'] for id in ts_id])
+            x_inds = y_inds = np.nonzero(xy_mask)[0]
+
 
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, x[xy_mask], y[xy_mask])
@@ -223,14 +233,28 @@ class CFDataRepository(interfaces.GeoTsRepository):
 
     def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):
-
-        if geo_location_criteria is not None:
+        ts_id = None
+        if (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'unique_id'):
+            self.selection_criteria = {'unique_id':geo_location_criteria['unique_id']}
+            ts_id_key = [k for (k,v) in dataset.variables.items() if getattr(v,'cf_role',None)=='timeseries_id'][0]
+            ts_id = dataset.variables[ts_id_key][:]
+        elif (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'polygon'):
+            raise CFDataRepositoryError("Selection using polygon not supported yet.")
+        #elif (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'bbox'):
+        # elif all([isinstance(geo_location_criteria, list),
+        #           all(isinstance(elem, list) for elem in geo_location_criteria),
+        #           len(geo_location_criteria)==2]):
+        elif (len(geo_location_criteria)==2):
+            self.selection_criteria = {'bbox':geo_location_criteria}
             self._bounding_box = geo_location_criteria
+        else:
+            raise CFDataRepositoryError("Unrecognized selection criteria.")
 
         raw_data = {}
         x = dataset.variables.get("x", None)
         y = dataset.variables.get("y", None)
         time = dataset.variables.get("time", None)
+        dim_nb_series = [dim.name for dim in dataset.dimensions.values() if dim.name != 'time'][0]
         if not all([x, y, time]):
             raise CFDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
@@ -245,7 +269,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
 
-        x, y, m_xy, _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
+        x, y, m_xy, _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs, ts_id)
         for k in dataset.variables.keys():
             if self._nc_shyft_map.get(k, None) in input_source_types:
                 if k in self._shift_fields and issubset:  # Add one to time slice
@@ -257,7 +281,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
                 data_slice = len(data.dimensions)*[slice(None)]
                 if ensemble_member is not None:
                     data_slice[dims.index("ensemble_member")] = ensemble_member
-                data_slice[dims.index("station")] = m_xy
+                data_slice[dims.index(dim_nb_series)] = m_xy
                 data_slice[dims.index("time")] = data_time_slice
                 pure_arr = data[data_slice]
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
@@ -270,7 +294,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
             data = dataset.variables["z"]
             #dims = data.dimensions
             #data_slice = len(data.dimensions)*[slice(None)]
-            #data_slice[dims.index("station")] = m_xy
+            #data_slice[dims.index("dim_nb_series")] = m_xy
             #z = data[data_slice]
             z = data[m_xy]
         else:
@@ -318,12 +342,14 @@ class CFDataRepository(interfaces.GeoTsRepository):
             dr = r[1:] - r[:-1]
             return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
 
+        # Unit- and aggregation-dependent conversions go here
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
                        "relative_humidity": lambda x, t: (noop_space(x), noop_time(t)),
                        "temperature": lambda x, t: (noop_space(x), noop_time(t)),
                        "global_radiation": lambda x, t: (noop_space(x), noop_time(t)),
                        "precipitation": lambda x, t: (noop_space(x), noop_time(t)),
-                       "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x), dacc_time(t))}
+                       "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x), dacc_time(t)),
+                       "discharge": lambda x, t: (noop_space(x), noop_time(t))}
         res = {}
         for k, (v, ak) in data.items():
             res[k] = convert_map[ak](v, time)
@@ -332,7 +358,11 @@ class CFDataRepository(interfaces.GeoTsRepository):
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in iteritems(data):
-            tpe = self.source_type_map[name]
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
-                                      ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            if name in self.source_type_map.keys():
+                tpe = self.source_type_map[name]
+                res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
+                                          ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            else:
+                vct = self.vector_type_map[name]
+                res[name] = vct(ts)
         return res

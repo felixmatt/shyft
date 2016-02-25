@@ -47,7 +47,13 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         self._region_model = model_config.model_type() # region_model
         self._mask = None
         self._epsg = self._rconf.domain()["EPSG"] # epsg
-        self._data_file = path.join(shyftdata_dir, self._rconf.repository()["data_file"])
+        filename = self._rconf.repository()["data_file"]
+        if not path.isabs(filename):
+            # Relative paths will be prepended the data_dir
+            filename = path.join(shyftdata_dir, filename)
+        if not path.isfile(filename):
+            raise CFRegionModelRepositoryError("No such file '{}'".format(filename))
+        self._data_file = filename
         self._catch_ids = self._rconf.catchments()
         self.bounding_box = None
 

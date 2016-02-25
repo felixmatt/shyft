@@ -1,7 +1,6 @@
 ---
 repository:
-  name: netcdf
-  class: shyft.repository.netcdf.cf_region_model_repository.CFRegionModelRepository
+  class: !!python/name:shyft.repository.netcdf.cf_region_model_repository.CFRegionModelRepository
   data_file: netcdf/orchestration-testdata/cell_data.nc
 
 domain:
@@ -42,8 +41,8 @@ catchment_indices:
   - 1000010
   - 1000011
 
-parameter_overrides:
-  1228:
-    kirchner:
-        c1: -2.539
+#parameter_overrides:
+#  1228:
+#    kirchner:
+#        c1: -2.539
 ...

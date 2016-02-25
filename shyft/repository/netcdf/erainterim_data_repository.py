@@ -10,12 +10,11 @@ from netCDF4 import Dataset
 from pyproj import Proj
 from pyproj import transform
 from shyft import api
-import sys
-sys.path.append('D:/users/ysa/shyft_main/shyft/shyft')
-#from .. import interfaces
-#from .time_conversion import convert_netcdf_time
-from repository import interfaces
-from repository.netcdf.time_conversion import convert_netcdf_time
+from shyft import shyftdata_dir
+from .. import interfaces
+from .time_conversion import convert_netcdf_time
+#from repository import interfaces
+#from repository.netcdf.time_conversion import convert_netcdf_time
 
 
 class ERAInterimDataRepositoryError(Exception):
@@ -46,16 +45,16 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         and initialize data retrieval.
         """
         self._rconf = region_config
-        #epsg = self._rconf.domain()["EPSG"]
-        epsg = self._rconf["EPSG"]
-        directory = params['data_dir']
+        epsg = self._rconf.domain()["EPSG"]
+        #epsg = self._rconf["EPSG"]
+        #directory = params['data_dir']
         filename = params["stations_met"]
-        
-        if not path.isdir(directory):
-            raise ERAInterimDataRepositoryError("No such directory '{}'".format(directory))
+
+        #if not path.isdir(directory):
+        #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
-            filename = path.join(directory, filename)
+            filename = path.join(shyftdata_dir, filename)
         if not path.isfile(filename):
             raise ERAInterimDataRepositoryError("No such file '{}'".format(filename))
             
