@@ -220,10 +220,11 @@ namespace shyft {
             struct boost_tz_info { // limitation is posix time, def from 1901 and onward
                 ptime posix_t1970;///< epoch reference in ptime, needed to convert to utctime
                 time_zone_ptr tzinfo;///< we extract boost info from this one
+                string tz_region_name;///< the timezone region name, olson standard
                 /**\brief convert a ptime to a utctime */
                 utctime to_utctime(ptime p) const { return (p-posix_t1970).total_seconds();}
 
-                boost_tz_info(time_zone_ptr tzinfo):posix_t1970((date(1970,1,1))),tzinfo(tzinfo) {}
+                boost_tz_info(string tz_region_name,time_zone_ptr tzinfo):posix_t1970((date(1970,1,1))),tzinfo(tzinfo),tz_region_name(tz_region_name) {}
 
 
                 utctime dst_start(int year) const {
@@ -238,12 +239,12 @@ namespace shyft {
                 utctimespan dst_offset(int y) const {
                     return utctimespan(tzinfo->dst_offset().total_seconds());
                 }
-                string name() const {return tzinfo->std_zone_name();}
+                string name() const {return tz_region_name;}
             };
 
-            static shared_ptr<tz_info_t> create_from_posix_definition(const string& posix_tz_string) {
+            static shared_ptr<tz_info_t> create_from_posix_definition(string tz_region_name,const string& posix_tz_string) {
                 time_zone_ptr tz=time_zone_ptr(new posix_time_zone(posix_tz_string));
-                boost_tz_info btz(tz);
+                boost_tz_info btz(tz_region_name,tz);
                 return make_shared<tz_info_t>(tz_info_t(btz.base_offset(),tz_table(btz)));
             }
 
@@ -253,14 +254,14 @@ namespace shyft {
                 region_tz_map.clear(); name_tz_map.clear();
                 for(const auto&id:tzdb.region_list()) {
                     auto tz=tzdb.time_zone_from_region(id);
-                    boost_tz_info btz(tz);
+                    boost_tz_info btz(id,tz);
                     auto tzinfo= make_shared<tz_info_t>(tz_info_t(btz.base_offset(),tz_table(btz)));
                     region_tz_map[id]=tzinfo;
                     name_tz_map[tzinfo->name()]=tzinfo;
                 }
             }
             void tz_info_database::add_tz_info(string region_name,string posix_tz_string) {
-                auto tzinfo= create_from_posix_definition(posix_tz_string);
+                auto tzinfo= create_from_posix_definition(region_name,posix_tz_string);
                 region_tz_map[region_name]=tzinfo;
                 name_tz_map[tzinfo->name()]=tzinfo;
             }
@@ -664,7 +665,7 @@ namespace shyft {
         calendar::calendar(string region_id) {
             for(size_t i=0;i<time_zone::n_tzdef;++i) {
                 if(region_id==time_zone::tzdef[i].region) {
-                    tz_info=time_zone::create_from_posix_definition(time_zone::tzdef[i].posix_definition);
+                    tz_info=time_zone::create_from_posix_definition(region_id,time_zone::tzdef[i].posix_definition);
                 }
             }
             if(!tz_info)
