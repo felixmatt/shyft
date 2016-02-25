@@ -79,7 +79,7 @@ void timeseries_test::test_point_timeaxis() {
     TS_ASSERT_EQUALS(tx.index_of(-3600),std::string::npos);//(1),utcperiod(t[1],t[2]);
     TS_ASSERT_EQUALS(tx.index_of(t[0]),0);
     TS_ASSERT_EQUALS(tx.index_of(t[1]-1),0);
-    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),2);
+    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),1);
 
 }
 void timeseries_test::test_timeaxis() {
@@ -116,6 +116,9 @@ void timeseries_test::test_point_source_with_timeaxis() {
     TS_ASSERT_EQUALS(a.total_period(),b.total_period());
     TS_ASSERT_EQUALS(a.size(),b.size());
     TS_ASSERT_EQUALS(a.get_time_axis().size(),b.get_time_axis().size());
+    auto t_after= t+ deltahours(24*365*10);
+    TS_ASSERT_EQUALS(fixed_ta.index_of(t_after),point_ta.index_of(t_after));
+
     for(size_t i=0;i<n;i++) {
         // Verify values
         TS_ASSERT_DELTA(values[i],a.get(i).v,shyfttest::EPS);

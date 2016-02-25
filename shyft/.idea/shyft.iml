@@ -10,7 +10,7 @@
       <excludeFolder url="file://$MODULE_DIR$/../core/obj" />
       <excludeFolder url="file://$MODULE_DIR$/../test/obj" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.4.3 (C:\Anaconda\python.exe)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.4.3 (/opt/anaconda/bin/python3.4)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">
