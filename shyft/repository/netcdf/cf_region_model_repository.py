@@ -4,7 +4,7 @@ Read region netCDF files with cell data.
 """
 
 from __future__ import absolute_import
-from six import iteritems
+from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
 
 #from abc import ABCMeta, abstractmethod
 
@@ -187,9 +187,16 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
                 if hasattr(region_parameter, name_map[p_type_name]):
                     sub_param = getattr(region_parameter, name_map[p_type_name])
                     for p, v in iteritems(value_):
-                        setattr(sub_param, p, v)
+                        if hasattr(sub_param, p):
+                            setattr(sub_param, p, v)
+                        else:
+                            raise RegionConfigError("Invalid parameter '{}' for parameter set '{}'".format(p, p_type_name))
+                else:
+                    raise RegionConfigError("Invalid parameter set '{}' for selected model '{}'".format(p_type_name, self._region_model.__name__))
             elif p_type_name == "p_corr_scale_factor":
                 region_parameter.p_corr.scale_factor = value_
+            else:
+                raise RegionConfigError("Unknown parameter set '{}'".format(p_type_name))
 
         # TODO: Move into yaml file similar to p_corr_scale_factor
         radiation_slope_factor = 0.9
