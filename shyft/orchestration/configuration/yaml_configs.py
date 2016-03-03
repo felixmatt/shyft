@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 from datetime import datetime
 
@@ -27,7 +28,7 @@ class YamlContent(object):
 
     def __init__(self, config_file):
         self._config_file = config_file
-        with open(config_file) as cfg_file:
+        with open(config_file,encoding='utf8') as cfg_file:
             config = yaml.load(cfg_file)
         # Expose all keys in yaml file as attributes
         self.__dict__.update(config)
@@ -170,7 +171,8 @@ class YAMLSimConfig(object):
         self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos)
 
         # If region and interpolation ids are not present, just use fake ones
-        self.region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
+        # self.region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
+        self.region_id = 'not_in_use'
         self.interpolation_id = 0 if not hasattr(self, "interpolation_id") \
                            else int(self.interpolation_id)
 
