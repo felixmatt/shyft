@@ -25,14 +25,14 @@ class CFTsRepository(TsRepository):
 
     """
                      
-    def __init__(self, params):
+    def __init__(self, file, var_type):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
         """
         #directory = params['data_dir']
-        filename = params['file']
-        self.var_name = params['var_type']
+        filename = file
+        self.var_name = var_type
         
         #if not path.isdir(directory):
         #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
