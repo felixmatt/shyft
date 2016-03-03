@@ -14,10 +14,10 @@ parameters:
       precipitation_gradient: 2.0
   model:
     actual_evapotranspiration:
-      scale_factor: 1.5
-    data:
-      constant_relative_humidity: 0.8
-      constant_wind_speed: 2.0
+      ae_scale_factor: 1.5
+    #data:
+    #  constant_relative_humidity: 0.8
+    #  constant_wind_speed: 2.0
     gamma_snow:
       calculate_iso_pot_energy: false
       fast_albedo_decay_rate: 6.752787747748934
@@ -34,8 +34,8 @@ parameters:
       wind_const: 1.0
       wind_scale: 1.8959672005350063
       winter_end_day_of_year: 100
-    hbv_snow:
-        foo: 10.0
+    #hbv_snow:
+    #    foo: 10.0
     kirchner:
       c1: -3.336197322290274
       c2: 0.33433661533385695
