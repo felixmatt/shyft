@@ -34,7 +34,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
         #epsg = self._rconf["EPSG"]
         #directory = params['data_dir']
         filename = params["stations_met"]
-        
+        self.selection_criteria = params["selection_criteria"]
+
         #if not path.isdir(directory):
         #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
         if not path.isabs(filename):
@@ -51,7 +52,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         self._x_padding = 5000.0 # x_padding
         self._y_padding = 5000.0 # y_padding
         self._bounding_box = None # bounding_box
-        self.selection_criteria = None
+
 
         # Field names and mappings netcdf_name: shyft_name
         self._nc_shyft_map = {"relative_humidity": "relative_humidity",
@@ -73,6 +74,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
                                 "wind_speed": api.WindSpeedSource}
 
         self.vector_type_map = {"discharge": api.TsVector}
+
+        if self.selection_criteria is not None: self._validate_selection_criteria()
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
@@ -128,6 +131,20 @@ class CFDataRepository(interfaces.GeoTsRepository):
         bounding_box[1][2] += self._y_padding
         bounding_box[1][3] += self._y_padding
         return bounding_box
+
+    def _validate_selection_criteria(self):
+        s_c = self.selection_criteria
+        if list(s_c)[0] == 'unique_id':
+            if not isinstance(s_c['unique_id'], list):
+                raise CFDataRepositoryError("Unique_id selection criteria should be a list.")
+        elif list(s_c)[0] == 'polygon':
+            raise CFDataRepositoryError("Selection using polygon not supported yet.")
+        elif list(s_c)[0] == 'bbox':
+            if not (isinstance(s_c['bbox'], list) and len(s_c['bbox']) == 2):
+                raise CFDataRepositoryError("bbox selection criteria should be a list with two lists.")
+            self._bounding_box = s_c['bbox']
+        else:
+            raise CFDataRepositoryError("Unrecognized selection criteria.")
 
     def _convert_to_timeseries(self, data):
         """Convert timeseries from numpy structures to shyft.api timeseries.
@@ -234,21 +251,12 @@ class CFDataRepository(interfaces.GeoTsRepository):
     def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):
         ts_id = None
-        if (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'unique_id'):
-            self.selection_criteria = {'unique_id':geo_location_criteria['unique_id']}
-            ts_id_key = [k for (k,v) in dataset.variables.items() if getattr(v,'cf_role',None)=='timeseries_id'][0]
-            ts_id = dataset.variables[ts_id_key][:]
-        elif (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'polygon'):
-            raise CFDataRepositoryError("Selection using polygon not supported yet.")
-        #elif (isinstance(geo_location_criteria, dict) and list(geo_location_criteria)[0] == 'bbox'):
-        # elif all([isinstance(geo_location_criteria, list),
-        #           all(isinstance(elem, list) for elem in geo_location_criteria),
-        #           len(geo_location_criteria)==2]):
-        elif (len(geo_location_criteria)==2):
+        if self.selection_criteria is None:
             self.selection_criteria = {'bbox':geo_location_criteria}
             self._bounding_box = geo_location_criteria
-        else:
-            raise CFDataRepositoryError("Unrecognized selection criteria.")
+        if list(self.selection_criteria)[0]=='unique_id':
+            ts_id_key = [k for (k, v) in dataset.variables.items() if getattr(v, 'cf_role',None) == 'timeseries_id'][0]
+            ts_id = dataset.variables[ts_id_key][:]
 
         raw_data = {}
         x = dataset.variables.get("x", None)
