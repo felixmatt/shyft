@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-from shyft.repository.netcdf.cf_region_model_repository import CFRegionModelRepository
-from shyft.repository.netcdf.cf_geo_ts_repository import CFDataRepository
-from shyft.repository.netcdf.cf_ts_repository import CFTsRepository
-from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
-from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
-from shyft.repository.service.gis_location_service import GisLocationService
-from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD, FC_PROD
-from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
-from shyft.repository.service.gis_region_model_repository import RegionModelConfig
-from shyft.repository.service.gis_region_model_repository import GridSpecification
 
 class ConfigError(Exception):
     pass
@@ -17,18 +7,31 @@ def cls_path(cls):
     return cls.__module__+'.'+cls.__name__
 
 def nc_geo_ts_repo_constructor(params,region_config):
+    from shyft.repository.netcdf.cf_geo_ts_repository import CFDataRepository
+
     return CFDataRepository(params,region_config)
 
 def nc_region_model_repo_constructor(region_config, model_config):
+    from shyft.repository.netcdf.cf_region_model_repository import CFRegionModelRepository
+
     return CFRegionModelRepository(region_config, model_config)
 
 def nc_target_repo_constructor(params):
+    from shyft.repository.netcdf.cf_ts_repository import CFTsRepository
+
     return CFTsRepository(**params)
 
 def smg_target_repo_constructor(params):
+    from shyft.repository.service.ssa_smg_db import SmGTsRepository
+
     return SmGTsRepository(**params)
 
 def smg_geo_ts_repo_constructor(params,region_config):
+    from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
+    from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
+    from shyft.repository.service.gis_location_service import GisLocationService
+    from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD, FC_PROD
+
     epsg = region_config.domain()["EPSG"]
     met_stations = [MetStationConfig(**s) for s in params['stations_met']]
     gis_location_repository=GisLocationService() # this provides the gis locations for my stations
@@ -38,7 +41,11 @@ def smg_geo_ts_repo_constructor(params,region_config):
                            ens_config=None)
 
 def statkraft_region_model_repo_constructor(region_config, model_config):
+    from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
+    from shyft.repository.service.gis_region_model_repository import RegionModelConfig
+    from shyft.repository.service.gis_region_model_repository import GridSpecification
     from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
+
     name = 'not_in_use'
     repo_params = region_config.repository()['params']
     d = region_config.domain()
@@ -75,9 +82,9 @@ def statkraft_region_model_repo_constructor(region_config, model_config):
     rm_cfg_dict = {x.name: x for x in cfg_list}
     return GisRegionModelRepository(rm_cfg_dict)
 
-r_m_repo_constructors = {cls_path(CFRegionModelRepository): nc_region_model_repo_constructor,
-                         cls_path(GisRegionModelRepository): statkraft_region_model_repo_constructor}
-geo_ts_repo_constructors = {cls_path(CFDataRepository): nc_geo_ts_repo_constructor,
-                            cls_path(GeoTsRepository): smg_geo_ts_repo_constructor}
-target_repo_constructors = {cls_path(CFTsRepository): nc_target_repo_constructor,
-                            cls_path(SmGTsRepository): smg_target_repo_constructor}
+r_m_repo_constructors = {'shyft.repository.netcdf.cf_region_model_repository.CFRegionModelRepository': nc_region_model_repo_constructor,
+                         'shyft.repository.service.gis_region_model_repository.GisRegionModelRepository': statkraft_region_model_repo_constructor}
+geo_ts_repo_constructors = {'shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository': nc_geo_ts_repo_constructor,
+                            'shyft.repository.service.ssa_geo_ts_repository.GeoTsRepository': smg_geo_ts_repo_constructor}
+target_repo_constructors = {'shyft.repository.netcdf.cf_ts_repository.CFTsRepository': nc_target_repo_constructor,
+                            'shyft.repository.service.ssa_smg_db.SmGTsRepository': smg_target_repo_constructor}
