@@ -1,5 +1,9 @@
+import numpy as np
+
 from .. import simulator
 from shyft import api
+from shyft.repository.interfaces import TsStoreItem
+from shyft.repository.interfaces import TimeseriesStore
 
 class ConfigSimulatorError(Exception):
     pass
@@ -9,6 +13,26 @@ class ConfigSimulator(simulator.DefaultSimulator):
     def __init__(self, config):
         super().__init__(config.region_id,config.interpolation_id,config.region_model,
                          config.geo_ts, config.interp_repos)
+        self.config = config
+
+    def _extraction_method_1d(self,ts_info):
+        c_id = ts_info['catchment_id']
+        t_st, t_dt, t_n = ts_info['time_axis'].start(), ts_info['time_axis'].delta(), ts_info['time_axis'].size()
+        tst = api.TsTransform()
+        found_indx = np.in1d(self.region_model.catchment_id_map,c_id)
+        if np.count_nonzero(found_indx) != len(c_id):
+            raise ConfigSimulatorError(
+                "Global catchment index {} not found.".format(
+                    ','.join([str(val) for val in [i for i in c_id if i not in self.region_model.catchment_id_map]])))
+        c_indx = [i for i,j in enumerate(found_indx) if j]
+        methods = {'discharge': lambda m: tst.to_average(t_st, t_dt, t_n, m.statistics.discharge(c_indx))}
+        return methods[ts_info['type']]
+
+    def save_result_timeseries(self):
+        for repo in self.config.dst_repo:
+            save_list = [TsStoreItem(ts_info['uid'],self._extraction_method_1d(ts_info)) for ts_info in repo['1D_timeseries']]
+            TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model)
+
 
 class ConfigCalibrator(simulator.DefaultSimulator):
     @property

@@ -169,6 +169,18 @@ class YAMLSimConfig(object):
         for source in datasets_config.sources:
             geo_ts_repos.append(geo_ts_repo_constructors[cls_path(source['repository'])](source['params'],region_config))
         self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos)
+        # Construct destination repository
+        self.dst_repo = []
+        if hasattr(datasets_config, 'destinations'):
+            for repo in datasets_config.destinations:
+                repo['repository'] = target_repo_constructors[cls_path(repo['repository'])](repo['params'])
+                #[dst['time_axis'].update({'start_datetime': utctime_from_datetime(dst['time_axis']['start_datetime'])})
+                # for dst in repo['1D_timeseries'] if dst['time_axis'] is not None]
+                [dst.update({'time_axis':self.time_axis}) if dst['time_axis'] is None
+                 else dst.update({'time_axis':api.Timeaxis(utctime_from_datetime(dst['time_axis']['start_datetime']),
+                                                           dst['time_axis']['time_step_length'],
+                                                           dst['time_axis']['number_of_steps'])}) for dst in repo['1D_timeseries']]
+                self.dst_repo.append(repo)
 
         # If region and interpolation ids are not present, just use fake ones
         # self.region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
