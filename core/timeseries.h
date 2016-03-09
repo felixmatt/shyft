@@ -91,11 +91,10 @@ namespace shyft{
             template<typename S>
             point_timeaxis(S begin_time, S end_time) : times(begin_time,end_time) {}
             utcperiod total_period() const {
-                if(times.size()==0) return utcperiod();
-                if(times.size()==1) return utcperiod(times[0],times[0]);
+                if(times.size()<=1) return utcperiod();
                 return utcperiod(times[0],times[times.size()-1]);
             }
-            size_t size() const { return times.size() - 1; }
+            size_t size() const { return times.size()>1?times.size() - 1:0; }
 
             utcperiod operator()(size_t i) const {
                 if (i >= times.size() - 1)
@@ -111,7 +110,8 @@ namespace shyft{
 #endif
             /**< return closest index of nearest time point.. some problem using op(i) in end case.. */
             size_t index_of(utctime tx) const {
-                if (times.size()<2 && tx < times[0]) return string::npos;
+                if (times.size()<2 ) return string::npos;
+                if(tx<times[0]) return string::npos;
                 if (tx >= times.back()) return times.size()-2;// because last point is END of last period
                 auto r = lower_bound(times.cbegin(), times.cend(), tx,
                                           [](utctime pt, utctime val){ return pt <= val; });
