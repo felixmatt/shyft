@@ -5,17 +5,6 @@ env:
   global:
     - SHYFT_DEPENDENCIES_DIR=$HOME/shyft-dependencies
 
-addons:
-    apt:
-        sources:
-            - llvm-toolchain-precise
-            - ubuntu-toolchain-r-test
-        packages:
-            - clang-3.7
-            - g++-5
-            - gcc-5
-            - liblapack-dev
-	    - libgfortran-4.8-dev
 install:
   - sudo apt-get update -qq
   - sudo apt-get --assume-yes install liblapack-dev
@@ -27,15 +16,13 @@ cache:
     - $SHYFT_DEPENDENCIES_DIR
 
 language:
-  - python
   - cpp
 
 os:
   - linux
-  # - osx
 
-python:
-  - 3.4
+#python:
+#  - 3.4
 
 before_install:
   - uname -a
@@ -52,7 +39,7 @@ before_install:
   - conda update conda
 
   # Install dependencies
-  - conda create -n shyft_env python=$TRAVIS_PYTHON_VERSION pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj swig
+  - conda create -n shyft_env python=3.4 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj swig
   - source activate shyft_env
   - python -V
 
