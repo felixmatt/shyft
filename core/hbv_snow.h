@@ -219,8 +219,7 @@ namespace shyft {
                     double swe = s.swe;
                     double sca = s.sca;
                     const double total_water = prec + swe;
-                    double snow;
-                    double rain;
+                    double snow,rain;
                     if( temp < p.tx ) {snow=prec;rain= 0.0;}
                     else              {snow= 0.0;rain=prec;}
                     double step_in_days = (t1 - t0)/86400.0;

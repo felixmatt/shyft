@@ -66,6 +66,13 @@ void hbv_snow_test::test_mass_balance_at_snowpack_buildup() {
     snow_model.step(state, r, t0, t1, p, precipitation, temperature);
     double total_water_after = state.swe + r.outflow;
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
+    state.swe = 0.2;
+    state.sca = 0.6;
+    temperature=p.tx;// special check fo tx
+    SnowModel snow_model2(p, state);
+    snow_model2.step(state, r, t0, t1, p, precipitation, temperature);
+    TS_ASSERT_DELTA(total_water_before,state.swe+r.outflow, 1.0e-8);
+
 }
 
 void hbv_snow_test::test_mass_balance_rain_no_snow() {
@@ -78,7 +85,7 @@ void hbv_snow_test::test_mass_balance_rain_no_snow() {
     utctime t0 = 0;
     utctime t1 = 3600; // One hour
     double precipitation = 0.15;
-    double temperature = 1.0;
+    double temperature = p.tx;
     double sca = 0.0;
     double swe = 0.0;
     state.swe=swe;
