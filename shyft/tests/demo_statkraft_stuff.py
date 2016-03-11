@@ -90,8 +90,11 @@ class GisRegionModelDemo(object):
         nx = 105
         ny = 75
         # test fetching for regulated catchments using CATCH_ID
-        id_list = [1228, 1308, 1394, 1443, 1726, 1867, 1996, 2041, 2129, 2195, 2198, 2277, 2402, 2446, 2465, 2545, 2640, 2718, 3002, 3536, 3630, 1000010, 1000011]
-        s_list = []
+        id_list = [1228, 1308, 1394, 1443, 1726, 1867, 1996, 2041, 2129, 2195, 2198, 2277, 2402, 2446, 2465, 2545, 2640, 2718, 3002, 3536, 3630, 100010, 100011]
+        # Finnkoisjøen, Hersjøen, Lødølja, Nesjøen, Nidarvoll, Sakristian, Selbu II, Sellisjøen, Stuggusjøen, Sylsjøen II, Sørungen, Trondheim-Voll
+        #s_list = [121, 217, 360, 421, 423, 489, 503, 506, 574, 598, 610, 632] # Old OBJECTID
+        # Finnkoisjøen, Hersjøen, Lødølja, Nesjøen, Sakristian, Selbu II, Sellisjøen, Stuggusjøen, Sylsjøen II, Sørungen, Trondheim-Voll
+        s_list = [666, 3, 68, 605, 479, 454, 489, 460, 402, 538, 555] # Updated OBJECTID
         self.plot_region_model('regulated', 'CATCH_ID', x0, y0, dx, dy, nx, ny, id_list, s_list, 32633)
 
     def vinjevatn(self):
@@ -133,6 +136,6 @@ class GisRegionModelDemo(object):
 if __name__ == '__main__':
     demo = GisRegionModelDemo()
     # demo.tistel_32()
-    demo.tistel_arome()
-    # demo.nea_nidelv()
+    # demo.tistel_arome()
+    demo.nea_nidelv()
     # demo.vinjevatn()

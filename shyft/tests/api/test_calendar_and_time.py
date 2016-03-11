@@ -24,7 +24,7 @@ class Calendar(unittest.TestCase):
     def test_create_calendar_from_region_id(self):
         osl = api.Calendar("Europe/Oslo")
         self.assertIsNotNone(osl)
-        self.assertEquals(osl.tz_info.name(), "CET")
+        self.assertEquals(osl.tz_info.name(), "Europe/Oslo")
         self.assertEquals(osl.tz_info.base_offset(), 3600)
         t = osl.time(2015, 6, 1)
         self.assertTrue(osl.tz_info.is_dst(t))

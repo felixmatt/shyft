@@ -71,6 +71,14 @@ using namespace shyfttest;
 typedef point_timeseries<point_timeaxis> xts_t;
 
 void timeseries_test::test_point_timeaxis() {
+    point_timeaxis ts0; //zero points
+    TS_ASSERT_EQUALS(ts0.size(),0);
+    TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
+    vector<utctime> t2={3600*1};//just one point
+    point_timeaxis ts1(begin(t2),end(t2));
+    TS_ASSERT_EQUALS(ts0.size(),0);
+    TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
+
     vector<utctime> t={3600*1,3600*2,3600*3};
     point_timeaxis tx(begin(t),end(t));
     TS_ASSERT_EQUALS(tx.size(),2);// number of periods, - two .. (unless we redefined the last to be last point .. +oo)
@@ -79,7 +87,8 @@ void timeseries_test::test_point_timeaxis() {
     TS_ASSERT_EQUALS(tx.index_of(-3600),std::string::npos);//(1),utcperiod(t[1],t[2]);
     TS_ASSERT_EQUALS(tx.index_of(t[0]),0);
     TS_ASSERT_EQUALS(tx.index_of(t[1]-1),0);
-    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),2);
+    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),1);
+
 
 }
 void timeseries_test::test_timeaxis() {
@@ -116,6 +125,9 @@ void timeseries_test::test_point_source_with_timeaxis() {
     TS_ASSERT_EQUALS(a.total_period(),b.total_period());
     TS_ASSERT_EQUALS(a.size(),b.size());
     TS_ASSERT_EQUALS(a.get_time_axis().size(),b.get_time_axis().size());
+    auto t_after= t+ deltahours(24*365*10);
+    TS_ASSERT_EQUALS(fixed_ta.index_of(t_after),point_ta.index_of(t_after));
+
     for(size_t i=0;i<n;i++) {
         // Verify values
         TS_ASSERT_DELTA(values[i],a.get(i).v,shyfttest::EPS);

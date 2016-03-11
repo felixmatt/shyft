@@ -170,11 +170,13 @@ void gamma_snow_test::test_step() {
 
     const std::clock_t start = std::clock();
     for (size_t i=0; i<365; ++i) {
-        gs.step(states, response, i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum,0.0,0.0);
+        gs.step(states, response, i*dt, dt, param, i&1 ?temp:param.tx, rad, prec, wind_speed, rel_hum,0.0,0.0);
     }
     const std::clock_t total = std::clock() - start;
-    std::cout << "Final result: " << response.outflow << std::endl;
-    std::cout << "One year of (simple) snow algorithm took: " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        std::cout << "Final result: " << response.outflow << std::endl;
+        std::cout << "One year of (simple) snow algorithm took: " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    }
 }
 
 

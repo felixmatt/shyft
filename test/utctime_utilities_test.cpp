@@ -138,7 +138,7 @@ void utctime_utilities_test::test_tz_info_db() {
     // create from iso zone description:"Europe/Oslo","CET","CET","CEST","CEST","+01:00:00","+01:00:00","-1;0;3","+02:00:00","-1;0;10","+03:00:00"
     tz_info_db.add_tz_info("Europe/Oslo","CET+01CEST+01,M3.5.0/02:00,M10.5.0/03:00");
     auto eu_osl=tz_info_db.tz_info_from_region("Europe/Oslo");
-    TS_ASSERT_EQUALS(eu_osl->name(),string("CET"));
+    TS_ASSERT_EQUALS(eu_osl->name(),string("Europe/Oslo"));
     calendar utc;
     TS_ASSERT_EQUALS(eu_osl->is_dst(utc.time(YMDhms(2016, 3,27, 0,59,59))),false);// second before..
     TS_ASSERT_EQUALS(eu_osl->is_dst(utc.time(YMDhms(2016, 3,27, 1, 0, 0))),true); // exactly at shift into summer
@@ -147,7 +147,7 @@ void utctime_utilities_test::test_tz_info_db() {
     tz_info_database tz_iso_db;// do some minor testing of the internal iso tz db.
     tz_iso_db.load_from_iso_db();
     auto eu_osl_iso=tz_iso_db.tz_info_from_region("Europe/Oslo");
-    TS_ASSERT_EQUALS(eu_osl_iso->name(),string("CET"));
+    TS_ASSERT_EQUALS(eu_osl_iso->name(),string("Europe/Oslo"));
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016, 3,27, 0,59,59))),false);// second before..
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016, 3,27, 1, 0, 0))),true); // exactly at shift into summer
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016,10,30, 0,59,59))),true); // second before..

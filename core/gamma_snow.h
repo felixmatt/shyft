@@ -307,8 +307,10 @@ namespace shyft {
                         acc_melt = iso_pot_energy = 0.0;
 
 
-                    double snow = T < p.tx ? prec : 0.0;
-                    const double rain = T <= p.tx ? 0.0 : prec;
+                    double snow;
+                    double rain;
+                    if( T < p.tx ) {snow = prec; rain = 0.0;}
+                    else           {snow = 0.0;rain = prec;}
                     if (fabs(snow + rain - prec) > 1.0e-8)
                         throw std::runtime_error("Mass balance violation!!!!");
 

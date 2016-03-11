@@ -229,7 +229,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
 class ReservoirFetcher(BaseGisDataFetcher):
     def __init__(self, epsg_id, geometry=None):
         super(ReservoirFetcher, self).__init__(geometry=geometry, server_name="oslwvagi001p", server_port="6080",
-                                               service_index=5, epsg_id=epsg_id)
+                                               service_index=6, epsg_id=epsg_id)
         self.query["where"] = "1 = 1"
         self.query["outFields"] = "OBJECTID"
 
@@ -253,10 +253,10 @@ class ReservoirFetcher(BaseGisDataFetcher):
 class CatchmentFetcher(BaseGisDataFetcher):
     def __init__(self, catchment_type, identifier, epsg_id):
         if catchment_type == 'regulated':
-            service_index = 6
+            service_index = 7 # 6
             # self.identifier = 'POWER_PLANT_ID'
         elif catchment_type == 'unregulated':
-            service_index = 7
+            service_index = 8 # 7
             # self.identifier = 'FELTNR'
         else:
             raise GisDataFetchError(

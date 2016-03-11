@@ -5,20 +5,10 @@ env:
   global:
     - SHYFT_DEPENDENCIES_DIR=$HOME/shyft-dependencies
 
-addons:
-    apt:
-        sources:
-            - llvm-toolchain-precise
-            - ubuntu-toolchain-r-test
-        packages:
-            - clang-3.7
-            - g++-5
-            - gcc-5
-            - liblapack-dev
-
 install:
-  #- sudo apt-get update -qq
-  #- sudo apt-get --assume-yes install liblapack-dev
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+  - sudo apt-get --assume-yes install liblapack-dev g++-5 gcc-5 gfortran
   - export CXX="g++-5" CC="gcc-5"
 
 
@@ -27,15 +17,13 @@ cache:
     - $SHYFT_DEPENDENCIES_DIR
 
 language:
-  - python
   - cpp
 
 os:
   - linux
-  # - osx
 
-python:
-  - 3.4
+#python:
+#  - 3.4
 
 before_install:
   - uname -a
@@ -52,11 +40,8 @@ before_install:
   - conda update conda
 
   # Install dependencies
-  - conda create -n shyft_env python=$TRAVIS_PYTHON_VERSION pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj swig
+  - conda create -n shyft_env python=3.4 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj swig
   - source activate shyft_env
-  #- conda install -c https://conda.anaconda.org/minrk swig  # hits a bug in conda
-  #- conda install swig
-  #- pip install descartes
   - python -V
 
   # The data repository dependency
@@ -68,6 +53,7 @@ before_install:
 #  - clang
 
 before_script:
+  - export CXX="g++-5" CC="gcc-5"
   - mkdir build
   - cd build
   - cmake ..
@@ -76,7 +62,7 @@ script:
   - export CXX="g++-5" CC="gcc-5"
   - gcc --version
   - g++-5 --version
-  - make -j 3 VERBOSE=1  # 3 paralel compiler processes can take up to 5 GB RAM!
+  - make -j 3 VERBOSE=1   CXX="g++-5" CC="gcc-5" # 3 paralel compiler processes can take up to 5 GB RAM!
   - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
   - make test
   - make install
