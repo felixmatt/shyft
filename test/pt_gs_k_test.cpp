@@ -174,7 +174,7 @@ void pt_gs_k_test::test_mass_balance() {
     utctimespan dt=deltahours(1);
     const int n=1;
     timeaxis tax(t0,dt,n);
-
+	timeaxis tax_state(t0, dt, n + 1);
     pt::parameter pt_param;
     gs::parameter gs_param;
     ae::parameter ae_param;
@@ -197,7 +197,7 @@ void pt_gs_k_test::test_mass_balance() {
     pt_gs_k::all_response_collector rc;
     const double cell_area=1000*1000;
     sc.collect_state=true;
-    sc.initialize(tax,cell_area);
+    sc.initialize(tax_state,cell_area);
     rc.initialize(tax,cell_area);
     geo_cell_data gcd(geo_point(1000,1000,100));
     pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
