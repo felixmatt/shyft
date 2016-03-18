@@ -198,6 +198,9 @@ namespace shyft {
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);
+                if(i+1==time_axis.size())
+                    state_collector.collect(i+1, state);///< \note last iteration,collect the  final state as well.
+
             }
             response_collector.set_end_response(response);
         }
