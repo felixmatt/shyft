@@ -175,7 +175,7 @@ namespace shyft {
                 double rel_hum = rel_hum_accessor.value(i);
                 double prec = p_corr.calc(prec_accessor.value(i));
                 double wind_speed = wind_speed_accessor.value(i);
-
+                state_collector.collect(i, state);
                 //
                 // Land response:
                 //
@@ -210,7 +210,9 @@ namespace shyft {
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);
-                state_collector.collect(i, state);
+
+                if(i+1==time_axis.size())
+                    state_collector.collect(i+1, state);///< \note last iteration,collect the  final state as well.
             }
             response_collector.set_end_response(response);
         }
