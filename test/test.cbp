@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  utctime_utilities_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
