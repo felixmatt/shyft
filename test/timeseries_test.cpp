@@ -1232,13 +1232,17 @@ namespace shyft{namespace think {
                     r.t.push_back(tb);++ib;// b contribution only, incr. b
                 }
             }
-            // a or b (or both) are empty for time-points,
+            // a or b (or both) are empty for time-points, we need to fill up remaining < te
             if (ia<ea) { // more to fill in from a ?
-                while(ia<ea)
-                    r.t.push_back(a.time(ia++));
+                while(ia<ea) {
+                    auto t_i=a.time(ia++);
+                    if(t_i<te) r.t.push_back(t_i);
+                }
             } else { // more to fill in from b ?
-                while(ib<eb)
-                    r.t.push_back(b.time(ib++));
+                while(ib<eb) {
+                    auto t_i=b.time(ib++);
+                    if(t_i<te) r.t.push_back(t_i);
+                }
             }
 
             if(r.t.back()==r.t_end) // make sure we leave t_end as the last point.
@@ -1271,6 +1275,7 @@ namespace shyft{namespace think {
             // the hard way merge points in the intersection of periods
             utctime t0= max(pa.start,pb.start);
             utctime te= min(pa.end,pb.end);
+            utcperiod tp(t0,te);
             //TODO: Really! We need index_of(t0,open_range=true), or we need sparse timeaxis to deliver index of closest internal period!
             size_t ia= a.open_range_index_of(t0);//notice these have to be non-nan!
             size_t ib= b.open_range_index_of(t0);
@@ -1282,34 +1287,40 @@ namespace shyft{namespace think {
             r.p.reserve((ea-ia)+(eb-ib));//assume worst case here, avoid realloc
 
             while(ia<ea && ib < eb) { // while both do have contributions
-                utcperiod ta=a.period(ia);
-                utcperiod tb=b.period(ib);
-                if(!ta.overlaps(tb)){
+                utcperiod p_ia=intersection(a.period(ia),tp);
+                utcperiod p_ib=intersection(b.period(ib),tp);
+                if(!p_ia.overlaps(p_ib)){
                     ++ia;++ib;
                     continue;
                 }
 
-                if(ta==tb) {
-                    r.p.push_back(ta);++ia;++ib;// common period, push&incr. both
-                } else if( tb.contains(ta) )  {
-                    r.p.push_back(ta);++ia;// a contribution only, incr. a
-                } else if( ta.contains(tb) ) {
-                    r.p.push_back(tb);++ib;// b contribution only, incr. b
+                if(p_ia==p_ib) {
+                    r.p.push_back(p_ia);++ia;++ib;// common period, push&incr. both
+                } else if( p_ib.contains(p_ia) )  {
+                    r.p.push_back(p_ia);++ia;// a contribution only, incr. a
+                } else if( p_ia.contains(p_ib) ) {
+                    r.p.push_back(p_ib);++ib;// b contribution only, incr. b
                 } else { //ok, not equal, and neither a or b contains the other
-                    if( ta.start < tb.start) {
-                        r.p.push_back(intersection(ta,tb));++ia;// a contribution only, incr. a
+                    if( p_ia.start < p_ib.start) {
+                        r.p.push_back(intersection(p_ia,p_ib));++ia;// a contribution only, incr. a
                     } else {
-                        r.p.push_back(intersection(ta,tb));++ib;// b contribution only, incr. b
+                        r.p.push_back(intersection(p_ia,p_ib));++ib;// b contribution only, incr. b
                     }
                 }
             }
             // a or b (or both) are empty for periods,
             if (ia<ea) { // more to fill in from a ?
-                while(ia<ea)
-                    r.p.push_back(a.period(ia++));
+                while(ia<ea) {
+                    utcperiod p_i=intersection(a.period(ia++),tp);
+                    if(p_i.timespan()>0)
+                        r.p.push_back(p_i);
+                }
             } else { // more to fill in from b ?
-                while(ib<eb)
-                    r.p.push_back(b.period(ib++));
+                while(ib<eb) {
+                    utcperiod p_i=intersection(b.period(ib++),tp);
+                    if(p_i.timespan()>0)
+                        r.p.push_back(p_i);
+                }
             }
             return r;
          }
@@ -1682,7 +1693,9 @@ void timeseries_test::test_time_axis() {
     TS_ASSERT(test_if_equal(f_dt_null,time_axis::combine(c_dt,p_dt_x)));
     TS_ASSERT(test_if_equal(f_dt_null,time_axis::combine(expected,p_dt_x)));
     TS_ASSERT(test_if_equal(f_dt_null,time_axis::combine(p_dt,p_dt_x)));
-    //TODO: when we implement combine of non-continuous time_axis, verify it here
+    TS_ASSERT(test_if_equal(f_dt_null,time_axis::combine(ta_of_periods,f_dt_null)));
+    TS_ASSERT(test_if_equal(f_dt_null,time_axis::combine(p_dt_x,c_dt_p)));
+
 
     //
     // STEP 5: Verify the time_axis::combine algorithm for overlapping time-axis
@@ -1695,7 +1708,9 @@ void timeseries_test::test_time_axis() {
     TS_ASSERT(test_if_equal(expected_combine1,time_axis::combine(overlap1,time_axis::generic_dt(c_dt))));
     TS_ASSERT(test_if_equal(expected_combine1,time_axis::combine(overlap1,time_axis::generic_dt(p_dt))));
     TS_ASSERT(test_if_equal(expected_combine1,time_axis::combine(overlap1,time_axis::generic_dt(expected))));
-    //TODO: when we implement combine of non-continuous time_axis, verify it here
+    TS_ASSERT(test_if_equal(expected_combine1,time_axis::combine(overlap1,c_dt_p)));
+    TS_ASSERT(test_if_equal(expected_combine1,time_axis::combine(ta_of_periods,overlap1)));
+
 }
 
 

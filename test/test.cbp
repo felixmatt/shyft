@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="utctime_utilities_test test_add_over_dst_transitions" />
+				<Option parameters="timeseries_test test_time_axis" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
