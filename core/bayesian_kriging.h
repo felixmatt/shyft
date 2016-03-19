@@ -301,7 +301,7 @@ namespace shyft {
 	            arma::mat F_r, E_beta_w_r, omega_r, GH_inv_r, BM_r;
 
 	            // Matrix pointers used in the time loop
-	            arma::mat *F_p, *E_beta_w_p, *omega_p, *GH_inv_p, *BM_p;
+	            arma::mat *F_p=nullptr, *E_beta_w_p=nullptr, *omega_p=nullptr, *GH_inv_p=nullptr, *BM_p=nullptr;
 
 	            const size_t num_sources = std::distance(source_begin, source_end);
 	            std::vector<TSA> source_accessors;

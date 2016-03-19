@@ -114,7 +114,7 @@ class BaseGisDataFetcher(object):
         self.geometry = geometry
         self.epsg_id = epsg_id
         if server_name.endswith('p'):
-            self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT_v1/SHyFT/MapServer/{}/query"
+            self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
         else:
             self.url_template = "http://{}:{}/arcgis/rest/services/EnkiLandTypes/EnkiLandTypes/MapServer/{}/query"
         if os.environ.get("NO_PROXY", False) and not self.server_name in os.environ["NO_PROXY"]: os.environ[

@@ -64,6 +64,7 @@ script:
   - g++-5 --version
   - make -j 3 VERBOSE=1   CXX="g++-5" CC="gcc-5" # 3 paralel compiler processes can take up to 5 GB RAM!
   - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
+  - export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3.0.0:/usr/lib/x86_64-linux-gnu/libgfortran.so.3 
   - make test
   - make install
   - PYTHONPATH=.. python -c"import shyft; shyft.print_versions()"

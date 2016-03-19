@@ -46,6 +46,8 @@ void pt_gs_k_test::test_call_stack()
         times.emplace_back(i);
 
     point_timeaxis time_axis(times.cbegin(), times.cend());
+    times.emplace_back(t1+model_dt);
+    point_timeaxis state_axis(times.cbegin(),times.cend());
 
     // Initialize parameters
     pt::parameter pt_param;
@@ -64,7 +66,7 @@ void pt_gs_k_test::test_call_stack()
 
     // Initialize collectors
     shyfttest::mock::PTGSKResponseCollector response_collector(time_axis.size());
-    shyfttest::mock::StateCollector<point_timeaxis> state_collector(time_axis);
+    shyfttest::mock::StateCollector<point_timeaxis> state_collector(state_axis);
 
     state state{gs_state, kirchner_state};
     parameter parameter{pt_param, gs_param, ae_param, k_param,  p_corr_param};
@@ -72,6 +74,9 @@ void pt_gs_k_test::test_call_stack()
     pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,
                          response>(geo_cell, parameter, time_axis, temp, prec, wind_speed,
                                      rel_hum, radiation, state, state_collector, response_collector);
+    for(size_t i=0;i<n_ts_points+1;++i) { // state have one extra point
+        TS_ASSERT(state_collector._inst_discharge.value(i)>0.0001);// verify there are different from 0.0 filled in for all time-steps
+    }
 }
 
 void pt_gs_k_test::test_raster_call_stack()
@@ -91,6 +96,8 @@ void pt_gs_k_test::test_raster_call_stack()
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
     shyft::timeseries::point_timeaxis time_axis(times.cbegin(), times.cend());
+    times.emplace_back(t1+model_dt);
+    point_timeaxis state_axis(times.cbegin(),times.cend());
 
     // 10 catchments numbered from 0 to 9.
     std::vector<catchment_t> catchment_discharge;
@@ -129,10 +136,10 @@ void pt_gs_k_test::test_raster_call_stack()
 
 
     const std::clock_t start = std::clock();
-    for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge] (PTGSKCell& d) mutable {
+    for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge,&state_axis] (PTGSKCell& d) mutable {
         auto time = time_axis(0).start;
 
-        shyfttest::mock::StateCollector<point_timeaxis> sc(time_axis);
+        shyfttest::mock::StateCollector<point_timeaxis> sc(state_axis);
         shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);
         //PTGSKResponseCollector rc(time_axis.size());
 
@@ -167,7 +174,7 @@ void pt_gs_k_test::test_mass_balance() {
     utctimespan dt=deltahours(1);
     const int n=1;
     timeaxis tax(t0,dt,n);
-
+	timeaxis tax_state(t0, dt, n + 1);
     pt::parameter pt_param;
     gs::parameter gs_param;
     ae::parameter ae_param;
@@ -190,7 +197,7 @@ void pt_gs_k_test::test_mass_balance() {
     pt_gs_k::all_response_collector rc;
     const double cell_area=1000*1000;
     sc.collect_state=true;
-    sc.initialize(tax,cell_area);
+    sc.initialize(tax_state,cell_area);
     rc.initialize(tax,cell_area);
     geo_cell_data gcd(geo_point(1000,1000,100));
     pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);

@@ -73,8 +73,9 @@ namespace shyft {
 			bool operator==(const utcperiod &p) const { return start == p.start &&  end == p.end; }
 			bool operator!=(const utcperiod &p) const {return ! (*this==p);}
 			bool contains(utctime t) const {return is_valid(t)&&valid()?t>=start && t<end:false;}
+
 			bool contains(const utcperiod& p) const {return valid()&&p.valid()&& p.start>=start &&p.end <=end;}
-			bool overlaps(const utcperiod& p) const {return !( (p.start >= end) || (p.end <= start) )?true:false; }
+			bool overlaps(const utcperiod& p) const {return ( (p.start >= end) || (p.end <= start) )?false:true; }
 			utctime start;
 			utctime end;
 			std::string to_string() const;
