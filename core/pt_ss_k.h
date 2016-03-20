@@ -169,7 +169,7 @@ namespace shyft {
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
             // Step through times in axis
             for (size_t i=0; i < time_axis.size(); ++i) {
-                utcperiod period = time_axis(i);
+                utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);

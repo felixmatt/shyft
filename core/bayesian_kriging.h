@@ -331,7 +331,7 @@ namespace shyft {
 	                }
 	                if (valid_inds != prev_valid_inds) {
 	                    if (valid_inds.size() == 0) {
-	                        std::cout << "period("<< t_step <<"| " << num_timesteps << ") = " << time_axis(t_step) << std::endl;
+	                        std::cout << "period("<< t_step <<"| " << num_timesteps << ") = " << time_axis.period(t_step) << std::endl;
 	                        throw std::runtime_error("No valid sources for time period, giving up.");
 	                    }
 	                    if (valid_inds.size() == num_sources) {
@@ -366,7 +366,7 @@ namespace shyft {
 	                }
 
 	                // Build prior data for time step:
-	                E_beta_pri.at(1, 0) = parameter.temperature_gradient(time_axis(t_step));
+	                E_beta_pri.at(1, 0) = parameter.temperature_gradient(time_axis.period(t_step));
 	                E_beta_w_pri.operator=((eye22 - *GH_inv_p)*E_beta_pri);
 
 	                // Fill T_obs with valid temperatures

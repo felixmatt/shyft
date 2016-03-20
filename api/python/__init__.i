@@ -41,7 +41,7 @@
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
     #include "core/core_pch.h"
     #include "core/utctime_utilities.h"
-
+    #include "core/time_axis.h"
     #include "api/api.h"
     #include "core/geo_point.h"
     #include "core/geo_cell_data.h"
@@ -86,11 +86,11 @@
 %shared_ptr(std::vector<shyft::api::RelHumSource>)
 
 %shared_ptr( shyft::api::ITimeSeriesOfPoints)
-%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis>>)
-%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::point_timeaxis>>)
-%shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::timeseries::timeaxis,shyft::timeseries::sin_fx>>)
+%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt>>)
+%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::point_dt>>)
+%shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::time_axis::fixed_dt,shyft::timeseries::sin_fx>>)
 //%shared_ptr( shyft::core::pts_t )
-%shared_ptr( shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis> )
+%shared_ptr( shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt> )
 %shared_ptr( shyft::core::time_zone::tz_info<shyft::core::time_zone::tz_table> )
 
 // -- Now we let SWIG parse and interpret the types in enki_api.h
@@ -137,6 +137,13 @@
     %typedef shyft::core::utctime utctime;
     %typedef shyft::core::utctimespan utctimespan;
     %typedef shyft::core::utctimespan timespan;
+
+    %rename(Timeaxis) shyft::time_axis::fixed_dt;
+    %rename(PointTimeaxis) shyft::time_axis::point_dt;
+    %rename(TimeaxisCalendarDt) shyft::time_axis::calendar_dt;
+    %rename(TimeaxisCalendarDtP) shyft::time_axis::calendar_dt_p;
+    %rename(TimeaxisPeriodList) shyft::time_axis::period_list;
+    %include "core/time_axis.h"
 
     %include "core/geo_point.h"
     %include "core/geo_cell_data.h"
@@ -287,18 +294,18 @@ namespace std {
 
 namespace shyft {
   namespace timeseries {
-    %template(TsFixed) point_timeseries<timeaxis>;
-    %template(TsPoint) point_timeseries<point_timeaxis>;
-    %template(TsSinFx) function_timeseries<timeaxis,sin_fx>;
-    %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::timeaxis>>,shyft::timeseries::timeaxis>;
-    %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::timeseries::point_timeaxis>>,shyft::timeseries::timeaxis>;
-    %template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::timeseries::timeaxis>;
+    %template(TsFixed) point_timeseries<shyft::time_axis::fixed_dt>;
+    %template(TsPoint) point_timeseries<shyft::time_axis::point_dt>;
+    %template(TsSinFx) function_timeseries<shyft::time_axis::fixed_dt,sin_fx>;
+    %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt>>,shyft::time_axis::fixed_dt>;
+    %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::point_dt>>,shyft::time_axis::fixed_dt>;
+    %template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::time_axis::fixed_dt>;
   }
 
   namespace api {
     typedef ITimeSeriesOfPoints ITimeSeriesDouble;
-    %template(TsCoreFixed) GenericTs<point_timeseries<timeaxis>>;
-    %template(TsCorePoint) GenericTs<point_timeseries<point_timeaxis>>;
+    %template(TsCoreFixed) GenericTs<point_timeseries<shyft::time_axis::fixed_dt>>;
+    %template(TsCorePoint) GenericTs<point_timeseries<shyft::time_axis::point_dt>>;
   }
 }
 
@@ -312,7 +319,7 @@ namespace shyft {
 }
 
 
-%extend shyft::timeseries::timeaxis {
+%extend shyft::time_axis::fixed_dt {
 %pythoncode %{
     def __str__(self):
         utc=Calendar()
@@ -335,6 +342,35 @@ namespace shyft {
         self.counter += 1
         return self(self.counter - 1)
 
+    def __call__(self,ix):
+        return self.period(ix)
+%}
+}
+
+%extend shyft::time_axis::point_dt {
+%pythoncode %{
+    def __str__(self):
+        return "PointTimeAxis("+str(self.total_period()) + ", n= " + str(self.size())+")"
+
+    def __len__(self):
+        return self.size();
+
+    def __iter__(self):
+        self.counter = 0
+        return self
+
+    def __next__(self):                 # Py3-style iterator interface
+        return self.next()
+
+    def next(self):
+        if self.counter >= len(self):
+            del self.counter
+            raise StopIteration
+        self.counter += 1
+        return self(self.counter - 1)
+
+    def __call__(self,ix):
+        return self.period(ix)
 %}
 }
 

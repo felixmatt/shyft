@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="timeseries_test test_time_axis" />
+				<Option parameters="timeseries_test" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -120,6 +120,8 @@
 			<Option compile="1" />
 			<Option weight="0" />
 		</Unit>
+		<Unit filename="time_axis_test.cpp" />
+		<Unit filename="time_axis_test.h" />
 		<Unit filename="timeseries_test.cpp" />
 		<Unit filename="timeseries_test.h" />
 		<Unit filename="utctime_utilities_test.cpp" />

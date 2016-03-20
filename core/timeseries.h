@@ -1,6 +1,7 @@
 #pragma once
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
+#include "time_axis.h"
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
@@ -18,7 +19,7 @@
 namespace shyft{
 
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    /** \brief The timeseries namespace contains all needed concepts related
+    /** \namespace The timeseries namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
     *
     * concepts:
@@ -49,7 +50,7 @@ namespace shyft{
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
         */
         inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
-
+#if 0
         /** \brief The timeaxis supports most common needs in shyft::core,
          * especially for regular forecast scenario with interval like hour, day, or 3-hours etc.
          * It is easy to create, and light-weight/high speed implementation.
@@ -74,7 +75,11 @@ namespace shyft{
                 return ix < n ? ix : n - 1;
             }
         };
+#else
+        typedef shyft::time_axis::fixed_dt timeaxis;
+#endif
 
+#if 0
         /** \brief A point_timeaxis constructs a set of time-periods,
          * with number of consecutive periods equal to n-1 time points supplied.
          * You need to supply at least two points to get a valid time-axis.
@@ -118,7 +123,9 @@ namespace shyft{
                 return static_cast<size_t>(r - times.cbegin()) - 1;
             }
         };
-
+#else
+        typedef time_axis::point_dt point_timeaxis;
+#endif
         /** \brief Enumerates how points are to be understood (most reasonably) when mapping to f(t) in the time-series concept.
          */
         enum point_interpretation_policy {
@@ -194,7 +201,7 @@ namespace shyft{
             const timeaxis_t& get_time_axis() const { return time_axis; }
             utcperiod total_period() const { return time_axis.total_period(); }
             // Source read interface:
-            point get(size_t i) const { return point(time_axis(i).start, v[i]); } // maybe verify v.size(), vs. time_axis size ?
+            point get(size_t i) const { return point(time_axis.time(i), v[i]); } // maybe verify v.size(), vs. time_axis size ?
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
             size_t size() const { return time_axis.size(); }
             // Source write interface
@@ -202,7 +209,7 @@ namespace shyft{
 
             /**< .value() implements the Accessor pattern */
             double value(size_t i) const { return v[i]; }
-            utctime time(size_t i) const { return time_axis(i).start; }
+            utctime time(size_t i) const { return time_axis.time(i); }
             // Additional write interface
             void add(size_t i, double value) { v[i] += value; }
             void add(const point_timeseries<TA>& other) {
@@ -240,7 +247,7 @@ namespace shyft{
             function_timeseries(const TA& time_axis, const F& f,point_interpretation_policy point_interpretation=POINT_INSTANT_VALUE):time_axis(time_axis),fx(f) {}
             // Source read interface:
             point get(size_t i) const {
-                utctime t = time_axis(i).start;
+                utctime t = time_axis.time(i);
                 return point(t, (*this)(t));
             } // maybe verify v.size(), vs. time_axis size ?
             size_t size() const {return time_axis.size();}
@@ -286,7 +293,7 @@ namespace shyft{
             constant_timeseries(){cvalue=0.0;}
             constant_timeseries(const TA& time_axis, double value) : time_axis(time_axis), cvalue(value) {}
             // Source read interface
-            point get(size_t i) const { return point(time_axis(i).start, cvalue); }
+            point get(size_t i) const { return point(time_axis.time(i), cvalue); }
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
             size_t size() const { return time_axis.size(); }
             // Accessor interface
@@ -508,7 +515,7 @@ namespace shyft{
             double value(const size_t i) const {
                 if(i == q_idx)
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-                q_value = average_value(source, time_axis(q_idx=i), last_idx,source.point_interpretation()==POINT_INSTANT_VALUE);
+                q_value = average_value(source, time_axis.period(q_idx=i), last_idx,source.point_interpretation()==POINT_INSTANT_VALUE);
                 return q_value;
             }
 
@@ -543,7 +550,7 @@ namespace shyft{
              */
             double value(const size_t i) const {
                 point pt = source.get(i);
-                if (pt.t != time_axis[i])
+                if (pt.t != time_axis.time(i))
                     throw std::runtime_error("Time axis and source are not aligned.");
                 return pt.v;
             }

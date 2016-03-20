@@ -87,7 +87,7 @@ namespace shyfttest {
             TSPointTarget(const T& time_axis) {
                 _values.reserve(time_axis.size());
                 for (size_t i = 0; i < time_axis.size(); ++i)
-                    _values.emplace_back(time_axis(i).end, 0.0);
+                    _values.emplace_back(time_axis.period(i).end, 0.0);
             }
 
             shyft::timeseries::point& value(size_t idx) { return _values[idx]; }
