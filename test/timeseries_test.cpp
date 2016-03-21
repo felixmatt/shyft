@@ -696,20 +696,10 @@ namespace shyft{namespace think {
     struct is_shared_ptr<shared_ptr<T>> {static const bool value=true;};
 
     ///< T d_ref(T) template to return a ref or const ref to T, if T is shared_ptr<T> or just T
-    template< typename U>
-    typename  enable_if<!is_shared_ptr<U>::value,U>::type &
-      d_ref(U& t) {return t;}
 
-    template< typename U>
-    typename  enable_if<!is_shared_ptr<U>::value,U>::type const &
-      d_ref(const U& t) {return t;}
+    template<class U> const U& d_ref(const std::shared_ptr<U>& p) { return *p; }
+    template<class U> const U& d_ref(const U& u) { return u; }
 
-    template< typename U>
-    typename  enable_if<is_shared_ptr<U>::value,U>::type::element_type &
-      d_ref(U& t) {return *t;}
-    template< typename U>
-    typename  enable_if<is_shared_ptr<U>::value,U>::type::element_type const &
-      d_ref(const U& t) {return *t;}
 
     ///< \brief d_ref_t template to rip out T of shared_ptr<T> or T if T specified
     template <class T, class P = void >
@@ -831,12 +821,12 @@ namespace shyft{namespace think {
         TA ta;
         point_fx_policy fx_policy;
 
-        bin_op(const A&lhs,O op,const B& rhs):op(op),lhs(lhs),rhs(rhs) {
+
+        template<class A_,class B_>
+        bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
             ta=time_axis::combine(d_ref(lhs).ta,d_ref(rhs).ta);
             fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
         }
-
-
         double operator()(utctime t) const {
             if(!ta.total_period().contains(t))
                 return nan;
@@ -865,7 +855,8 @@ namespace shyft{namespace think {
         TA ta;
         point_fx_policy fx_policy;
 
-        bin_op(double lhs,O op,const B& rhs):lhs(lhs),rhs(rhs),op(op) {
+        template<class A_,class B_>
+        bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
             ta=d_ref(rhs).ta;
             fx_policy = d_ref(rhs).fx_policy;
         }
@@ -884,7 +875,8 @@ namespace shyft{namespace think {
         TA ta;
         point_fx_policy fx_policy;
 
-        bin_op(const A& lhs,O op,double rhs):lhs(lhs),rhs(rhs),op(op) {
+        template<class A_,class B_>
+        bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
             ta=d_ref(lhs).ta;
             fx_policy = d_ref(lhs).fx_policy;
         }
@@ -927,6 +919,10 @@ namespace shyft{namespace think {
     template <class A,class B>
     auto operator- (const A& lhs, const B& rhs) {
         return bin_op<A,B,minus<double>,typename op_axis<A,B>::type> (lhs,minus<double>(),rhs);
+    }
+    template <class A>
+    auto operator- (const A& lhs) {
+        return bin_op<A,double,multiplies<double>,typename op_axis<A,double>::type> (lhs,multiplies<double>(),-1.0);
     }
 
     template <class A,class B>
@@ -983,7 +979,7 @@ void timeseries_test::test_binary_operator() {
     ats<decltype(c),decltype(ta2)> avg_c2(c,ta2);
     auto d = avg_c*3.0 + avg_c2 + bts+max(a,b)*min(b,c);
     //DO NOT RUN YET:
-    auto e = d + c_dt_p_ts;
+    auto e = - d + c_dt_p_ts;
     TS_ASSERT_EQUALS(n,c.ta.size());
     TS_ASSERT_DELTA(8.0,c.value(0),0.00000001);
     TS_ASSERT_EQUALS(n/2,avg_c->ta.size());
