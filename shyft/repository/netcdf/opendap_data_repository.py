@@ -191,8 +191,8 @@ class GFSDataRepository(interfaces.GeoTsRepository):
 
     def _transform_raw(self, data, time):
 
-        def noop_time(t):
-            return api.Timeaxis(t[0], t[1] - t[0], len(t))
+        #def noop_time(t):
+        #    return api.Timeaxis(api.utctime(t[0]), api.timespan(t[1] - t[0]), len(t))
 
         def noop_space(x):
             return x
@@ -203,14 +203,16 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         def prec_conv(x):
             return x*3600
 
-        convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
-                       "radiation": lambda x, t: (noop_space(x), noop_time(t)),
-                       "temperature": lambda x, t: (air_temp_conv(x), noop_time(t)),
-                       "precipitation": lambda x, t: (prec_conv(x), noop_time(t)),
-                       "relative_humidity": lambda x, t: (noop_space(x), noop_time(t))}
+        convert_map = {"wind_speed": lambda x, ta: (noop_space(x), ta),
+                       "radiation": lambda x, ta: (noop_space(x), ta),
+                       "temperature": lambda x, ta: (air_temp_conv(x), ta),
+                       "precipitation": lambda x, ta: (prec_conv(x), ta),
+                       "relative_humidity": lambda x, ta: (noop_space(x), ta)}
+
+        ta = api.Timeaxis(time[0], time[1] - time[0], len(time))
         res = {}
         for k, v in data.items():
-            res[k] = convert_map[k](v, time)
+            res[k] = convert_map[k](v, ta)
         return res
 
     def _convert_to_timeseries(self, data):

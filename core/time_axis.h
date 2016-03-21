@@ -54,9 +54,7 @@ namespace shyft {
             utctime t;
             utctimespan dt;
             size_t n;
-
-            fixed_dt() : t( no_utctime ), dt( 0 ), n( 0 ) {}
-            fixed_dt( utctime t, utctimespan dt, size_t n ) : t( t ), dt( dt ), n( n ) {}
+            fixed_dt( utctime start=no_utctime, utctimespan deltat=0, size_t n_periods=0 ) : t( start ), dt( deltat ), n( n_periods ) {}
             utctimespan delta() const {return dt;}//BW compat
             utctime start() const {return t;} //BW compat
             size_t size() const {return n;}

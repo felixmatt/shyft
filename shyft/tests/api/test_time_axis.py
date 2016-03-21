@@ -1,5 +1,6 @@
 from builtins import range
 from shyft import api
+import numpy as np
 import unittest
 
 
@@ -26,6 +27,10 @@ class TimeAxis(unittest.TestCase):
         self.assertEqual(self.ta(0).end,self.t+self.d)
         self.assertEqual(self.ta(1).start,self.t+self.d)
         self.assertEqual(self.ta.total_period().start,self.t)
+        va=np.array([86400,3600,3],dtype=np.int64)
+        xta = api.Timeaxis(va[0],va[1],va[2])
+        #xta = api.Timeaxis(86400,3600,3)
+        self.assertEqual(xta.size(),3)
     
     def test_iterate_timeaxis(self):
         tot_dt=0

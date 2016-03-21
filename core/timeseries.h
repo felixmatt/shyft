@@ -50,82 +50,10 @@ namespace shyft{
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
         */
         inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
-#if 0
-        /** \brief The timeaxis supports most common needs in shyft::core,
-         * especially for regular forecast scenario with interval like hour, day, or 3-hours etc.
-         * It is easy to create, and light-weight/high speed implementation.
-         */
-        class timeaxis {
-            utctime t0;
-            utctimespan dt;
-            size_t n;
-          public:
-            timeaxis(utctime start=no_utctime, utctimespan dt=0, size_t n=0) : t0(start),dt(dt),n(n) {}
-            utcperiod total_period() const { return utcperiod(t0,t0+n*dt);}
-            utctime start() const { return t0;}
-            size_t size() const { return n; }
-            utctimespan delta() const {return dt;}
-            utcperiod operator()(size_t i) const { return utcperiod(t0 + i*dt, t0 + (i + 1)*dt); }
-#ifndef SWIG
-            utctime   operator[](size_t i) const { return utctime(t0 + i*dt); }
-#endif
-            size_t index_of(utctime tx) const {
-                if(tx < t0) return string::npos;
-                auto ix = size_t((tx - t0)/dt);
-                return ix < n ? ix : n - 1;
-            }
-        };
-#else
+
         typedef shyft::time_axis::fixed_dt timeaxis;
-#endif
-
-#if 0
-        /** \brief A point_timeaxis constructs a set of time-periods,
-         * with number of consecutive periods equal to n-1 time points supplied.
-         * You need to supply at least two points to get a valid time-axis.
-         * TODO: Not perfectly defined, ref index_of and op() ..
-         */
-        class point_timeaxis {
-            vector<utctime> times;
-          public:
-            point_timeaxis() {}
-            point_timeaxis(const point_timeaxis&c):times(c.times) {}
-
-            point_timeaxis(const vector<utctime>& time_points):times(time_points) { }
-
-            template<typename S>
-            point_timeaxis(S begin_time, S end_time) : times(begin_time,end_time) {}
-            utcperiod total_period() const {
-                if(times.size()<=1) return utcperiod();
-                return utcperiod(times[0],times[times.size()-1]);
-            }
-            size_t size() const { return times.size()>1?times.size() - 1:0; }
-
-            utcperiod operator()(size_t i) const {
-                if (i >= times.size() - 1)
-                    throw exception();
-                return utcperiod(times[i], times[i + 1]);
-            }
-#ifndef SWIG
-            point_timeaxis& operator=(const point_timeaxis&c) {if(this!=&c) times=c.times;return *this;}
-
-            point_timeaxis(point_timeaxis&& c) : times(std::move(c.times)) {}
-            point_timeaxis& operator=(point_timeaxis&& c) {times=std::move(c.times);return *this;}
-            utctime operator[](size_t i) const { return times[i];}
-#endif
-            /**< return closest index of nearest time point.. some problem using op(i) in end case.. */
-            size_t index_of(utctime tx) const {
-                if (times.size()<2 ) return string::npos;
-                if(tx<times[0]) return string::npos;
-                if (tx >= times.back()) return times.size()-2;// because last point is END of last period
-                auto r = lower_bound(times.cbegin(), times.cend(), tx,
-                                          [](utctime pt, utctime val){ return pt <= val; });
-                return static_cast<size_t>(r - times.cbegin()) - 1;
-            }
-        };
-#else
         typedef time_axis::point_dt point_timeaxis;
-#endif
+
         /** \brief Enumerates how points are to be understood (most reasonably) when mapping to f(t) in the time-series concept.
          */
         enum point_interpretation_policy {

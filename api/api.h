@@ -24,6 +24,7 @@
  */
 
 #include "core/utctime_utilities.h"
+#include "core/time_axis.h"
 #include "core/geo_point.h"
 #include "core/geo_cell_data.h"
 #include "core/timeseries.h"
@@ -116,7 +117,7 @@ namespace shyft {
                         point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
         {
             return shared_ptr<ITimeSeriesOfPoints> (
-                new GenericTs<point_timeseries<timeaxis> >(point_timeseries<timeaxis>(timeaxis(tStart,
+                new GenericTs<point_timeseries<time_axis::fixed_dt> >(point_timeseries<time_axis::fixed_dt>(time_axis::fixed_dt(tStart,
                             dt, n), values, interpretation)));
         }
 
@@ -127,25 +128,21 @@ namespace shyft {
                              point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
             if (times.size() == values.size() + 1) {
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
-                            point_timeaxis(times), values, interpretation)));
+                    new GenericTs<point_timeseries<time_axis::point_dt> >(point_timeseries<time_axis::point_dt>(
+                            time_axis::point_dt(times), values, interpretation)));
             } else if (times.size() == values.size()) {
                 auto tx(times);
                 tx.push_back(period.end > times.back()?period.end:times.back() + utctimespan(1));
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<point_timeaxis> >(point_timeseries<point_timeaxis>(
-                            point_timeaxis(tx), values, interpretation)));
+                    new GenericTs<point_timeseries<time_axis::point_dt> >(point_timeseries<time_axis::point_dt>(
+                            time_axis::point_dt(tx), values, interpretation)));
             } else {
                 throw std::runtime_error("create_time_point_ts times and values arrays must have corresponding count");
             }
         }
     };
 
-    /*struct TsTransform {
-        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n, shared_ptr<ITimeSeriesOfPoints> &src) {
-            return model_calibration::ts_transform().to_average(start, dt, n, src);
-        }
-    }*/
+
 
     /** \brief GeoPointSource contains common properties, functions
      * for the point sources in Enki.
@@ -206,7 +203,7 @@ namespace shyft {
 
     };
 
-    typedef shyft::timeseries::point_timeseries<timeaxis> result_ts_t;
+    typedef shyft::timeseries::point_timeseries<time_axis::fixed_dt> result_ts_t;
     typedef std::shared_ptr<result_ts_t> result_ts_t_;
 
     /** \brief A class that facilitates fast state io, the yaml in Python is too slow

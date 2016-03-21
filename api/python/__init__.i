@@ -91,6 +91,8 @@
 %shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::time_axis::fixed_dt,shyft::timeseries::sin_fx>>)
 //%shared_ptr( shyft::core::pts_t )
 %shared_ptr( shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt> )
+%shared_ptr( shyft::timeseries::point_timeseries<shyft::time_axis::point_dt> )
+
 %shared_ptr( shyft::core::time_zone::tz_info<shyft::core::time_zone::tz_table> )
 
 // -- Now we let SWIG parse and interpret the types in enki_api.h
@@ -211,7 +213,7 @@
 
     %include "core/model_calibration.h"
 
-    %include "api.h"
+    %include "api/api.h"
 
 namespace shyft {
   namespace core {

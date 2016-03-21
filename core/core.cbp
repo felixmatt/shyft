@@ -91,6 +91,7 @@
 		<Unit filename="sceua_optimizer.cpp" />
 		<Unit filename="sceua_optimizer.h" />
 		<Unit filename="skaugen.h" />
+		<Unit filename="time_axis.h" />
 		<Unit filename="timeseries.h" />
 		<Unit filename="utctime_utilities.cpp" />
 		<Unit filename="utctime_utilities.h" />
