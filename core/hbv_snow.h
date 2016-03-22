@@ -196,7 +196,7 @@ namespace shyft {
                     if (sp > potmelt) {
                         sw += potmelt + rain;
                         sp -= potmelt;
-                        sw = min(sw, sp*lw);
+                        sw = std::min(sw, sp*lw);
                     } else if (sp > 0.0)
                         sp = sw = 0.0;
                 }
