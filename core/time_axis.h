@@ -103,6 +103,26 @@ namespace shyft {
 
             calendar_dt() : t( no_utctime ), dt( 0 ), n( 0 ) {}
             calendar_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : cal( cal ), t( t ), dt( dt ), n( n ) {}
+            calendar_dt(const calendar_dt&c):cal(c.cal),t(c.t),dt(c.dt),n(c.n) {}
+            #ifndef SWIG
+            calendar_dt(calendar_dt &&c):cal(std::move(c.cal)),t(c.t),dt(c.dt),n(c.n){}
+            calendar_dt& operator=(calendar_dt&&c) {
+                cal=std::move(c.cal);
+                t=c.t;
+                dt=c.dt;
+                n=c.n;
+                return *this;
+            }
+            calendar_dt& operator=(const calendar_dt &x) {
+                if(this != &x) {
+                    cal=x.cal;
+                    t=x.t;
+                    dt=x.dt;
+                    n=x.n;
+                }
+                return *this;
+            }
+            #endif // SWIG
 
             size_t size() const {return n;}
 
@@ -277,6 +297,7 @@ namespace shyft {
             {
             calendar_dt cta;
             vector<utcperiod> p;// sub-periods within each cta.period, using cta.period.start as t0
+            calendar_dt_p(){}
             calendar_dt_p( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n, vector<utcperiod> p )
                 : cta( cal, t, dt, n ), p( move( p ) ) {
                 // TODO: validate p, each p[i] non-overlapping and within ~ dt
@@ -286,6 +307,22 @@ namespace shyft {
                 // sub-periods fits-within each gross period.
 
             }
+            calendar_dt_p(const calendar_dt_p&c):cta(c.cta),p(c.p) {}
+            #ifndef SWIG
+            calendar_dt_p(calendar_dt_p &&c):cta(std::move(c.cta)),p(std::move(c.p)){}
+            calendar_dt_p& operator=(calendar_dt_p&&c) {
+                cta=std::move(c.cta);
+                p=std::move(c.p);
+                return *this;
+            }
+            calendar_dt_p& operator=(const calendar_dt_p &x) {
+                if(this != &x) {
+                    cta=x.cta;
+                    p=x.p;
+                }
+                return *this;
+            }
+            #endif // SWIG
 
             size_t size() const { return cta.size() * ( p.size() ? p.size() : 1 );}
 

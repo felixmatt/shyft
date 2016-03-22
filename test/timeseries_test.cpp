@@ -632,42 +632,107 @@ void timeseries_test::test_sin_fx_ts() {
             return bin_op<A,B,op_max,typename op_axis<A,B>::type> (lhs,op_max(),rhs);
         }
 #endif
+template <class A,class B>
+static bool is_equal_ts(const A& a,const B& b) {
+    if(a.ta.size()!=b.ta.size())
+        return false;
+    for(size_t i=0;i<a.ta.size();++i) {
+        if(a.ta.period(i)!= b.ta.period(i))
+            return false;
+        if (fabs(a.value(i)-b.value(i))>1e-6)
+            return false;
+    }
+    return true;
+}
+
+template < class TS_E,class TS_A,class TS_B,class TA>
+static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
+    // Excpected results are time-series with ta and a constant value equal to the standard operators
+    TS_E a_plus_b(ta,a_value+b_value);
+    TS_E a_minus_b(ta,a_value-b_value);
+    TS_E a_mult_b(ta,a_value*b_value);
+    TS_E a_div_b(ta,a_value/b_value);
+    TS_E max_a_b(ta,std::max(a_value,b_value));
+    TS_E min_a_b(ta,std::min(a_value,b_value));
+
+    // Step 1:   ts bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b)));
+    // Step 2:  ts bin_op double
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b_value));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b_value));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b_value));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b_value));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b_value)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b_value)));
+    // Step 3: double bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a_value+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a_value-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a_value*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a_value/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a_value,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
+
+}
+
 void timeseries_test::test_binary_operator() {
     using namespace shyft::timeseries;
     using namespace shyft;
-    // regular time-axis time-series
-    typedef point_ts<time_axis::fixed_dt> pts_t;
-    /*
-    Demo to show how to use ts-math binary operations,
-    Working for fixed_dt, point_dt and shared_ptr or by value ts.
-
-    */
     calendar utc;
     utctime start = utc.time(YMDhms(2016,3,8));
-    auto dt = deltahours(1);
-    int  n = 10;
-    time_axis::fixed_dt ta(start,dt,n);
-    time_axis::point_dt bta({start,start+dt*3,start+dt*6},start+dt*7);
-    time_axis::calendar_dt_p c_dt_p_ta(make_shared<calendar>(),start,dt,n,{utcperiod(deltaminutes(10),deltaminutes(20))});
-    point_ts<time_axis::point_dt> bts(bta,10.0);
-    point_ts<time_axis::calendar_dt_p> c_dt_p_ts(c_dt_p_ta,14.0);
-    auto a=make_shared<pts_t>(ta,1.0);
-    auto b=make_shared<pts_t>(ta,2.0);
+    utctimespan dt = deltahours(1);
+    size_t  n = 4;
+    double a_value=3.0;
+    double b_value=2.0;
+    {
+        typedef time_axis::fixed_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta(start,dt,n);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
 
-    auto c= a+a*a + 2.0*(b+1.0)/a;
-    time_axis::fixed_dt ta2(start,dt*2,n/2);
+    {
+        typedef time_axis::point_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta({start,start+dt,start+2*dt,start+3*dt},start+4*dt);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
 
-    auto avg_c = make_shared<average_ts<decltype(c),decltype(ta2)>>(c,ta2); //true average ts of c
-    average_ts<decltype(c),decltype(ta2)> avg_c2(c,ta2);
-    auto d = avg_c*3.0 + avg_c2 + bts+max(a,b)*min(b,c);
-    auto e = - d + c_dt_p_ts;
-    TS_ASSERT_EQUALS(n,c.ta.size());
-    TS_ASSERT_DELTA(8.0,c.value(0),0.00000001);
-    TS_ASSERT_EQUALS(n/2,avg_c->ta.size());
-    TS_ASSERT(d.value(0)>0.0?true:false);
-    auto f = 3.0+a;
-    auto g = max(3.0,a);
-    TS_ASSERT(is_ts<decltype(f)>::value);
+    {
+        typedef time_axis::calendar_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta(make_shared<calendar>(),start,dt,n);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+
+    {
+        typedef time_axis::calendar_dt_p ta_t;
+        typedef point_ts<ta_t> ts_t;
+        vector<utcperiod> sub_periods({utcperiod(deltaminutes(10),deltaminutes(20))});
+        ta_t ta(make_shared<calendar>(),start,dt,n,sub_periods);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+    {
+        typedef time_axis::period_list ta_t;
+        typedef point_ts<ta_t> ts_t;
+        vector<utcperiod> periods;for(size_t i=0;i<n;++i) periods.emplace_back(start+i*dt,start+(i+1)*dt);
+        ta_t ta(periods);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
 
 }
 
