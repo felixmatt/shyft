@@ -62,15 +62,15 @@ namespace shyft{
          * State-in-time values are typically POINT_INSTANT_VALUES; and we could as an approximation
          * draw a straight line between the points.
          */
-        enum point_fx_policy {
+        enum point_interpretation_policy {
             POINT_INSTANT_VALUE, ///< the point value represents the value at the specific time (or centered around that time),typically linear accessor
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
         };
-        typedef point_fx_policy point_interpretation_policy;// BW compatible
+        //typedef point_interpretation_policy point_interpretation_policy;// BW compatible
 
-        inline point_fx_policy result_policy(point_fx_policy a, point_fx_policy b) {
-            return a==point_fx_policy::POINT_INSTANT_VALUE || b==point_fx_policy::POINT_INSTANT_VALUE?point_fx_policy::POINT_INSTANT_VALUE:point_fx_policy::POINT_AVERAGE_VALUE;
+        inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
+            return a==point_interpretation_policy::POINT_INSTANT_VALUE || b==point_interpretation_policy::POINT_INSTANT_VALUE?point_interpretation_policy::POINT_INSTANT_VALUE:point_interpretation_policy::POINT_AVERAGE_VALUE;
         }
         #ifndef SWIG
         //--- to avoid duplicating algorithms in classes where the stored references are
@@ -101,12 +101,12 @@ namespace shyft{
         struct d_ref_t<T,typename enable_if<!is_shared_ptr<T>::value>::type > {
             typedef T type;
         };
-
+        #endif
         /**\brief point time-series, pts, defined by
          * its
          * templated time-axis, ta
          * the values corresponding periods in time-axis (same size)
-         * the point_fx_policy that determine how to compute the
+         * the point_interpretation_policy that determine how to compute the
          * f(t) on each interval of the time-axis (linear or stair-case)
          * and
          * value of the i'th interval of the time-series.
@@ -114,10 +114,19 @@ namespace shyft{
         template <class TA>
         struct point_ts {
             typedef TA ta_t;
-            point_fx_policy fx_policy;
             TA ta;
             vector<double> v;
-            point_ts(const TA& ta, double fill_value):ta(ta),v(ta.size(),fill_value) {}
+            point_interpretation_policy fx_policy;
+
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+
+            point_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){}
+            point_ts(const TA& ta, double fill_value,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(ta.size(),fill_value),fx_policy(fx_policy) {}
+            point_ts(const TA& ta,const vector<double>&vx,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(vx),fx_policy(fx_policy) {
+                if(ta.size() != v.size())
+                    throw runtime_error("point_ts: time-axis size is different from value-size");
+            }
             //TODO: move/cp constructors needed ?
             //TODO should we provide/hide v ?
             // TA ta, ta is expected to provide 'time_axis' functions as needed
@@ -126,7 +135,7 @@ namespace shyft{
             double operator()(utctime t) const {
                 size_t i = ta.index_of(t);
                 if(i == string::npos) return nan;
-                if( fx_policy==point_fx_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1])) {
+                if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1])) {
                     utctime t1=ta.time(i);
                     utctime t2=ta.time(i+1);
                     double f= double(t2-t)/double(t2-t1);
@@ -139,10 +148,31 @@ namespace shyft{
              * Hmm. is that policy every useful in this context ?
              */
             double value(size_t i) const  {
-                if( fx_policy==point_fx_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
-                    return 0.5*(v[i] + v[i+1]); // average of the value, linear between points(is that useful ?)
+                //if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
+                //    return 0.5*(v[i] + v[i+1]); // average of the value, linear between points(is that useful ?)
                 return v[i];
             }
+            // BW compatiblity ?
+            size_t size() const { return ta.size();}
+            size_t index_of(utctime t) const {return ta.index_of(t);}
+            utcperiod total_period() const {return ta.total_period();}
+            utctime time(size_t i ) const {return ta.time(i);}
+
+            // to help average_value method for now!
+            point get(size_t i) const {return point(ta.time(i),value(i));}
+
+            // Additional write/modify interface to operate directly on the values in the time-series
+            void set(size_t i,double x) {v[i]=x;}
+            void add(size_t i, double value) { v[i] += value; }
+            void add(const point_ts<TA>& other) {
+                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), std::plus<double>());
+            }
+            void add_scale(const point_ts<TA>&other,double scale) {
+                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), [scale](double a, double b) {return a + b*scale; });
+            }
+            void fill(double value) { std::fill(begin(v), end(v), value); }
+			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
+
         };
 
 
@@ -158,10 +188,10 @@ namespace shyft{
             typedef TA ta_t;
             TA ta;
             TS ts;
-            point_fx_policy fx_policy;
+            point_interpretation_policy fx_policy;
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts)
-            ,fx_policy(point_fx_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
+            ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
             // to help average_value method for now!
             point get(size_t i) const {return point(ta.time(i),ts.value(i));}
             size_t size() const { return ta.size();}
@@ -172,7 +202,7 @@ namespace shyft{
                     return nan;
                 size_t ix_hint=(i*d_ref(ts).ta.size())/ta.size();// assume almost fixed delta-t.
                 //TODO: make specialized pr. time-axis average_value, since average of fixed_dt is trivial compared to other ta.
-                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == point_fx_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
             }
             double operator()(utctime t) const {
                 size_t i=ta.index_of(t);
@@ -183,7 +213,7 @@ namespace shyft{
         };
 
 
-
+        #ifndef SWIG
 
         /** \brief Basic math operators
          *
@@ -200,7 +230,7 @@ namespace shyft{
             A lhs;
             B rhs;
             TA ta;
-            point_fx_policy fx_policy;
+            point_interpretation_policy fx_policy;
 
 
             template<class A_,class B_>
@@ -216,7 +246,7 @@ namespace shyft{
             double value(size_t i) const {
                 if(i==string::npos || i>=ta.size() )
                     return nan;
-                if(fx_policy==point_fx_policy::POINT_AVERAGE_VALUE)
+                if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
                     return (*this)(ta.time(i));
                 utcperiod p=ta.period(i);
                 double v0= (*this)(p.start);
@@ -234,7 +264,7 @@ namespace shyft{
             B rhs;
             O op;
             TA ta;
-            point_fx_policy fx_policy;
+            point_interpretation_policy fx_policy;
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
@@ -254,7 +284,7 @@ namespace shyft{
             double rhs;
             O op;
             TA ta;
-            point_fx_policy fx_policy;
+            point_interpretation_policy fx_policy;
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
@@ -381,7 +411,7 @@ namespace shyft{
          *  -# .size() const       --> number of periods on time-axis
          *  -#  op() (i) const        --> utcperiod of the i'th interval
          */
-
+        #if 0
         template<typename TA>
         class point_timeseries {
           public:
@@ -459,7 +489,7 @@ namespace shyft{
             void fill(double value) { std::fill(begin(v), end(v), value); }
 			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
         };
-
+        #endif
         /** \brief A point source with a time_axis, and a function Fx(utctime t) that
          *  gives the value at utctime t, where t is from timeaxis(i).t
          *  suitable for functional type of time series
@@ -803,11 +833,11 @@ namespace shyft{
          * \tparam TA the time-axis
          */
         template <class TA>
-        class direct_accessor<point_timeseries<TA>, TA> {
+        class direct_accessor<point_ts<TA>, TA> {
           private:
-            const point_timeseries<TA>& source; //< \note this is a reference to the supplied point_source, so please be aware of life-time
+            const point_ts<TA>& source; //< \note this is a reference to the supplied point_source, so please be aware of life-time
           public:
-            direct_accessor(const point_timeseries<TA>& source, const TA& ta) : source(source) { }
+            direct_accessor(const point_ts<TA>& source, const TA& ta) : source(source) { }
 
             /** \brief Return value at pos without check since the source has its own timeaxis
              */

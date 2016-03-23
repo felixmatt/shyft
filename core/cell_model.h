@@ -9,7 +9,7 @@ namespace shyft {
 		using namespace shyft::timeseries;
 
 		// and typedefs for commonly used types in the model
-		typedef point_timeseries<timeaxis> pts_t;
+		typedef point_ts<timeaxis> pts_t;
 		typedef constant_timeseries<timeaxis> cts_t;
 		typedef timeaxis timeaxis_t;
 
@@ -156,7 +156,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).time_axis, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
@@ -193,7 +193,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).time_axis, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
 				bool match_all = catchment_indexes.size() == 0;
 
 				for (const auto& c : cells) {

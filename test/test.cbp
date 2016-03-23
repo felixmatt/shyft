@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  utctime_utilities_test test_tz_info_db" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  timeseries_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

@@ -70,7 +70,7 @@ using namespace shyft::timeseries;
 
 using namespace shyfttest;
 
-typedef point_timeseries<point_timeaxis> xts_t;
+typedef point_ts<point_timeaxis> xts_t;
 
 void timeseries_test::test_point_timeaxis() {
     point_timeaxis ts0; //zero points
@@ -127,12 +127,12 @@ void timeseries_test::test_point_source_with_timeaxis() {
     timeaxis fixed_ta(t,d,n);
     point_timeaxis point_ta(time_points);
 
-    point_timeseries<timeaxis> a(fixed_ta,values);
-    point_timeseries<point_timeaxis> b(point_ta,values);
+    point_ts<timeaxis> a(fixed_ta,values);
+    point_ts<point_timeaxis> b(point_ta,values);
 
-    TS_ASSERT_EQUALS(a.total_period(),b.total_period());
+    TS_ASSERT_EQUALS(a.ta.total_period(),b.ta.total_period());
     TS_ASSERT_EQUALS(a.size(),b.size());
-    TS_ASSERT_EQUALS(a.get_time_axis().size(),b.get_time_axis().size());
+    TS_ASSERT_EQUALS(a.ta.size(),b.ta.size());
     auto t_after= t+ deltahours(24*365*10);
     TS_ASSERT_EQUALS(fixed_ta.index_of(t_after),point_ta.index_of(t_after));
 
@@ -163,7 +163,7 @@ void timeseries_test::test_point_source_scale_by_value() {
     auto d=deltahours(1);
     size_t n=10;
     vector<double> values;for(size_t i=0;i<n;++i) values.emplace_back(i*1.0);
-    point_timeseries<timeaxis> a(timeaxis(t,d,n),values);
+    point_ts<timeaxis> a(timeaxis(t,d,n),values);
     auto b=a;
     a.scale_by(2.0);
     b.fill(1.0);
@@ -556,7 +556,7 @@ void timeseries_test::test_TxFxSource() {
 void timeseries_test::test_point_timeseries_with_point_timeaxis() {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
-    point_timeseries<point_timeaxis> ps(point_timeaxis(times),points);
+    point_ts<point_timeaxis> ps(point_timeaxis(times),points);
     TS_ASSERT_EQUALS(ps.size(),3);
     for(size_t i=0;i<ps.size();++i) {
         TS_ASSERT_EQUALS(ps.get(i).v,points[i]);
@@ -579,7 +579,7 @@ void timeseries_test::test_time_series_difference() {
 }
 
 void timeseries_test::test_ts_weighted_average(void) {
-    using pts_t=point_timeseries<timeaxis>;
+    using pts_t=point_ts<timeaxis>;
 	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
@@ -621,17 +621,6 @@ void timeseries_test::test_sin_fx_ts() {
 
 }
 
-#if 0
-       template <class A,class B,typename =
-                    enable_if_t<
-                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
-                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
-                        >
-                  >
-        auto max_ts2(const A& lhs, const B& rhs) {
-            return bin_op<A,B,op_max,typename op_axis<A,B>::type> (lhs,op_max(),rhs);
-        }
-#endif
 template <class A,class B>
 static bool is_equal_ts(const A& a,const B& b) {
     if(a.ta.size()!=b.ta.size())
@@ -680,6 +669,14 @@ static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value
 }
 
 void timeseries_test::test_binary_operator() {
+    /** Test strategy here is to ensure that
+       a) it compiles
+       b) it gives the expected results for all combinations
+       The test_bin_op template function does the hard work,
+       this method only provides suitable parameters and types
+       to the test_bin_op function
+
+    */
     using namespace shyft::timeseries;
     using namespace shyft;
     calendar utc;

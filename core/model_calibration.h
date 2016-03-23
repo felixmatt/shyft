@@ -601,7 +601,7 @@ namespace shyft{
 				vector<pts_t> catchment_d;
 				vector<area_ts> catchment_sca,catchment_swe;// "catchment" level simulated discharge,sca,swe
 				for (const auto& t : targets) {
-					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.get_time_axis());
+					shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.ta);
 					pts_t property_sum;
                     switch(t.catchment_property){
                     case DISCHARGE:
@@ -614,7 +614,7 @@ namespace shyft{
                         property_sum=compute_swe_sum(t,catchment_swe);
                         break;
                     }
-					shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.get_time_axis());
+					shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
                     double partial_goal_function_value;
 					if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
 						partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);

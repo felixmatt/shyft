@@ -97,11 +97,11 @@ namespace shyft {
         }
 
 
-        utcperiod total_period() const { return ts_rep.total_period(); }
-        size_t size() const { return ts_rep.size(); }
-        utctime time(size_t i) const { return ts_rep.time(i); }
+        utcperiod total_period() const { return ts_rep.ta.total_period(); }
+        size_t size() const { return ts_rep.ta.size(); }
+        utctime time(size_t i) const { return ts_rep.ta.time(i); }
         double value(size_t i) const { return ts_rep.value(i); }
-        size_t index_of(utctime t) const { return ts_rep.index_of(t);}
+        size_t index_of(utctime t) const { return ts_rep.ta.index_of(t);}
         // utility
         void set(size_t i, double x) { ts_rep.set(i, x);}
         void fill(double x) {ts_rep.fill(x);}
@@ -117,7 +117,7 @@ namespace shyft {
                         point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
         {
             return shared_ptr<ITimeSeriesOfPoints> (
-                new GenericTs<point_timeseries<time_axis::fixed_dt> >(point_timeseries<time_axis::fixed_dt>(time_axis::fixed_dt(tStart,
+                new GenericTs<point_ts<time_axis::fixed_dt> >(point_ts<time_axis::fixed_dt>(time_axis::fixed_dt(tStart,
                             dt, n), values, interpretation)));
         }
 
@@ -128,13 +128,13 @@ namespace shyft {
                              point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
             if (times.size() == values.size() + 1) {
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<time_axis::point_dt> >(point_timeseries<time_axis::point_dt>(
+                    new GenericTs<point_ts<time_axis::point_dt> >(point_ts<time_axis::point_dt>(
                             time_axis::point_dt(times), values, interpretation)));
             } else if (times.size() == values.size()) {
                 auto tx(times);
                 tx.push_back(period.end > times.back()?period.end:times.back() + utctimespan(1));
                 return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_timeseries<time_axis::point_dt> >(point_timeseries<time_axis::point_dt>(
+                    new GenericTs<point_ts<time_axis::point_dt> >(point_ts<time_axis::point_dt>(
                             time_axis::point_dt(tx), values, interpretation)));
             } else {
                 throw std::runtime_error("create_time_point_ts times and values arrays must have corresponding count");
@@ -203,7 +203,7 @@ namespace shyft {
 
     };
 
-    typedef shyft::timeseries::point_timeseries<time_axis::fixed_dt> result_ts_t;
+    typedef shyft::timeseries::point_ts<time_axis::fixed_dt> result_ts_t;
     typedef std::shared_ptr<result_ts_t> result_ts_t_;
 
     /** \brief A class that facilitates fast state io, the yaml in Python is too slow

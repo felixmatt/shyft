@@ -140,7 +140,7 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 			//std::cout << "Base temp at pos (i,j) = " << i << ", " << j << ") = " << b_t << std::endl;
 			for (size_t l = 0; l < ts_size; ++l)
 				pts.emplace_back( b_t + pt.z*(0.6 / 100));
-			sources.emplace_back(pt, xpts_t(dta,pts.cbegin(), pts.cend()));
+			sources.emplace_back(pt, xpts_t(dta,pts));
 		}
 	}
 	for (size_t i = 0; i < num_dests_x; ++i) {

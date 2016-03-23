@@ -46,9 +46,9 @@ namespace shyft {
         typedef shared_ptr<multi_point> multi_point_;
 
         /// and typedefs for commonly used types in this test
-        typedef et::point_timeseries<et::timeaxis>      pts_t;
+        typedef et::point_ts<et::timeaxis>      pts_t;
         //typedef et::point_source_with_no_regularity xts_t;
-        typedef et::point_timeseries<et::point_timeaxis> xts_t;
+        typedef et::point_ts<et::point_timeaxis> xts_t;
         typedef et::constant_timeseries<et::timeaxis>   cts_t;
 
 
@@ -276,7 +276,7 @@ namespace shyft {
                 time_points.emplace_back(ec::max_utctime);// open-ended time-axis
 
                 et::point_timeaxis pts(time_points);
-                r.ts= xts_t(pts,begin(values),end(values));
+                r.ts= xts_t(pts,values);
                 return r;
             }
         };

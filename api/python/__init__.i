@@ -86,12 +86,12 @@
 %shared_ptr(std::vector<shyft::api::RelHumSource>)
 
 %shared_ptr( shyft::api::ITimeSeriesOfPoints)
-%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt>>)
-%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::point_dt>>)
+%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>)
+%shared_ptr( shyft::api::GenericTs<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>)
 %shared_ptr( shyft::api::GenericTs<shyft::timeseries::function_timeseries<shyft::time_axis::fixed_dt,shyft::timeseries::sin_fx>>)
 //%shared_ptr( shyft::core::pts_t )
-%shared_ptr( shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt> )
-%shared_ptr( shyft::timeseries::point_timeseries<shyft::time_axis::point_dt> )
+%shared_ptr( shyft::timeseries::point_ts<shyft::time_axis::fixed_dt> )
+%shared_ptr( shyft::timeseries::point_ts<shyft::time_axis::point_dt> )
 
 %shared_ptr( shyft::core::time_zone::tz_info<shyft::core::time_zone::tz_table> )
 
@@ -296,18 +296,18 @@ namespace std {
 
 namespace shyft {
   namespace timeseries {
-    %template(TsFixed) point_timeseries<shyft::time_axis::fixed_dt>;
-    %template(TsPoint) point_timeseries<shyft::time_axis::point_dt>;
+    %template(TsFixed) point_ts<shyft::time_axis::fixed_dt>;
+    %template(TsPoint) point_ts<shyft::time_axis::point_dt>;
     %template(TsSinFx) function_timeseries<shyft::time_axis::fixed_dt,sin_fx>;
-    %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::fixed_dt>>,shyft::time_axis::fixed_dt>;
-    %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_timeseries<shyft::time_axis::point_dt>>,shyft::time_axis::fixed_dt>;
+    %template(AverageAccessorTsFixed) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>,shyft::time_axis::fixed_dt>;
+    %template(AverageAccessorTsPoint) average_accessor<shyft::api::GenericTs<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>,shyft::time_axis::fixed_dt>;
     %template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::time_axis::fixed_dt>;
   }
 
   namespace api {
     typedef ITimeSeriesOfPoints ITimeSeriesDouble;
-    %template(TsCoreFixed) GenericTs<point_timeseries<shyft::time_axis::fixed_dt>>;
-    %template(TsCorePoint) GenericTs<point_timeseries<shyft::time_axis::point_dt>>;
+    %template(TsCoreFixed) GenericTs<point_ts<shyft::time_axis::fixed_dt>>;
+    %template(TsCorePoint) GenericTs<point_ts<shyft::time_axis::point_dt>>;
   }
 }
 

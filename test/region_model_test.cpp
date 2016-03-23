@@ -38,7 +38,7 @@ namespace kr = shyft::core::kirchner;
 namespace pt_gs_k = shyft::core::pt_gs_k;
 
 // and typedefs for commonly used types in this test
-typedef et::point_timeseries<et::timeaxis> pts_t;
+typedef et::point_ts<et::timeaxis> pts_t;
 typedef et::constant_timeseries<et::timeaxis> cts_t;
 typedef et::timeaxis ta_t;
 
