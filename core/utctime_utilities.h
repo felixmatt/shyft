@@ -233,7 +233,7 @@ namespace shyft {
                        && x.minute == minute && x.second == second;
             }
 			static YMDhms max() {return YMDhms(YEAR_MAX,12,31,23,59,59);}
-			static YMDhms min() {return YMDhms(YEAR_MIN,12,31,23,59,59);}
+			static YMDhms min() {return YMDhms(YEAR_MIN,1,1,0,0,0);}
 		};
         /** \brief Calendar deals with the concept of human calendar.
          *

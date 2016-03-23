@@ -13,5 +13,9 @@
 			<Depends filename="core/core.cbp" />
 			<Depends filename="api/api.cbp" />
 		</Project>
+		<Project filename="api/boostpython/boostpython.cbp">
+			<Depends filename="core/core.cbp" />
+			<Depends filename="api/api.cbp" />
+		</Project>
 	</Workspace>
 </CodeBlocks_workspace_file>
