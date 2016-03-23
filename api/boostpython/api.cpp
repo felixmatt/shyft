@@ -1,4 +1,6 @@
 
+//#include <boost/python.hpp>
+
 #include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
 #include <boost/python/args.hpp>
@@ -7,6 +9,7 @@
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/overloads.hpp>
 #include <boost/python/return_internal_reference.hpp>
+#include <boost/python/handle.hpp>
 
 #include "core/utctime_utilities.h"
 
@@ -72,7 +75,7 @@ void def_Calendar() {
     .def("calendar_units",&calendar::calendar_units,args("t"),"returns YMDhms for specified t, in the time-zone as given by the calendar")
     .def("time",time_YMDhms,args("YMDhms"),"convert calendar coordinates into time using the calendar time-zone")
 
-    .def("time",time_6,calendar_time_overloads())//args("Y"),"returns time of Y.01.01 in calendar time-zone")
+    .def("time",time_6,calendar_time_overloads("returns time accoring to calendar",args("Y,M,D,h,m,s")))//args("Y"),"returns time of Y.01.01 in calendar time-zone")
 
     .def("add",&calendar::add,args("t,delta_t,n"),
          "calendar semantic add\n"
@@ -148,7 +151,7 @@ void def_utctime_utilities() {
 
 BOOST_PYTHON_MODULE(api)
 {
-    using namespace boost::python;
+
     scope().attr("__doc__")="SHyFT python api providing basic types";
     def("version", version);
     def_utctime_utilities();
