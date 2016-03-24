@@ -9,6 +9,9 @@
 #include <boost/python/return_value_policy.hpp>
 #include <boost/python/copy_const_reference.hpp>
 #include <boost/python/return_internal_reference.hpp>
+#include <boost/python/operators.hpp>
+#include <boost/operators.hpp>
+
 #include "core/utctime_utilities.h"
 
 
@@ -129,6 +132,8 @@ void def_UtcPeriod() {
     .def("contains",contains_p,args("p"),"returns true if utcperiod p is contained in this utcperiod" )
     .def("overlaps",&utcperiod::overlaps,args("p"), "returns true if period p overlaps this utcperiod" )
     .def("__str__",&utcperiod::to_string,"returns the str using time-zone utc to convert to readable time")
+    .def(self == self)
+    .def(self != self)
     .def("timespan",&utcperiod::timespan,"returns end-start, the timespan of the period")
     .def_readwrite("start",&utcperiod::start,"Defines the start of the period, inclusive")
     .def_readwrite("end",&utcperiod::end,"Defines the end of the period, not inclusive");

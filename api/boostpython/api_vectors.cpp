@@ -81,7 +81,6 @@ void def_vectors() {
         .def("FromNdArray",FromNdArray<double>).staticmethod("FromNdArray")
         .def("from_numpy",FromNdArray<double>).staticmethod("from_numpy")
         .def("to_numpy",ToNpArray<double>,"convert DoubleVector to numpy").staticmethod("to_numpy")
-        //.def("ToNpArray",ToNpArray<utctime>,"convert UtcTimeVector to numpy").staticmethod("ToNpArray")
-        ;//.def("push_back",&vector<double>::push_back,args("v"),"adds another element at end of the vector");
+        ;
 }
 
