@@ -26,22 +26,7 @@ using namespace shyft::core;
 using namespace boost::python;
 using namespace std;
 
-void def_std_vectors() {
 
-    typedef std::vector<std::string> StringVector;
-    typedef std::vector<int> IntVector;
-    typedef std::vector<double> DoubleVector;
-    typedef std::vector<utctime> UtcTimeVector;
-    class_<StringVector>("StringVector","Is a list of strings")
-        .def(vector_indexing_suite<StringVector>());
-    class_<IntVector>("IntVector")
-        .def(vector_indexing_suite<IntVector>());
-    class_<UtcTimeVector>("UtcTimeVector")
-        .def(vector_indexing_suite<UtcTimeVector>());
-    class_<DoubleVector>("DoubleVector")
-        .def(vector_indexing_suite<DoubleVector>())
-        ;//.def("push_back",&vector<double>::push_back,args("v"),"adds another element at end of the vector");
-}
 
 void def_Timeaxis() {
     using namespace shyft::time_axis;
@@ -104,10 +89,11 @@ void def_api() {
     void def_utctime();
     void def_Calendar();
     void def_UtcPeriod();
+    void def_vectors();
     def_utctime();
     def_Calendar();
     def_UtcPeriod();
-    def_std_vectors();
+    def_vectors();
     def_Timeaxis();
     def_PointTimeaxis();
     def_CalendarTimeaxis();
