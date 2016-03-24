@@ -4,7 +4,7 @@
 #include <boost/python/args.hpp>
 #include <boost/python/class.hpp>
 //#include <boost/python/scope.hpp>
-//#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 //#include <boost/python/return_internal_reference.hpp>
 //#include <boost/python/return_value_policy.hpp>
 //#include <boost/python/copy_const_reference.hpp>
@@ -12,6 +12,7 @@
 //#include <boost/python/overloads.hpp>
 #include <boost/python/enum.hpp>
 //#include <boost/operators.hpp>
+#include "py_convertible.h"
 
 #include "core/core_pch.h"
 #include "core/utctime_utilities.h"
@@ -53,9 +54,8 @@ void def_target_specification() {
         .export_values()
         ;
     typedef shyft::core::pts_t target_ts_t;
-
-
     typedef  model_calibration::target_specification<target_ts_t> TargetSpecificationPts;
+
     class_<TargetSpecificationPts>("TargetSpecificationPts",
         "To guide the model calibration, we have a goal-function that we try to minimize\n"
         "This class contains the needed specification of this goal-function so that we can\n"
@@ -75,7 +75,14 @@ void def_target_specification() {
         .def_readwrite("s_r",&TargetSpecificationPts::s_r,"KG-scalefactor for correlation")
         .def_readwrite("s_a",&TargetSpecificationPts::s_a,"KG-scalefactor for alpha (variance)")
         .def_readwrite("s_b",&TargetSpecificationPts::s_b,"KG-scalefactor for beta (bias)")
+        .def_readwrite("ts", &TargetSpecificationPts::ts," target ts")
         ;
+
+    //.i:   %template(TargetSpecificationVector) vector<shyft::core::model_calibration::target_specification<shyft::core::pts_t>>;
+    typedef vector<TargetSpecificationPts> TargetSpecificationVector;
+    class_<TargetSpecificationVector>("TargetSpecificationVector","A list of (weighted) target specifications to be used for model calibration")
+        .def(vector_indexing_suite<TargetSpecificationVector>())
+     ;
     //typedef model_calibration::ts_transform TsTransform;
     //        %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>;
     //    %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::core::pts_t>;
@@ -97,4 +104,7 @@ void def_target_specification() {
         .def("to_average",m3,args("start","dt","n","src"),"")
         .def("to_average",m4,args("start","dt","n","src"),"")
         ;
+    py_api::iterable_converter()
+        .from_python< std::vector<TargetSpecificationPts> >()
+    ;
 }

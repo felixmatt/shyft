@@ -105,7 +105,10 @@ class ShyftApi(unittest.TestCase):
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
         t.ts = tsa
-        tv = api.TargetSpecificationVector([t, t2])
+        #TODO: Does not work, list of objects are not yet convertible tv = api.TargetSpecificationVector([t, t2])
+        tv=api.TargetSpecificationVector()
+        tv.append(t)
+        tv.append(t2)
         # now verify we got something ok
         self.assertEqual(2, tv.size())
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # average value 0..1 ->0.5

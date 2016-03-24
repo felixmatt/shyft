@@ -204,6 +204,9 @@ namespace shyft{
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
                 return *this;
 			}
+			bool operator==(const target_specification& x) const {
+			    return catchment_indexes == x.catchment_indexes && catchment_property==x.catchment_property;
+			}
 #endif
             /** \brief Constructs a target specification element for calibration, specifying all neede parameters
              *

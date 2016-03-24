@@ -117,6 +117,7 @@
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
 		</Unit>
+		<Unit filename="py_convertible.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />
