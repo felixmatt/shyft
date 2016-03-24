@@ -8,7 +8,6 @@
 #include <boost/python/return_internal_reference.hpp>
 #include <boost/python/return_value_policy.hpp>
 #include <boost/python/copy_const_reference.hpp>
-#include <boost/python/return_internal_reference.hpp>
 #include <boost/python/operators.hpp>
 #include <boost/operators.hpp>
 

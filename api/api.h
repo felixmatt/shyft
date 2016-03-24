@@ -64,11 +64,29 @@ namespace shyft {
         virtual size_t size() const=0;        ///< number of points that descr. y=f(t) on t ::= period
         virtual utctime time(size_t i) const=0;///< get the i'th time point
         virtual double value(size_t i) const=0;///< get the i'th value
-
+        #ifndef SWIG
+        double operator()(utctime t) const {
+            size_t i=index_of(t);
+            if(i==std::string::npos) {
+                return nan;
+            }
+            double v1=value(i);
+            if( point_interpretation()==point_interpretation_policy::POINT_INSTANT_VALUE
+                    && i+1<size()
+                    && isfinite(value(i+1)) ) {
+                utctime t1=time(i);
+                utctime t2=time(i+1);
+                double f= double(t2-t)/double(t2-t1);
+                return v1*f + (1.0-f)*value(i+1);
+            }
+            return v1;
+        }
+        #endif
         // core friendly interface
         virtual size_t index_of(utctime t) const=0;
         virtual void set(size_t i, double x)=0;
         virtual void fill(double x) =0;
+        virtual void scale_by(double x)=0;
         point get(size_t i) const { return point(time(i), value(i)); }
     };
 
@@ -105,6 +123,7 @@ namespace shyft {
         // utility
         void set(size_t i, double x) { ts_rep.set(i, x);}
         void fill(double x) {ts_rep.fill(x);}
+        void scale_by(double x) {ts_rep.scale_by(x);}
     };
 
     /** \brief TsFactor provides time-series creation function using supplied primitives like vector of double, start, delta-t, n etc.
