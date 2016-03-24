@@ -28,8 +28,8 @@ class TimeAxis(unittest.TestCase):
         self.assertEqual(self.ta(1).start,self.t+self.d)
         self.assertEqual(self.ta.total_period().start,self.t)
         va=np.array([86400,3600,3],dtype=np.int64)
-        xta = api.Timeaxis(int(va[0]), int(va[1]), int(va[2])) # TODO: boost.python require this to be int, needs overload for np.int64 types..
-        #xta = api.Timeaxis(va[0], va[1], va[2])
+        xta = api.Timeaxis(int(va[0]), int(va[1]), int(va[2]))
+        #xta = api.Timeaxis(va[0], va[1], va[2])# TODO: boost.python require this to be int, needs overload for np.int64 types..
         #xta = api.Timeaxis(86400,3600,3)
         self.assertEqual(xta.size(),3)
     
@@ -48,8 +48,8 @@ class TimeAxis(unittest.TestCase):
         A point time axis takes n+1 points do describe n-periods, where
         each period is defined as [ point_i .. point_i+1 >
         """
-        #tap=api.PointTimeaxis(api.UtcTimeVector([t for t in range(self.t,self.t+(self.n+1)*self.d,self.d)])) #TODO: Should work
-        tap=api.PointTimeaxis(api.UtcTimeVector.from_numpy(np.array([t for t in range(self.t,self.t+(self.n+1)*self.d,self.d)]))) #TODO: Should work
+        tap=api.PointTimeaxis(api.UtcTimeVector([t for t in range(self.t,self.t+(self.n+1)*self.d,self.d)])) #TODO: Should work
+        #tap=api.PointTimeaxis(api.UtcTimeVector.from_numpy(np.array([t for t in range(self.t,self.t+(self.n+1)*self.d,self.d)]))) #TODO: Should work
         self.assertEqual(tap.size(),self.ta.size())
         for i in range(self.ta.size()):
             self.assertEqual(tap(i), self.ta(i))
