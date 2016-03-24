@@ -61,6 +61,17 @@ static void def_ITimeSeriesOfPoints() {
     class_<TsVector>("TsVector","A vector of refs to ITimeSeriesOfPoints")
         .def(vector_indexing_suite<TsVector>())
         ;
+
+    //%template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::time_axis::fixed_dt>;
+    typedef shyft::time_axis::fixed_dt ta_t;
+    typedef shyft::timeseries::average_accessor<pts_t,ta_t> AverageAccessorTs;
+    class_<AverageAccessorTs>("AverageAccessorTs","Accessor to get out true average for the time-axis intervals for a point time-series",no_init)
+        .def(init<const pts_t&,const ta_t&>(args("ts","ta"),"construct accessor from ts and time-axis ta"))
+        .def(init<shared_ptr<pts_t>,const ta_t&>(args("ts","ta"),"constructor from ref ts and time-axis ta"))
+        .def("value",&AverageAccessorTs::value,args("i"),"returns the i'th true average value" )
+        .def("size", &AverageAccessorTs::size,"returns number of intervals in the time-axis for this accessor")
+        ;
+
 }
 static void def_GenericTs() {
         //not needed, TsFactory does the job

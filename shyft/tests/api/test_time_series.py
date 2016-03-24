@@ -100,7 +100,7 @@ class TimeSeries(unittest.TestCase):
         tsf=api.TsFactory()
         ts1=tsf.create_point_ts(self.ta.size(), self.t, self.d, v)
         ts2=tsf.create_time_point_ts(self.ta.total_period(),t,v)
-        tax=api.Timeaxis(self.ta.start()+api.deltaminutes(30),api.deltahours(1),self.ta.size())
+        tax=api.Timeaxis(self.ta.total_period().start+api.deltaminutes(30),api.deltahours(1),self.ta.size())
         avg1=api.AverageAccessorTs(ts1,tax)
         self.assertEqual(avg1.size(),tax.size())
         self.assertIsNotNone(ts2)
@@ -112,16 +112,18 @@ class TimeSeries(unittest.TestCase):
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         #t.push_back(self.ta(self.ta.size()-1).end) #important! needs n+1 points to determine n periods in the timeaxis
-        tax=api.Timeaxis(self.ta.start()+api.deltaminutes(30),api.deltahours(1),self.ta.size())
+        t_start = self.ta.total_period().start
+        dt = api.deltahours(1)
+        tax=api.Timeaxis(t_start+api.deltaminutes(30),dt,self.ta.size())
         tsf=api.TsFactory()
         ts1=tsf.create_point_ts(self.ta.size(), self.t, self.d, v)
         ts2=tsf.create_time_point_ts(self.ta.total_period(),t,v)
         ts3=api.TsFixed(tax,v)
         
         tst=api.TsTransform()
-        tt1=tst.to_average(tax.start(),tax.delta(),tax.size(),ts1)
-        tt2=tst.to_average(tax.start(),tax.delta(),tax.size(),ts2)
-        tt3=tst.to_average(tax.start(),tax.delta(),tax.size(),ts3)
+        tt1=tst.to_average(t_start,dt,tax.size(),ts1)
+        tt2=tst.to_average(t_start,dt,tax.size(),ts2)
+        tt3=tst.to_average(t_start,dt,tax.size(),ts3)
         self.assertEqual(tt1.size(),tax.size())
         self.assertEqual(tt2.size(),tax.size())
         self.assertEqual(tt3.size(),tax.size())
