@@ -95,6 +95,12 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_vectors.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="numpy_boost.hpp" />
+		<Unit filename="numpy_boost_python.hpp" />
 		<Unit filename="pt_gs_k.cpp">
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
