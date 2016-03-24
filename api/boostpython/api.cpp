@@ -12,6 +12,7 @@
 #include <boost/python/handle.hpp>
 
 #include "core/utctime_utilities.h"
+#include "core/time_axis.h"
 
 char const* version() {
    return "v1.0";
@@ -36,19 +37,20 @@ void def_std_vectors() {
     class_<UtcTimeVector>("UtcTimeVector")
         .def(vector_indexing_suite<UtcTimeVector>());
     class_<DoubleVector>("DoubleVector")
-        .def(vector_indexing_suite<DoubleVector>());
+        .def(vector_indexing_suite<DoubleVector>())
+        ;//.def("push_back",&vector<double>::push_back,args("v"),"adds another element at end of the vector");
 }
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(calendar_time_overloads,calendar::time,1,6);
 
 void def_Calendar() {
-    def_std_vectors();
+
     std::string (shyft::core::calendar::*to_string_t)(shyft::core::utctime) const= &calendar::to_string;//selects correct ptr.
     std::string (calendar::*to_string_p)(utcperiod) const =&calendar::to_string;
     utctimespan (calendar::*diff_units)(utctime,utctime,utctimespan) const=&calendar::diff_units;
     utctime (calendar::*time_YMDhms)(YMDhms) const = &calendar::time;
     utctime (calendar::*time_6)(int,int,int,int,int,int) const = &calendar::time;
 
-    class_<calendar,shared_ptr<calendar>>("Calendar",
+    class_<calendar,shared_ptr<const calendar>>("Calendar",
         "Calendar deals with the concept of human calendar\n"
         " In SHyFT we practice the 'utctime-perimeter' principle,\n"
         "  * so the core is utc-time only \n"
@@ -102,7 +104,7 @@ void def_Calendar() {
     .def_readonly("HOUR",&calendar::HOUR)
     .def_readonly("MINUTE",&calendar::MINUTE)
     .def_readonly("SECOND",&calendar::SECOND);
-
+    register_ptr_to_python<shared_ptr<const calendar> >();
 
     class_<YMDhms>("YMDhms","Defines calendar coordinates as Year Month Day hour minute second")
     .def(init<int>(args("Y"),"creates coordinates specifiying Year, resulting in YMDhms(Y,1,1,0,0,0)"))
@@ -138,21 +140,92 @@ void def_UtcPeriod() {
     .def_readwrite("end",&utcperiod::end,"Defines the end of the period, not inclusive");
     def("intersection",&intersection,args("a,b"),"Returns the intersection of two utcperiods");
 }
-void def_utctime_utilities() {
+static bool is_npos(size_t n) {
+    return n==string::npos;
+}
+void def_utctime() {
     def("utctime_now",utctime_now,"returns utc-time now as seconds since 1970s");
+    def("deltahours",deltahours,args("n"),"returns timespan equal to specified n hours");
+    def("deltaminutes",deltaminutes,args("n"),"returns timespan equal to specified n minutes");
+    def("is_npos",is_npos,args("n"),"returns true if n is npos, - meaning no position");
     scope current;
     current.attr("max_utctime")= max_utctime;
     current.attr("min_utctime")= min_utctime;
     current.attr("no_utctime")=no_utctime;
-    def_Calendar();
-    def_UtcPeriod();
+    current.attr("npos")=string::npos;
+}
+void def_Timeaxis() {
+    using namespace shyft::time_axis;
+    class_<fixed_dt>("Timeaxis","timeaxis doc")
+        .def(init<utctime,utctimespan,size_t>(args("start,delta_t,n"),"creates a timeaxis with n intervals, fixed delta_t, starting at start"))
+        .def("size",&fixed_dt::size,"returns number of intervals")
+        .def_readonly("n",&fixed_dt::n,"number of periods")
+        .def_readonly("start",&fixed_dt::t,"start of the time-axis")
+        .def_readonly("delta_t",&fixed_dt::dt,"timespan of each interval")
+        .def("total_period",&fixed_dt::total_period,"the period that covers the entire time-axis")
+        .def("time",&fixed_dt::time,args("i"),"return the start of the i'th period of the time-axis")
+        .def("period",&fixed_dt::period,args("i"),"return the i'th period of the time-axis")
+        .def("index_of",&fixed_dt::index_of,args("t"),"return the index the time-axis period that contains t")
+        .def("open_range_index_of",&fixed_dt::open_range_index_of,args("t"),"returns the index that contains t, or is before t")
+        .def("full_range",&fixed_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
+        .def("null_range",&fixed_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
+}
+void def_PointTimeaxis() {
+    using namespace shyft::time_axis;
+    class_<point_dt>("PointTimeaxis","timeaxis doc")
+        .def(init<const vector<utctime>&,utctime>(args("time_points,t_end"),"creates a time-axis with n intervals using time-points plus the end-points"))
+        .def(init<const vector<utctime>& >(args("time_points"),"create a time-axis supplying n+1 points to define n intervals"))
+        .def("size",&point_dt::size,"returns number of intervals")
+        .def_readonly("t",&point_dt::t,"timepoints except last")
+        .def_readonly("t_end",&point_dt::t,"end of time-axis")
+        //.def_readonly("delta_t",&point_dt::dt,"timespan of each interval")
+        .def("total_period",&point_dt::total_period,"the period that covers the entire time-axis")
+        .def("time",&point_dt::time,args("i"),"return the start of the i'th period of the time-axis")
+        .def("period",&point_dt::period,args("i"),"return the i'th period of the time-axis")
+        .def("index_of",&point_dt::index_of,args("t"),"return the index the time-axis period that contains t")
+        .def("open_range_index_of",&point_dt::open_range_index_of,args("t"),"returns the index that contains t, or is before t")
+        ;//.def("full_range",&point_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
+        //.def("null_range",&point_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
+}
+
+void def_CalendarTimeaxis() {
+    using namespace shyft::time_axis;
+    class_<calendar_dt>("CalendarTimeaxis","timeaxis doc")
+        .def(init<shared_ptr<const calendar>,utctime,utctimespan,size_t>(args("calendar,start,delta_t,n"),"creates a calendar timeaxis with n intervals, fixed calendar delta_t, starting at start"))
+        .def("size",&calendar_dt::size,"returns number of intervals")
+        .def_readonly("n",&calendar_dt::n,"number of periods")
+        .def_readonly("start",&calendar_dt::t,"start of the time-axis")
+        .def_readonly("delta_t",&calendar_dt::dt,"timespan of each interval")
+        .def_readonly("calendar",&calendar_dt::cal,"calendar of the time-axis")
+        .def("size",&calendar_dt::size,"returns number of intervals")
+        .def("total_period",&calendar_dt::total_period,"the period that covers the entire time-axis")
+        .def("time",&calendar_dt::time,args("i"),"return the start of the i'th period of the time-axis")
+        .def("period",&calendar_dt::period,args("i"),"return the i'th period of the time-axis")
+        .def("index_of",&calendar_dt::index_of,args("t"),"return the index the time-axis period that contains t")
+        .def("open_range_index_of",&calendar_dt::open_range_index_of,args("t"),"returns the index that contains t, or is before t")
+        ;//.def("full_range",&point_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
+        //.def("null_range",&point_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
 }
 
 
-BOOST_PYTHON_MODULE(api)
+void def_api() {
+    void def_GeoPoint();
+    void def_GeoCellData();
+    def_utctime();
+    def_Calendar();
+    def_UtcPeriod();
+    def_std_vectors();
+    def_Timeaxis();
+    def_PointTimeaxis();
+    def_CalendarTimeaxis();
+    def_GeoPoint();
+    def_GeoCellData();
+}
+
+BOOST_PYTHON_MODULE(_api)
 {
 
     scope().attr("__doc__")="SHyFT python api providing basic types";
     def("version", version);
-    def_utctime_utilities();
+    def_api();
 }

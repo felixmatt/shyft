@@ -6,8 +6,8 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
-				<Option output="api" prefix_auto="0" extension_auto="1" />
+			<Target title="api_Debug">
+				<Option output="../../shyft/api/_api" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -18,8 +18,33 @@
 					<Add directory="../../bin/Debug" />
 				</Linker>
 			</Target>
-			<Target title="Release">
-				<Option output="api" prefix_auto="0" extension_auto="1" />
+			<Target title="api_Release">
+				<Option output="../../shyft/api/_api" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
+			<Target title="pt_gs_k_Debug">
+				<Option output="../../shyft/api/pt_gs_k/_pt_gs_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
+			<Target title="pt_gs_k_Release">
+				<Option output="../../shyft/api/pt_gs_k/_pt_gs_k" prefix_auto="0" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -32,6 +57,10 @@
 				</Linker>
 			</Target>
 		</Build>
+		<VirtualTargets>
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;" />
+		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++14" />
@@ -50,7 +79,22 @@
 			<Add library="python3.4m" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
-		<Unit filename="main.cpp" />
+		<Unit filename="api.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_GeoCellData.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_GeoPoint.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="pt_gs_k.cpp">
+			<Option target="pt_gs_k_Debug" />
+			<Option target="pt_gs_k_Release" />
+		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion />
