@@ -19,13 +19,13 @@ void def_GeoCellData() {
                           "like glacier, lake, reservoir and forest.\n"
                           "It is designed as a part of GeoCellData \n"
     )
-    .def(init<double,double,double,double,double>(args("glacier,lake,reservoir,forest,unspecified"),"construct LandTypeFraction specifying the area of each type"))
+    .def(init<double,double,double,double,double>(args("glacier","lake","reservoir","forest","unspecified"),"construct LandTypeFraction specifying the area of each type"))
     .def("glacier",&land_type_fractions::glacier,"returns the glacier part")
     .def("lake",&land_type_fractions::lake,"returns the lake part")
     .def("reservoir",&land_type_fractions::reservoir,"returns the reservoir part")
     .def("forest",&land_type_fractions::forest,"returns the forest part")
     .def("unspecified",&land_type_fractions::unspecified,"returns the unspecified part")
-    .def("set_fractions",&land_type_fractions::set_fractions,args("glacier,lake,reservoir,forest"),"set the fractions explicit, each a value in range 0..1, sum should be 1.0")
+    .def("set_fractions",&land_type_fractions::set_fractions,args("glacier","lake","reservoir","forest"),"set the fractions explicit, each a value in range 0..1, sum should be 1.0")
     ;
 
     class_<geo_cell_data>("GeoCellData",
@@ -39,7 +39,7 @@ void def_GeoCellData() {
                           "  catchment_id   def (-1)\n"
                           "  radiation_slope_factor def 0.9\n"
     )
-    .def(init<geo_point,double,int,double,const land_type_fractions&>(args("mid_point,area,catchment_id,radiation_slope_factor,land_type_fractions"),"constructs a GeoCellData with all parameters specified"))
+    .def(init<geo_point,double,int,double,const land_type_fractions&>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions"),"constructs a GeoCellData with all parameters specified"))
     .def("mid_point",&geo_cell_data::mid_point,"returns the mid_point",return_value_policy<copy_const_reference>())
     .def("catchment_id",&geo_cell_data::catchment_id,"returns the catchment_id")
     .def("set_catchment_id",&geo_cell_data::catchment_id,args("catchment_id"),"set the catchment_id")

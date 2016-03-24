@@ -290,6 +290,8 @@ namespace shyft {
 			static inline utctimespan seconds(int h, int m, int s) { return h*HOUR + m*MINUTE + s*SECOND; }
 
 			time_zone::tz_info_t_ tz_info;
+			/**\brief returns tz_info (helper for boost python really) */
+			time_zone::tz_info_t_ get_tz_info() const {return tz_info;}
 			/**\brief construct a timezone with standard offset, no dst, name= UTC+01 etc. */
 			calendar(utctimespan tz=0): tz_info(new time_zone::tz_info_t(tz)) {}
 			/**\brief construct a timezone from tz_info shared ptr provided from typically time_zone db */

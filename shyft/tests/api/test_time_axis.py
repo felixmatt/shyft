@@ -28,7 +28,8 @@ class TimeAxis(unittest.TestCase):
         self.assertEqual(self.ta(1).start,self.t+self.d)
         self.assertEqual(self.ta.total_period().start,self.t)
         va=np.array([86400,3600,3],dtype=np.int64)
-        xta = api.Timeaxis(va[0],va[1],va[2])
+        xta = api.Timeaxis(int(va[0]), int(va[1]), int(va[2])) # TODO: boost.python require this to be int, needs overload for np.int64 types..
+        #xta = api.Timeaxis(va[0], va[1], va[2])
         #xta = api.Timeaxis(86400,3600,3)
         self.assertEqual(xta.size(),3)
     
