@@ -12,7 +12,7 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(pthsk.size(), 10)
         pthsk.snow.lw = 0.23
         self.assertAlmostEqual(pthsk.snow.lw, 0.23)
-        snow = api.HbvSnowParameter(lw=0.2)  # keyword does work now!
+        snow = api.HbvSnowParameter(tx=0.2)  # orderded .. keyword does work now! TODO: verify if we can have boost provide real kwargs
         self.assertIsNotNone(snow)
         snow.lw = 0.2
         self.assertAlmostEqual(snow.lw, 0.2);

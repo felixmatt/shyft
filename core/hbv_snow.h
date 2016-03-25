@@ -89,7 +89,7 @@ namespace shyft {
                       set_std_distribution_and_quantiles();
                 }
                 #ifndef SWIG
-                parameter(vector<double>& s, vector<double>& intervals,
+                parameter(const vector<double>& s, const vector<double>& intervals,
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
                 #endif // SWIG
@@ -142,7 +142,7 @@ namespace shyft {
                 vector<double> sw;
                 size_t I_n;
 
-                calculator(const P& p, S& state) {
+                calculator(const P& p,  S& state) {
                     // Simple trapezoidal rule to normalize the snow redistribution quartiles
                     auto s = p.s;
                     I = p.intervals;

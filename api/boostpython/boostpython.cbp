@@ -56,10 +56,35 @@
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="pt_hs_k_Debug">
+				<Option output="../../shyft/api/pt_hs_k/_pt_hs_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
+			<Target title="pt_hs_k_Release">
+				<Option output="../../shyft/api/pt_hs_k/_pt_hs_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
 		</Build>
 		<VirtualTargets>
-			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;" />
-			<Add alias="Release" targets="api_Release;pt_gs_k_Release;" />
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_hs_k_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_hs_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
@@ -99,6 +124,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_hbv_snow.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_kirchner.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
@@ -115,7 +144,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
-		<Unit filename="api_region_environment.cpp" />
+		<Unit filename="api_region_environment.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_target_specification.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
@@ -141,6 +173,10 @@
 		<Unit filename="pt_gs_k.cpp">
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
+		</Unit>
+		<Unit filename="pt_hs_k.cpp">
+			<Option target="pt_hs_k_Debug" />
+			<Option target="pt_hs_k_Release" />
 		</Unit>
 		<Unit filename="py_convertible.h" />
 		<Extensions>
