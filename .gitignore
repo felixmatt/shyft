@@ -32,7 +32,6 @@ ipch
 *.intermediate.manifest
 *.ilk
 shyft/tests/netcdf/state.yaml
-shyft/api/__init__.py
 shyft/api/pt_gs_k.py
 shyft/api/pt_ss_k.py
 shyft/api/pt_hs_k.py

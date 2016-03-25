@@ -42,6 +42,20 @@ void def_pt_gs_k() {
         .def("get_name",&parameter::get_name,args("i"),"returns the i'th parameter name, see also .get()/.set() and .size()")
         ;
 
+    class_<state>("PTGSKState")
+        .def(init<gamma_snow::state,kirchner::state>(args("gs","k"),"initializes state with gamma-snow gs and kirchner k"))
+        .def_readwrite("gs",&state::gs,"gamma-snow state")
+        .def_readwrite("kirchner",&state::kirchner,"kirchner state")
+        ;
+
+    class_<response>("PTGSKResponse","This struct contains the responses of the methods used in the PTGSK assembly")
+        .def_readwrite("pt",&response::pt,"priestley_taylor response")
+        .def_readwrite("gs",&response::gs,"gamma-snnow response")
+        .def_readwrite("ae",&response::ae,"actual evapotranspiration response")
+        .def_readwrite("kirchner",&response::kirchner,"kirchner response")
+        .def_readwrite("total_discharge",&response::total_discharge,"total stack response")
+        ;
+    //TODO: consider exposing the calculator
 }
 //extern void def_api();
 BOOST_PYTHON_MODULE(_pt_gs_k)

@@ -41,6 +41,19 @@ void def_pt_hs_k() {
         .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
         .def("get_name",&parameter::get_name,args("i"),"returns the i'th parameter name, see also .get()/.set() and .size()")
         ;
+    class_<state>("PTHSKState")
+        .def(init<hbv_snow::state,kirchner::state>(args("snow","k"),"initializes state with hbv-snow gs and kirchner k"))
+        .def_readwrite("snow",&state::snow,"hbv-snow state")
+        .def_readwrite("kirchner",&state::kirchner,"kirchner state")
+        ;
+
+    class_<response>("PTHSKResponse","This struct contains the responses of the methods used in the PTHSK assembly")
+        .def_readwrite("pt",&response::pt,"priestley_taylor response")
+        .def_readwrite("snow",&response::snow,"hbc-snow response")
+        .def_readwrite("ae",&response::ae,"actual evapotranspiration response")
+        .def_readwrite("kirchner",&response::kirchner,"kirchner response")
+        .def_readwrite("total_discharge",&response::total_discharge,"total stack response")
+        ;
 
 
 }
