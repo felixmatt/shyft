@@ -83,19 +83,19 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
-		<Unit filename="api_GeoCellData.cpp">
-			<Option target="api_Debug" />
-			<Option target="api_Release" />
-		</Unit>
-		<Unit filename="api_GeoPoint.cpp">
-			<Option target="api_Debug" />
-			<Option target="api_Release" />
-		</Unit>
 		<Unit filename="api_actual_evapotranspiration.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_gamma_snow.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_geo_cell_data.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_geo_point.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
