@@ -9,6 +9,7 @@
 #include <boost/python/return_internal_reference.hpp>
 #include <boost/python/handle.hpp>
 
+#include "core/core_pch.h"
 #include "core/utctime_utilities.h"
 #include "core/priestley_taylor.h"
 #include "core/actual_evapotranspiration.h"
@@ -16,6 +17,10 @@
 #include "core/gamma_snow.h"
 #include "core/kirchner.h"
 #include "core/pt_gs_k.h"
+#include "api/pt_gs_k.h"
+#include "core/pt_gs_k_cell_model.h"
+#include "core/region_model.h"
+#include "core/model_calibration.h"
 
 static char const* version() {
    return "v1.0";
@@ -25,8 +30,21 @@ static char const* version() {
 using namespace boost::python;
 using namespace shyft::core;
 using namespace shyft::core::pt_gs_k;
+static void expose_state_io() {
+    namespace sa=shyft::api;
+    typedef shyft::api::pt_gs_k_state_io PTGSKStateIo;
+    //using state=shyft::core::pt_gs_k::state;
+    std::string (PTGSKStateIo::*to_string1)(const state& ) const = &PTGSKStateIo::to_string;
+    std::string (PTGSKStateIo::*to_string2)(const std::vector<state>& ) const = &PTGSKStateIo::to_string;
+    class_<PTGSKStateIo>("PTGSKStateIo")
+     .def("from_string",&PTGSKStateIo::from_string,args("str","state"), "returns true if succeeded convertion string into state")
+     .def("to_string",to_string1,args("state"),"convert a state into readable string")
+     .def("to_string",to_string2,args("state_vector"),"convert a vector of state to a string" )
+     .def("vector_from_string",&PTGSKStateIo::vector_from_string,args("s"),"given string s, convert it to a state vector")
+     ;
+}
 
-void def_pt_gs_k() {
+static void expose_pt_gs_k() {
     class_<parameter>("PTGSKParameter",
                       "Contains the parameters to the methods used in the PTGSK assembly\n"
                       "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
@@ -55,6 +73,16 @@ void def_pt_gs_k() {
         .def_readwrite("kirchner",&response::kirchner,"kirchner response")
         .def_readwrite("total_discharge",&response::total_discharge,"total stack response")
         ;
+    typedef std::vector<state> PTGSKStateVector;
+    class_<PTGSKStateVector>("PTGSKStateVector")
+     .def(vector_indexing_suite<PTGSKStateVector>())
+        ;
+  #if 0
+            %template(PTGSKCellAll)  cell<parameter, environment_t, state, state_collector, all_response_collector>;
+        typedef cell<parameter, environment_t, state, state_collector, all_response_collector> PTGSKCellAll;
+        %template(PTGSKCellOpt)     cell<parameter, environment_t, state, null_collector, discharge_collector>;
+        typedef cell<parameter, environment_t, state, null_collector, discharge_collector> PTGSKCellOpt;
+#endif
     //TODO: consider exposing the calculator
 }
 //extern void def_api();
@@ -63,5 +91,6 @@ BOOST_PYTHON_MODULE(_pt_gs_k)
 
     scope().attr("__doc__")="SHyFT python api for the pt_gs_k model";
     def("version", version);
-    def_pt_gs_k();
+    expose_pt_gs_k();
+    expose_state_io();
 }

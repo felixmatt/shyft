@@ -132,6 +132,10 @@ namespace shyft {
             struct state {
                 double q=0.0001; //< water content in [mm/h], it defaults to 0.0001 mm, zero is not a reasonable valid value
                 state(double q=0.0001):q(q){}
+                bool operator==(const state&x) const {
+                    const double eps=1e-6;
+                    return fabs(q-x.q)<eps;
+                }
             };
 
 

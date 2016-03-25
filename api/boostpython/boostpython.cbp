@@ -112,6 +112,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_cell_environment.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_gamma_snow.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
@@ -125,6 +129,10 @@
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_snow.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_interpolation.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>

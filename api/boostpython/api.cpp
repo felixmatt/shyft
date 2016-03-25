@@ -44,6 +44,7 @@ void def_api() {
     void def_kirchner();
     void def_precipitation_correction();
     void def_hbv_snow();
+    void expose_cell_environment();
     def_utctime();
     def_Calendar();
     def_UtcPeriod();
@@ -62,6 +63,7 @@ void def_api() {
     def_kirchner();
     def_precipitation_correction();
     def_hbv_snow();
+    expose_cell_environment();
 }
 
 BOOST_PYTHON_MODULE(_api)

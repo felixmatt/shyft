@@ -132,6 +132,7 @@ namespace shyft {
             state(gs_state_t gs, kirchner_state_t k) : gs(gs), kirchner(k) {}
             gs_state_t gs;
             kirchner_state_t kirchner;
+            bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}
         };
 
 

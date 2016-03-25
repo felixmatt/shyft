@@ -1,17 +1,10 @@
 
-//#include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
 #include <boost/python/args.hpp>
 #include <boost/python/class.hpp>
-//#include <boost/python/scope.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-//#include <boost/python/return_internal_reference.hpp>
-//#include <boost/python/return_value_policy.hpp>
-//#include <boost/python/copy_const_reference.hpp>
-//#include <boost/python/operators.hpp>
-//#include <boost/python/overloads.hpp>
 #include <boost/python/enum.hpp>
-//#include <boost/operators.hpp>
+
 #include "py_convertible.h"
 
 #include "core/core_pch.h"

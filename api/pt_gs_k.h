@@ -4,7 +4,7 @@
 
 namespace shyft {
   namespace api {
-    typedef shyft::core::pt_gs_k::state_t pt_gs_k_state_t;
+    typedef shyft::core::pt_gs_k::state pt_gs_k_state_t;
 
     struct pt_gs_k_state_io {
         bool from_string(const std::string &str, pt_gs_k_state_t &s) const {
