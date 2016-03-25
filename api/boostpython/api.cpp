@@ -37,6 +37,7 @@ void def_api() {
     void def_CalendarTimeaxis();
     void def_timeseries();
     void def_target_specification();
+    void def_region_environment() ;
     def_utctime();
     def_Calendar();
     def_UtcPeriod();
@@ -48,6 +49,7 @@ void def_api() {
     def_GeoCellData();
     def_timeseries();
     def_target_specification();
+    def_region_environment();
 }
 
 BOOST_PYTHON_MODULE(_api)

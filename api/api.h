@@ -177,7 +177,7 @@ namespace shyft {
 
         geo_point mid_point_;
         ITimeSeriesOfPoints_ ts;
-
+        bool is_equal(const GeoPointSource& x) const {return mid_point_==x.mid_point_ && ts.get()== x.ts.get();}
         geo_point mid_point() const { return mid_point_; }
     };
 
@@ -185,27 +185,32 @@ namespace shyft {
         TemperatureSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
         const ITimeSeriesOfPoints& temperatures() const { return *ts; }
+        bool operator==(const TemperatureSource& x) {return is_equal(x);}
     };
 
     struct PrecipitationSource : GeoPointSource {
         PrecipitationSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
         const ITimeSeriesOfPoints& precipitations() const { return *ts; }
+        bool operator==(const PrecipitationSource& x) {return is_equal(x);}
     };
 
     struct WindSpeedSource : GeoPointSource {
         WindSpeedSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
+        bool operator==(const WindSpeedSource& x) {return is_equal(x);}
     };
 
     struct RelHumSource : GeoPointSource {
         RelHumSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
+        bool operator==(const RelHumSource& x) {return is_equal(x);}
     };
 
     struct RadiationSource : GeoPointSource {
         RadiationSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
          : GeoPointSource(p, ts) {}
+        bool operator==(const RadiationSource& x) {return is_equal(x);}
     };
 
     struct a_region_environment {
