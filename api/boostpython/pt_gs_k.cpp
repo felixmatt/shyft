@@ -45,7 +45,7 @@ static void expose_state_io() {
 }
 
 static void expose_pt_gs_k() {
-    class_<parameter>("PTGSKParameter",
+    class_<parameter,bases<>,std::shared_ptr<parameter>>("PTGSKParameter",
                       "Contains the parameters to the methods used in the PTGSK assembly\n"
                       "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
         )
@@ -59,12 +59,19 @@ static void expose_pt_gs_k() {
         .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
         .def("get_name",&parameter::get_name,args("i"),"returns the i'th parameter name, see also .get()/.set() and .size()")
         ;
+    register_ptr_to_python<std::shared_ptr<parameter> >();
 
     class_<state>("PTGSKState")
         .def(init<gamma_snow::state,kirchner::state>(args("gs","k"),"initializes state with gamma-snow gs and kirchner k"))
         .def_readwrite("gs",&state::gs,"gamma-snow state")
         .def_readwrite("kirchner",&state::kirchner,"kirchner state")
         ;
+
+    typedef std::vector<state> PTGSKStateVector;
+    class_<PTGSKStateVector,bases<>,std::shared_ptr<PTGSKStateVector> >("PTGSKStateVector")
+        .def(vector_indexing_suite<PTGSKStateVector>())
+        ;
+
 
     class_<response>("PTGSKResponse","This struct contains the responses of the methods used in the PTGSK assembly")
         .def_readwrite("pt",&response::pt,"priestley_taylor response")
@@ -85,7 +92,74 @@ static void expose_pt_gs_k() {
 #endif
     //TODO: consider exposing the calculator
 }
-//extern void def_api();
+static void expose_pt_gs_k_collectors() {
+    typedef shyft::core::pt_gs_k::all_response_collector PTGSKAllCollector;
+    class_<PTGSKAllCollector>("PTGSKAllCollector", "collect all cell response from a run")
+        .def_readonly("destination_area",&PTGSKAllCollector::destination_area,"a copy of cell area [m2]")
+        .def_readonly("avg_discharge",&PTGSKAllCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+        .def_readonly("snow_sca",&PTGSKAllCollector::snow_sca," gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
+        .def_readonly("snow_swe",&PTGSKAllCollector::snow_swe,"gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep")
+        .def_readonly("snow_outflow",&PTGSKAllCollector::snow_outflow," gamma snow output [m³/s] for the timestep")
+        .def_readonly("ae_output",&PTGSKAllCollector::ae_output,"actual evap mm/h")
+        .def_readonly("pe_output",&PTGSKAllCollector::pe_output,"pot evap mm/h")
+        .def_readonly("end_reponse",&PTGSKAllCollector::end_reponse,"end_response, at the end of collected")
+    ;
+
+    typedef shyft::core::pt_gs_k::discharge_collector PTGSKDischargeCollector;
+    class_<PTGSKDischargeCollector>("PTGSKDischargeCollector", "collect all cell response from a run")
+        .def_readonly("cell_area",&PTGSKDischargeCollector::cell_area,"a copy of cell area [m2]")
+        .def_readonly("avg_discharge",&PTGSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+        .def_readonly("snow_sca",&PTGSKDischargeCollector::snow_sca," gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
+        .def_readonly("snow_swe",&PTGSKDischargeCollector::snow_swe,"gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep")
+        .def_readonly("end_reponse",&PTGSKDischargeCollector::end_response,"end_response, at the end of collected")
+        .def_readwrite("collect_snow",&PTGSKDischargeCollector::collect_snow,"controls collection of snow routine")
+        ;
+    typedef shyft::core::pt_gs_k::null_collector PTGSKNullCollector;
+    class_<PTGSKNullCollector>("PTGSKNullCollector","collector that does not collect anything, useful during calibration to minimize memory&maximize speed")
+        ;
+
+    typedef shyft::core::pt_gs_k::state_collector PTGSKStateCollector;
+    class_<PTGSKStateCollector>("PTGSKStateCollector","collects state, if collect_state flag is set to true")
+        .def_readwrite("collect_state",&PTGSKStateCollector::collect_state,"if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)")
+        .def_readonly("kirchner_discharge",&PTGSKStateCollector::kirchner_discharge,"Kirchner state instant Discharge given in m^3/s")
+        .def_readonly("gs_albedo",&PTGSKStateCollector::gs_albedo,"")
+        .def_readonly("gs_lwc",&PTGSKStateCollector::gs_lwc,"")
+        .def_readonly("gs_surface_heat",&PTGSKStateCollector::gs_surface_heat,"")
+        .def_readonly("gs_alpha",&PTGSKStateCollector::gs_alpha,"")
+        .def_readonly("gs_sdc_melt_mean",&PTGSKStateCollector::gs_sdc_melt_mean,"")
+        .def_readonly("gs_acc_melt",&PTGSKStateCollector::gs_acc_melt,"")
+        .def_readonly("gs_iso_pot_energy",&PTGSKStateCollector::gs_iso_pot_energy,"")
+        .def_readonly("gs_temp_swe",&PTGSKStateCollector::gs_temp_swe,"")
+    ;
+
+}
+template <class T>
+static void expose_cell(const char *cell_name,const char* cell_doc) {
+  class_<T>(cell_name,cell_doc)
+    .def_readwrite("geo",&T::geo,"geo_cell_data information for the cell")
+    .def_readwrite("parameter",&T::parameter,"reference to parameter for this cell, typically shared for a catchment")
+    .def_readwrite("env_ts",&T::env_ts,"environment time-series as projected to the cell")
+    .def_readonly("sc",&T::sc,"state collector for the cell")
+    .def_readonly("rc",&T::rc,"response collector for the cell")
+  ;
+
+}
+static void expose_pt_gs_k_cell() {
+  typedef cell<parameter, environment_t, state, state_collector, all_response_collector> PTGSKCellAll;
+  typedef cell<parameter, environment_t, state, null_collector, discharge_collector> PTGSKCellOpt;
+  expose_cell<PTGSKCellAll>("PTGSKCellAll","tbd: PTGSKCellAll doc");
+  expose_cell<PTGSKCellOpt>("PTGSKCellOpt","tbd: PTGSKCellOpt doc");
+}
+
+template <class M>
+static void expose_model(const char *model_name,const char *model_doc) {
+
+}
+
+static void expose_pt_gs_k_model() {
+    typedef region_model<pt_gs_k::cell_discharge_response_t> PTGSKOptModel;
+    typedef region_model<pt_gs_k::cell_complete_response_t> PTGSKModel;
+}
 BOOST_PYTHON_MODULE(_pt_gs_k)
 {
 
@@ -93,4 +167,6 @@ BOOST_PYTHON_MODULE(_pt_gs_k)
     def("version", version);
     expose_pt_gs_k();
     expose_state_io();
+    expose_pt_gs_k_cell();
+    expose_pt_gs_k_collectors();
 }
