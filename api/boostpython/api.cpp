@@ -41,6 +41,8 @@ void def_api() {
     void def_priestley_taylor();
     void def_actual_evapotranspiration();
     void def_gamma_snow();
+    void def_kirchner();
+    void def_precipitation_correction();
     def_utctime();
     def_Calendar();
     def_UtcPeriod();
@@ -56,6 +58,8 @@ void def_api() {
     def_priestley_taylor();
     def_actual_evapotranspiration();
     def_gamma_snow();
+    def_kirchner();
+    def_precipitation_correction();
 }
 
 BOOST_PYTHON_MODULE(_api)

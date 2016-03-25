@@ -99,7 +99,19 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_kirchner.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_precipitation_correction.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_priestley_taylor.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_pt_gs_k.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>

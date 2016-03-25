@@ -195,14 +195,14 @@ namespace shyft {
               public:
                 calculator(const P& param) : param(param) { /* Do nothing */ }
 
-                calculator(double abs_err, double rel_err, P& param)
+                calculator(double abs_err, double rel_err, const P& param)
                     : dense_stepper(boost::numeric::odeint::make_dense_output(abs_err, rel_err,
                       boost::numeric::odeint::runge_kutta_dopri5<state_type>())),
                       average_computer(dense_stepper), param(param) {}
 
 
                 /** \brief step Kirchner model forward from time t0 to time t1
-                 * \note If the supplied q (state) is less than min_q(0.00001, it represents mm water..), 
+                 * \note If the supplied q (state) is less than min_q(0.00001, it represents mm water..),
                  *       it is forced to min_q to ensure numerical stability
                  */
                 void step(shyft::timeseries::utctime T0, shyft::timeseries::utctime T1, double& q, double& q_avg, double p, double e) {
