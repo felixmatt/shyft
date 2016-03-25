@@ -91,6 +91,15 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_actual_evapotranspiration.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_priestley_taylor.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_region_environment.cpp" />
 		<Unit filename="api_target_specification.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />

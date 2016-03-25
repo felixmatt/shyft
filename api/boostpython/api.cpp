@@ -38,6 +38,9 @@ void def_api() {
     void def_timeseries();
     void def_target_specification();
     void def_region_environment() ;
+    void def_priestley_taylor();
+    void def_actual_evapotranspiration();
+    void def_gamma_snow();
     def_utctime();
     def_Calendar();
     def_UtcPeriod();
@@ -50,6 +53,9 @@ void def_api() {
     def_timeseries();
     def_target_specification();
     def_region_environment();
+    def_priestley_taylor();
+    def_actual_evapotranspiration();
+    def_gamma_snow();
 }
 
 BOOST_PYTHON_MODULE(_api)

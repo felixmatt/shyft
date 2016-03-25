@@ -40,7 +40,7 @@ static void def_GeoPointSourceX(const char *py_name,const char *py_vector,const 
     py::class_<TSourceVector,py::bases<>,std::shared_ptr<TSourceVector> > (py_vector)
         .def(py::vector_indexing_suite<TSourceVector>())
         ;
-
+    py::register_ptr_to_python<std::shared_ptr<TSourceVector> >();
 }
 
 static void def_GeoPointSource(void) {

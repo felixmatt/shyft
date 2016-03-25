@@ -27,8 +27,9 @@ class ShyftApi(unittest.TestCase):
         gsp = api.GammaSnowParameter(winter_end_day_of_year=99, initial_bare_ground_fraction=0.04, snow_cv=0.44,
                                      tx=-0.3, wind_scale=1.9, wind_const=0.9, max_water=0.11, surface_magnitude=33.0,
                                      max_albedo=0.88, min_albedo=0.55, fast_albedo_decay_rate=6.0,
-                                     slow_albedo_decay_rate=4.0, snowfall_reset_depth=6.1, glacier_albedo=0.44,
-                                     calculate_iso_pot_energy=False)
+                                     slow_albedo_decay_rate=4.0, snowfall_reset_depth=6.1, glacier_albedo=0.44
+                                     )# TODO: This does not work due to boost.python template arity of 15,  calculate_iso_pot_energy=False)
+        gsp.calculate_iso_pot_energy=False
         gsp.snow_cv = 0.5
         gsp.initial_bare_ground_fraction = 0.04
         kp = api.KirchnerParameter(c1=-2.55, c2=0.8, c3=-0.01)
