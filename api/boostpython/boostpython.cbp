@@ -95,6 +95,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_gamma_snow.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_priestley_taylor.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
