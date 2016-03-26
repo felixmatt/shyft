@@ -137,6 +137,48 @@ namespace expose_statistics {
     typedef size_t ix_;
     using namespace boost::python;
 
+    template<class cell>
+    static void kirchner(const char *cell_name) {
+        char state_name[200];sprintf(state_name,"%sKirchnerStateStatistics",cell_name);
+        typedef typename shyft::api::kirchner_cell_state_statistics<cell>    sc_stat;
+
+        rts_ (sc_stat::*discharge_ts)(cids_) const = &sc_stat::discharge;
+        vd_  (sc_stat::*discharge_vd)(cids_,ix_) const =&sc_stat::discharge;
+        class_<sc_stat>(state_name,"Kirchner response statistics",no_init)
+            .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Kirchner cell response statistics object"))
+            .def("discharge",discharge_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+            .def("discharge",discharge_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+        ;
+    }
+
+    template <class cell>
+    static void priestley_taylor(const char *cell_name) {
+        char response_name[200];sprintf(response_name,"%sPriestleyTaylorResponseStatistics",cell_name);
+        typedef typename shyft::api::priestley_taylor_cell_response_statistics<cell> rc_stat;
+
+        rts_ (rc_stat::*output_ts)(cids_) const = &rc_stat::output;
+        vd_  (rc_stat::*output_vd)(cids_,ix_) const =&rc_stat::output;
+        class_<rc_stat>(response_name,"PriestleyTaylor response statistics",no_init)
+            .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct PriestleyTaylor cell response statistics object"))
+            .def("output",output_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+            .def("output",output_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+        ;
+    }
+
+    template <class cell>
+    static void actual_evapotranspiration(const char *cell_name) {
+        char response_name[200];sprintf(response_name,"%sActualEvapotranspirationResponseStatistics",cell_name);
+        typedef typename shyft::api::actual_evapotranspiration_cell_response_statistics<cell> rc_stat;
+
+        rts_ (rc_stat::*output_ts)(cids_) const = &rc_stat::output;
+        vd_  (rc_stat::*output_vd)(cids_,ix_) const =&rc_stat::output;
+        class_<rc_stat>(response_name,"ActualEvapotranspiration response statistics",no_init)
+            .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct ActualEvapotranspiration cell response statistics object"))
+            .def("output",output_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+            .def("output",output_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+        ;
+    }
+
     template <class cell>
     static void gamma_snow(const char *cell_name) {
         char state_name[200];sprintf(state_name,"%sGammaSnowStateStatistics",cell_name);
@@ -280,6 +322,9 @@ static void expose_pt_gs_k_cell() {
   expose_cell<PTGSKCellAll>("PTGSKCellAll","tbd: PTGSKCellAll doc");
   expose_cell<PTGSKCellOpt>("PTGSKCellOpt","tbd: PTGSKCellOpt doc");
   expose_statistics::gamma_snow<PTGSKCellAll>("PTGSKCell");//it only gives meaning to expose the *All collect cell-type
+  expose_statistics::actual_evapotranspiration<PTGSKCellAll>("PTGSKCell");
+  expose_statistics::priestley_taylor<PTGSKCellAll>("PTGSKCell");
+  expose_statistics::kirchner<PTGSKCellAll>("PTGSKCell");
 
 }
 
