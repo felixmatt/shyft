@@ -43,7 +43,8 @@ static void def_GeoPointSource(void) {
         "Typically it contains a GeoPoint (3d position), plus a time-series\n"
         )
         .def(py::init<py::optional<sc::geo_point,sa::ITimeSeriesOfPoints_ >>(py::args("midpoint","ts")))
-        .def_readwrite("mid_point",&sa::GeoPointSource::mid_point_)
+        .def_readwrite("mid_point_",&sa::GeoPointSource::mid_point_,"reference to internal mid_point")
+        .def("mid_point",&sa::GeoPointSource::mid_point,"returns a copy of mid_point")
         .def_readwrite("ts",&sa::GeoPointSource::ts)
         ;
 

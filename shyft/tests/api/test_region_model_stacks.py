@@ -72,25 +72,26 @@ class RegionModel(unittest.TestCase):
 
     def create_dummy_region_environment(self, time_axis, mid_point):
         re = api.ARegionEnvironment()
-        re.precipitation = api.PrecipitationSourceVector()
-        re.precipitation.append(self._create_constant_geo_ts(
+        pv = api.PrecipitationSourceVector()
+        pv.append(self._create_constant_geo_ts(
                 api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
-
-        re.temperature = api.TemperatureSourceVector()
-        re.temperature.append(self._create_constant_geo_ts(
+        re.precipitation = pv
+        tv = api.TemperatureSourceVector()
+        tv.append(self._create_constant_geo_ts(
                 api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
-
-        re.wind_speed = api.WindSpeedSourceVector()
-        re.wind_speed.append(self._create_constant_geo_ts(
+        re.temperature = tv
+        wv = api.WindSpeedSourceVector()
+        wv.append(self._create_constant_geo_ts(
                 api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
-
-        re.rel_hum = api.RelHumSourceVector()
-        re.rel_hum.append(self._create_constant_geo_ts(
+        re.wind_speed = wv
+        rhv = api.RelHumSourceVector()
+        rhv.append(self._create_constant_geo_ts(
                 api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
-
-        re.radiation = api.RadiationSourceVector()
-        re.radiation.append(self._create_constant_geo_ts(
+        re.rel_hum = rhv
+        rav = api.RadiationSourceVector()
+        rav.append(self._create_constant_geo_ts(
                 api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
+        re.radiation = rav
         return re
 
     def test_pt_ss_k_model_init(self):
