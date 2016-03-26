@@ -123,6 +123,10 @@ namespace shyft {
 			void set_snow_sca_swe_collection(bool on) {/*default simply ignore*/}
 			/// run the cell method stack for  a specified time-axis, to be specialized by cell type
 			void run(const timeaxis_t& t) {}
+			///< operator equal if same midpoint and catchment-id
+			bool operator==(const cell&x) const {
+			    return geo.mid_point()==x.geo.mid_point()&& geo.catchment_id()==x.geo.catchment_id();
+			}
 		};
 
         using namespace std;

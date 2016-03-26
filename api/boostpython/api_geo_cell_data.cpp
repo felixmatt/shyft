@@ -39,7 +39,7 @@ void def_GeoCellData() {
                           "  catchment_id   def (-1)\n"
                           "  radiation_slope_factor def 0.9\n"
     )
-    .def(init<geo_point,double,int,double,const land_type_fractions&>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions"),"constructs a GeoCellData with all parameters specified"))
+    .def(init<geo_point,double,int,optional<double,const land_type_fractions&>>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions"),"constructs a GeoCellData with all parameters specified"))
     .def("mid_point",&geo_cell_data::mid_point,"returns the mid_point",return_value_policy<copy_const_reference>())
     .def("catchment_id",&geo_cell_data::catchment_id,"returns the catchment_id")
     .def("set_catchment_id",&geo_cell_data::catchment_id,args("catchment_id"),"set the catchment_id")

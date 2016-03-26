@@ -10,16 +10,7 @@
 
 
 using namespace boost::python;
-#if 0
-    %rename(IDWParameter)  shyft::core::inverse_distance::parameter;
-    %rename(IDWTemperatureParameter)  shyft::core::inverse_distance::temperature_parameter;
-    %rename(IDWPrecipitationParameter)  shyft::core::inverse_distance::precipitation_parameter;
-    %include "core/inverse_distance.h"
 
-    %rename(BTKConstParameter)  shyft::core::bayesian_kriging::const_parameter;
-    %rename(BTKParameter)       shyft::core::bayesian_kriging::parameter;
-    %include "core/bayesian_kriging.h"
-#endif
 static void expose_btk_interpolation() {
     typedef shyft::core::bayesian_kriging::parameter BTKParameter;
 

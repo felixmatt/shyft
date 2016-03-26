@@ -215,7 +215,7 @@ namespace shyft {
             //     we can extract cell-level into into the catchments
 
             parameter_t_ region_parameter;///< applies to all cells, except those with catchment override
-            std::map<size_t, parameter_t_> catchment_parameters;///<  for each catchment parameter is possible
+            std::map<int, parameter_t_> catchment_parameters;///<  for each catchment parameter is possible
 
             std::vector<bool> catchment_filter;///<if active (alias .size()>0), only calc if catchment_filter[catchment_id] is true.
 
@@ -249,7 +249,7 @@ namespace shyft {
             }
             region_model(std::shared_ptr<std::vector<C> >& cells,
                          const parameter_t &region_param,
-                         const std::map<size_t, parameter_t>& catchment_parameters)
+                         const std::map<int, parameter_t>& catchment_parameters)
              : cells(cells) {
                 set_region_parameter(region_param);
                 for(const auto & pair:catchment_parameters)
@@ -463,12 +463,12 @@ namespace shyft {
                 \param catchment_id the 0 based catchment_id that correlates to the cells catchment_id
                 \param a reference to the parameter that will be kept for those cells
             */
-            void set_catchment_parameter(size_t catchment_id, const parameter_t & p) {
+            void set_catchment_parameter(int catchment_id, const parameter_t & p) {
                 if (catchment_parameters.find(catchment_id) == catchment_parameters.end()) {
                     auto shared_p = parameter_t_(new parameter_t(p));// add to map, a copy of p
                     catchment_parameters[catchment_id] = shared_p;
                     for(auto &c:*cells)
-                        if (c.geo.catchment_id() == catchment_id)
+                        if (int(c.geo.catchment_id()) == catchment_id)
                             c.set_parameter(shared_p);
                 } else {
                     *(catchment_parameters[catchment_id]) = p; //copy values into existing parameters
@@ -478,17 +478,17 @@ namespace shyft {
 
             /** \brief remove a catchment specific parameter override, if it exists.
             */
-            void remove_catchment_parameter(size_t catchment_id) {
+            void remove_catchment_parameter(int catchment_id) {
                 auto it = catchment_parameters.find(catchment_id);
                 if (it != catchment_parameters.end()) {
                     catchment_parameters.erase(catchment_id);// get rid of it, and update the affected cells with the global parameter
                     for(auto & c:*cells)
-                        if (c.geo.catchment_id() == catchment_id)
+                        if (int(c.geo.catchment_id()) == catchment_id)
                             c.set_parameter(region_parameter);
                 }
             }
             /** \brief returns true if there exist a specific parameter override for the specified 0-based catchment_id*/
-            bool has_catchment_parameter(size_t catchment_id) const {
+            bool has_catchment_parameter(int catchment_id) const {
                 return catchment_parameters.find(catchment_id) != catchment_parameters.end();
             }
 
@@ -497,7 +497,7 @@ namespace shyft {
             * \param catchment_id 0 based catchment id as placed on each cell
             * \returns reference to the real parameter structure for the catchment_id if exists, otherwise the global parameters
             */
-            parameter_t& get_catchment_parameter(size_t catchment_id) const {
+            parameter_t& get_catchment_parameter(int catchment_id) const {
                 auto search=catchment_parameters.find(catchment_id);
                 if ( search != catchment_parameters.end())
                     return *((*search).second);
