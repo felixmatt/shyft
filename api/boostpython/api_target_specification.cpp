@@ -1,13 +1,7 @@
-
-#include <boost/python/def.hpp>
-#include <boost/python/args.hpp>
-#include <boost/python/class.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include <boost/python/enum.hpp>
+#include "boostpython_pch.h"
 
 #include "py_convertible.h"
 
-#include "core/core_pch.h"
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/timeseries.h"

@@ -95,6 +95,9 @@
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
 		</Compiler>
+		<ResourceCompiler>
+			<Add option="-Winvalid-pch" />
+		</ResourceCompiler>
 		<Linker>
 			<Add option="-pthread" />
 			<Add library="blas" />
@@ -148,10 +151,6 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
-		<Unit filename="api_pt_gs_k.cpp">
-			<Option target="api_Debug" />
-			<Option target="api_Release" />
-		</Unit>
 		<Unit filename="api_region_environment.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
@@ -176,6 +175,13 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="boostpython_pch.cpp" />
+		<Unit filename="boostpython_pch.h">
+			<Option compile="1" />
+			<Option weight="0" />
+		</Unit>
+		<Unit filename="expose.h" />
+		<Unit filename="expose_statistics.h" />
 		<Unit filename="numpy_boost.hpp" />
 		<Unit filename="numpy_boost_python.hpp" />
 		<Unit filename="pt_gs_k.cpp">

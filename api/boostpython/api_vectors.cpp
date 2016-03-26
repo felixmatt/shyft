@@ -1,15 +1,6 @@
-#include <boost/python/module.hpp>
-#include <boost/python/def.hpp>
-#include <boost/python/args.hpp>
-#include <boost/python/class.hpp>
-#include <boost/python/scope.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include <boost/python/overloads.hpp>
-#include <boost/python/return_internal_reference.hpp>
-#include <boost/python/handle.hpp>
+#include "boostpython_pch.h"
 
-#include <boost/python/numeric.hpp>
-#include <boost/python/tuple.hpp>
+
 
 //#include <numpy/npy_common.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION

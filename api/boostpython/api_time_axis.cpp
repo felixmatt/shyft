@@ -1,12 +1,4 @@
-#include <boost/python/module.hpp>
-#include <boost/python/def.hpp>
-#include <boost/python/args.hpp>
-#include <boost/python/class.hpp>
-#include <boost/python/scope.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include <boost/python/overloads.hpp>
-#include <boost/python/return_internal_reference.hpp>
-#include <boost/python/handle.hpp>
+#include "boostpython_pch.h"
 
 
 #include "core/utctime_utilities.h"

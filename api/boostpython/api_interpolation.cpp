@@ -1,9 +1,5 @@
+#include "boostpython_pch.h"
 
-#include <boost/python/def.hpp>
-#include <boost/python/args.hpp>
-#include <boost/python/class.hpp>
-
-#include "core/core_pch.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
 #include "core/region_model.h"

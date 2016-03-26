@@ -1,7 +1,4 @@
-
-#include <boost/python/def.hpp>
-#include <boost/python/args.hpp>
-#include <boost/python/class.hpp>
+#include "boostpython_pch.h"
 
 #include "core/actual_evapotranspiration.h"
 
