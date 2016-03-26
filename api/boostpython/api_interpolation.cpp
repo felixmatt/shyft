@@ -6,7 +6,7 @@
 #include "core/core_pch.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
-
+#include "core/region_model.h"
 
 
 using namespace boost::python;
@@ -66,10 +66,29 @@ static void expose_idw_interpolation() {
         .def(init<double,optional<int,double>>(args("increase_pct_m", "max_members","max_distance"),"create IDW from supplied parameters"))
         .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor,"mm/m,  default=1.02, mm/m, corresponding to 2 mm increase pr. 100 m height")
     ;
-
-
+}
+static void expose_interpolation_parameter() {
+    typedef shyft::core::interpolation_parameter InterpolationParameter;
+    namespace idw = shyft::core::inverse_distance;
+    namespace btk = shyft::core::bayesian_kriging;
+    class_<InterpolationParameter>("InterpolationParameter",
+             "The InterpolationParameter keep parameters needed to perform the\n"
+             "interpolation steps, IDW,BTK etc\n"
+             "It is used as parameter  in the model.run_interpolation() method\n"
+        )
+        .def(init<const btk::parameter&,const idw::precipitation_parameter&,const idw::parameter&,const idw::parameter&,const idw::parameter&>(args("temperature","precipitation","wind_speed","radiation","rel_hum"),"using BTK for temperature"))
+        .def(init<const idw::temperature_parameter&,const idw::precipitation_parameter&,const idw::parameter&,const idw::parameter&,const idw::parameter&>(args("temperature","precipitation","wind_speed","radiation","rel_hum"),"using smart IDW for temperature, typically grid inputs"))
+        .def_readwrite("use_idw_for_temperature",&InterpolationParameter::use_idw_for_temperature,"if true, the IDW temperature is used instead of BTK, useful for grid-input scenarios")
+        .def_readwrite("temperature",&InterpolationParameter::temperature,"BTK for temperature (in case .use_idw_for_temperature is false)")
+        .def_readwrite("temperature_idw",&InterpolationParameter::temperature_idw,"IDW for temperature(in case .use_idw_for_temperature is true)")
+        .def_readwrite("precipitation",&InterpolationParameter::precipitation,"IDW parameters for precipitation")
+        .def_readwrite("wind_speed", &InterpolationParameter::wind_speed,"IDW parameters for wind_speed")
+        .def_readwrite("radiation", &InterpolationParameter::radiation,"IDW parameters for radiation")
+        .def_readwrite("rel_hum",&InterpolationParameter::rel_hum,"IDW parameters for relative humidity")
+        ;
 }
 void expose_interpolation() {
     expose_idw_interpolation();
     expose_btk_interpolation();
+    expose_interpolation_parameter();
 }
