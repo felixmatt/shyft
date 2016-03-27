@@ -42,7 +42,9 @@ class ShyftApi(unittest.TestCase):
 
     def test_create_ptgsk_param(self):
         ptgsk_p = self._create_std_ptgsk_param()
+        copy_p = pt_gs_k.PTGSKParameter(ptgsk_p)
         self.assertTrue(ptgsk_p != None, "should be possible to create a std param")
+        self.assertIsNotNone(copy_p)
 
     def _create_std_geo_cell_data(self):
         geo_point = api.GeoPoint(1, 2, 3)

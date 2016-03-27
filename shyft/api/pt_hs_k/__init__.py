@@ -1,5 +1,8 @@
 from ._pt_hs_k import *
 # Fix up types that we need attached to the model
+PTHSKStateVector.push_back = lambda self, x: self.append(x)
+PTHSKStateVector.size = lambda self: len(self)
+
 PTHSKModel.cell_t = PTHSKCellAll
 PTHSKParameter.map_t = PTHSKParameterMap
 PTHSKModel.parameter_t = PTHSKParameter
@@ -19,4 +22,4 @@ PTHSKCellAll.vector_t = PTHSKCellAllVector
 PTHSKCellOpt.vector_t = PTHSKCellOptVector
 PTHSKState.vector_t = PTHSKStateVector
 PTHSKState.serializer_t= PTHSKStateIo
-PTHSKStateVector.push_back = lambda self, x: self.append(x)
+

@@ -1,5 +1,9 @@
 from ._pt_gs_k import *
 # Fix up types that we need attached to the model
+PTGSKStateVector.push_back = lambda self, x: self.append(x)
+PTGSKStateVector.size = lambda self: len(self)
+
+
 PTGSKModel.cell_t = PTGSKCellAll
 PTGSKParameter.map_t = PTGSKParameterMap
 PTGSKModel.parameter_t = PTGSKParameter
@@ -19,4 +23,3 @@ PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
 PTGSKState.serializer_t= PTGSKStateIo
-PTGSKStateVector.push_back = lambda self, x: self.append(x)

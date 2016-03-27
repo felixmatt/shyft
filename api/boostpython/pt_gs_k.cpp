@@ -33,6 +33,7 @@ namespace expose {
                               "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
                 .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter>(args("pt","gs","ae","k","p_corr"),"create object with specified parameters"))
+                .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
                 .def_readwrite("gs",&parameter::gs,"gamma-snow parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")

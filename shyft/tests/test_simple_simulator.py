@@ -346,8 +346,8 @@ class SimulationTestCase(unittest.TestCase):
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
-        target_spec_vec = api.TargetSpecificationVector([target_spec])
-
+        target_spec_vec = api.TargetSpecificationVector() # TODO: We currently dont fix list initializer for vectors
+        target_spec_vec.append(target_spec)
         # Construct a fake, perturbed starting point for calibration
         p_vec = [param.get(i) for i in range(param.size())]
         for i, name in enumerate([param.get_name(i) for i in range(len(p_vec))]):

@@ -1,5 +1,9 @@
 from ._pt_ss_k import *
 # Fix up types that we need attached to the model
+PTSSKStateVector.push_back = lambda self, x: self.append(x)
+PTSSKStateVector.size = lambda self: len(self)
+
+
 PTSSKModel.cell_t = PTSSKCellAll
 PTSSKParameter.map_t = PTSSKParameterMap
 PTSSKModel.parameter_t = PTSSKParameter

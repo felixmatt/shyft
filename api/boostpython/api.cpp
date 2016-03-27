@@ -21,6 +21,7 @@ namespace expose {
     extern void hbv_snow();
     extern void cell_environment();
     extern void interpolation();
+    extern void skaugen_snow();
 
     void api() {
         calendar_and_time();
@@ -31,12 +32,13 @@ namespace expose {
         timeseries();
         target_specification();
         region_environment();
+        precipitation_correction();
         priestley_taylor();
         actual_evapotranspiration();
         gamma_snow();
-        kirchner();
-        precipitation_correction();
+        skaugen_snow();
         hbv_snow();
+        kirchner();
         cell_environment();
         interpolation();
     }

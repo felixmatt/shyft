@@ -177,6 +177,9 @@ namespace shyft {
 
         geo_point mid_point_;
         ITimeSeriesOfPoints_ ts;
+        // boost python fixes for attributes and shared_ptr
+        ITimeSeriesOfPoints_ get_ts()  {return ts;}
+        void set_ts(ITimeSeriesOfPoints_ x) {ts=x;}
         bool is_equal(const GeoPointSource& x) const {return mid_point_==x.mid_point_ && ts.get()== x.ts.get();}
         geo_point mid_point() const { return mid_point_; }
     };
@@ -219,12 +222,31 @@ namespace shyft {
             typedef RadiationSource radiation_t;
             typedef RelHumSource rel_hum_t;
             typedef WindSpeedSource wind_speed_t;
+            /** make vectors non nullptr by  default */
+            a_region_environment() {
+                temperature=make_shared<vector<TemperatureSource>>();
+                precipitation=make_shared<vector<PrecipitationSource>>();
+                radiation=make_shared<vector<RadiationSource>>();
+                rel_hum=make_shared<vector<RelHumSource>>();
+                wind_speed=make_shared<vector<WindSpeedSource>>();
+            }
             shared_ptr<vector<TemperatureSource>>   temperature;
             shared_ptr<vector<PrecipitationSource>> precipitation;
             shared_ptr<vector<RadiationSource>>     radiation;
             shared_ptr<vector<WindSpeedSource>>     wind_speed;
             shared_ptr<vector<RelHumSource>>        rel_hum;
 
+            // our boost python needs these methods to get properties straight (most likely it can be fixed by other means but..)
+            shared_ptr<vector<TemperatureSource>> get_temperature() {return temperature;}
+            void set_temperature(shared_ptr<vector<TemperatureSource>> x) {temperature=x;}
+            shared_ptr<vector<PrecipitationSource>> get_precipitation() {return precipitation;}
+            void set_precipitation(shared_ptr<vector<PrecipitationSource>> x) {precipitation=x;}
+            shared_ptr<vector<RadiationSource>> get_radiation() {return radiation;}
+            void set_radiation(shared_ptr<vector<RadiationSource>> x) {radiation=x;}
+            shared_ptr<vector<WindSpeedSource>> get_wind_speed() {return wind_speed;}
+            void set_wind_speed(shared_ptr<vector<WindSpeedSource>> x) {wind_speed=x;}
+            shared_ptr<vector<RelHumSource>> get_rel_hum() {return rel_hum;}
+            void set_rel_hum(shared_ptr<vector<RelHumSource>> x) {rel_hum=x;}
     };
 
     typedef shyft::timeseries::point_ts<time_axis::fixed_dt> result_ts_t;

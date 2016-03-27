@@ -21,7 +21,7 @@ namespace expose {
     static void cell(const char *cell_name,const char* cell_doc) {
       class_<T>(cell_name,cell_doc)
         .def_readwrite("geo",&T::geo,"geo_cell_data information for the cell")
-        .def_readwrite("parameter",&T::parameter,"reference to parameter for this cell, typically shared for a catchment")
+        .add_property("parameter",&T::get_parameter,&T::set_parameter,"reference to parameter for this cell, typically shared for a catchment")
         .def_readwrite("env_ts",&T::env_ts,"environment time-series as projected to the cell")
         .def_readonly("sc",&T::sc,"state collector for the cell")
         .def_readonly("rc",&T::rc,"response collector for the cell")
@@ -58,7 +58,7 @@ namespace expose {
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
-         .def("run_cells",&M::number_of_catchments,"run_cells calculations over specified time_axis, require that run_interpolation is done first")
+         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0),"run_cells calculations over specified time_axis, require that run_interpolation is done first")
          .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
                     "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
                     "to a value representative for the cell.mid_point().\n"
@@ -121,6 +121,7 @@ namespace expose {
         )
         .def("get_cells",&M::get_cells,"cells as shared_ptr<vector<cell_t>>")
         .def("size",&M::size,"return number of cells")
+        .add_property("cells",&M::get_cells,"cells of the model")
          ;
     }
     template<class RegionModel>

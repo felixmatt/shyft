@@ -209,7 +209,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
                        "precipitation": lambda x, ta: (prec_conv(x), ta),
                        "relative_humidity": lambda x, ta: (noop_space(x), ta)}
 
-        ta = api.Timeaxis(time[0], time[1] - time[0], len(time))
+        ta = api.Timeaxis(int(time[0]), int(time[1] - time[0]), len(time))
         res = {}
         for k, v in data.items():
             res[k] = convert_map[k](v, ta)
@@ -227,8 +227,8 @@ class GFSDataRepository(interfaces.GeoTsRepository):
                     raise GFSDataRepositoryError("Time axis size {} not equal to the number of "
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
-                return tsc(ta.size(), ta.start(), ta.delta(),
-                           api.DoubleVector_FromNdArray(d.flatten()), 0)
+                return tsc(ta.size(), ta.start, ta.delta_t,
+                     api.DoubleVector_FromNdArray(d.flatten()), api.point_interpretation_policy.POINT_AVERAGE_VALUE)
 
             time_series[key] = np.array([[construct(data[fslice + [i, j]])
                                           for j in range(J)] for i in range(I)])
@@ -239,8 +239,11 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         for name, ts in data.items():
             tpe = self.source_type_map[name] 
             ids = [idx for idx in np.ndindex(pts.shape[:-1])]
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
-                                      ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            #res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]), ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            tpe_v=tpe.vector_t()
+            for idx in np.ndindex(pts.shape[:-1]):
+                tpe_v.append(tpe(api.GeoPoint(*pts[idx]), ts[idx]))
+            res[name] = tpe_v
         return res
 
     def _limit(self, lon, lat, target_cs, altitudes=None):

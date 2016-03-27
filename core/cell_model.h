@@ -99,6 +99,10 @@ namespace shyft {
 			SC sc;   ///<method stack and context dependent class (we dont collect state during optimization)
 			RC rc;   ///<method stack and context dependent (full response, or just minimal for optimization)
 
+            // boost python workaround for shared ptr properties
+            std::shared_ptr<P> get_parameter() {return parameter;}
+
+
 			///< support to initialize env. input series, before interpolation step
 			void   init_env_ts(const typename E::timeaxis_t &ta) { env_ts.init(ta); }
 			///< common support during run, first step is to call begin_run, typically invoked from run() in templates, calls initialize on collectors
