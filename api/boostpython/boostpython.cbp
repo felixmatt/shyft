@@ -119,6 +119,7 @@
 			<Add directory="../../../dlib" />
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
+			<Add directory="$(#numpy.include)" />
 		</Compiler>
 		<ResourceCompiler>
 			<Add option="-Winvalid-pch" />
