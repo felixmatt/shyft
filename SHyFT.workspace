@@ -5,10 +5,6 @@
 		<Project filename="api/api.cbp">
 			<Depends filename="core/core.cbp" />
 		</Project>
-		<Project filename="api/python/api.python.cbp">
-			<Depends filename="core/core.cbp" />
-			<Depends filename="api/api.cbp" />
-		</Project>
 		<Project filename="test/test.cbp">
 			<Depends filename="core/core.cbp" />
 			<Depends filename="api/api.cbp" />
