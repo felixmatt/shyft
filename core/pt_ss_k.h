@@ -107,9 +107,10 @@ namespace shyft {
             snow_state_t snow;
             kirchner_state_t kirchner;
             state() {}
-            state(snow_state_t& snow, kirchner_state_t& kirchner)
+            state(const snow_state_t& snow, const kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
+            bool operator==(const state& x) const {return kirchner==x.kirchner && snow==x.snow;}
         };
 
 

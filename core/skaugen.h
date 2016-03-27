@@ -114,6 +114,18 @@ namespace shyft {
                       double swe=0.0, double free_water=0.0, double residual=0.0, unsigned long num_units=0)
                  : nu(nu), alpha(alpha), sca(sca), swe(swe), free_water(free_water),
                    residual(residual), num_units(num_units) {}
+                bool operator==(const state &x) const {
+                    const double eps=1e-6;
+                    return fabs(nu - x.nu)<eps
+                        && fabs(alpha - x.alpha)<eps
+                        && fabs(sca - x.sca) < eps
+                        && fabs(swe - x.swe)<eps
+                        && fabs(free_water - x.free_water)<eps
+                        && fabs(residual - x.residual)<eps
+                        && num_units==x.num_units;
+
+
+                }
             };
 
 

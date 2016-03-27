@@ -155,6 +155,56 @@ namespace expose {
             ;
         }
 
+        template <class cell>
+        static void skaugen(const char *cell_name) {
+            char state_name[200];sprintf(state_name,"%sSkaugenStateStatistics",cell_name);
+            char response_name[200];sprintf(response_name,"%sSkaugenResponseStatistics",cell_name);
+            typedef typename shyft::api::skaugen_cell_state_statistics<cell>    sc_stat;
+            typedef typename shyft::api::skaugen_cell_response_statistics<cell> rc_stat;
+
+            rts_ (sc_stat::*alpha_ts)(cids_) const = &sc_stat::alpha;
+            vd_  (sc_stat::*alpha_vd)(cids_,ix_) const =&sc_stat::alpha;
+            rts_ (sc_stat::*nu_ts)(cids_) const = &sc_stat::nu;
+            vd_  (sc_stat::*nu_vd)(cids_,ix_) const =&sc_stat::nu;
+            rts_ (sc_stat::*lwc_ts)(cids_) const = &sc_stat::lwc;
+            vd_  (sc_stat::*lwc_vd)(cids_,ix_) const =&sc_stat::lwc;
+            rts_ (sc_stat::*residual_ts)(cids_) const = &sc_stat::residual;
+            vd_  (sc_stat::*residual_vd)(cids_,ix_) const =&sc_stat::residual;
+            rts_ (sc_stat::*swe_ts)(cids_) const = &sc_stat::swe;
+            vd_  (sc_stat::*swe_vd)(cids_,ix_) const =&sc_stat::swe;
+            rts_ (sc_stat::*sca_ts)(cids_) const = &sc_stat::sca;
+            vd_  (sc_stat::*sca_vd)(cids_,ix_) const =&sc_stat::sca;
+
+            class_<sc_stat>(state_name,"Skaugen snow state statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Skaugen snow cell state statistics object"))
+                .def("alpha",alpha_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("alpha",alpha_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("nu",nu_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("nu",nu_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("lwc",lwc_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("residual",residual_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("residual",residual_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+            ;
+
+
+            rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
+            vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
+            rts_ (rc_stat::*total_stored_water_ts)(cids_) const = &rc_stat::total_stored_water;
+            vd_  (rc_stat::*total_stored_water_vd)(cids_,ix_) const =&rc_stat::total_stored_water;
+
+            class_<rc_stat>(response_name,"Skaugen snow response statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Skaugen snow cell response statistics object"))
+                .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("total_stored_water",total_stored_water_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("total_stored_water",total_stored_water_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+            ;
+        }
 
         template <class cell>
         static void basic_cell(const char *cell_name) {
