@@ -146,7 +146,7 @@ namespace expose {
 }
 
 
-BOOST_PYTHON_MODULE(_pt_gs_k)
+BOOST_PYTHON_MODULE(_pt_ss_k)
 {
 
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_ss_k model";
