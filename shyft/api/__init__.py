@@ -1,13 +1,17 @@
 from ._api import *
 
 # Fix up vector types
+
 DoubleVector.size= lambda self: len(self)
 
 UtcTimeVector.size= lambda self: len(self)
+
 IntVector.size = lambda self: len(self)
+
 StringVector.size = lambda self: len(self)
 
 TsVector.size = lambda self: len(self)
+
 TsVector.push_back = lambda self, ts: self.append(ts)
 
 TargetSpecificationVector.size =lambda self: len(self)

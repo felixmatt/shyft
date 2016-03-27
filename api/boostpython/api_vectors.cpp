@@ -1,92 +1,62 @@
 #include "boostpython_pch.h"
 
-
-
-//#include <numpy/npy_common.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy_boost_python.hpp"
-
+#include "py_convertible.h"
 #include "core/utctime_utilities.h"
 
-#include "py_convertible.h"
+namespace expose {
+    using namespace shyft::core;
+    using namespace boost::python;
+    using namespace std;
 
-
-using namespace shyft::core;
-using namespace boost::python;
-using namespace std;
-
-static void* np_import() {
-    import_array();
-    return nullptr;
-}
-
-template<class T>
-static vector<T> FromNdArray(const numpy_boost<T,1>& npv) {
-    vector<T> r;r.reserve(npv.shape()[0]);
-    for(size_t i=0;i<npv.shape()[0];++i) {
-        r.push_back(npv[i]);
+    static void* np_import() {
+        import_array();
+        return nullptr;
     }
-    return r;
-}
 
-template<class T>
-static numpy_boost<T,1> ToNpArray(const vector<T>&v) {
-    int dims[]={int(v.size())};
-    numpy_boost<T,1> r(dims);
-    for(size_t i=0;i<r.size();++i) {
-        r[i]=v[i];
+    template<class T>
+    static vector<T> FromNdArray(const numpy_boost<T,1>& npv) {
+        vector<T> r;r.reserve(npv.shape()[0]);
+        for(size_t i=0;i<npv.shape()[0];++i) {
+            r.push_back(npv[i]);
+        }
+        return r;
     }
-    return r;
-}
 
+    template<class T>
+    static numpy_boost<T,1> ToNpArray(const vector<T>&v) {
+        int dims[]={int(v.size())};
+        numpy_boost<T,1> r(dims);
+        for(size_t i=0;i<r.size();++i) {
+            r[i]=v[i];
+        }
+        return r;
+    }
 
+    template <class T>
+    static void expose_vector(const char *name) {
+        typedef std::vector<T> XVector;
 
-void def_vectors() {
-    typedef std::vector<std::string> StringVector;
-    typedef std::vector<int> IntVector;
-    typedef std::vector<double> DoubleVector;
-    typedef std::vector<utctime> UtcTimeVector;
-    np_import();
-
-    numpy_boost_python_register_type<int, 1>();
-    numpy_boost_python_register_type<utctime,1>();
-    numpy_boost_python_register_type<double, 1>();
-
-    // Register interable conversions.
-    py_api::iterable_converter()
-        .from_python<std::vector<double> >()
-        .from_python<std::vector<std::string> >()
-        .from_python<std::vector<int> >()
-        .from_python<std::vector<utctime> >()
-    ;
-
-
-    class_<StringVector>("StringVector","Is a list of strings")
-        .def(vector_indexing_suite<StringVector>())
+        class_<XVector>(name)
+        .def(vector_indexing_suite<XVector>()) // meaning it get all it needs to appear as python list
+        .def(init<const XVector&>(args("const_ref_v"))) // so we can copy construct
+        .def("FromNdArray",FromNdArray<T>).staticmethod("FromNdArray") // BW compatible
+        .def("from_numpy",FromNdArray<T>).staticmethod("from_numpy")// static construct from numpy TODO: fix __init__
+        .def("to_numpy",ToNpArray<T>,"convert to numpy") // Ok, to make numpy 1-d arrays
         ;
-
-    class_<IntVector>("IntVector")
-        .def(vector_indexing_suite<IntVector>())
-        .def(init<const IntVector&>(args("const_ref_v")))
-        .def("FromNdArray",FromNdArray<int>).staticmethod("FromNdArray")
-        .def("from_numpy",FromNdArray<int>).staticmethod("from_numpy")
-        .def("to_numpy",ToNpArray<int>,"convert IntVector to numpy").staticmethod("to_numpy")
+        numpy_boost_python_register_type<T, 1>(); // register the numpy object so we can access it in C++
+        py_api::iterable_converter() // and finally ensure that lists into constructor do work
+            .from_python<XVector>()
         ;
+    }
 
-    class_<UtcTimeVector>("UtcTimeVector")
-        .def(vector_indexing_suite<UtcTimeVector>())
-        .def(init<const UtcTimeVector&>(args("const_ref_v")))
-        .def("FromNdArray",FromNdArray<utctime>).staticmethod("FromNdArray")
-        .def("from_numpy",FromNdArray<utctime>).staticmethod("from_numpy")
-        .def("to_numpy",ToNpArray<utctime>,"convert UtcTimeVector to numpy").staticmethod("to_numpy")
-        ;
-
-    class_<DoubleVector>("DoubleVector")
-        .def(vector_indexing_suite<DoubleVector>())
-        .def(init<const DoubleVector&>(args("const_ref_v")))
-        .def("FromNdArray",FromNdArray<double>).staticmethod("FromNdArray")
-        .def("from_numpy",FromNdArray<double>).staticmethod("from_numpy")
-        .def("to_numpy",ToNpArray<double>,"convert DoubleVector to numpy").staticmethod("to_numpy")
-        ;
+    void vectors() {
+        np_import();
+        expose_vector<std::string>("StringVector");
+        expose_vector<double>("DoubleVector");
+        expose_vector<int>("IntVector");
+        expose_vector<utctime>("UtcTimeVector");
+    }
 }
 

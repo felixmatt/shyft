@@ -178,7 +178,8 @@ class SimulationTestCase(unittest.TestCase):
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
-        target_spec_vec = api.TargetSpecificationVector([target_spec])
+        target_spec_vec = api.TargetSpecificationVector() #([target_spec]) does not yet work
+        target_spec_vec.append(target_spec)
         p_opt = simulator.optimize(time_axis, state_repos.get_state(0),
                                    target_spec_vec, p_guess, p_min, p_max)
 

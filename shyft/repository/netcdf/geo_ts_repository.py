@@ -136,7 +136,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                                              utc_period)
             assert type(ts) is list
             tsf = api.TsFactory()
-            acc_data = []
+            acc_data = api_source_type.vector_t()
             for station in ts:
                 times = station['time']
                 assert type(times) is list
@@ -149,7 +149,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                 api_ts = tsf.create_time_point_ts(total_period, time_points, value_points)
                 data_source = api_source_type(api.GeoPoint(*station['location']), api_ts)
                 acc_data.append(data_source)
-            data[input_source] = api_source_type.vector_t(acc_data)
+            data[input_source] = acc_data
         return data
 
     def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria):

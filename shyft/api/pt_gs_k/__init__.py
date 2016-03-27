@@ -19,3 +19,4 @@ PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
 PTGSKState.serializer_t= PTGSKStateIo
+PTGSKStateVector.push_back = lambda self, x: self.append(x)
