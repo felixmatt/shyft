@@ -135,7 +135,7 @@ void region_model_test::test_build(void) {
     c1b.geo.set_catchment_id(1);
     ptgsk_cells->push_back(c1);
     ptgsk_cells->push_back(c1b);
-    map<size_t, pt_gs_k::parameter_t> catchment_params;
+    map<int, pt_gs_k::parameter_t> catchment_params;
     auto c1p = pt_gs_k::parameter_t{pt, gs, ae, kp, scp};
     c1p.kirchner.c1 = -2.5;
     catchment_params[1] = c1p;
@@ -200,7 +200,7 @@ void region_model_test::test_region_vs_catchment_parameters(void) {
     TS_ASSERT(rm.has_catchment_parameter(1)==false);
     TS_ASSERT((*cells)[0].parameter==(*cells)[1].parameter );//ensure they now share the common region-model parameter
     // now test alternate constructor that takes catchment-parameter map as input
-    map<size_t, parameter_t> catchment_params;
+    map<int, parameter_t> catchment_params;
     c1p.kirchner.c1 = -2.59;
     catchment_params[1] = c1p;
     rm=region_model_t(cells,gp,catchment_params);// so catchment-id 1 should have different parameters!
