@@ -40,13 +40,13 @@ echo "First building pch file"
 g++ $gcc_opt -c $shyft_api_pch -o $shyft_api_pch_out
 echo "  Compile&Link _api.so started"
 g++ $gcc_opt  -o api/_api.so    $shyft_api_source    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
-#echo "  Compile&Link _pt_gs_k.so started"
-#g++ $gcc_opt  -o api/pt_gs_k/_pt_gs_k.so   ../api/boostpython/pt_gs_k.cpp   $shyft_common_source  $armadillo_libs $boost_libs $py_lib  &
-#echo "  Compile&Link _pt_ss_k.so started"
-#g++ $gcc_opt -o api/pt_ss_k/_pt_ss_k.so    ../api/boostpython/pt_ss_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
-#echo "  Compile&Link _pt_hs_k.so started"
-#g++ $gcc_opt -o api/pt_hs_k/_pt_hs_k.so    ../api/boostpython/pt_hs_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
-#echo -n "Waiting for the background compilations to complete..(could take some minutes)"
+echo "  Compile&Link _pt_gs_k.so started"
+g++ $gcc_opt  -o api/pt_gs_k/_pt_gs_k.so   ../api/boostpython/pt_gs_k.cpp   $shyft_common_source  $armadillo_libs $boost_libs $py_lib  &
+echo "  Compile&Link _pt_ss_k.so started"
+g++ $gcc_opt -o api/pt_ss_k/_pt_ss_k.so    ../api/boostpython/pt_ss_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
+echo "  Compile&Link _pt_hs_k.so started"
+g++ $gcc_opt -o api/pt_hs_k/_pt_hs_k.so    ../api/boostpython/pt_hs_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
+echo -n "Waiting for the background compilations to complete..(could take some minutes)"
 wait
 echo "."
 echo "All finished"
