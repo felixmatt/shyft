@@ -22,6 +22,7 @@
     <ProjectGuid>{CFADAA14-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>EnkiService</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -78,12 +79,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
-    <TargetName>___init__</TargetName>
+    <TargetName>_api</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\shyft\api\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\api\</IntDir>
+    <PreBuildEventUseInBuild />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -97,12 +99,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
-    <TargetName>___init__</TargetName>
+    <TargetName>_api</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\api\</OutDir>
+    <OutDir>$(SolutionDir)\shyft\shyft\api\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\api\</IntDir>
+    <PreBuildEventUseInBuild>
+    </PreBuildEventUseInBuild>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -133,12 +137,12 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_NO_SCL_SECURE_NO_DEPRECATE;SWIG_NO_CRT_SECURE_NO_DEPRECATE;SWIG_PYTHON_INTERPRETER_NO_DEBUGX;BOOSTSERIAL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1; WIN32;_DEBUG;_WINDOWS;_USRDLL;HAVE_LAPACK;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..;../..;$(PYTHON27_64_ROOT)\Include;;$(PYTHON27_64_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>../boostpython;..;../..;$(PYTHON27_64_ROOT)\Include;;$(PYTHON27_64_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -146,7 +150,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>blas_win64_MT.lib;lapack_win64_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>boost_python-vc140-mt-1_60.lib;blas_win64_MT.lib;lapack_win64_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
@@ -154,10 +158,12 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run __init___wrap.cpp</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files api</Message>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -193,13 +199,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_PYTHON_INTERPRETER_NO_DEBUG;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..;../..;$(PYTHON27_64_ROOT)\Include;;$(PYTHON27_64_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>../boostpython;..;../..;$(PYTHON27_64_ROOT)\Include;;$(PYTHON27_64_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ErrorReporting>Send</ErrorReporting>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -209,15 +215,17 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>blas_win64_MT.lib;lapack_win64_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>boost_python-vc140-mt-1_60.lib;blas_win64_MT.lib;lapack_win64_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run __init___wrap.cpp</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <PreBuildEvent>
-      <Message>Update swig generated files api</Message>
+      <Message>
+      </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -229,11 +237,36 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="NMakefile.swig_run" />
-    <None Include="__init__.i" />
+    <ClCompile Include="..\boostpython\api.cpp" />
+    <ClCompile Include="..\boostpython\api_actual_evapotranspiration.cpp" />
+    <ClCompile Include="..\boostpython\api_cell_environment.cpp" />
+    <ClCompile Include="..\boostpython\api_gamma_snow.cpp" />
+    <ClCompile Include="..\boostpython\api_geo_cell_data.cpp" />
+    <ClCompile Include="..\boostpython\api_geo_point.cpp" />
+    <ClCompile Include="..\boostpython\api_hbv_snow.cpp" />
+    <ClCompile Include="..\boostpython\api_interpolation.cpp" />
+    <ClCompile Include="..\boostpython\api_kirchner.cpp" />
+    <ClCompile Include="..\boostpython\api_precipitation_correction.cpp" />
+    <ClCompile Include="..\boostpython\api_priestley_taylor.cpp" />
+    <ClCompile Include="..\boostpython\api_region_environment.cpp" />
+    <ClCompile Include="..\boostpython\api_skaugen.cpp" />
+    <ClCompile Include="..\boostpython\api_target_specification.cpp" />
+    <ClCompile Include="..\boostpython\api_time_axis.cpp" />
+    <ClCompile Include="..\boostpython\api_time_series.cpp" />
+    <ClCompile Include="..\boostpython\api_utctime.cpp" />
+    <ClCompile Include="..\boostpython\api_vectors.cpp" />
+    <ClCompile Include="..\boostpython\boostpython_pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="__init___wrap.cpp" />
+    <ClInclude Include="..\boostpython\boostpython_pch.h" />
+    <ClInclude Include="..\boostpython\expose.h" />
+    <ClInclude Include="..\boostpython\expose_statistics.h" />
+    <ClInclude Include="..\boostpython\numpy_boost.hpp" />
+    <ClInclude Include="..\boostpython\numpy_boost_python.hpp" />
+    <ClInclude Include="..\boostpython\py_convertible.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
