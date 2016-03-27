@@ -123,4 +123,86 @@ namespace expose {
         .def("size",&M::size,"return number of cells")
          ;
     }
+    template<class RegionModel>
+    static void
+    model_calibrator(const char *optimizer_name) {
+
+        typedef typename RegionModel::parameter_t parameter_t;
+        typedef shyft::core::pts_t pts_t;
+        typedef shyft::core::model_calibration::optimizer<RegionModel, parameter_t, pts_t> Optimizer;
+        typedef typename Optimizer::target_specification_t target_specification_t;
+
+        class_<Optimizer>(optimizer_name,
+            "The optimizer for parameters in a ref: shyft::core::region_model\n"
+            "It provides needed functionality to orchestrate a search for the optimal parameters so that the goal function\n"
+            "specified by the target_specifications are minimized.\n"
+            "The user can specify which parameters (model specific) to optimize, giving range min..max for each of the\n"
+            "parameters. Only parameters with min != max are used, thus minimizing the parameter space.\n"
+            "\n"
+            "Target specification ref: target_specification allows a lot of flexibility when it comes to what\n"
+            "goes into the ref: nash_sutcliffe goal function.\n"
+            "\n"
+            "The search for optimium starts with the current parameter-set, the current start state, over the specified model time-axis.\n"
+            "After a run, the goal function is calculated and returned back to the minbobyqa algorithm that continue searching for the minimum\n"
+            "value until tolerances/iterations area reached.\n"
+            ,no_init
+        )
+        .def(init< RegionModel&,
+                   const std::vector<target_specification_t>&,
+                   const std::vector<double>&,
+                   const std::vector<double>& >(
+                   args("model","targets","p_min","p_max"),
+                    "construct an opt model for ptgsk, use p_min=p_max to disable optimization for a parameter\n"
+                    "param model reference to the model to be optimized, the model should be initialized, i.e. the interpolation step done.\n"
+                    "param vector<target_specification_t> specifies how to calculate the goal-function, \ref shyft::core::model_calibration::target_specification\n"
+                    "param p_min minimum values for the parameters to be optimized\n"
+                    "param p_max maximum values for the parameters to be  optimized\n"
+                  )
+        )
+        .def("get_initial_state",&Optimizer::get_initial_state,args("i"),"get a copy of the i'th cells initial state")
+        .def("optimize",&Optimizer::optimize,args("p","max_n_evaluations","tr_start","tr_stop"),
+                "Call to optimize model, starting with p parameter set, using p_min..p_max as boundaries.\n"
+                "where p is the full parameter vector.\n"
+                "the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer\n"
+                "down to a minimum number to facilitate fast run.\n"
+                "param p contains the starting point for the parameters\n"
+                "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+                "param tr_start is the trust region start , default 0.1, ref bobyqa\n"
+                "param tr_stop is the trust region stop, default 1e-5, ref bobyqa\n"
+                "return the optimized parameter vector\n"
+        )
+        .def("optimize_dream",&Optimizer::optimize_dream,args("p","max_n_evaluations"),
+                "Call to optimize model, using DREAM alg., find p, using p_min..p_max as boundaries.\n"
+                "where p is the full parameter vector.\n"
+                "the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer\n"
+                "down to a minimum number to facilitate fast run.\n"
+                "param p is used as start point (not really, DREAM use random, but we should be able to pass u and q....\n"
+                "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+                "return the optimized parameter vector\n"
+        )
+        .def("optimize_sceua",&Optimizer::optimize_sceua,args("p","max_n_evaluations","x_eps","y_eps"),
+                "Call to optimize model, using SCE UA, using p as startpoint, find p, using p_min..p_max as boundaries.\n"
+                "where p is the full parameter vector.\n"
+                "the p_min,p_max specified in constructor is used to reduce the parameter-space for the optimizer\n"
+                "down to a minimum number to facilitate fast run.\n"
+                "param p is used as start point and is updated with the found optimal points\n"
+                "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+                "param x_eps is stop condition when all changes in x's are within this range\n"
+                "param y_eps is stop condition, and search is stopped when goal function does not improve anymore within this range\n"
+                "return the optimized parameter vector\n"
+        )
+        .def("reset_states",&Optimizer::reset_states,"reset the state of the model to the initial state before starting the run/optimize")
+        .def("set_parameter_ranges",&Optimizer::set_parameter_ranges,args("p_min","p_max"),"set the parameter ranges, set min=max=wanted parameter value for those not subject to change during optimization")
+        .def("set_verbose_level",&Optimizer::set_verbose_level,args("level"),"set verbose level on stdout during calibration,0 is silent,1 is more etc.")
+        .def("calculate_goal_function",&Optimizer::calculate_goal_function,args("full_vector_of_parameters"),
+                "calculate the goal_function as used by minbobyqa,etc.,\n"
+                "using the full set of  parameters vectors (as passed to optimize())\n"
+                "and also ensures that the shyft state/cell/catchment result is consistent\n"
+                "with the passed parameters passed\n"
+                "param full_vector_of_parameters contains all parameters that will be applied to the run.\n"
+                "returns the goal-function, weigthed nash_sutcliffe|Kling-Gupta sum \n"
+        )
+        ;
+
+    }
 }
