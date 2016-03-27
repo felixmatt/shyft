@@ -107,6 +107,10 @@ namespace shyft {
 
                 state(double swe=0.0, double sca=0.0)
                   : swe(swe), sca(sca) { /* Do nothing */ }
+                bool operator==(const state& x)const {
+                    const double eps=1e-6;
+                    return fabs(swe-x.swe)<eps && fabs(sca-x.sca)<eps;
+                }
             };
             struct response {
                 double outflow = 0.0;

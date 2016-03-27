@@ -125,6 +125,38 @@ namespace expose {
         }
 
         template <class cell>
+        static void hbv_snow(const char *cell_name) {
+            char state_name[200];sprintf(state_name,"%sHBVSnowStateStatistics",cell_name);
+            char response_name[200];sprintf(response_name,"%sHBVSnowResponseStatistics",cell_name);
+            typedef typename shyft::api::hbv_snow_cell_state_statistics<cell>    sc_stat;
+            typedef typename shyft::api::hbv_snow_cell_response_statistics<cell> rc_stat;
+
+            rts_ (sc_stat::*swe_ts)(cids_) const = &sc_stat::swe;
+            vd_  (sc_stat::*swe_vd)(cids_,ix_) const =&sc_stat::swe;
+            rts_ (sc_stat::*sca_ts)(cids_) const = &sc_stat::sca;
+            vd_  (sc_stat::*sca_vd)(cids_,ix_) const =&sc_stat::sca;
+
+            class_<sc_stat>(state_name,"HBVSnow state statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell state statistics object"))
+                .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+                .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+            ;
+
+
+            rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
+            vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
+
+            class_<rc_stat>(response_name,"HBVSnow response statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell response statistics object"))
+                .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+            ;
+        }
+
+
+        template <class cell>
         static void basic_cell(const char *cell_name) {
             char base_name[200];sprintf(base_name,"%sStatistics",cell_name);
             typedef typename shyft::api::basic_cell_statistics<cell> bc_stat;
