@@ -26,7 +26,7 @@ namespace expose {
         using namespace shyft::core::pt_hs_k;
 
         static void parameter_state_response() {
-            class_<parameter>("PTHSKParameter",
+            class_<parameter,bases<>,std::shared_ptr<parameter>>("PTHSKParameter",
                               "Contains the parameters to the methods used in the PTHSK assembly\n"
                               "priestley_taylor,hbv_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
@@ -40,6 +40,13 @@ namespace expose {
                 .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
                 .def("get_name",&parameter::get_name,args("i"),"returns the i'th parameter name, see also .get()/.set() and .size()")
                 ;
+            register_ptr_to_python<std::shared_ptr<parameter> >();
+
+            typedef std::map<int,parameter> PTHSKParameterMap;
+            class_<PTHSKParameterMap>("PTHSKParameterMap","dict (int,parameter)  where the int is 0-based catchment_id")
+                .def(map_indexing_suite<PTHSKParameterMap>())
+            ;
+
             class_<state>("PTHSKState")
                 .def(init<hbv_snow::state,kirchner::state>(args("snow","k"),"initializes state with hbv-snow gs and kirchner k"))
                 .def_readwrite("snow",&state::snow,"hbv-snow state")
