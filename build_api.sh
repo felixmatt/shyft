@@ -2,7 +2,6 @@
 # minimialistic script to build shyft python api, 
 #given that the 
 #  compile dependencies are in place
-#  swig >=3.07
 #  python 3.x (anaconda tested, other possible as long as we do have numpy for compile)
 #  boost 1.60
 #  dlib
