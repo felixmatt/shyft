@@ -36,7 +36,7 @@ set(sources ${cpps} ${headers})
 set(target "test_shyft")
 
 # Flags
-add_definitions("-DARMA_DONT_NO_DEBUG -DARMA_DONT_USE_WRAPPER -D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_STD")
+add_definitions("-D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_STD")
 
 add_executable(${target} ${sources})
 # Additional libraries

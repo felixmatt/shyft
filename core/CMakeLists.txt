@@ -7,7 +7,7 @@ list(REMOVE_ITEM cpps "core_pch.cpp")
 set(SOURCES ${headers} ${cpps})
 
 message(STATUS "Compiling boost library (only selected components)...")
-execute_process(COMMAND ./bootstrap.sh --prefix=${SHYFT_DEPENDENCIES}/local --with-libraries=filesystem,system
+execute_process(COMMAND ./bootstrap.sh --prefix=${SHYFT_DEPENDENCIES}/local --with-libraries=filesystem,system,python,date_time
   WORKING_DIRECTORY ${SHYFT_DEPENDENCIES}/boost
   RESULT_VARIABLE rv
   OUTPUT_VARIABLE output
@@ -38,7 +38,6 @@ endif()
 
 message(STATUS "Generating Makefile for the SHyFT static library...")
 
-add_definitions("-DARMA_DONT_USE_WRAPPER")
 
 add_library(shyftcore STATIC ${SOURCES})
 set_target_properties(shyftcore PROPERTIES OUTPUT_NAME shyftcore)

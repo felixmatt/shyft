@@ -12,4 +12,4 @@ TestHeaders = $(CoreTests)
 
 TestGenerator=../../cxxtest/bin/cxxtestgen
 
-main.cpp: $(TestHeaders) Makefile.testupdate; $(TestGenerator) -o main.cpp --runner=StdioPrinter $(TestHeaders)
+runner.cpp: $(TestHeaders) Makefile.testupdate; $(TestGenerator) -o runner.cpp --runner=StdioPrinter $(TestHeaders)
