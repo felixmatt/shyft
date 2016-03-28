@@ -43,4 +43,26 @@ add_executable(${target} ${sources})
 target_link_libraries(${target} shyftcore blas lapack boost_filesystem boost_system)
 
 # This can be made more specific, but we would need the list of tests.
-add_test(${target} ${target})
+#add_test(${target} ${target})
+#The current list:
+add_test(inverse_distance_test ${target} inverse_distance_test)
+add_test(time_axis_test ${target} time_axis_test)
+add_test(region_model_test ${target} region_model_test )
+add_test(priestley_taylor_test ${target} priestley_taylor_test)
+add_test(gamma_snow_test ${target} gamma_snow_test)
+add_test(kirchner_test ${target} kirchner_test)
+add_test(bayesian_kriging_test ${target} bayesian_kriging_test)
+add_test(utctime_utilities_test ${target} utctime_utilities_test)
+add_test(pt_gs_k_test ${target} pt_gs_k_test)
+add_test(actual_evapotranspiration_test ${target} actual_evapotranspiration_test)
+add_test(calibration_test ${target} calibration_test)
+add_test(hbv_snow_test  ${target} hbv_snow_test)
+add_test(pt_hs_k_test ${target} pt_hs_k_test)
+add_test(pt_ss_k_test ${target} pt_ss_k_test)
+add_test(timeseries_test ${target} timeseries_test)
+add_test(api_test ${target} api_test)
+add_test(cell_builder_test ${target} cell_builder_test) 
+add_test(skaugen_test ${target} skaugen_test)
+add_test(sceua_test ${target} sceua_test)
+
+
