@@ -95,7 +95,6 @@
 		<Unit filename="inverse_distance_test.h" />
 		<Unit filename="kirchner_test.cpp" />
 		<Unit filename="kirchner_test.h" />
-		<Unit filename="main.cpp" />
 		<Unit filename="mocks.cpp" />
 		<Unit filename="mocks.h" />
 		<Unit filename="priestley_taylor_test.cpp" />
@@ -108,6 +107,7 @@
 		<Unit filename="pt_ss_k_test.h" />
 		<Unit filename="region_model_test.cpp" />
 		<Unit filename="region_model_test.h" />
+		<Unit filename="runner.cpp" />
 		<Unit filename="sceua_test.cpp" />
 		<Unit filename="sceua_test.h" />
 		<Unit filename="skaugen_test.cpp" />
