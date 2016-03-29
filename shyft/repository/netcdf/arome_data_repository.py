@@ -258,8 +258,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                     raise AromeDataRepositoryError("Time axis size {} not equal to the number of "
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
-                return tsc(ta.size(), ta.start(), ta.delta(),
-                           api.DoubleVector_FromNdArray(d.flatten()), 0)
+                return tsc(ta.size(), ta.start, ta.delta_t,
+                           api.DoubleVector_FromNdArray(d.flatten()), api.point_interpretation_policy.POINT_AVERAGE_VALUE)
             time_series[key] = np.array([[construct(data[fslice + [i, j]])
                                           for j in range(J)] for i in range(I)])
         return time_series
@@ -470,8 +470,15 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         res = {}
         for name, ts in iteritems(data):
             tpe = self.source_type_map[name]
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
-                                      ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            # SiH: Unfortunately, I have not got the boost.python to eat list of non-basic object
+            # into the constructor of vectors like this:
+            #res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]), ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            #     so until then, we have to do the loop
+            tpe_v=tpe.vector_t()
+            for idx in np.ndindex(pts.shape[:-1]):
+                tpe_v.append(tpe(api.GeoPoint(*pts[idx]), ts[idx]))
+
+            res[name] = tpe_v
         return res
 
     def _get_files(self, t_c, date_pattern):

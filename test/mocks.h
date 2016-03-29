@@ -9,7 +9,7 @@ namespace shyfttest {
         using namespace shyft::core;
         using namespace shyft::timeseries;
         typedef std::vector<point> point_vector_t;
-		typedef point_timeseries<point_timeaxis> xpts_t;
+		typedef point_ts<point_timeaxis> xpts_t;
 
          void create_time_series(xpts_t& temp,
                                 xpts_t& prec,
@@ -63,20 +63,20 @@ namespace shyfttest {
 		template<class T>
 		struct StateCollector {
 			// these are the one that we collects from the response, to better understand the model::
-			shyft::timeseries::point_timeseries<T> _inst_discharge; // Kirchner state instant Discharge given in m^3/s
+			shyft::timeseries::point_ts<T> _inst_discharge; // Kirchner state instant Discharge given in m^3/s
 
 			StateCollector() {}
 			StateCollector(const T& time_axis) :_inst_discharge(time_axis, 0.0) { /* Do nothing */ }
 
 			void initialize(const T& time_axis) {
-				_inst_discharge = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
+				_inst_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 			}
 
 			template<class S>
 			void collect(size_t idx, const S& state) {
 				_inst_discharge.set(idx, state.kirchner.q);
 			}
-			const shyft::timeseries::point_timeseries<T>& kirchner_state() const { return _inst_discharge; }
+			const shyft::timeseries::point_ts<T>& kirchner_state() const { return _inst_discharge; }
 		};
 
         template<class T> class TSPointTarget {
@@ -87,7 +87,7 @@ namespace shyfttest {
             TSPointTarget(const T& time_axis) {
                 _values.reserve(time_axis.size());
                 for (size_t i = 0; i < time_axis.size(); ++i)
-                    _values.emplace_back(time_axis(i).end, 0.0);
+                    _values.emplace_back(time_axis.period(i).end, 0.0);
             }
 
             shyft::timeseries::point& value(size_t idx) { return _values[idx]; }
@@ -97,14 +97,14 @@ namespace shyfttest {
 		template<class T>
 		struct DischargeCollector {
 		    double destination_area;
-		    shyft::timeseries::point_timeseries<T> avg_discharge; // Discharge given in m^3
+		    shyft::timeseries::point_ts<T> avg_discharge; // Discharge given in m^3
 		    DischargeCollector() : destination_area(0.0) {}
 		    DischargeCollector(const double destination_area) : destination_area(destination_area) { }
 		    DischargeCollector(const double destination_area, const T& time_axis)
 		    : destination_area(destination_area), avg_discharge(time_axis, 0.0) { }
 
 		    void initialize(const T& time_axis) {
-		        avg_discharge = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
+		        avg_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 		    }
 
 		    template<class R>
@@ -114,7 +114,7 @@ namespace shyfttest {
 		    template<class R>
 		    void set_end_response(const R& response) {}
 
-		    const shyft::timeseries::point_timeseries<T>& discharge() const { return avg_discharge; }
+		    const shyft::timeseries::point_ts<T>& discharge() const { return avg_discharge; }
 		};
 
 		template<class T>
@@ -126,13 +126,13 @@ namespace shyfttest {
 			}
 
 			// these are the one that we collects from the response, to better understand the model::
-			shyft::timeseries::point_timeseries<T> avg_discharge; // Kirchner Discharge given in m^3/s
-			shyft::timeseries::point_timeseries<T> _snow_sca; // gamma snow, sca..
-			shyft::timeseries::point_timeseries<T> _snow_swe;// gamma snow swe, mm
-			shyft::timeseries::point_timeseries<T> _snow_output;// snow output in m^3/s
-			shyft::timeseries::point_timeseries<T> _total_stored_snow;// skaugen's stored water in m^3
-			shyft::timeseries::point_timeseries<T> _ae_output;// actual evap mm/h
-			shyft::timeseries::point_timeseries<T> _pe_output;// actual evap mm/h
+			shyft::timeseries::point_ts<T> avg_discharge; // Kirchner Discharge given in m^3/s
+			shyft::timeseries::point_ts<T> _snow_sca; // gamma snow, sca..
+			shyft::timeseries::point_ts<T> _snow_swe;// gamma snow swe, mm
+			shyft::timeseries::point_ts<T> _snow_output;// snow output in m^3/s
+			shyft::timeseries::point_ts<T> _total_stored_snow;// skaugen's stored water in m^3
+			shyft::timeseries::point_ts<T> _ae_output;// actual evap mm/h
+			shyft::timeseries::point_ts<T> _pe_output;// actual evap mm/h
 
 			ResponseCollector() : destination_area(0.0) {}
 			ResponseCollector(const double destination_area) : destination_area(destination_area) {}
@@ -141,13 +141,13 @@ namespace shyfttest {
 
 			// called before run
 			void initialize(const T& time_axis) {
-				avg_discharge = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_snow_sca = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_snow_swe = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_snow_output = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_total_stored_snow = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_ae_output = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
-				_pe_output = shyft::timeseries::point_timeseries<T>(time_axis, 0.0);
+				avg_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_snow_sca = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_snow_swe = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_snow_output = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_total_stored_snow = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_ae_output = shyft::timeseries::point_ts<T>(time_axis, 0.0);
+				_pe_output = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 			}
 
 			/// call for each time step, to collect needed information from R
@@ -164,12 +164,12 @@ namespace shyfttest {
 			void set_end_response(const R& r) {}
 
 			// access functions to pick out the results
-			const shyft::timeseries::point_timeseries<T>& discharge() const { return avg_discharge; }
-			const shyft::timeseries::point_timeseries<T>& snow_sca() const { return _snow_sca; }
-			const shyft::timeseries::point_timeseries<T>& snow_swe() const { return _snow_swe; }
-			const shyft::timeseries::point_timeseries<T>& snow_output() const { return _snow_output; }
-			const shyft::timeseries::point_timeseries<T>& ae_output() const { return _ae_output; }
-			const shyft::timeseries::point_timeseries<T>& pe_output() const { return _pe_output; }
+			const shyft::timeseries::point_ts<T>& discharge() const { return avg_discharge; }
+			const shyft::timeseries::point_ts<T>& snow_sca() const { return _snow_sca; }
+			const shyft::timeseries::point_ts<T>& snow_swe() const { return _snow_swe; }
+			const shyft::timeseries::point_ts<T>& snow_output() const { return _snow_output; }
+			const shyft::timeseries::point_ts<T>& ae_output() const { return _ae_output; }
+			const shyft::timeseries::point_ts<T>& pe_output() const { return _pe_output; }
 		};
         template<class R, class S, class P, class TS> class MCell {
           public:

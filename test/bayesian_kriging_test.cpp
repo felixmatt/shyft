@@ -129,7 +129,7 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
     for (size_t l = 0; l < ts_size; ++l)
         times.emplace_back(l*dt);
     times.emplace_back(shyft::core::max_utctime);
-    point_timeaxis dta(begin(times),end(times));
+    point_timeaxis dta(times);
 	for (size_t i = 0; i < num_sources_x; ++i) {
 		pt.x = x_min + i*(x_max - x_min) / (num_sources_x - 1);
 		for (size_t j = 0; j < num_sources_y; ++j) {
@@ -140,7 +140,7 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 			//std::cout << "Base temp at pos (i,j) = " << i << ", " << j << ") = " << b_t << std::endl;
 			for (size_t l = 0; l < ts_size; ++l)
 				pts.emplace_back( b_t + pt.z*(0.6 / 100));
-			sources.emplace_back(pt, xpts_t(dta,pts.cbegin(), pts.cend()));
+			sources.emplace_back(pt, xpts_t(dta,pts));
 		}
 	}
 	for (size_t i = 0; i < num_dests_x; ++i) {
@@ -191,7 +191,7 @@ void bayesian_kriging_test::test_covariance_calculation() {
 void bayesian_kriging_test::test_build_covariance_matrices() {
 	return;
 	Parameter params;
-	const point_timeaxis time_axis(begin(ctimes), end(ctimes));
+	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
 	DestinationList destinations;
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
@@ -206,7 +206,7 @@ void bayesian_kriging_test::test_build_covariance_matrices() {
 void bayesian_kriging_test::test_build_elevation_matrices() {
 	return;
 	Parameter params;
-	const point_timeaxis time_axis(begin(ctimes), end(ctimes));
+	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
 	DestinationList destinations;
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
@@ -232,7 +232,7 @@ void bayesian_kriging_test::test_interpolation() {
 	vector<utctime> times; times.reserve(n_times);
 	for (size_t i = 0; i < n_times; ++i)
 		times.emplace_back(dt*i);
-	const point_timeaxis time_axis(times.cbegin(), times.cend());
+	const point_timeaxis time_axis(times);
 	build_sources_and_dests(n_s, n_s, n_d, n_d, n_times, dt, time_axis, true, sources, destinations);
 	const std::clock_t start = std::clock();
 	btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);

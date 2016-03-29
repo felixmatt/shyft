@@ -45,9 +45,9 @@ void pt_gs_k_test::test_call_stack()
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
 
-    point_timeaxis time_axis(times.cbegin(), times.cend());
+    point_timeaxis time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times.cbegin(),times.cend());
+    point_timeaxis state_axis(times);
 
     // Initialize parameters
     pt::parameter pt_param;
@@ -95,9 +95,9 @@ void pt_gs_k_test::test_raster_call_stack()
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    shyft::timeseries::point_timeaxis time_axis(times.cbegin(), times.cend());
+    shyft::timeseries::point_timeaxis time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times.cbegin(),times.cend());
+    point_timeaxis state_axis(times);
 
     // 10 catchments numbered from 0 to 9.
     std::vector<catchment_t> catchment_discharge;
@@ -137,7 +137,7 @@ void pt_gs_k_test::test_raster_call_stack()
 
     const std::clock_t start = std::clock();
     for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge,&state_axis] (PTGSKCell& d) mutable {
-        auto time = time_axis(0).start;
+        auto time = time_axis.time(0);
 
         shyfttest::mock::StateCollector<point_timeaxis> sc(state_axis);
         shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);

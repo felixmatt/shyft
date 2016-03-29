@@ -216,6 +216,7 @@
     <ClInclude Include="region_model_test.h" />
     <ClInclude Include="skaugen_test.h" />
     <ClInclude Include="timeseries_test.h" />
+    <ClInclude Include="time_axis_test.h" />
     <ClInclude Include="utctime_utilities_test.h" />
   </ItemGroup>
   <ItemGroup>
@@ -275,6 +276,7 @@
     <ClCompile Include="runner.cpp" />
     <ClCompile Include="skaugen_test.cpp" />
     <ClCompile Include="timeseries_test.cpp" />
+    <ClCompile Include="time_axis_test.cpp" />
     <ClCompile Include="utctime_utilities_test.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

@@ -25,6 +25,7 @@
     <ClInclude Include="test_pch.h" />
     <ClInclude Include="pt_ss_k_test.h" />
     <ClInclude Include="sceua_test.h" />
+    <ClInclude Include="time_axis_test.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="runner.cpp" />
@@ -49,6 +50,7 @@
     <ClCompile Include="test_pch.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
     <ClCompile Include="sceua_test.cpp" />
+    <ClCompile Include="time_axis_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.testupdate" />

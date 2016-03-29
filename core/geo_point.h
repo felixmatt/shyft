@@ -18,7 +18,12 @@ namespace shyft {
             geo_point() : x(0), y(0), z(0) {}
             geo_point(double x, double y=0.0, double z=0.0) : x(x), y(y), z(z) {}
 
-            /** \brief Squared eucledian distance 
+            bool operator==(const geo_point &o) const {
+                const double accuracy=1e-3;//mm
+                return distance2(*this,o)<accuracy;
+            }
+
+            /** \brief Squared eucledian distance
              *
              * \return the 3D distance^2 between supplied arguments a and b
              */
@@ -50,7 +55,7 @@ namespace shyft {
                 return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
             }
 
-            /** \brief Difference between points a and b, i.e. a - b. Should perhaps return a 
+            /** \brief Difference between points a and b, i.e. a - b. Should perhaps return a
              * GeoDifference instead for mathematical correctness.
              *
              * \return GeoPoint(a.x - b.x, a.y - b.y, a.z - b.z)

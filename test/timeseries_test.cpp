@@ -3,6 +3,7 @@
 #include "timeseries_test.h"
 #include "mocks.h"
 #include "core/timeseries.h"
+#include "core/time_axis.h"
 #include <armadillo>
 #include <cmath>
 #include <functional>
@@ -12,6 +13,7 @@ namespace shyfttest {
     const double EPS = 1.0e-8;
     using namespace std;
     using namespace shyft::timeseries;
+    using namespace shyft::core;
 
         /// for testing, this one helps verifying the behavior of the algorithms.
         class test_timeseries {
@@ -68,26 +70,31 @@ using namespace shyft::timeseries;
 
 using namespace shyfttest;
 
-typedef point_timeseries<point_timeaxis> xts_t;
+typedef point_ts<point_timeaxis> xts_t;
 
 void timeseries_test::test_point_timeaxis() {
     point_timeaxis ts0; //zero points
     TS_ASSERT_EQUALS(ts0.size(),0);
     TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
     vector<utctime> t2={3600*1};//just one point
-    point_timeaxis ts1(begin(t2),end(t2));
-    TS_ASSERT_EQUALS(ts0.size(),0);
-    TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
+    try {
+    point_timeaxis ts1(t2);
+    TS_ASSERT(false);
+    //TS_ASSERT_EQUALS(ts0.size(),0);
+    //TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
+    } catch (const exception & ex) {
 
+    }
     vector<utctime> t={3600*1,3600*2,3600*3};
-    point_timeaxis tx(begin(t),end(t));
+    point_timeaxis tx(t);
     TS_ASSERT_EQUALS(tx.size(),2);// number of periods, - two .. (unless we redefined the last to be last point .. +oo)
-    TS_ASSERT_EQUALS(tx(0),utcperiod(t[0],t[1]));
-    TS_ASSERT_EQUALS(tx(1),utcperiod(t[1],t[2]));
+    TS_ASSERT_EQUALS(tx.period(0),utcperiod(t[0],t[1]));
+    TS_ASSERT_EQUALS(tx.period(1),utcperiod(t[1],t[2]));
     TS_ASSERT_EQUALS(tx.index_of(-3600),std::string::npos);//(1),utcperiod(t[1],t[2]);
     TS_ASSERT_EQUALS(tx.index_of(t[0]),0);
     TS_ASSERT_EQUALS(tx.index_of(t[1]-1),0);
-    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),1);
+    TS_ASSERT_EQUALS(tx.index_of(t[2]+1),std::string::npos);
+    TS_ASSERT_EQUALS(tx.open_range_index_of(t[2]+1),1);
 
 
 }
@@ -98,12 +105,13 @@ void timeseries_test::test_timeaxis() {
     timeaxis tx(t0,dt,n);
     TS_ASSERT_EQUALS(tx.size(),n);
     for(size_t i=0;i<n;++i) {
-        TS_ASSERT_EQUALS(tx(i), utcperiod(t0+i*dt,t0+(i+1)*dt));
-        TS_ASSERT_EQUALS(tx[i], t0+i*dt );
-        TS_ASSERT_EQUALS(tx.index_of(tx[i]),i);
-        TS_ASSERT_EQUALS(tx.index_of(tx[i]+dt/2),i)
+        TS_ASSERT_EQUALS(tx.period(i), utcperiod(t0+i*dt,t0+(i+1)*dt));
+        TS_ASSERT_EQUALS(tx.time(i), t0+i*dt );
+        TS_ASSERT_EQUALS(tx.index_of(tx.time(i)),i);
+        TS_ASSERT_EQUALS(tx.index_of(tx.time(i)+dt/2),i);
     }
-    TS_ASSERT_EQUALS(tx.index_of(t0+(n+1)*dt),n-1);
+    TS_ASSERT_EQUALS(tx.open_range_index_of(t0+(n+1)*dt),n-1);
+    TS_ASSERT_EQUALS(tx.index_of(t0+(n+1)*dt),string::npos);
     TS_ASSERT_EQUALS(tx.index_of(t0-1),string::npos);
 
 }
@@ -119,12 +127,12 @@ void timeseries_test::test_point_source_with_timeaxis() {
     timeaxis fixed_ta(t,d,n);
     point_timeaxis point_ta(time_points);
 
-    point_timeseries<timeaxis> a(fixed_ta,values);
-    point_timeseries<point_timeaxis> b(point_ta,values);
+    point_ts<timeaxis> a(fixed_ta,values);
+    point_ts<point_timeaxis> b(point_ta,values);
 
-    TS_ASSERT_EQUALS(a.total_period(),b.total_period());
+    TS_ASSERT_EQUALS(a.ta.total_period(),b.ta.total_period());
     TS_ASSERT_EQUALS(a.size(),b.size());
-    TS_ASSERT_EQUALS(a.get_time_axis().size(),b.get_time_axis().size());
+    TS_ASSERT_EQUALS(a.ta.size(),b.ta.size());
     auto t_after= t+ deltahours(24*365*10);
     TS_ASSERT_EQUALS(fixed_ta.index_of(t_after),point_ta.index_of(t_after));
 
@@ -138,7 +146,7 @@ void timeseries_test::test_point_source_with_timeaxis() {
         TS_ASSERT_EQUALS(a.time(i),b.time(i));
         TS_ASSERT_EQUALS(a.get(i).t,b.get(i).t);
         // time-index of
-        auto ti=fixed_ta[i] + d/2;
+        auto ti=fixed_ta.time(i) + d/2;
         auto ix= fixed_ta.index_of(ti);
         TS_ASSERT_EQUALS(ix,a.index_of(ti));
         TS_ASSERT_EQUALS(ix,b.index_of(ti));
@@ -155,7 +163,7 @@ void timeseries_test::test_point_source_scale_by_value() {
     auto d=deltahours(1);
     size_t n=10;
     vector<double> values;for(size_t i=0;i<n;++i) values.emplace_back(i*1.0);
-    point_timeseries<timeaxis> a(timeaxis(t,d,n),values);
+    point_ts<timeaxis> a(timeaxis(t,d,n),values);
     auto b=a;
     a.scale_by(2.0);
     b.fill(1.0);
@@ -508,7 +516,7 @@ public:
 	double value(const size_t i) const {
 		if (i == q_idx)
 			return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-		q_value = average_value_staircase_fast(source, time_axis(q_idx = i), last_idx);
+		q_value = average_value_staircase_fast(source, time_axis.period(q_idx = i), last_idx);
 		return q_value;
 	}
 
@@ -548,7 +556,7 @@ void timeseries_test::test_TxFxSource() {
 void timeseries_test::test_point_timeseries_with_point_timeaxis() {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
-    point_timeseries<point_timeaxis> ps(point_timeaxis(times),points);
+    point_ts<point_timeaxis> ps(point_timeaxis(times),points);
     TS_ASSERT_EQUALS(ps.size(),3);
     for(size_t i=0;i<ps.size();++i) {
         TS_ASSERT_EQUALS(ps.get(i).v,points[i]);
@@ -566,12 +574,12 @@ void timeseries_test::test_time_series_difference() {
     const utctime T1 = 100;
     for (size_t i = 0; i < n; ++i)
         ta_times[i] = T0 + (T1 - T0)*i/(n - 1);
-    point_timeaxis time_axis(ta_times.cbegin(), ta_times.cend());
+    point_timeaxis time_axis(ta_times);
 
 }
 
 void timeseries_test::test_ts_weighted_average(void) {
-    using pts_t=point_timeseries<timeaxis>;
+    using pts_t=point_ts<timeaxis>;
 	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
@@ -612,5 +620,119 @@ void timeseries_test::test_sin_fx_ts() {
 	TS_ASSERT_DELTA(tsfx(deltahours(18)), 0.0, 0.000001);
 
 }
+
+template <class A,class B>
+static bool is_equal_ts(const A& a,const B& b) {
+    if(a.ta.size()!=b.ta.size())
+        return false;
+    for(size_t i=0;i<a.ta.size();++i) {
+        if(a.ta.period(i)!= b.ta.period(i))
+            return false;
+        if (fabs(a.value(i)-b.value(i))>1e-6)
+            return false;
+    }
+    return true;
+}
+
+template < class TS_E,class TS_A,class TS_B,class TA>
+static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
+    // Excpected results are time-series with ta and a constant value equal to the standard operators
+    TS_E a_plus_b(ta,a_value+b_value);
+    TS_E a_minus_b(ta,a_value-b_value);
+    TS_E a_mult_b(ta,a_value*b_value);
+    TS_E a_div_b(ta,a_value/b_value);
+    TS_E max_a_b(ta,std::max(a_value,b_value));
+    TS_E min_a_b(ta,std::min(a_value,b_value));
+
+    // Step 1:   ts bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b)));
+    // Step 2:  ts bin_op double
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b_value));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b_value));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b_value));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b_value));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b_value)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b_value)));
+    // Step 3: double bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a_value+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a_value-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a_value*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a_value/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a_value,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
+
+}
+
+void timeseries_test::test_binary_operator() {
+    /** Test strategy here is to ensure that
+       a) it compiles
+       b) it gives the expected results for all combinations
+       The test_bin_op template function does the hard work,
+       this method only provides suitable parameters and types
+       to the test_bin_op function
+
+    */
+    using namespace shyft::timeseries;
+    using namespace shyft;
+    calendar utc;
+    utctime start = utc.time(YMDhms(2016,3,8));
+    utctimespan dt = deltahours(1);
+    size_t  n = 4;
+    double a_value=3.0;
+    double b_value=2.0;
+    {
+        typedef time_axis::fixed_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta(start,dt,n);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+
+    {
+        typedef time_axis::point_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta({start,start+dt,start+2*dt,start+3*dt},start+4*dt);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+
+    {
+        typedef time_axis::calendar_dt ta_t;
+        typedef point_ts<ta_t> ts_t;
+        ta_t ta(make_shared<calendar>(),start,dt,n);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+
+    {
+        typedef time_axis::calendar_dt_p ta_t;
+        typedef point_ts<ta_t> ts_t;
+        vector<utcperiod> sub_periods({utcperiod(deltaminutes(10),deltaminutes(20))});
+        ta_t ta(make_shared<calendar>(),start,dt,n,sub_periods);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+    {
+        typedef time_axis::period_list ta_t;
+        typedef point_ts<ta_t> ts_t;
+        vector<utcperiod> periods;for(size_t i=0;i<n;++i) periods.emplace_back(start+i*dt,start+(i+1)*dt);
+        ta_t ta(periods);
+        auto  a = make_shared<ts_t>(ta,a_value);
+        ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
+        test_bin_op<ts_t>(a,b,ta,a_value,b_value);
+    }
+
+}
+
+
 
 

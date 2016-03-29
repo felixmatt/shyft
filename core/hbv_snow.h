@@ -89,7 +89,7 @@ namespace shyft {
                       set_std_distribution_and_quantiles();
                 }
                 #ifndef SWIG
-                parameter(vector<double>& s, vector<double>& intervals,
+                parameter(const vector<double>& s, const vector<double>& intervals,
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
                 #endif // SWIG
@@ -107,6 +107,10 @@ namespace shyft {
 
                 state(double swe=0.0, double sca=0.0)
                   : swe(swe), sca(sca) { /* Do nothing */ }
+                bool operator==(const state& x)const {
+                    const double eps=1e-6;
+                    return fabs(swe-x.swe)<eps && fabs(sca-x.sca)<eps;
+                }
             };
             struct response {
                 double outflow = 0.0;
@@ -142,7 +146,7 @@ namespace shyft {
                 vector<double> sw;
                 size_t I_n;
 
-                calculator(const P& p, S& state) {
+                calculator(const P& p,  S& state) {
                     // Simple trapezoidal rule to normalize the snow redistribution quartiles
                     auto s = p.s;
                     I = p.intervals;
@@ -196,7 +200,7 @@ namespace shyft {
                     if (sp > potmelt) {
                         sw += potmelt + rain;
                         sp -= potmelt;
-                        sw = min(sw, sp*lw);
+                        sw = std::min(sw, sp*lw);
                     } else if (sp > 0.0)
                         sp = sw = 0.0;
                 }

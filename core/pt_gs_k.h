@@ -132,6 +132,7 @@ namespace shyft {
             state(gs_state_t gs, kirchner_state_t k) : gs(gs), kirchner(k) {}
             gs_state_t gs;
             kirchner_state_t kirchner;
+            bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}
         };
 
 
@@ -252,7 +253,7 @@ namespace shyft {
             const double altitude= geo_cell_data.mid_point().z;
             // Step through times in axis
             for (size_t i = 0; i < time_axis.size(); ++i) {
-                utcperiod period = time_axis(i);
+                utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);

@@ -20,6 +20,7 @@
 
 %}
 
+
 %include "numpy.i"
 %include <windows.i>
 %include <std_string.i>
@@ -31,6 +32,7 @@
 
 // Add type information from api module
 %import "__init__.i"
+
 
 %shared_ptr(std::vector<shyft::core::pt_gs_k::cell_discharge_response_t>)
 %shared_ptr(std::vector<shyft::core::pt_gs_k::cell_complete_response_t>)
@@ -67,7 +69,7 @@
 %include "core/pt_gs_k_cell_model.h"
 
 %rename (PTGSKStateIo) shyft::api::pt_gs_k_state_io;
-%include "pt_gs_k.h"
+%include "api/pt_gs_k.h"
 
 namespace shyft {
   namespace core {

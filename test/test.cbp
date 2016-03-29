@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="utctime_utilities_test test_add_over_dst_transitions" />
+				<Option parameters="time_axis_test" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  utctime_utilities_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  time_axis_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  utctime_utilities_test test_tz_info_db" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  timeseries_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -120,6 +120,8 @@
 			<Option compile="1" />
 			<Option weight="0" />
 		</Unit>
+		<Unit filename="time_axis_test.cpp" />
+		<Unit filename="time_axis_test.h" />
 		<Unit filename="timeseries_test.cpp" />
 		<Unit filename="timeseries_test.h" />
 		<Unit filename="utctime_utilities_test.cpp" />

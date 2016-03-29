@@ -166,7 +166,7 @@ namespace shyft {
 					for_each(source_begin, source_end,  // First, just create unsorted SourceWeightList
 							 [&]
 							 (const typename S::value_type& source) {
-							   double weight = min(max_weight, 1.0/M::distance_measure(destination_point,
+							   double weight = std::min(max_weight, 1.0/M::distance_measure(destination_point,
                                                 source.mid_point(),
                                                 parameter.distance_measure_factor));
 							   if(weight >= min_weight) // max distance value tranformed to minimum weight, so we only use those near enough

@@ -12,7 +12,7 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(pthsk.size(), 10)
         pthsk.snow.lw = 0.23
         self.assertAlmostEqual(pthsk.snow.lw, 0.23)
-        snow = api.HbvSnowParameter(lw=0.2)  # keyword does work now!
+        snow = api.HbvSnowParameter(tx=0.2)  # orderded .. keyword does work now! TODO: verify if we can have boost provide real kwargs
         self.assertIsNotNone(snow)
         snow.lw = 0.2
         self.assertAlmostEqual(snow.lw, 0.2);
@@ -27,8 +27,9 @@ class ShyftApi(unittest.TestCase):
         gsp = api.GammaSnowParameter(winter_end_day_of_year=99, initial_bare_ground_fraction=0.04, snow_cv=0.44,
                                      tx=-0.3, wind_scale=1.9, wind_const=0.9, max_water=0.11, surface_magnitude=33.0,
                                      max_albedo=0.88, min_albedo=0.55, fast_albedo_decay_rate=6.0,
-                                     slow_albedo_decay_rate=4.0, snowfall_reset_depth=6.1, glacier_albedo=0.44,
-                                     calculate_iso_pot_energy=False)
+                                     slow_albedo_decay_rate=4.0, snowfall_reset_depth=6.1, glacier_albedo=0.44
+                                     )# TODO: This does not work due to boost.python template arity of 15,  calculate_iso_pot_energy=False)
+        gsp.calculate_iso_pot_energy=False
         gsp.snow_cv = 0.5
         gsp.initial_bare_ground_fraction = 0.04
         kp = api.KirchnerParameter(c1=-2.55, c2=0.8, c3=-0.01)
@@ -41,7 +42,9 @@ class ShyftApi(unittest.TestCase):
 
     def test_create_ptgsk_param(self):
         ptgsk_p = self._create_std_ptgsk_param()
+        copy_p = pt_gs_k.PTGSKParameter(ptgsk_p)
         self.assertTrue(ptgsk_p != None, "should be possible to create a std param")
+        self.assertIsNotNone(copy_p)
 
     def _create_std_geo_cell_data(self):
         geo_point = api.GeoPoint(1, 2, 3)
@@ -105,7 +108,10 @@ class ShyftApi(unittest.TestCase):
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
         t.ts = tsa
-        tv = api.TargetSpecificationVector([t, t2])
+        #TODO: Does not work, list of objects are not yet convertible tv = api.TargetSpecificationVector([t, t2])
+        tv=api.TargetSpecificationVector()
+        tv.append(t)
+        tv.append(t2)
         # now verify we got something ok
         self.assertEqual(2, tv.size())
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # average value 0..1 ->0.5

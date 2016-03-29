@@ -73,6 +73,8 @@ namespace shyft {
 			bool operator==(const utcperiod &p) const { return start == p.start &&  end == p.end; }
 			bool operator!=(const utcperiod &p) const {return ! (*this==p);}
 			bool contains(utctime t) const {return is_valid(t)&&valid()?t>=start && t<end:false;}
+
+			bool contains(const utcperiod& p) const {return valid()&&p.valid()&& p.start>=start &&p.end <=end;}
 			bool overlaps(const utcperiod& p) const {return ( (p.start >= end) || (p.end <= start) )?false:true; }
 			utctime start;
 			utctime end;
@@ -82,7 +84,11 @@ namespace shyft {
 #endif
 		};
 		inline bool is_valid(const utcperiod &p) {return p.valid();}
-
+        inline utcperiod intersection(const utcperiod&a, const utcperiod& b) {
+            utctime t0=std::max(a.start,b.start);
+            utctime t1=std::min(a.end,b.end);
+            return t0<=t1? utcperiod(t0,t1):utcperiod();
+        }
         namespace time_zone {
             using namespace std;
 
@@ -227,7 +233,7 @@ namespace shyft {
                        && x.minute == minute && x.second == second;
             }
 			static YMDhms max() {return YMDhms(YEAR_MAX,12,31,23,59,59);}
-			static YMDhms min() {return YMDhms(YEAR_MIN,12,31,23,59,59);}
+			static YMDhms min() {return YMDhms(YEAR_MIN,1,1,0,0,0);}
 		};
         /** \brief Calendar deals with the concept of human calendar.
          *
@@ -284,6 +290,8 @@ namespace shyft {
 			static inline utctimespan seconds(int h, int m, int s) { return h*HOUR + m*MINUTE + s*SECOND; }
 
 			time_zone::tz_info_t_ tz_info;
+			/**\brief returns tz_info (helper for boost python really) */
+			time_zone::tz_info_t_ get_tz_info() const {return tz_info;}
 			/**\brief construct a timezone with standard offset, no dst, name= UTC+01 etc. */
 			calendar(utctimespan tz=0): tz_info(new time_zone::tz_info_t(tz)) {}
 			/**\brief construct a timezone from tz_info shared ptr provided from typically time_zone db */
