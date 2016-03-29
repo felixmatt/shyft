@@ -9,7 +9,7 @@ namespace shyft {
 		using namespace shyft::timeseries;
 
 		// and typedefs for commonly used types in the model
-		typedef point_timeseries<timeaxis> pts_t;
+		typedef point_ts<timeaxis> pts_t;
 		typedef constant_timeseries<timeaxis> cts_t;
 		typedef timeaxis timeaxis_t;
 
@@ -99,6 +99,10 @@ namespace shyft {
 			SC sc;   ///<method stack and context dependent class (we dont collect state during optimization)
 			RC rc;   ///<method stack and context dependent (full response, or just minimal for optimization)
 
+            // boost python workaround for shared ptr properties
+            std::shared_ptr<P> get_parameter() {return parameter;}
+
+
 			///< support to initialize env. input series, before interpolation step
 			void   init_env_ts(const typename E::timeaxis_t &ta) { env_ts.init(ta); }
 			///< common support during run, first step is to call begin_run, typically invoked from run() in templates, calls initialize on collectors
@@ -123,6 +127,10 @@ namespace shyft {
 			void set_snow_sca_swe_collection(bool on) {/*default simply ignore*/}
 			/// run the cell method stack for  a specified time-axis, to be specialized by cell type
 			void run(const timeaxis_t& t) {}
+			///< operator equal if same midpoint and catchment-id
+			bool operator==(const cell&x) const {
+			    return geo.mid_point()==x.geo.mid_point()&& geo.catchment_id()==x.geo.catchment_id();
+			}
 		};
 
         using namespace std;
@@ -156,7 +164,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).time_axis, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
@@ -193,7 +201,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).time_axis, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
 				bool match_all = catchment_indexes.size() == 0;
 
 				for (const auto& c : cells) {

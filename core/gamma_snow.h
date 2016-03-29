@@ -98,6 +98,18 @@ namespace shyft {
                 double acc_melt = 0.0;
                 double iso_pot_energy = 0.0;
                 double temp_swe = 0.0;
+                bool operator==(const state &x) const {
+                    const double eps=1e-6;
+                    return fabs(albedo - x.albedo)<eps
+                        && fabs(lwc - x.lwc) < eps
+                        && fabs(surface_heat - x.surface_heat)<eps
+                        && fabs(alpha - x.alpha)<eps
+                        && fabs(sdc_melt_mean - x.sdc_melt_mean)<eps
+                        && fabs(acc_melt - x.acc_melt)<eps
+                        && fabs(iso_pot_energy - x.iso_pot_energy)<eps
+                        && fabs(temp_swe - x.temp_swe)<eps;
+
+                }
             };
 
 

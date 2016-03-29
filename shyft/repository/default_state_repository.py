@@ -15,7 +15,10 @@ class DefaultStateRepository(interfaces.StateRepository):
         return interfaces.StateInfo()
 
     def get_state(self, state_id):
-        return self.state_vec_t([self.state_t() for _ in range(self.n)])
+        v=self.state_vec_t()
+        for i in range(self.n):
+            v.append(self.state_t())
+        return v #self.state_vec_t([self.state_t() for _ in range(self.n)]) #TODO list convertible state not yet there..
 
     def put_state(self, region_model_id, utc_timestamp, region_model_state, tags=None):
         pass

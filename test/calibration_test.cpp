@@ -20,8 +20,8 @@ namespace pc = shyft::core::precipitation_correction;
 
 
 
-typedef point_timeseries<point_timeaxis> xpts_t;
-typedef point_timeseries<timeaxis> catchment_t;
+typedef point_ts<point_timeaxis> xpts_t;
+typedef point_ts<timeaxis> catchment_t;
 typedef MCell<pt_gs_k::response_t, pt_gs_k::state_t, pt_gs_k::parameter_t, xpts_t> PTGSKCell;
 
 

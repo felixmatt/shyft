@@ -24,11 +24,11 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
 
-            parameter(pt_parameter_t& pt,
-                        snow_parameter_t& snow,
-                        ae_parameter_t& ae,
-                        kirchner_parameter_t& kirchner,
-                        precipitation_correction_parameter_t p_corr)
+            parameter(const pt_parameter_t& pt,
+                        const snow_parameter_t& snow,
+                        const ae_parameter_t& ae,
+                        const kirchner_parameter_t& kirchner,
+                        const precipitation_correction_parameter_t& p_corr)
              : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
              			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
 			parameter(){}
@@ -103,9 +103,10 @@ namespace shyft {
             snow_state_t snow;
             kirchner_state_t kirchner;
             state() {}
-            state(snow_state_t& snow, kirchner_state_t& kirchner)
+            state(const snow_state_t& snow, const kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
+            bool operator==(const state& x) const {return snow==x.snow && kirchner==x.kirchner;}
         };
 
         struct response {
@@ -161,7 +162,7 @@ namespace shyft {
 
             // Step through times in axis
             for (size_t i = 0; i < time_axis.size(); ++i) {
-                utcperiod period = time_axis(i);
+                utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);

@@ -6,7 +6,15 @@
 
 namespace shyft {
     namespace core {
-
+        // python exposure needs definition here (even if's a constant)
+			const utctimespan calendar::YEAR;//=365*24*3600L;
+			const utctimespan calendar::MONTH;//=30*24*3600L;
+			const utctimespan calendar::WEEK;// = 7*24*3600L;
+			const utctimespan calendar::DAY;// =  1*24*3600L;
+			// these are just timespan constants with no calendar semantics
+			const utctimespan calendar::HOUR;// = 3600L;
+			const utctimespan calendar::MINUTE;// = 60L;
+			const utctimespan calendar::SECOND;// = 1L;
         using namespace std;
         std::ostream& operator<<(std::ostream& os, const utcperiod& p) {
             os << p.to_string();

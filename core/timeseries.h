@@ -1,6 +1,7 @@
 #pragma once
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
+#include "time_axis.h"
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
@@ -18,7 +19,7 @@
 namespace shyft{
 
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    /** \brief The timeseries namespace contains all needed concepts related
+    /** \namespace The timeseries namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
     *
     * concepts:
@@ -50,82 +51,355 @@ namespace shyft{
         */
         inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
 
-        /** \brief The timeaxis supports most common needs in shyft::core,
-         * especially for regular forecast scenario with interval like hour, day, or 3-hours etc.
-         * It is easy to create, and light-weight/high speed implementation.
-         */
-        class timeaxis {
-            utctime t0;
-            utctimespan dt;
-            size_t n;
-          public:
-            timeaxis(utctime start=no_utctime, utctimespan dt=0, size_t n=0) : t0(start),dt(dt),n(n) {}
-            utcperiod total_period() const { return utcperiod(t0,t0+n*dt);}
-            utctime start() const { return t0;}
-            size_t size() const { return n; }
-            utctimespan delta() const {return dt;}
-            utcperiod operator()(size_t i) const { return utcperiod(t0 + i*dt, t0 + (i + 1)*dt); }
-#ifndef SWIG
-            utctime   operator[](size_t i) const { return utctime(t0 + i*dt); }
-#endif
-            size_t index_of(utctime tx) const {
-                if(tx < t0) return string::npos;
-                auto ix = size_t((tx - t0)/dt);
-                return ix < n ? ix : n - 1;
-            }
-        };
+        typedef shyft::time_axis::fixed_dt timeaxis;
+        typedef time_axis::point_dt point_timeaxis;
 
-        /** \brief A point_timeaxis constructs a set of time-periods,
-         * with number of consecutive periods equal to n-1 time points supplied.
-         * You need to supply at least two points to get a valid time-axis.
-         * TODO: Not perfectly defined, ref index_of and op() ..
-         */
-        class point_timeaxis {
-            vector<utctime> times;
-          public:
-            point_timeaxis() {}
-            point_timeaxis(const point_timeaxis&c):times(c.times) {}
-
-            point_timeaxis(const vector<utctime>& time_points):times(time_points) { }
-
-            template<typename S>
-            point_timeaxis(S begin_time, S end_time) : times(begin_time,end_time) {}
-            utcperiod total_period() const {
-                if(times.size()<=1) return utcperiod();
-                return utcperiod(times[0],times[times.size()-1]);
-            }
-            size_t size() const { return times.size()>1?times.size() - 1:0; }
-
-            utcperiod operator()(size_t i) const {
-                if (i >= times.size() - 1)
-                    throw exception();
-                return utcperiod(times[i], times[i + 1]);
-            }
-#ifndef SWIG
-            point_timeaxis& operator=(const point_timeaxis&c) {if(this!=&c) times=c.times;return *this;}
-
-            point_timeaxis(point_timeaxis&& c) : times(std::move(c.times)) {}
-            point_timeaxis& operator=(point_timeaxis&& c) {times=std::move(c.times);return *this;}
-            utctime operator[](size_t i) const { return times[i];}
-#endif
-            /**< return closest index of nearest time point.. some problem using op(i) in end case.. */
-            size_t index_of(utctime tx) const {
-                if (times.size()<2 ) return string::npos;
-                if(tx<times[0]) return string::npos;
-                if (tx >= times.back()) return times.size()-2;// because last point is END of last period
-                auto r = lower_bound(times.cbegin(), times.cend(), tx,
-                                          [](utctime pt, utctime val){ return pt <= val; });
-                return static_cast<size_t>(r - times.cbegin()) - 1;
-            }
-        };
-
-        /** \brief Enumerates how points are to be understood (most reasonably) when mapping to f(t) in the time-series concept.
+        /** \brief Enumerates how points are mapped to f(t)
+         *
+         * If there is a point_ts, this determines how we would draw f(t).
+         * Average values are typically staircase-start-of step, a constant over the interval
+         * for which the average is computed.
+         * State-in-time values are typically POINT_INSTANT_VALUES; and we could as an approximation
+         * draw a straight line between the points.
          */
         enum point_interpretation_policy {
             POINT_INSTANT_VALUE, ///< the point value represents the value at the specific time (or centered around that time),typically linear accessor
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
         };
+        //typedef point_interpretation_policy point_interpretation_policy;// BW compatible
+
+        inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
+            return a==point_interpretation_policy::POINT_INSTANT_VALUE || b==point_interpretation_policy::POINT_INSTANT_VALUE?point_interpretation_policy::POINT_INSTANT_VALUE:point_interpretation_policy::POINT_AVERAGE_VALUE;
+        }
+        #ifndef SWIG
+        //--- to avoid duplicating algorithms in classes where the stored references are
+        // either by shared_ptr, or by value, we use template function:
+        //  to make shared_ptr<T> appear equal to T
+        template<typename T> struct is_shared_ptr {static const bool value=false;};
+        template<typename T> struct is_shared_ptr<shared_ptr<T>> {static const bool value=true;};
+
+
+
+        /** \brief d_ref function to d_ref object or shared_ptr
+         *
+         * The T d_ref(T) template to return a ref or const ref to T, if T is shared_ptr<T> or just T
+         */
+        template<class U> const U& d_ref(const std::shared_ptr<U>& p) { return *p; }
+        template<class U> const U& d_ref(const U& u) { return u; }
+
+
+        ///< \brief d_ref_t template to rip out T of shared_ptr<T> or T if T specified
+        template <class T, class P = void >
+        struct d_ref_t { };
+
+        template <class T >
+        struct d_ref_t<T,typename enable_if<is_shared_ptr<T>::value>::type> {
+            typedef typename T::element_type type;
+        };
+        template <class T >
+        struct d_ref_t<T,typename enable_if<!is_shared_ptr<T>::value>::type > {
+            typedef T type;
+        };
+        #endif
+        /**\brief point time-series, pts, defined by
+         * its
+         * templated time-axis, ta
+         * the values corresponding periods in time-axis (same size)
+         * the point_interpretation_policy that determine how to compute the
+         * f(t) on each interval of the time-axis (linear or stair-case)
+         * and
+         * value of the i'th interval of the time-series.
+         */
+        template <class TA>
+        struct point_ts {
+            typedef TA ta_t;
+            TA ta;
+            vector<double> v;
+            point_interpretation_policy fx_policy;
+
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+
+            point_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){}
+            point_ts(const TA& ta, double fill_value,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(ta.size(),fill_value),fx_policy(fx_policy) {}
+            point_ts(const TA& ta,const vector<double>&vx,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(vx),fx_policy(fx_policy) {
+                if(ta.size() != v.size())
+                    throw runtime_error("point_ts: time-axis size is different from value-size");
+            }
+            //TODO: move/cp constructors needed ?
+            //TODO should we provide/hide v ?
+            // TA ta, ta is expected to provide 'time_axis' functions as needed
+            // so we do not re-pack and provide functions like .size(), .index_of etc.
+            /**\brief the function value f(t) at time t, fx_policy taken into account */
+            double operator()(utctime t) const {
+                size_t i = ta.index_of(t);
+                if(i == string::npos) return nan;
+                if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1])) {
+                    utctime t1=ta.time(i);
+                    utctime t2=ta.time(i+1);
+                    double f= double(t2-t)/double(t2-t1);
+                    return v[i]*f + (1.0-f)*v[i+1];
+                }
+                return v[i]; // just keep current value flat to +oo or nan
+            }
+
+            /**\brief value of the i'th interval fx_policy taken into account,
+             * Hmm. is that policy every useful in this context ?
+             */
+            double value(size_t i) const  {
+                //if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
+                //    return 0.5*(v[i] + v[i+1]); // average of the value, linear between points(is that useful ?)
+                return v[i];
+            }
+            // BW compatiblity ?
+            size_t size() const { return ta.size();}
+            size_t index_of(utctime t) const {return ta.index_of(t);}
+            utcperiod total_period() const {return ta.total_period();}
+            utctime time(size_t i ) const {return ta.time(i);}
+
+            // to help average_value method for now!
+            point get(size_t i) const {return point(ta.time(i),value(i));}
+
+            // Additional write/modify interface to operate directly on the values in the time-series
+            void set(size_t i,double x) {v[i]=x;}
+            void add(size_t i, double value) { v[i] += value; }
+            void add(const point_ts<TA>& other) {
+                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), std::plus<double>());
+            }
+            void add_scale(const point_ts<TA>&other,double scale) {
+                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), [scale](double a, double b) {return a + b*scale; });
+            }
+            void fill(double value) { std::fill(begin(v), end(v), value); }
+			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
+
+        };
+
+
+        /**\brief average_ts, average time-series
+         *
+         * Represents a ts that for
+         * the specified time-axis returns the true-average of the
+         * underlying specified TS ts.
+         *
+         */
+        template<class TS,class TA>
+        struct average_ts {
+            typedef TA ta_t;
+            TA ta;
+            TS ts;
+            point_interpretation_policy fx_policy;
+            average_ts(const TS&ts,const TA& ta)
+            :ta(ta),ts(ts)
+            ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
+            // to help average_value method for now!
+            point get(size_t i) const {return point(ta.time(i),ts.value(i));}
+            size_t size() const { return ta.size();}
+            size_t index_of(utctime t) const {return ta.index_of(t);}
+            //--
+            double value(size_t i) const {
+                if(i >= ta.size())
+                    return nan;
+                size_t ix_hint=(i*d_ref(ts).ta.size())/ta.size();// assume almost fixed delta-t.
+                //TODO: make specialized pr. time-axis average_value, since average of fixed_dt is trivial compared to other ta.
+                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+            }
+            double operator()(utctime t) const {
+                size_t i=ta.index_of(t);
+                if( i==string::npos)
+                    return nan;
+                return value(i);
+            }
+        };
+
+
+        #ifndef SWIG
+
+        /** \brief Basic math operators
+         *
+         * Here we take a very direct approach, just create a bin_op object for
+         * each bin_op :
+         *   -# specialize for double vs. ts
+         *   -# use perfect forwarding of the arguments, using d_ref to keep shared_ptr vs. object the same
+         *
+         */
+        template<class A, class B, class O, class TA>
+        struct bin_op {
+            typedef TA ta_t;
+            O op;
+            A lhs;
+            B rhs;
+            TA ta;
+            point_interpretation_policy fx_policy;
+
+
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
+                ta=time_axis::combine(d_ref(lhs).ta,d_ref(rhs).ta);
+                fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+            }
+            double operator()(utctime t) const {
+                if(!ta.total_period().contains(t))
+                    return nan;
+                return op(d_ref(lhs)(t),d_ref(rhs)(t));
+            }
+            double value(size_t i) const {
+                if(i==string::npos || i>=ta.size() )
+                    return nan;
+                if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
+                    return (*this)(ta.time(i));
+                utcperiod p=ta.period(i);
+                double v0= (*this)(p.start);
+                double v1= (*this)(p.end);
+                if(isfinite(v1)) return 0.5*(v0 + v1);
+                return v0;
+            }
+        };
+
+        /** specialize for double bin_op ts */
+        template<class B,class O,class TA>
+        struct bin_op<double,B,O,TA> {
+            typedef TA ta_t;
+            double lhs;
+            B rhs;
+            O op;
+            TA ta;
+            point_interpretation_policy fx_policy;
+
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
+                ta=d_ref(rhs).ta;
+                fx_policy = d_ref(rhs).fx_policy;
+            }
+
+            double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
+            double value(size_t i) const {return op(lhs,d_ref(rhs).value(i));}
+        };
+
+        /** specialize for ts bin_op double */
+        template<class A,class O,class TA>
+        struct bin_op<A,double,O,TA> {
+            typedef TA ta_t;
+            A lhs;
+            double rhs;
+            O op;
+            TA ta;
+            point_interpretation_policy fx_policy;
+
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
+                ta=d_ref(lhs).ta;
+                fx_policy = d_ref(lhs).fx_policy;
+            }
+            double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
+            double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
+        };
+
+
+        /** \brief op_axis is about deriving the time-axis of a result
+         *
+         * When doing binary-ts operations, we need to deduce at runtime what will be the
+         *  most efficient time-axis type of the binary result
+         * We use time_axis::combine_type<..> if we have two time-series
+         * otherwise we specialize for double binop ts, and ts binop double.
+         * \sa shyft::time_axis::combine_type
+         */
+        template<typename L,typename R>
+        struct op_axis {
+            typedef typename time_axis::combine_type< typename d_ref_t<L>::type::ta_t, typename d_ref_t<R>::type::ta_t>::type type;
+        };
+
+        template<typename R>
+        struct op_axis<double,R> {
+            typedef typename d_ref_t<R>::type::ta_t type;
+        };
+
+        template<typename L>
+        struct op_axis<L,double> {
+            typedef typename d_ref_t<L>::type::ta_t type;
+        };
+
+        /** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
+         * otherwise the operators will interfere with other libraries doing the same.
+         */
+        template<class T> struct is_ts {static const bool value=false;};
+        template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
+
+        template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
+        template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
+        template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+        struct op_max {
+            double operator()(const double&a,const double&b) const {return max(a,b);}
+        };
+        struct op_min {
+            double operator()(const double&a,const double&b) const {return min(a,b);}
+        };
+
+        template <class A,class B, typename = enable_if_t< is_ts<A>::value || is_ts<B>::value > >
+        auto operator+ (const A& lhs, const B& rhs) {
+            return bin_op<A,B,plus<double>,typename op_axis<A,B>::type> (lhs,plus<double>(),rhs);
+        }
+
+        template <class A,class B,typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+        auto operator- (const A& lhs, const B& rhs) {
+            return bin_op<A,B,minus<double>,typename op_axis<A,B>::type> (lhs,minus<double>(),rhs);
+        }
+
+        /** unary minus implemented as -1.0* ts */
+        template <class A,typename = enable_if_t< is_ts<A>::value >>
+        auto operator- (const A& lhs) {
+            return bin_op<A,double,multiplies<double>,typename op_axis<A,double>::type> (lhs,multiplies<double>(),-1.0);
+        }
+
+        template <class A,class B,typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+        auto operator* (const A& lhs, const B& rhs) {
+            return bin_op<A,B,multiplies<double>,typename op_axis<A,B>::type> (lhs,multiplies<double>(),rhs);
+        }
+
+        template <class A,class B,typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+        auto operator/ (const A& lhs, const B& rhs) {
+            return bin_op<A,B,divides<double>,typename op_axis<A,B>::type> (lhs,divides<double>(),rhs);
+        }
+
+        template <class A,class B,typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+        auto max(const A& lhs, const B& rhs) {
+            return bin_op<A,B,op_max,typename op_axis<A,B>::type> (lhs,op_max(),rhs);
+        }
+
+        template <class A,class B,typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+        auto min(const A& lhs, const B& rhs) {
+            return bin_op<A,B,op_min,typename op_axis<A,B>::type> (lhs,op_min(),rhs);
+        }
+
+
+        #endif
         /** \brief A point source with time_axis.
          *
          * The point_source template class contains a time axis and an equally sized
@@ -137,6 +411,7 @@ namespace shyft{
          *  -# .size() const       --> number of periods on time-axis
          *  -#  op() (i) const        --> utcperiod of the i'th interval
          */
+        #if 0
         template<typename TA>
         class point_timeseries {
           public:
@@ -194,7 +469,7 @@ namespace shyft{
             const timeaxis_t& get_time_axis() const { return time_axis; }
             utcperiod total_period() const { return time_axis.total_period(); }
             // Source read interface:
-            point get(size_t i) const { return point(time_axis(i).start, v[i]); } // maybe verify v.size(), vs. time_axis size ?
+            point get(size_t i) const { return point(time_axis.time(i), v[i]); } // maybe verify v.size(), vs. time_axis size ?
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
             size_t size() const { return time_axis.size(); }
             // Source write interface
@@ -202,7 +477,7 @@ namespace shyft{
 
             /**< .value() implements the Accessor pattern */
             double value(size_t i) const { return v[i]; }
-            utctime time(size_t i) const { return time_axis(i).start; }
+            utctime time(size_t i) const { return time_axis.time(i); }
             // Additional write interface
             void add(size_t i, double value) { v[i] += value; }
             void add(const point_timeseries<TA>& other) {
@@ -214,7 +489,7 @@ namespace shyft{
             void fill(double value) { std::fill(begin(v), end(v), value); }
 			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
         };
-
+        #endif
         /** \brief A point source with a time_axis, and a function Fx(utctime t) that
          *  gives the value at utctime t, where t is from timeaxis(i).t
          *  suitable for functional type of time series
@@ -240,7 +515,7 @@ namespace shyft{
             function_timeseries(const TA& time_axis, const F& f,point_interpretation_policy point_interpretation=POINT_INSTANT_VALUE):time_axis(time_axis),fx(f) {}
             // Source read interface:
             point get(size_t i) const {
-                utctime t = time_axis(i).start;
+                utctime t = time_axis.time(i);
                 return point(t, (*this)(t));
             } // maybe verify v.size(), vs. time_axis size ?
             size_t size() const {return time_axis.size();}
@@ -286,7 +561,7 @@ namespace shyft{
             constant_timeseries(){cvalue=0.0;}
             constant_timeseries(const TA& time_axis, double value) : time_axis(time_axis), cvalue(value) {}
             // Source read interface
-            point get(size_t i) const { return point(time_axis(i).start, cvalue); }
+            point get(size_t i) const { return point(time_axis.time(i), cvalue); }
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
             size_t size() const { return time_axis.size(); }
             // Accessor interface
@@ -508,7 +783,7 @@ namespace shyft{
             double value(const size_t i) const {
                 if(i == q_idx)
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-                q_value = average_value(source, time_axis(q_idx=i), last_idx,source.point_interpretation()==POINT_INSTANT_VALUE);
+                q_value = average_value(source, time_axis.period(q_idx=i), last_idx,source.point_interpretation()==POINT_INSTANT_VALUE);
                 return q_value;
             }
 
@@ -543,7 +818,7 @@ namespace shyft{
              */
             double value(const size_t i) const {
                 point pt = source.get(i);
-                if (pt.t != time_axis[i])
+                if (pt.t != time_axis.time(i))
                     throw std::runtime_error("Time axis and source are not aligned.");
                 return pt.v;
             }
@@ -558,11 +833,11 @@ namespace shyft{
          * \tparam TA the time-axis
          */
         template <class TA>
-        class direct_accessor<point_timeseries<TA>, TA> {
+        class direct_accessor<point_ts<TA>, TA> {
           private:
-            const point_timeseries<TA>& source; //< \note this is a reference to the supplied point_source, so please be aware of life-time
+            const point_ts<TA>& source; //< \note this is a reference to the supplied point_source, so please be aware of life-time
           public:
-            direct_accessor(const point_timeseries<TA>& source, const TA& ta) : source(source) { }
+            direct_accessor(const point_ts<TA>& source, const TA& ta) : source(source) { }
 
             /** \brief Return value at pos without check since the source has its own timeaxis
              */

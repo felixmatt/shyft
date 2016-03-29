@@ -72,26 +72,21 @@ class RegionModel(unittest.TestCase):
 
     def create_dummy_region_environment(self, time_axis, mid_point):
         re = api.ARegionEnvironment()
-        re.precipitation = api.PrecipitationSourceVector()
-        re.precipitation.append(self._create_constant_geo_ts(
-                api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
-
-        re.temperature = api.TemperatureSourceVector()
-        re.temperature.append(self._create_constant_geo_ts(
-                api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
-
-        re.wind_speed = api.WindSpeedSourceVector()
-        re.wind_speed.append(self._create_constant_geo_ts(
-                api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
-
-        re.rel_hum = api.RelHumSourceVector()
-        re.rel_hum.append(self._create_constant_geo_ts(
-                api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
-
-        re.radiation = api.RadiationSourceVector()
-        re.radiation.append(self._create_constant_geo_ts(
-                api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
+        re.precipitation.append(self._create_constant_geo_ts(api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))
+        re.temperature.append(self._create_constant_geo_ts(api.TemperatureSource, mid_point, time_axis.total_period(), 10.0))
+        re.wind_speed.append(self._create_constant_geo_ts(api.WindSpeedSource, mid_point, time_axis.total_period(), 2.0))
+        re.rel_hum.append(self._create_constant_geo_ts(api.RelHumSource, mid_point, time_axis.total_period(), 0.7))
+        re.radiation = api.RadiationSourceVector() # just for testing BW compat
+        re.radiation.append(self._create_constant_geo_ts(api.RadiationSource, mid_point, time_axis.total_period(), 300.0))
         return re
+
+    def test_create_region_environment(self):
+        cal = api.Calendar()
+        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),api.deltahours(1), 240)
+        re = self.create_dummy_region_environment(time_axis,api.GeoPoint(1000,1000,100))
+        self.assertIsNotNone(re)
+        self.assertEqual(len(re.radiation), 1)
+        self.assertAlmostEqual(re.radiation[0].ts.value(0), 300.0)
 
     def test_pt_ss_k_model_init(self):
         num_cells = 20
@@ -140,10 +135,17 @@ class RegionModel(unittest.TestCase):
                 model_interpolation_parameter, time_axis,
                 self.create_dummy_region_environment(time_axis,
                                                      model.get_cells()[int(num_cells / 2)].geo.mid_point()))
+        s0 = pt_gs_k.PTGSKStateVector()
+        for i in range(num_cells):
+            si = pt_gs_k.PTGSKState()
+            si.kirchner.q = 40.0
+            s0.append(si)
+        model.set_states(s0)
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
+
         self.assertIsNotNone(sum_discharge)
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)

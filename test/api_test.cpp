@@ -18,6 +18,7 @@ using namespace shyft::timeseries;
 
 using namespace shyft::api;
 
+#if 0
 bool operator==(const pt_gs_k_state_t& a, const pt_gs_k_state_t& b) {
 	const double tol = 1e-9;
 	return fabs(a.gs.albedo - b.gs.albedo) < tol
@@ -52,7 +53,7 @@ bool operator==(const pt_hs_k_state_t& a, const pt_hs_k_state_t& b) {
 		&& fabs(a.kirchner.q - b.kirchner.q) < tol;
 
 }
-
+#endif
 void api_test::test_ptgsk_state_io() {
 	using namespace shyft::api;
 	pt_gs_k_state_t s;

@@ -1,33 +1,3 @@
-# Create the SWIG wrappers
-#-----------------------------------------------------------------------------
-message(STATUS "Generating Python interface using SWIG...")
-
-if(WIN32 AND MSVC)
-  set(MAKE_COMMAND "nmake")
-  set(MAKE_FLAGS "/F")
-  set(MAKE_FILE "NMakefile.swig_run")
-else()
-  set(MAKE_COMMAND "make")
-  set(MAKE_FLAGS -j 2 -f)  # use 2 processes to not overload TravisCI too much
-  set(MAKE_FILE "Makefile.swig_run")
-endif()
-
-execute_process(COMMAND ${MAKE_COMMAND} ${MAKE_FLAGS} ${MAKE_FILE}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/api/python
-  RESULT_VARIABLE rv
-  OUTPUT_VARIABLE swig_output
-  ERROR_VARIABLE  swig_error
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-
-if(NOT rv EQUAL 0)
-  message("SWIG make output:" ${swig_output})
-  message("SWIG make error:" ${swig_error})
-  message(FATAL_ERROR "Errors occurred.  Leaving now!")
-  return()
-endif()
-
-
 # Compilation step for Python extensions
 #-----------------------------------------------------------------------------
 # Python install
@@ -91,7 +61,7 @@ include_directories(${PROJECT_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/dlib
   ${SHYFT_DEPENDENCIES}/armadillo/include ${include_numpy})
 
 # Set the compiler flags (for gcc and clang)
-set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++11 -DARMA_DONT_USE_WRAPPER)
+set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11)
 #set(CMAKE_CXX_FLAGS ${C_FLAGS} CACHE STRING "CXX flags." FORCE)
 
 # Set the common C++ files
@@ -101,16 +71,29 @@ set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # Additional libraries
-set(LIBS "-lblas -llapack")
+set(LIBS "-lblas -llapack -lboost_python3")
 
-# Compile extensions
-foreach(python_extension "__init__" "pt_gs_k" "pt_ss_k" "pt_hs_k")
-  add_library(${python_extension} SHARED ${CXX_FILES} ${CMAKE_SOURCE_DIR}/api/python/${python_extension}_wrap.cxx)
+# Compile extensions api extension
+foreach(python_api_extension  "api" )
+   file(GLOB cpps ${CMAKE_SOURCE_DIR}/api/boostpython/${python_api_extension}*.cpp )
+  add_library(${python_api_extension} SHARED ${CXX_FILES} ${cpps} )
+  set_target_properties(${python_api_extension} PROPERTIES OUTPUT_NAME ${python_api_extension})
+  # Python extensions do not use the 'lib' prefix
+  set_target_properties(${python_api_extension} PROPERTIES PREFIX "_")
+  set_property(TARGET ${python_api_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
+  target_link_libraries(${python_api_extension} ${LIBS})
+  install(TARGETS ${python_api_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api)
+
+endforeach(python_api_extension)
+
+# then for each sub module
+foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k")
+  add_library(${python_extension} SHARED ${CXX_FILES} ${CMAKE_SOURCE_DIR}/api/boostpython/${python_extension}.cpp)
   set_target_properties(${python_extension} PROPERTIES OUTPUT_NAME ${python_extension})
   # Python extensions do not use the 'lib' prefix
   set_target_properties(${python_extension} PROPERTIES PREFIX "_")
   set_property(TARGET ${python_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
   target_link_libraries(${python_extension} ${LIBS})
-  install(TARGETS ${python_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api)
+  install(TARGETS ${python_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api/${python_extension})
 
 endforeach(python_extension)

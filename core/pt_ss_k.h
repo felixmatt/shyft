@@ -107,9 +107,10 @@ namespace shyft {
             snow_state_t snow;
             kirchner_state_t kirchner;
             state() {}
-            state(snow_state_t& snow, kirchner_state_t& kirchner)
+            state(const snow_state_t& snow, const kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
+            bool operator==(const state& x) const {return kirchner==x.kirchner && snow==x.snow;}
         };
 
 
@@ -169,7 +170,7 @@ namespace shyft {
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
             // Step through times in axis
             for (size_t i=0; i < time_axis.size(); ++i) {
-                utcperiod period = time_axis(i);
+                utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
                 double rel_hum = rel_hum_accessor.value(i);

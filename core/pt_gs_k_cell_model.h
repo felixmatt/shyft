@@ -190,7 +190,7 @@ namespace shyft {
             typedef cell<parameter_t, environment_t, state_t, null_collector, discharge_collector> cell_discharge_response_t; ///<used for operational or calibration runs, only needed info is collected.
 
         }
-
+        #ifndef SWIG
         //specialize run method for all_response_collector
         template<>
         inline void cell<pt_gs_k::parameter_t, environment_t, pt_gs_k::state_t,
@@ -254,5 +254,6 @@ namespace shyft {
             ::set_snow_sca_swe_collection(bool on_or_off) {
             rc.collect_snow=on_or_off;// possible, if true, we do collect both swe and sca, default is off
         }
+        #endif
     }
 }

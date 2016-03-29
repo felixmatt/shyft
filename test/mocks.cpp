@@ -27,10 +27,10 @@ namespace shyfttest {
         }
         tpoints.emplace_back(T1);
         point_timeaxis ta(tpoints);
-        temp = xpts_t(ta,temps.cbegin(), temps.cend());
-        prec = xpts_t(ta,precs.cbegin(), precs.cend());
-        rel_hum = xpts_t(ta,rel_hums.cbegin(), rel_hums.cend());
-        wind_speed = xpts_t(ta,wind_speeds.cbegin(), wind_speeds.cend());
-        radiation = xpts_t(ta,rads.cbegin(), rads.cend());
+        temp = xpts_t(ta,temps);
+        prec = xpts_t(ta,precs);
+        rel_hum = xpts_t(ta,rel_hums);
+        wind_speed = xpts_t(ta,wind_speeds);
+        radiation = xpts_t(ta,rads);
     }
 }
