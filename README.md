@@ -26,7 +26,6 @@ For compiling and running SHyFT, you will need:
 * A C++11 compiler
 * The BLAS and LAPACK libraries (development packages)
 * A Python3 (3.4 or higher) interpreter
-* The SWIG wrapping tool (>= 3.0.5)
 * The NumPy package (>= 1.8.0)
 * The netCDF4 package (>= 1.2.1)
 * The CMake building tool (2.8.7 or higher)
