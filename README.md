@@ -18,6 +18,9 @@ simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki)
 developed at Sintef by Sjur Kolberg with contributions from Kolbjorn
 Engeland and Oddbjorn Bruland.
 
+Wiki for [SHyFT](https://github.com/statkraft/shyft/wiki) includes details
+for how to get prebuilt binaries, how to build and contribute.
+
 REQUIREMENTS
 ============
 
