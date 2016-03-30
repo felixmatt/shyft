@@ -129,16 +129,16 @@ namespace shyft {
             utcperiod total_period() const {
                 return n == 0 ?
                        utcperiod( min_utctime, min_utctime ) :  // maybe just a non-valid period?
-                       utcperiod( t, dt <= dt_h ? t + n*dt : cal->add( t, dt, n ) );
+                       utcperiod( t, dt <= dt_h ? t + n*dt : cal->add( t, dt,long(n) ) );
             }
 
             utctime time( size_t i ) const {
-                if( i < n ) return dt <= dt_h ? t + i * dt : cal->add( t, dt, i );
+                if( i < n ) return dt <= dt_h ? t + i * dt : cal->add( t, dt, long(i) );
                 throw out_of_range( "calendar_dt.time(i)" );
             }
 
             utcperiod period( size_t i ) const {
-                if( i < n ) return dt < dt_h ? utcperiod( t + i * dt, t + ( i + 1 ) * dt ) : utcperiod( cal->add( t, dt, i ), cal->add( t, dt, i + 1 ) );
+                if( i < n ) return dt < dt_h ? utcperiod( t + i * dt, t + ( i + 1 ) * dt ) : utcperiod( cal->add( t, dt, long( i) ), cal->add( t, dt, long(i + 1) ) );
                 throw out_of_range( "calendar_dt.period(i)" );
             }
 
@@ -183,13 +183,19 @@ namespace shyft {
                 if(t.size()==0 || t.back()>=t_end )
                     throw runtime_error("time_axis::point_dt() illegal initialization parameters");
             }
-            point_dt(const vector<utctime>& all_points):t(all_points),t_end(all_points.back()){
+            point_dt(const vector<utctime>& all_points):t(all_points){
                 if(t.size()<2)
                     throw runtime_error("time_axis::point_dt() needs at least two time-points");
-                t.pop_back();
+				t_end = t.back();
+				t.pop_back();
 
             }
-
+			point_dt(vector<utctime> && all_points):t(move(all_points)) {
+				if (t.size() < 2)
+					throw runtime_error("time_axis::point_dt() needs at least two time-points");
+				t_end = t.back();
+				t.pop_back();
+			}
 
             size_t size() const {return t.size();}
 

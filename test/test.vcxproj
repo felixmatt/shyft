@@ -119,7 +119,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>test_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>.;..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -170,7 +170,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;CXXTEST_RUNNING;_CXXTEST_HAVE_STD;_CXXTEST_HAVE_EH;_SCL_SECURE_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;ENKI_USE_DLIB;BOOST_NUMERIC_ODEINT_CXX11;__UNIT_TEST__;ARMA_USE_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>test_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>.;..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>

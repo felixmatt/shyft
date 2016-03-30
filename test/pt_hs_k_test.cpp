@@ -55,7 +55,7 @@ void pt_hs_k_test::test_call_stack() {
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
     timeaxis time_axis(t0, dt, n_ts_points);
-
+	timeaxis state_time_axis(t0, dt, n_ts_points + 1);
     // Initialize parameters
     std::vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0}; // Zero cv distribution of snow (i.e. even)
     std::vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
@@ -74,7 +74,7 @@ void pt_hs_k_test::test_call_stack() {
 
     // Initialize collectors
     shyfttest::mock::ResponseCollector<timeaxis> response_collector(1000*1000, time_axis);
-    shyfttest::mock::StateCollector<timeaxis> state_collector(time_axis);
+    shyfttest::mock::StateCollector<timeaxis> state_collector(state_time_axis);
 
     state state {snow_state, kirchner_state};
     parameter parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);

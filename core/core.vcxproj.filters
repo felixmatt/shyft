@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="dream_optimizer.cpp">
+      <Filter>optimizers</Filter>
+    </ClCompile>
+    <ClCompile Include="sceua_optimizer.cpp">
+      <Filter>optimizers</Filter>
+    </ClCompile>
+    <ClCompile Include="experimental.cpp">
+      <Filter>experimental</Filter>
+    </ClCompile>
+    <ClCompile Include="utctime_utilities.cpp">
+      <Filter>time</Filter>
+    </ClCompile>
+    <ClCompile Include="core_pch.cpp">
+      <Filter>compiler_etc</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="model_calibration.h" />
+    <ClInclude Include="cell_model.h" />
+    <ClInclude Include="region_model.h" />
+    <ClInclude Include="actual_evapotranspiration.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="gamma_snow.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="glacier_melt.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_snow.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="priestley_taylor.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="precipitation_correction.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="kirchner.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_gs_k.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_gs_k_cell_model.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_hs_k.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_hs_k_cell_model.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_ss_k.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_ss_k_cell_model.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="dream_optimizer.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="sceua_optimizer.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="optimizer_utils.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="time_axis.h">
+      <Filter>timeseries</Filter>
+    </ClInclude>
+    <ClInclude Include="timeseries.h">
+      <Filter>timeseries</Filter>
+    </ClInclude>
+    <ClInclude Include="experimental.h">
+      <Filter>experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="utctime_utilities.h">
+      <Filter>time</Filter>
+    </ClInclude>
+    <ClInclude Include="inverse_distance.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="bayesian_kriging.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="gaussian_random_field.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="skaugen.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="core_pch.h">
+      <Filter>compiler_etc</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler_compatiblity.h">
+      <Filter>compiler_etc</Filter>
+    </ClInclude>
+    <ClInclude Include="geo_cell_data.h">
+      <Filter>geo</Filter>
+    </ClInclude>
+    <ClInclude Include="geo_point.h">
+      <Filter>geo</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="methods">
+      <UniqueIdentifier>{3a7de961-d86b-498c-9a43-f252e88be5e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="method-stacks">
+      <UniqueIdentifier>{2cc3f047-bc55-44f5-8e57-518c2a19d472}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="optimizers">
+      <UniqueIdentifier>{78462948-0cca-48de-87be-68b894e215d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="timeseries">
+      <UniqueIdentifier>{13f6913a-d13d-40c2-9f91-4a3df6583322}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="experimental">
+      <UniqueIdentifier>{21ba19cc-d2a8-48b9-8aa3-509b9bb7fbc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time">
+      <UniqueIdentifier>{bd2d4fab-8491-4526-891a-9156fb995e82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="interpolation">
+      <UniqueIdentifier>{68bd584f-6120-4323-80bd-66d558206266}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler_etc">
+      <UniqueIdentifier>{aff58a1e-6cc9-40e7-ade5-6642d7f68fde}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="geo">
+      <UniqueIdentifier>{dcc1d8e5-0b48-465d-b917-e9b18bb97373}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
