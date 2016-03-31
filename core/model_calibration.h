@@ -235,8 +235,10 @@ namespace shyft{
         template< bool B, class T = void >
         using enable_if_tx = typename enable_if<B,T>::type;
 
+			#ifdef __GNUC__
             #pragma GCC diagnostic push
             #pragma GCC diagnostic ignored "-Wunused-value"
+			#endif
             template<class T,class=void>            // we only want compute_sca_sum IF the response-collector do have snow_sca attribute
             struct detect_snow_sca:false_type{};    // detect_snow_sca, default it to false,
 
@@ -248,8 +250,10 @@ namespace shyft{
 
             template<class T>
             struct detect_snow_swe<T,decltype(T::snow_swe,void())>:true_type{};
+			#ifdef __GNUC__
             #pragma GCC diagnostic pop
-            /** when doing catchment area related optimization, e.g. snow sca/swe
+			#endif
+			/** when doing catchment area related optimization, e.g. snow sca/swe
              *  we need to
              *  keep track of the area of each catchment so that we get
              *  true average values

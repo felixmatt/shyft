@@ -55,7 +55,7 @@ void kirchner_test::test_hard_case()
     double q_a = 0.0;
     double atol = 1.0e-2;
     double rtol = 1.0e-4;
-	bool verbose = getenv("SHYFT_VERBOSE");
+	bool verbose = getenv("SHYFT_VERBOSE")!=nullptr;
     for (size_t i = 0; i < 10; ++i) {
         calculator<kirchner::trapezoidal_average, parameter> k(atol, rtol, p);
         k.step(0, deltahours(1), q, q_a, P, E);

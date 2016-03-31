@@ -241,7 +241,7 @@ namespace shyft {
                             swe = (nnn - u)/sca_scale_factor*unit_size;
 
                             if (swe >= nnn*unit_size) {
-                                u = nnn*rel_red_sca + 1;
+                                u = long( nnn*rel_red_sca) + 1;
                                 swe = (nnn - u)/sca_scale_factor*unit_size;
                                 if (nnn == u)
                                     sca = 0.0;

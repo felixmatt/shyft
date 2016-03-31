@@ -59,7 +59,7 @@ void pt_ss_k_test::test_call_stack() {
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
     timeaxis time_axis(t0, dt, n_ts_points);
-
+	timeaxis state_time_axis(t0, dt, n_ts_points + 1);
     // Initialize parameters
     // Snow model parameters
     const double d_range = 113.0;
@@ -93,7 +93,7 @@ void pt_ss_k_test::test_call_stack() {
     //
     // Initialize collectors
     shyfttest::mock::ResponseCollector<timeaxis> response_collector(1000*1000, time_axis);
-    shyfttest::mock::StateCollector<timeaxis> state_collector(time_axis);
+    shyfttest::mock::StateCollector<timeaxis> state_collector(state_time_axis);
 
     state_t state {snow_state, kirchner_state};
     parameter_t parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);

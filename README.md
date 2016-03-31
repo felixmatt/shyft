@@ -18,6 +18,9 @@ simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki)
 developed at Sintef by Sjur Kolberg with contributions from Kolbjorn
 Engeland and Oddbjorn Bruland.
 
+Wiki for [SHyFT](https://github.com/statkraft/shyft/wiki) includes details
+for how to get prebuilt binaries, how to build and contribute.
+
 REQUIREMENTS
 ============
 
@@ -26,7 +29,6 @@ For compiling and running SHyFT, you will need:
 * A C++11 compiler
 * The BLAS and LAPACK libraries (development packages)
 * A Python3 (3.4 or higher) interpreter
-* The SWIG wrapping tool (>= 3.0.5)
 * The NumPy package (>= 1.8.0)
 * The netCDF4 package (>= 1.2.1)
 * The CMake building tool (2.8.7 or higher)

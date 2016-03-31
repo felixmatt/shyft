@@ -211,9 +211,12 @@ namespace shyfttest {
 
         catchment_t run(parameter_t param) {
             catchment_t catchment_discharge(time_axis, 0.0);
+			//shyft::time_axis::fixed_dt 
+			auto state_time_axis=time_axis;
+			state_time_axis.n++;//add room for end-state
             size_t i = 0;
-            for_each(model_cells.cbegin(), model_cells.cend(), [this, &i, &param, &catchment_discharge] (PTGSKCell d) {
-                StateCollector<timeaxis> sc(time_axis);
+            for_each(model_cells.cbegin(), model_cells.cend(), [this, &i, &param, &catchment_discharge,&state_time_axis] (PTGSKCell d) {
+                StateCollector<timeaxis> sc(state_time_axis);
                 DischargeCollector<timeaxis> rc(1000*1000, time_axis);
                 pt_gs_k::state_t s = state(i++);
                 pt_gs_k::response_t r;

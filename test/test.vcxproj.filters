@@ -1,61 +1,183 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
+    <ClInclude Include="actual_evapotranspiration_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="gamma_snow_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_snow_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="kirchner_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="priestley_taylor_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="bayesian_kriging_test.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="gaussian_random_field_test.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="inverse_distance_test.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_gs_k_test.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_hs_k_test.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="pt_ss_k_test.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="skaugen_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="utctime_utilities_test.h">
+      <Filter>time</Filter>
+    </ClInclude>
+    <ClInclude Include="sceua_test.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="calibration_test.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="time_axis_test.h">
+      <Filter>timeseries</Filter>
+    </ClInclude>
+    <ClInclude Include="timeseries_test.h">
+      <Filter>timeseries</Filter>
+    </ClInclude>
+    <ClInclude Include="api_test.h">
+      <Filter>usecases</Filter>
+    </ClInclude>
+    <ClInclude Include="cell_builder_test.h">
+      <Filter>usecases</Filter>
+    </ClInclude>
+    <ClInclude Include="region_model_test.h">
+      <Filter>usecases</Filter>
+    </ClInclude>
+    <ClInclude Include="mocks.h">
+      <Filter>compiler_and_testsupport</Filter>
+    </ClInclude>
+    <ClInclude Include="test_pch.h">
+      <Filter>compiler_and_testsupport</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="region_model_test.h" />
-    <ClInclude Include="actual_evapotranspiration_test.h" />
-    <ClInclude Include="bayesian_kriging_test.h" />
-    <ClInclude Include="calibration_test.h" />
-    <ClInclude Include="cell_builder_test.h" />
-    <ClInclude Include="api_test.h" />
-    <ClInclude Include="gamma_snow_test.h" />
-    <ClInclude Include="gaussian_random_field_test.h" />
-    <ClInclude Include="hbv_snow_test.h" />
-    <ClInclude Include="inverse_distance_test.h" />
-    <ClInclude Include="kirchner_test.h" />
-    <ClInclude Include="mocks.h" />
-    <ClInclude Include="priestley_taylor_test.h" />
-    <ClInclude Include="pt_gs_k_test.h" />
-    <ClInclude Include="pt_hs_k_test.h" />
-    <ClInclude Include="skaugen_test.h" />
-    <ClInclude Include="utctime_utilities_test.h" />
-    <ClInclude Include="timeseries_test.h" />
-    <ClInclude Include="test_pch.h" />
-    <ClInclude Include="pt_ss_k_test.h" />
-    <ClInclude Include="sceua_test.h" />
-    <ClInclude Include="time_axis_test.h" />
+    <ClCompile Include="actual_evapotranspiration_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="gamma_snow_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="hbv_snow_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="kirchner_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="priestley_taylor_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="bayesian_kriging_test.cpp">
+      <Filter>interpolation</Filter>
+    </ClCompile>
+    <ClCompile Include="gaussian_random_field_test.cpp">
+      <Filter>interpolation</Filter>
+    </ClCompile>
+    <ClCompile Include="inverse_distance_test.cpp">
+      <Filter>interpolation</Filter>
+    </ClCompile>
+    <ClCompile Include="pt_gs_k_test.cpp">
+      <Filter>method-stacks</Filter>
+    </ClCompile>
+    <ClCompile Include="pt_hs_k_test.cpp">
+      <Filter>method-stacks</Filter>
+    </ClCompile>
+    <ClCompile Include="pt_ss_k_test.cpp">
+      <Filter>method-stacks</Filter>
+    </ClCompile>
+    <ClCompile Include="skaugen_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="utctime_utilities_test.cpp">
+      <Filter>time</Filter>
+    </ClCompile>
+    <ClCompile Include="sceua_test.cpp">
+      <Filter>optimizers</Filter>
+    </ClCompile>
+    <ClCompile Include="calibration_test.cpp">
+      <Filter>optimizers</Filter>
+    </ClCompile>
+    <ClCompile Include="time_axis_test.cpp">
+      <Filter>timeseries</Filter>
+    </ClCompile>
+    <ClCompile Include="timeseries_test.cpp">
+      <Filter>timeseries</Filter>
+    </ClCompile>
+    <ClCompile Include="api_test.cpp">
+      <Filter>usecases</Filter>
+    </ClCompile>
+    <ClCompile Include="cell_builder_test.cpp">
+      <Filter>usecases</Filter>
+    </ClCompile>
+    <ClCompile Include="region_model_test.cpp">
+      <Filter>usecases</Filter>
+    </ClCompile>
+    <ClCompile Include="mocks.cpp">
+      <Filter>compiler_and_testsupport</Filter>
+    </ClCompile>
+    <ClCompile Include="runner.cpp">
+      <Filter>compiler_and_testsupport</Filter>
+    </ClCompile>
+    <ClCompile Include="test_pch.cpp">
+      <Filter>compiler_and_testsupport</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="runner.cpp" />
-    <ClCompile Include="region_model_test.cpp" />
-    <ClCompile Include="actual_evapotranspiration_test.cpp" />
-    <ClCompile Include="bayesian_kriging_test.cpp" />
-    <ClCompile Include="calibration_test.cpp" />
-    <ClCompile Include="cell_builder_test.cpp" />
-    <ClCompile Include="api_test.cpp" />
-    <ClCompile Include="gamma_snow_test.cpp" />
-    <ClCompile Include="gaussian_random_field_test.cpp" />
-    <ClCompile Include="hbv_snow_test.cpp" />
-    <ClCompile Include="inverse_distance_test.cpp" />
-    <ClCompile Include="kirchner_test.cpp" />
-    <ClCompile Include="priestley_taylor_test.cpp" />
-    <ClCompile Include="pt_gs_k_test.cpp" />
-    <ClCompile Include="pt_hs_k_test.cpp" />
-    <ClCompile Include="skaugen_test.cpp" />
-    <ClCompile Include="utctime_utilities_test.cpp" />
-    <ClCompile Include="timeseries_test.cpp" />
-    <ClCompile Include="mocks.cpp" />
-    <ClCompile Include="test_pch.cpp" />
-    <ClCompile Include="pt_ss_k_test.cpp" />
-    <ClCompile Include="sceua_test.cpp" />
-    <ClCompile Include="time_axis_test.cpp" />
+    <Filter Include="methods">
+      <UniqueIdentifier>{1d1c35a3-9ab1-48f5-ac98-ebd08c951d4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="interpolation">
+      <UniqueIdentifier>{01dd5e15-89b3-4fe5-8425-16a7a9bf33d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="method-stacks">
+      <UniqueIdentifier>{5b62a958-49e3-4ab5-a440-1f768efe6432}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time">
+      <UniqueIdentifier>{4a8ccc8e-0a32-4dbd-b7b1-f265f198bc1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="optimizers">
+      <UniqueIdentifier>{67c7111a-3f8e-4853-b558-d0c0f87b56b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="timeseries">
+      <UniqueIdentifier>{1c0b9abc-7129-48cb-be5a-18e11386ec0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="usecases">
+      <UniqueIdentifier>{9fc8a5b2-3517-4157-9f25-b55f1b13be49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compiler_and_testsupport">
+      <UniqueIdentifier>{87c7c61d-44db-405e-94c4-d3767587e3e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Makefile.testupdate" />
+    <None Include="Makefile.testupdate">
+      <Filter>compiler_and_testsupport</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="NMakeFile.testupdate" />
+    <CustomBuild Include="NMakeFile.testupdate">
+      <Filter>compiler_and_testsupport</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt">
+      <Filter>compiler_and_testsupport</Filter>
+    </Text>
   </ItemGroup>
 </Project>
