@@ -170,8 +170,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
                     raise CFDataRepositoryError("Time axis size {} not equal to the number of "
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
-                return tsc(ta.size(), ta.start(), ta.delta(),
-                           api.DoubleVector_FromNdArray(d.flatten()), 0)
+                return tsc(ta.size(), ta.start, ta.delta_t,
+                           api.DoubleVector.FromNdArray(d.flatten()))
             #time_series[key] = np.array([[construct(data[fslice + [i, j]])
             #                              for j in range(J)] for i in range(I)])
             time_series[key] = np.array([construct(data[:,j]) for j in range(J)])                                
@@ -368,8 +368,11 @@ class CFDataRepository(interfaces.GeoTsRepository):
         for name, ts in iteritems(data):
             if name in self.source_type_map.keys():
                 tpe = self.source_type_map[name]
-                res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
-                                          ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+                geo_ts_list = tpe.vector_t()
+                for idx in np.ndindex(pts.shape[:-1]):
+                    geo_ts = tpe(api.GeoPoint(*pts[idx]), ts[idx])
+                    geo_ts_list.append(geo_ts)
+                res[name] = geo_ts_list
             else:
                 vct = self.vector_type_map[name]
                 res[name] = vct(ts)

@@ -205,7 +205,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         cell_vector = self._region_model.cell_t.vector_t()
         for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, c_indx, ff, lf, rf, gf):
             cell = self._region_model.cell_t()
-            cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, c_id, radiation_slope_factor,
+            cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, int(c_id), radiation_slope_factor,
                                        api.LandTypeFractions(gf, lf, rf, ff, 0.0))
             cell_vector.append(cell)
 
