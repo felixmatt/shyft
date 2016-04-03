@@ -4,6 +4,7 @@
 #include "mocks.h"
 #include "core/timeseries.h"
 #include "core/time_axis.h"
+#include "api/api.h"
 #include <armadillo>
 #include <cmath>
 #include <functional>
@@ -620,13 +621,461 @@ void timeseries_test::test_sin_fx_ts() {
 	TS_ASSERT_DELTA(tsfx(deltahours(18)), 0.0, 0.000001);
 
 }
+namespace shyft {
+    namespace api {
+            /**
+                time-series math to be exposed to python
+
+                This provide functionality like
+
+                a = TsFactory.create_ts(..)
+                b = TsFactory.create_ts(..)
+                c = a + 3*b
+                d = max(c,0.0)
+
+                implementation strategy
+
+                provide a type apoint_ts, that always appears as a time-series.
+
+                It could however represent either a
+                  point_ts<time_axis:generic_dt>
+                or a
+                 abin_op_ts( lhs,op,rhs) , i.e. an expression
+
+                Then we provide operators:
+                apoint_ts bin_op a_point_ts
+                and
+                double bin_op a_points_ts
+
+
+             */
+            typedef shyft::time_axis::generic_dt gta_t;
+            typedef shyft::timeseries::point_ts<gta_t> gts_t;
+
+            /** virtual abstract base for point_ts */
+            struct  ipoint_ts {
+                virtual ~ipoint_ts(){}
+                virtual point_interpretation_policy point_interpretation() const =0;
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) =0;
+                virtual const gta_t& time_axis() const =0;
+                virtual utcperiod total_period() const=0;   ///< Returns period that covers points, given
+                virtual size_t index_of(utctime t) const=0; ///< we might want index_of(t,ix-hint..)
+                virtual size_t size() const=0;        ///< number of points that descr. y=f(t) on t ::= period
+                virtual utctime time(size_t i) const=0;///< get the i'th time point
+                virtual double value(size_t i) const=0;///< get the i'th value
+                virtual double value_at(utctime t) const =0;
+                // to be removed:
+                point get(size_t i) const {return point(time(i),value(i));}
+
+                // will not work, operator is for each class :double operator()(utctime t) const =0;
+                // we might want:
+                // vector<double> values() const; ///< return the values for the complete ts
+                //
+            };
+
+            /** apoint_ts, a value-type concrete ts that we build all the semantics on */
+            class apoint_ts {
+                /** a ref to the real implementation, could be a concrete point ts, or an expression */
+                std::shared_ptr<ipoint_ts> ts;// consider unique pointer instead,possibly public, to ease transparency in python
+                friend struct average_ts;
+               public:
+                // constructors that we want to expose
+                // like
+
+                apoint_ts(const gta_t& ta,double fill_value);
+                apoint_ts(const gta_t& ta,const std::vector<double>& values);
+                apoint_ts(const gta_t& ta,std::vector<double>&& values);
+                apoint_ts(gta_t&& ta,std::vector<double>&& values);
+                apoint_ts(gta_t&& ta,double fill_value);
+                apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
+                // some more exotic stuff like average_ts
+
+
+                // std ct/= stuff, that might be ommitted if c++ do the right thing.
+                apoint_ts(){}
+                apoint_ts(const apoint_ts&c):ts(c.ts){}
+                apoint_ts(apoint_ts&& c):ts(std::move(c.ts)){}
+                apoint_ts& operator=(const apoint_ts& c) {
+                    if( this != &c )
+                        ts=c.ts;
+                    return *this;
+                }
+                apoint_ts& operator=(apoint_ts&& c) {
+                    ts=std::move(c.ts);
+                    return *this;
+                }
+
+
+                // interface we want to expose
+                point_interpretation_policy point_interpretation() const {return ts->point_interpretation();}
+                void set_point_interpretation(point_interpretation_policy point_interpretation) { ts->set_point_interpretation(point_interpretation); };
+                const gta_t& time_axis() const { return ts->time_axis();};
+                utcperiod total_period() const {return ts->total_period();};   ///< Returns period that covers points, given
+                size_t index_of(utctime t) const {return ts->index_of(t);};
+                size_t size() const {return ts->size();};        ///< number of points that descr. y=f(t) on t ::= period
+                utctime time(size_t i) const {return ts->time(i);};///< get the i'th time point
+                double value(size_t i) const {return ts->value(i);};///< get the i'th value
+                double operator()(utctime t) const  {return ts->value_at(t);};
+                apoint_ts average(const gta_t &ta) const;
+            };
+
+
+
+            /** gpoint_ts a generic concrete point_ts, with a generic time-axis */
+            struct gpoint_ts:ipoint_ts {
+                gts_t rep;
+                // To create gpoint_ts, we use const ref, move ct wherever possible:
+                // note (we would normally use ct template here, but we are aiming at exposing to python)
+                gpoint_ts(const gta_t&ta,double fill_value):rep(ta,fill_value){}
+                gpoint_ts(const gta_t&ta,const std::vector<double>& v):rep(ta,v) {}
+                gpoint_ts(gta_t&&ta,double fill_value):rep(std::move(ta),fill_value){}
+                gpoint_ts(gta_t&&ta,std::vector<double>&& v):rep(std::move(ta),std::move(v)) {}
+                gpoint_ts(const gta_t& ta,std::vector<double>&& v):rep(ta,std::move(v)) {}
+
+                // now for the gpoint_ts it self, constructors incl. move
+                gpoint_ts(const gpoint_ts& c):rep(c.rep){}
+                gpoint_ts(gts_t&& c):rep(std::move(c)){}
+                gpoint_ts& operator=(const gpoint_ts&c) {
+                    if(this != &c)
+                        rep=c.rep;
+                    return *this;
+                }
+                gpoint_ts& operator=(gpoint_ts&& c) {
+                    rep=std::move(c.rep);
+                    return *this;
+                }
+
+                // implement ipoint_ts contract:
+                virtual point_interpretation_policy point_interpretation() const {return rep.point_interpretation();}
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {rep.set_point_interpretation(point_interpretation);}
+                virtual const gta_t& time_axis() const {return rep.time_axis();}
+                virtual utcperiod total_period() const {return rep.total_period();}
+                virtual size_t index_of(utctime t) const {return rep.index_of(t);}
+                virtual size_t size() const {return rep.size();}
+                virtual utctime time(size_t i) const {return rep.time(i);};
+                virtual double value(size_t i) const {return rep.value(i);}
+                virtual double value_at(utctime t) const {return rep(t);}
+                // implement some extra functions to manipulate the points
+                void set(size_t i, double x) {rep.set(i,x);}
+                void fill(double x) {rep.fill(x);}
+                void scale_by(double x) {rep.scale_by(x);}
+            };
+
+            struct average_ts:ipoint_ts {
+                gta_t ta;
+                std::shared_ptr<ipoint_ts> ts;
+                // useful constructors
+                average_ts(gta_t&& ta,const apoint_ts& ats):ta(std::move(ta)),ts(ats.ts) {}
+                average_ts(gta_t&& ta,apoint_ts&& ats):ta(std::move(ta)),ts(std::move(ats.ts)) {}
+                average_ts(const gta_t& ta,apoint_ts&& ats):ta(ta),ts(std::move(ats.ts)) {}
+                average_ts(const gta_t& ta,const apoint_ts& ats):ta(ta),ts(ats.ts) {}
+                average_ts(const gta_t& ta,const std::shared_ptr<ipoint_ts> &ts ):ta(ta),ts(ts){}
+                average_ts(gta_t&& ta,const std::shared_ptr<ipoint_ts> &ts ):ta(std::move(ta)),ts(ts){}
+                // std copy ct and assign
+                average_ts(const average_ts &c):ta(c.ta),ts(c.ts) {}
+                average_ts(average_ts&&c):ta(std::move(ta)),ts(std::move(c.ts)) {}
+                average_ts& operator=(const average_ts&c) {
+                    if( this != &c) {
+                        ta=c.ta;
+                        ts=c.ts;
+                    }
+                    return *this;
+                }
+                average_ts& operator=(average_ts&& c) {
+                    ta=std::move(c.ta);
+                    ts=std::move(c.ts);
+                    return *this;
+                }
+                                // implement ipoint_ts contract:
+                virtual point_interpretation_policy point_interpretation() const {return point_interpretation_policy::POINT_AVERAGE_VALUE;}
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {;}
+                virtual const gta_t& time_axis() const {return ta;}
+                virtual utcperiod total_period() const {return ta.total_period();}
+                virtual size_t index_of(utctime t) const {return ta.index_of(t);}
+                virtual size_t size() const {return ta.size();}
+                virtual utctime time(size_t i) const {return ta.time(i);};
+                virtual double value(size_t i) const {
+                    if(i>ta.size())
+                        return nan;
+                    size_t ix_hint=(i*ts->size())/ta.size();// assume almost fixed delta-t.
+                    return average_value(*ts,ta.period(i),ix_hint,ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+                }
+                virtual double value_at(utctime t) const {
+                    // return true average at t
+                    if(!ta.total_period().contains(t))
+                        return nan;
+                    return value(index_of(t));
+                }
+                // to help the average function, return the i'th point of the underlying timeseries
+                //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
+
+            };
+
+            // alternatives for operator types
+            // a) overload op(a,b) in bin_op --> gives bin_op_add,bin_op_sub etc... quite flexible to add more data needed during op
+            // b) make op a class, that we *refer* in bin_op (at the cost of referring bin-ops), hmm. involves heap, even if we use a unique_ptr
+            // c) just use pure function pointer, ok, but somewhat limits what the op() is and can do(no heap involvement
+            // d) combination of a) and c) ?
+            // e) let binop keep a ref. to op, and use static for +- etc. and then for the others? hmm.. no solution
+            // current approach c), since it's the simplest possible solution that solves the current use.
+
+            typedef double (*iop_t)(double a,double b);
+
+            static double iop_add(double a,double b) {return a + b;}
+            static double iop_sub(double a,double b) {return a - b;}
+            static double iop_div(double a,double b) {return a/b;}
+            static double iop_mul(double a,double b) {return a*b;}
+            static double iop_min(double a,double b) {return std::min(a,b);}
+            static double iop_max(double a,double b) {return std::max(a,b);}
+
+            /** binary operation for type ts op ts */
+            struct abin_op_ts:ipoint_ts {
+
+                  apoint_ts lhs;
+                  iop_t op;
+                  apoint_ts rhs;
+                  gta_t ta;
+                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+
+                  abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
+                  :lhs(lhs),op(op),rhs(rhs) {
+                      ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
+                      fx_policy= result_policy(lhs.point_interpretation(),rhs.point_interpretation());
+                  }
+                  abin_op_ts(const abin_op_ts& c)
+                    :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
+                  }
+                  abin_op_ts(abin_op_ts&& c)
+                    :lhs(std::move(c.lhs)),op(c.op),rhs(std::move(c.rhs)),ta(std::move(c.ta)),fx_policy(c.fx_policy)
+                     {
+                  }
+
+                  abin_op_ts& operator=(const abin_op_ts& c) {
+                    if( this != & c) {
+                        lhs = c.lhs;
+                        op = c.op;
+                        rhs = c.rhs;
+                        ta = c.ta;
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  abin_op_ts& operator=(abin_op_ts&& c) {
+                    if( this != & c) {
+                        lhs = std::move(c.lhs);
+                        op = c.op;
+                        rhs = std::move(c.rhs);
+                        ta  = std::move(c.ta);
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  virtual utcperiod total_period() const {return ta.total_period();}
+                  const gta_t& time_axis() const {return ta;};// combine lhs,rhs
+                  size_t index_of(utctime t) const{return ta.index_of(t);};
+                  size_t size() const {return ta.size();};// use the combined ta.size();
+                  utctime time( size_t i) const {return ta.time(i);}; // reeturn combined ta.time(i)
+                  double value_at(utctime t) const ;
+                  double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
+
+            };
+
+            /** binary operation for type double op ts */
+            struct abin_op_scalar_ts:ipoint_ts {
+                  double lhs;
+                  iop_t op;
+                  apoint_ts rhs;
+                  gta_t ta;
+                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+
+                  abin_op_scalar_ts(double lhs,iop_t op,const apoint_ts& rhs)
+                  :lhs(lhs),op(op),rhs(rhs) {
+                      ta=rhs.time_axis();
+                      fx_policy= rhs.point_interpretation();
+                  }
+                  abin_op_scalar_ts(const abin_op_scalar_ts& c)
+                    :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
+                  }
+                  abin_op_scalar_ts(abin_op_scalar_ts&& c)
+                    :lhs(c.lhs),op(c.op),rhs(std::move(c.rhs)),ta(std::move(c.ta)),fx_policy(c.fx_policy)
+                     {
+                  }
+
+                  abin_op_scalar_ts& operator=(const abin_op_scalar_ts& c) {
+                    if( this != & c) {
+                        lhs = c.lhs;
+                        op = c.op;
+                        rhs = c.rhs;
+                        ta = c.ta;
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  abin_op_scalar_ts& operator=(abin_op_scalar_ts&& c) {
+                    if( this != & c) {
+                        lhs = c.lhs;
+                        op = c.op;
+                        rhs = std::move(c.rhs);
+                        ta  = std::move(c.ta);
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  virtual utcperiod total_period() const {return ta.total_period();}
+                  const gta_t& time_axis() const {return ta;};// combine lhs,rhs
+                  size_t index_of(utctime t) const{return ta.index_of(t);};
+                  size_t size() const {return ta.size();};
+                  utctime time( size_t i) const {return ta.time(i);};
+                  double value_at(utctime t) const {return op(lhs,rhs(t));}
+                  double value(size_t i) const {return op(lhs,rhs.value(i));}
+
+            };
+
+            /** binary operation for type ts op double */
+            struct abin_op_ts_scalar:ipoint_ts {
+                  apoint_ts lhs;
+                  iop_t op;
+                  double rhs;
+                  gta_t ta;
+                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+
+                  abin_op_ts_scalar(const apoint_ts &lhs,iop_t op,double rhs)
+                  :lhs(lhs),op(op),rhs(rhs) {
+                      ta=lhs.time_axis();
+                      fx_policy= lhs.point_interpretation();
+                  }
+                  abin_op_ts_scalar(const abin_op_ts_scalar& c)
+                    :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
+                  }
+                  abin_op_ts_scalar(abin_op_ts_scalar&& c)
+                    :lhs(std::move(c.lhs)),op(c.op),rhs(c.rhs),ta(std::move(c.ta)),fx_policy(c.fx_policy)
+                     {
+                  }
+
+                  abin_op_ts_scalar& operator=(const abin_op_ts_scalar& c) {
+                    if( this != & c) {
+                        lhs = c.lhs;
+                        op = c.op;
+                        rhs = c.rhs;
+                        ta = c.ta;
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  abin_op_ts_scalar& operator=(abin_op_ts_scalar&& c) {
+                    if( this != & c) {
+                        lhs = std::move(c.lhs);
+                        op = c.op;
+                        rhs = c.rhs;
+                        ta  = std::move(c.ta);
+                        fx_policy = c.fx_policy;
+                    }
+                    return *this;
+                  }
+
+                  virtual utcperiod total_period() const {return ta.total_period();}
+                  const gta_t& time_axis() const {return ta;};
+                  size_t index_of(utctime t) const{return ta.index_of(t);};
+                  size_t size() const {return ta.size();};
+                  utctime time( size_t i) const {return ta.time(i);};
+                  double value_at(utctime t) const {return op(lhs(t),rhs);}
+                  double value(size_t i) const {return op(lhs.value(i),rhs);}
+
+            };
+
+            // add operators and functions to the apoint_ts class, of all variants that we want to expose
+            apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
+            apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
+
+
+            apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
+            apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
+            apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_add,rhs )); }
+
+            apoint_ts operator-(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_sub,rhs )); }
+            apoint_ts operator-(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_sub,rhs )); }
+            apoint_ts operator-(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_sub,rhs )); }
+            apoint_ts operator-(const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( -1.0,iop_mul,rhs )); }
+
+            apoint_ts operator/(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_div,rhs )); }
+            apoint_ts operator/(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_div,rhs )); }
+            apoint_ts operator/(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_div,rhs )); }
+
+            apoint_ts operator*(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_mul,rhs )); }
+            apoint_ts operator*(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_mul,rhs )); }
+            apoint_ts operator*(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_mul,rhs )); }
+
+
+            apoint_ts max(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_max,rhs ));}
+            apoint_ts max(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_max,rhs ));}
+            apoint_ts max(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_max,rhs ));}
+
+            apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
+            apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
+            apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
+
+            double abin_op_ts::value(size_t i) const {
+                if(i==std::string::npos || i>=ta.size() )
+                    return nan;
+                if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
+                    return value_at(ta.time(i));
+                utcperiod p=ta.period(i);
+                double v0= value_at(p.start);
+                double v1= value_at(p.end);
+                if(isfinite(v1)) return 0.5*(v0 + v1);
+                return v0;
+            }
+
+            double abin_op_ts::value_at(utctime t) const {
+                if(!ta.total_period().contains(t))
+                    return nan;
+                return op( lhs(t),rhs(t) );
+            }
+
+            // implement popular ct for apoint_ts to make it easy to expose & use
+            apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value)
+                :ts(std::make_shared<gpoint_ts>(ta,fill_value)) {
+            }
+            apoint_ts::apoint_ts(const time_axis::generic_dt& ta,const std::vector<double>& values)
+                :ts(std::make_shared<gpoint_ts>(ta,values)) {
+            }
+            apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values)
+                :ts(std::make_shared<gpoint_ts>(ta,std::move(values))) {
+            }
+            apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values)
+                :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values))) {
+            }
+            apoint_ts::apoint_ts(time_axis::generic_dt&& ta,double fill_value)
+                :ts(std::make_shared<gpoint_ts>(std::move(ta),fill_value))
+                {
+            }
+            apoint_ts apoint_ts::average(const gta_t &ta) const {
+                return shyft::api::average(*this,ta);
+            }
+
+
+    }
+}
 
 template <class A,class B>
 static bool is_equal_ts(const A& a,const B& b) {
-    if(a.ta.size()!=b.ta.size())
+    const auto &a_ta=a.time_axis();
+    const auto &b_ta=b.time_axis();
+    if(a_ta.size()!=b_ta.size())
         return false;
-    for(size_t i=0;i<a.ta.size();++i) {
-        if(a.ta.period(i)!= b.ta.period(i))
+    for(size_t i=0;i<a_ta.size();++i) {
+        if(a_ta.period(i)!= b_ta.period(i))
             return false;
         if (fabs(a.value(i)-b.value(i))>1e-6)
             return false;
@@ -667,6 +1116,7 @@ static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value
     TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
 
 }
+
 
 void timeseries_test::test_binary_operator() {
     /** Test strategy here is to ensure that
@@ -730,6 +1180,24 @@ void timeseries_test::test_binary_operator() {
         ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
         test_bin_op<ts_t>(a,b,ta,a_value,b_value);
     }
+
+}
+void timeseries_test::test_api_ts() {
+    using namespace shyft::api;
+    calendar utc;
+    utctime start = utc.time(YMDhms(2016,3,8));
+    utctimespan dt = deltahours(1);
+    size_t  n = 4;
+    double a_value=3.0;
+    double b_value=2.0;
+
+    gta_t ta(shyft::time_axis::fixed_dt(start,dt,n));
+    apoint_ts a(ta,a_value);
+    apoint_ts b(ta,b_value);
+    test_bin_op<apoint_ts>(a,b,ta,a_value,b_value);
+
+    gta_t ta2(shyft::time_axis::fixed_dt(start,dt*2,n/2));
+    auto c= average( a+3*b,ta2) * 4;
 
 }
 

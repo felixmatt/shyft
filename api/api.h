@@ -59,7 +59,7 @@ namespace shyft {
         virtual ~ITimeSeriesOfPoints(){}
         virtual point_interpretation_policy point_interpretation() const =0;
         virtual void set_point_interpretation(point_interpretation_policy point_interpretation) =0;
-
+        virtual time_axis::generic_dt time_axis() const =0;
         virtual utcperiod total_period() const=0;   ///< Returns period that covers points, given
         virtual size_t size() const=0;        ///< number of points that descr. y=f(t) on t ::= period
         virtual utctime time(size_t i) const=0;///< get the i'th time point
@@ -88,6 +88,7 @@ namespace shyft {
         virtual void fill(double x) =0;
         virtual void scale_by(double x)=0;
         point get(size_t i) const { return point(time(i), value(i)); }
+        // operator support
     };
 
     typedef std::shared_ptr<ITimeSeriesOfPoints> ITimeSeriesOfPoints_;
@@ -103,6 +104,9 @@ namespace shyft {
     struct GenericTs : public ITimeSeriesOfPoints {
         typedef TsRep ts_t;//export the ts type, so we can use it as tag later
         TsRep ts_rep;
+        virtual time_axis::generic_dt time_axis() const {
+            return time_axis::generic_dt(ts_rep.time_axis());
+        };
         GenericTs(){}
         GenericTs(const TsRep& ts):ts_rep(ts){}
         #ifndef SWIG
@@ -125,6 +129,9 @@ namespace shyft {
         void fill(double x) {ts_rep.fill(x);}
         void scale_by(double x) {ts_rep.scale_by(x);}
     };
+
+
+
 
     /** \brief TsFactor provides time-series creation function using supplied primitives like vector of double, start, delta-t, n etc.
      */

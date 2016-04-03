@@ -20,6 +20,7 @@ public:
     void test_ts_weighted_average();
 	void test_sin_fx_ts();
 	void test_binary_operator();
+	void test_api_ts();
 
 };
 
