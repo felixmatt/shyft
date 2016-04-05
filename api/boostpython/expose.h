@@ -54,6 +54,7 @@ namespace expose {
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
         auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment,shyft::core::interpolation_parameter>;
         class_<M>(model_name,m_doc,no_init)
+	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")

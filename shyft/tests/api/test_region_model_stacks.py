@@ -158,8 +158,9 @@ class RegionModel(unittest.TestCase):
         # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
         avg_gs_albedo = model.gamma_snow_state.albedo(cids)
         self.assertIsNotNone(avg_gs_albedo)
-        self.assertEqual(avg_temperature.size(), time_axis.size(),
-                         "expect results equal to time-axis size")
+        self.assertEqual(avg_temperature.size(), time_axis.size(),"expect results equal to time-axis size")
+        copy_region_model = model.__class__(model)
+        self.assertIsNotNone(copy_region_model)
 
     def test_model_state_io(self):
         num_cells = 2
@@ -182,6 +183,7 @@ class RegionModel(unittest.TestCase):
         num_cells = 20
         for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
             model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
+
             states = []
             x = ""
             for i in range(num_cells - 1):
