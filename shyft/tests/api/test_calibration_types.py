@@ -23,7 +23,7 @@ class ShyftApi(unittest.TestCase):
         ptp.albedo = 0.9
         ptp.alpha = 1.26
         aep = api.ActualEvapotranspirationParameter(ae_scale_factor=1.5)
-        aep.ae_scale_factor = 1.2
+        aep.ae_scale_factor = 1.1
         gsp = api.GammaSnowParameter(winter_end_day_of_year=99, initial_bare_ground_fraction=0.04, snow_cv=0.44,
                                      tx=-0.3, wind_scale=1.9, wind_const=0.9, max_water=0.11, surface_magnitude=33.0,
                                      max_albedo=0.88, min_albedo=0.55, fast_albedo_decay_rate=6.0,
@@ -38,6 +38,7 @@ class ShyftApi(unittest.TestCase):
         kp.c3 = 0.01
         spcp = api.PrecipitationCorrectionParameter(scale_factor=0.9)
         ptgsk_p = pt_gs_k.PTGSKParameter(ptp, gsp, aep, kp, spcp)
+        ptgsk_p.ae.ae_scale_factor = 1.2 # sih: just to demo ae scale_factor can be set directly
         return ptgsk_p
 
     def test_create_ptgsk_param(self):
