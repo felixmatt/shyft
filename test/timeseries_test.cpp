@@ -664,6 +664,7 @@ namespace shyft {
                 virtual utctime time(size_t i) const=0;///< get the i'th time point
                 virtual double value(size_t i) const=0;///< get the i'th value
                 virtual double value_at(utctime t) const =0;
+                virtual std::vector<double> values() const =0;// corresponding to time_axis()
                 // to be removed:
                 point get(size_t i) const {return point(time(i),value(i));}
 
@@ -716,7 +717,15 @@ namespace shyft {
                 utctime time(size_t i) const {return ts->time(i);};///< get the i'th time point
                 double value(size_t i) const {return ts->value(i);};///< get the i'th value
                 double operator()(utctime t) const  {return ts->value_at(t);};
+                std::vector<double> values() const {return ts->values();}
                 apoint_ts average(const gta_t &ta) const;
+                //-- if apoint_ts is everything we want to expose,
+                // these are needed in the case of gpoint_ts (exception if not..)
+                void set(size_t i, double x) ;
+                void fill(double x) ;
+                void scale_by(double x) ;
+
+
             };
 
 
@@ -755,6 +764,7 @@ namespace shyft {
                 virtual utctime time(size_t i) const {return rep.time(i);};
                 virtual double value(size_t i) const {return rep.value(i);}
                 virtual double value_at(utctime t) const {return rep(t);}
+                virtual std::vector<double> values() const {return rep.v;}
                 // implement some extra functions to manipulate the points
                 void set(size_t i, double x) {rep.set(i,x);}
                 void fill(double x) {rep.fill(x);}
@@ -805,6 +815,15 @@ namespace shyft {
                     if(!ta.total_period().contains(t))
                         return nan;
                     return value(index_of(t));
+                }
+                virtual std::vector<double> values() const {
+                    std::vector<double> r;r.reserve(ta.size());
+                    size_t ix_hint=ts->index_of(ta.time(0));
+                    bool linear_interpretation=ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE;
+                    for(size_t i=0;i<ta.size();++i) {
+                        r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
+                    }
+                    return std::move(r);//needed ?
                 }
                 // to help the average function, return the i'th point of the underlying timeseries
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
@@ -881,6 +900,7 @@ namespace shyft {
                   utctime time( size_t i) const {return ta.time(i);}; // reeturn combined ta.time(i)
                   double value_at(utctime t) const ;
                   double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
+                  std::vector<double> values() const;
 
             };
 
@@ -936,6 +956,12 @@ namespace shyft {
                   utctime time( size_t i) const {return ta.time(i);};
                   double value_at(utctime t) const {return op(lhs,rhs(t));}
                   double value(size_t i) const {return op(lhs,rhs.value(i));}
+                  std::vector<double> values() const {
+                      std::vector<double> r(rhs.values());
+                      for(auto& v:r)
+                        v=op(lhs,v);
+                      return r;
+                  }
 
             };
 
@@ -991,6 +1017,12 @@ namespace shyft {
                   utctime time( size_t i) const {return ta.time(i);};
                   double value_at(utctime t) const {return op(lhs(t),rhs);}
                   double value(size_t i) const {return op(lhs.value(i),rhs);}
+                  std::vector<double> values() const {
+                      std::vector<double> r(lhs.values());
+                      for(auto& v:r)
+                        v=op(rhs,v);
+                      return r;
+                  }
 
             };
 
@@ -1040,7 +1072,15 @@ namespace shyft {
             double abin_op_ts::value_at(utctime t) const {
                 if(!ta.total_period().contains(t))
                     return nan;
-                return op( lhs(t),rhs(t) );
+                return op( lhs(t),rhs(t) );// this might cost a 2xbin-search if not the underlying ts have smart incremental search (at the cost of thread safety)
+            }
+
+            std::vector<double> abin_op_ts::values() const {
+                std::vector<double> r;r.reserve(ta.size());
+                for(size_t i=0;i<ta.size();++i) {
+                    r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
+                }
+                return std::move(r);
             }
 
             // implement popular ct for apoint_ts to make it easy to expose & use
@@ -1063,7 +1103,24 @@ namespace shyft {
             apoint_ts apoint_ts::average(const gta_t &ta) const {
                 return shyft::api::average(*this,ta);
             }
-
+            void apoint_ts::set(size_t i, double x) {
+                gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
+                if(!gpts)
+                    throw std::runtime_error("apoint_ts::set(i,x) only allowed for ts of non-expression types");
+                gpts->set(i,x);
+            }
+            void apoint_ts::fill(double x) {
+                gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
+                if(!gpts)
+                    throw std::runtime_error("apoint_ts::fill(x) only allowed for ts of non-expression types");
+                gpts->fill(x);
+            }
+            void apoint_ts::scale_by(double x) {
+                gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
+                if(!gpts)
+                    throw std::runtime_error("apoint_ts::scale_by(x) only allowed for ts of non-expression types");
+                gpts->scale_by(x);
+            }
 
     }
 }
@@ -1197,7 +1254,19 @@ void timeseries_test::test_api_ts() {
     test_bin_op<apoint_ts>(a,b,ta,a_value,b_value);
 
     gta_t ta2(shyft::time_axis::fixed_dt(start,dt*2,n/2));
-    auto c= average( a+3*b,ta2) * 4;
+    auto c= average( a+3*b,ta2) * 4 + (b*a/2.0).average(ta2);
+    auto cv= c.values();
+    TS_ASSERT_EQUALS(cv.size(),ta2.size());
+    for(const auto&v:cv) {
+        TS_ASSERT_DELTA(v,(a_value+3*b_value)*4 +(a_value*b_value/2.0), 0.001);
+    }
+    // verify some special fx
+    a.set(0,a_value*b_value);
+    TS_ASSERT_DELTA(a.value(0),a_value*b_value,0.0001);
+    a.fill(b_value);
+    for(auto v:a.values())
+        TS_ASSERT_DELTA(v,b_value,0.00001);
+
 
 }
 
