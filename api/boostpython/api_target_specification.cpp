@@ -65,6 +65,7 @@ namespace expose {
             .def_readwrite("s_a",&TargetSpecificationPts::s_a,"KG-scalefactor for alpha (variance)")
             .def_readwrite("s_b",&TargetSpecificationPts::s_b,"KG-scalefactor for beta (bias)")
             .def_readwrite("ts", &TargetSpecificationPts::ts," target ts")
+			.def_readwrite("catchment_indexes",&TargetSpecificationPts::catchment_indexes,"catchment indexes, 'cids'")
             ;
 
         //.i:   %template(TargetSpecificationVector) vector<shyft::core::model_calibration::target_specification<shyft::core::pts_t>>;
