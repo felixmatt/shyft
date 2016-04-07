@@ -1269,7 +1269,46 @@ void timeseries_test::test_api_ts() {
 
 
 }
+namespace shyft {
+   namespace timeseries {
 
+   }
+}
 
+typedef shyft::time_axis::fixed_dt tta_t;
+typedef shyft::timeseries::point_ts<tta_t> tts_t;
+
+template<typename Fx>
+std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
+    std::vector<tts_t> r;r.reserve(n);
+    for (size_t i = 0;i < n;++i) {
+        std::vector<double> v;v.reserve(ta.size());
+        for (size_t j = 0;j < ta.size();++j)
+            v.push_back(f(i, ta.time(j)));
+        r.push_back(tts_t(ta, v));
+    }
+    return std::move(r);
+}
+
+void timeseries_test::test_ts_statistics() {
+    calendar utc;
+    auto t0 = utc.time(2015, 1, 1);
+    auto fx_1 = [t0](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
+    auto n_days=1;
+    auto n_ts=10;
+    tta_t  ta(t0, calendar::HOUR, n_days*24);
+    tta_t tad(t0, calendar::DAY, n_days);
+    auto tsv1 = create_test_ts(n_ts, ta, fx_1);
+    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
+    TS_ASSERT_EQUALS(size_t(6), r1.size());//, "expect ts equal to percentiles wanted");
+    // using excel percentile.inc(..) as correct answer, values 0..9 incl
+    TS_ASSERT_DELTA(r1[0].value(0), 0.0,0.0001);// " 0-percentile");
+    TS_ASSERT_DELTA(r1[1].value(0), 0.9,0.0001);// "10-percentile");
+    TS_ASSERT_DELTA(r1[2].value(0), 4.5,0.0001);// "50-percentile");
+    TS_ASSERT_DELTA(r1[3].value(0), 4.5,0.0001);// "avg");
+    TS_ASSERT_DELTA(r1[4].value(0), 6.3,0.0001);// "70-percentile");
+    TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
+    //cout<<"Done statistics tests!"<<endl;
+}
 
 

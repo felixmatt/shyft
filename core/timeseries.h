@@ -34,6 +34,9 @@ namespace shyft{
         using namespace std;
         const double EPS=1e-12;
 
+
+
+
 		/** \brief simply a point identified by utctime t and value v */
         struct point {
             utctime t;
@@ -872,6 +875,93 @@ namespace shyft{
             // We use EDs to scale, and KGEs = (1-EDs) with max at 1.0, we use 1-KGEs to get minimum as 0 for minbobyqa
             return /*EDs=*/ sqrt(std::pow(s_r*(r - 1), 2) + std::pow(s_a*(a - 1), 2) + std::pow(s_b*(b - 1), 2));
 		}
+
+		        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
+        /// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
+        /// calculate percentile using full sort.. works nice for a larger set of percentiles.
+        inline vector<double> calculate_percentiles_excel_method_full_sort(vector<double>& samples, const vector<int>& percentiles) {
+            vector<double> result; result.reserve(percentiles.size());
+            const size_t n_samples = samples.size();
+            const double silent_nan = std::numeric_limits<double>::quiet_NaN();
+            if (n_samples == 0) {
+                for (size_t i = 0; i < percentiles.size(); ++i)
+                    result.emplace_back(silent_nan);
+            } else for (auto i : percentiles) {
+                // use NIST definition for percentile
+                if (i < 0) { // hack: negative value,  aka. the mean value..
+                    double sum = 0; int n=0;
+                    for (auto x : samples) {
+                        if (std::isfinite(x)) { sum += x; ++n; }
+                    }
+                    result.emplace_back(n > 0 ? sum / n : silent_nan);
+                } else {
+                    // use Hyndman and fam R7 definition for percentile, R & excel
+                    const double eps = 1e-30;
+                    double nd = 1.0 + (n_samples - 1)*double(i) / 100.0;
+                    size_t n = int(nd);
+                    double delta = nd - n;
+                    if (n == 0 && delta <=eps ) result.emplace_back(*min_element(begin(samples), end(samples)));
+                    else if (n >= n_samples) result.emplace_back(*max_element(begin(samples), end(samples)));
+                    else {
+                        sort(begin(samples), end(samples));
+                        --n;//0 based index
+                        if (delta < eps) { //direct hit on the index, use just one.
+                            result.emplace_back(samples[n]);
+                        } else { // in-between two samples, use positional weight
+                            auto lower = samples[n];
+                            if (n < n_samples - 1)
+                                n++;
+                            auto upper = samples[n];
+                            result.emplace_back(lower + (delta)*(upper-lower));
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+       /** \brief calculate specified percentiles for supplied list of time-series over the specified time-axis
+
+		Percentiles for a set of timeseries, over a time-axis
+		we would like to :
+		percentiles_timeseries = calculate_percentiles(ts-id-list,time-axis,percentiles={0,25,50,100})
+		done like this
+		1..m ts-id, time-axis( start,dt, n),
+		read 1..m ts into memory
+		percentiles specified is np
+		result is percentiles_timeseries
+		accessor "accumulate" on time-axis to dt, using stair-case or linear between points
+		create result vector[1..n] (the time-axis dimension)
+		where each element is vector[1..np] (for each timestep, we get the percentiles
+		for each timestep_i in timeaxis
+		for each tsa_i: accessors(timeaxis,ts)
+		samplevector[timestep_i].emplace_back( tsa_i(time_step_i) )
+		percentiles_timeseries[timestep_i]= calculate_percentiles(..)
+
+		\return percentiles_timeseries
+
+		*/
+		template <class ts_t,class ta_t>
+		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles) {
+			std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
+			std::vector<point_ts<ta_t>> result;
+			for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
+				tsa_list.emplace_back(ts, ta);
+			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
+				result.emplace_back(ta, 0.0);
+			std::vector<double> samples(ts_list.size(), 0.0);
+
+			for (size_t t = 0; t < ta.size(); ++t) {//each time step t in the timeaxis, here we could do parallell partition
+				for (size_t i = 0; i < tsa_list.size(); ++i) // get samples from all the "tsa"
+					samples[i] = tsa_list[i].value(t);
+                // possible with pipe-line to percentile calc here !
+				std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
+				for (size_t p = 0; p < result.size(); ++p)
+					result[p].set(t, percentiles_at_t[p]);
+			}
+			return std::move(result);
+		}
+
 
     } // timeseries
 } // shyft
