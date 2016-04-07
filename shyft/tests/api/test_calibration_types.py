@@ -105,9 +105,13 @@ class ShyftApi(unittest.TestCase):
         # tsa_staircase2 = tst.to_average_staircase(start,dt,24,tsp,True) # skip nans, nans are 0
         # stuff it into the target spec.
         # also show how to specify snow-calibration
-        t2 = api.TargetSpecificationPts(tsa, api.IntVector([0, 2, 3]), 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA)
+        cids = api.IntVector([0, 2, 3])
+        t2 = api.TargetSpecificationPts(tsa,cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA)
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
+        self.assertIsNotNone(t2.catchment_indexes)
+        for i in range(len(cids)):
+            self.assertEqual(cids[i],t2.catchment_indexes[i])
         t.ts = tsa
         #TODO: Does not work, list of objects are not yet convertible tv = api.TargetSpecificationVector([t, t2])
         tv=api.TargetSpecificationVector()
