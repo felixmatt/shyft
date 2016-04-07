@@ -1290,7 +1290,8 @@ std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
     return std::move(r);
 }
 
-void timeseries_test::test_ts_statistics() {
+/** just verify that it calculate the right things */
+void timeseries_test::test_ts_statistics_calculations() {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
     auto fx_1 = [t0](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
@@ -1309,6 +1310,26 @@ void timeseries_test::test_ts_statistics() {
     TS_ASSERT_DELTA(r1[4].value(0), 6.3,0.0001);// "70-percentile");
     TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
     //cout<<"Done statistics tests!"<<endl;
+}
+/** just verify that it calculate the right things */
+void timeseries_test::test_ts_statistics_speed() {
+    calendar utc;
+    auto t0 = utc.time(2015, 1, 1);
+
+    auto fx_1 = [t0](size_t i, utctime t)->double {return double( rand()/36000.0 );};// should generate 0..9 constant ts.
+    auto n_days=365*10;
+    auto n_ts=100;
+    tta_t  ta(t0, calendar::HOUR, n_days*24);
+    tta_t tad(t0, calendar::DAY, n_days);
+    auto tsv1 = create_test_ts(n_ts, ta, fx_1);
+    cout<<"\nStart calc percentiles "<< n_days<<" days, x "<<n_ts<< " ts\n";
+    //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
+    vector<tts_t> r1;
+    auto f1 = [&tad,&tsv1,&r1]() {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});};
+    auto msec1 = measure<>::execution(f1);
+	//auto f1 = [&favg, &td](double &sum) {sum = 0.0; for (size_t i = 0; i < td.size(); ++i) sum += favg.value(i); };
+    TS_ASSERT_EQUALS(size_t(6), r1.size());//, "expect ts equal to percentiles wanted");
+    cout<<"Done statistics speed tests, "<<msec1<<" ms"<<endl;
 }
 
 
