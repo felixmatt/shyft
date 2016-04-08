@@ -942,23 +942,42 @@ namespace shyft{
 
 		*/
 		template <class ts_t,class ta_t>
-		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles) {
+		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
 			std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
 			std::vector<point_ts<ta_t>> result;
 			for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
 				tsa_list.emplace_back(ts, ta);
 			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
 				result.emplace_back(ta, 0.0);
-			std::vector<double> samples(ts_list.size(), 0.0);
 
-			for (size_t t = 0; t < ta.size(); ++t) {//each time step t in the timeaxis, here we could do parallell partition
-				for (size_t i = 0; i < tsa_list.size(); ++i) // get samples from all the "tsa"
-					samples[i] = tsa_list[i].value(t);
-                // possible with pipe-line to percentile calc here !
-				std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
-				for (size_t p = 0; p < result.size(); ++p)
-					result[p].set(t, percentiles_at_t[p]);
+			auto partition_calc=[&result,&tsa_list,&ta,&percentiles](size_t i0,size_t n) {
+                std::vector<double> samples(tsa_list.size(), 0.0);
+
+                for (size_t t = i0; t < i0+n; ++t) {//each time step t in the timeaxis, here we could do parallell partition
+                    for (size_t i = 0; i < tsa_list.size(); ++i) // get samples from all the "tsa"
+                        samples[i] = tsa_list[i].value(t);
+                    // possible with pipe-line to percentile calc here !
+                    std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
+                    for (size_t p = 0; p < result.size(); ++p)
+                        result[p].set(t, percentiles_at_t[p]);
+                }
+
+			};
+			if(ta.size()<min_t_steps) {
+                partition_calc(0,ta.size());
+			} else {
+                vector<future<void>> calcs;
+                //size_t n_partitions= 1+ ta.size()/min_t_steps;
+                for(size_t p=0;p<ta.size(); ) {
+                    size_t np = p+ min_t_steps<= ta.size()?min_t_steps:ta.size()-p;
+                    calcs.push_back(std::async(std::launch::async,partition_calc,p,np));
+                    p+=np;
+                }
+                for(auto &f:calcs)
+                    f.get();
+
 			}
+
 			return std::move(result);
 		}
 
