@@ -3,15 +3,12 @@
 class ConfigError(Exception):
     pass
 
-def cls_path(cls):
-    return cls.__module__+'.'+cls.__name__
-
 def nc_geo_ts_repo_constructor(params,region_config):
     from shyft.repository.netcdf.cf_geo_ts_repository import CFDataRepository
 
     return CFDataRepository(params,region_config)
 
-def nc_region_model_repo_constructor(region_config, model_config):
+def nc_region_model_repo_constructor(region_config, model_config, region_model_id):
     from shyft.repository.netcdf.cf_region_model_repository import CFRegionModelRepository
 
     return CFRegionModelRepository(region_config, model_config)
@@ -40,13 +37,12 @@ def smg_geo_ts_repo_constructor(params,region_config):
                            ts_repository=smg_ts_repository, met_station_list=met_stations,
                            ens_config=None)
 
-def statkraft_region_model_repo_constructor(region_config, model_config):
+def statkraft_region_model_repo_constructor(region_config, model_config, region_model_id):
     from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
     from shyft.repository.service.gis_region_model_repository import RegionModelConfig
     from shyft.repository.service.gis_region_model_repository import GridSpecification
     from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
 
-    name = 'not_in_use'
     repo_params = region_config.repository()['params']
     d = region_config.domain()
     grid_specification = GridSpecification(d['EPSG'],
@@ -75,7 +71,7 @@ def statkraft_region_model_repo_constructor(region_config, model_config):
             raise ConfigError("Unknown parameter set '{}'".format(p_type_name))
 
     cfg_list=[
-        RegionModelConfig(name, region_model_type, region_parameter, grid_specification,
+        RegionModelConfig(region_model_id, region_model_type, region_parameter, grid_specification,
                           repo_params['catchment_regulated_type'], repo_params['service_id_field_name'],
                           region_config.catchments()),
     ]

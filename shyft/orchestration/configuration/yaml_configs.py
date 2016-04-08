@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
-from datetime import datetime
-
 import yaml
 import numpy as np
 
 from shyft import api
-from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
+#from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
 from shyft.repository.interpolation_parameter_repository import (
     InterpolationParameterRepository)
 from shyft.repository import geo_ts_repository_collection
@@ -81,8 +79,9 @@ class ModelConfig(config_interfaces.ModelConfig):
         return self._config.parameters["model"]
 
     def model_type(self):
-        module, model_t = self._config.model_t.split(".")
-        return getattr(globals()[module], model_t)
+        #module, model_t = self._config.model_t.split(".")
+        #return getattr(globals()[module], model_t)
+        return self._config.model_t
 
 
 class ConfigError(Exception):
@@ -108,16 +107,13 @@ class YAMLSimConfig(object):
         """
         if overrides is None:
             overrides = {}
-        # The config_file needs to be an absolute path or have 'config_dir'
+        # The config_file needs to be an absolute path
         if os.path.isabs(config_file):
             self._config_file = config_file
             self.config_dir = os.path.dirname(config_file)
-        # elif "config_dir" in kwargs:
-        #     self._config_file = os.path.join(kwargs["config_dir"], config_file)
         else:
             raise ConfigError(
                 "'config_file' must be an absolute path ")
-                #"or 'config_dir' passed as an argument")
 
         self._config_section = config_section
 
@@ -129,8 +125,9 @@ class YAMLSimConfig(object):
         # Override the parameters with kwargs
         #self.__dict__.update(kwargs)
 
+        self.validate()
+
         # Create a time axis
-        #self.start_time = utctime_from_datetime(self.start_datetime)
         # It is assumed that the time specified in the config file is in UTC
         self.start_time = utctime_from_datetime(self.start_datetime)
         self.time_axis = api.Timeaxis(
@@ -140,7 +137,25 @@ class YAMLSimConfig(object):
         #    module, model_t = self.model_t.split(".")
         #    self.model_t = getattr(globals()[module], model_t)
 
+        # If region and interpolation ids are not present, just use fake ones
+        # self.region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
+        self.region_model_id = str(self.region_model_id)
+        self.interpolation_id = 0 if not hasattr(self, "interpolation_id") \
+                           else int(self.interpolation_id)
+        self.initial_state_repo = None
+        self.end_state_repo = None
+
         self.construct_repos(overrides)
+
+    def validate(self):
+        """Check for the existence of mandatory fields."""
+        assert hasattr(self, "region_config_file")
+        assert hasattr(self, "model_config_file")
+        assert hasattr(self, "datasets_config_file")
+        assert hasattr(self, "start_datetime")
+        assert hasattr(self, "run_time_step")
+        assert hasattr(self, "number_of_steps")
+        assert hasattr(self, "region_model_id")
 
     def construct_repos(self, overrides):
         """
@@ -161,7 +176,7 @@ class YAMLSimConfig(object):
 
         # Construct RegionModelRepository
         self.region_model = r_m_repo_constructors[cls_path(region_config.repository()['class'])](
-            region_config, model_config)
+            region_config, model_config, self.region_model_id)
         # Construct InterpolationParameterRepository
         self.interp_repos = InterpolationParameterRepository(model_config)
         # Construct GeoTsRepository
@@ -182,11 +197,13 @@ class YAMLSimConfig(object):
                                                            dst['time_axis']['number_of_steps'])}) for dst in repo['1D_timeseries']]
                 self.dst_repo.append(repo)
 
-        # If region and interpolation ids are not present, just use fake ones
-        # self.region_id = 0 if not hasattr(self, "region_id") else int(self.region_id)
-        self.region_id = 'not_in_use'
-        self.interpolation_id = 0 if not hasattr(self, "interpolation_id") \
-                           else int(self.interpolation_id)
+        # Construct StateRepository
+        if hasattr(self, 'initial_state'):
+            self.initial_state_repo = self.initial_state['repository']['class'](
+                **self.initial_state['repository']['params'])
+        if hasattr(self, 'end_state'):
+            self.end_state_repo = self.end_state['repository']['class'](
+                **self.end_state['repository']['params'])
 
     def __repr__(self):
         srepr = "%s::%s(" % (self.__class__.__name__, self._config_section)
@@ -199,7 +216,7 @@ class YAMLCalibConfig(object):
 
     def __init__(self, config_file, config_section):
         self._config_file = config_file
-        config = yaml.load(open(config_file))[config_section]
+        config = yaml.load(open(config_file,encoding='utf8'))[config_section]
         self.__dict__.update(config)
 
         self.validate()
@@ -222,7 +239,6 @@ class YAMLCalibConfig(object):
         assert hasattr(self, "optimization_method")
         assert hasattr(self, "calibration_parameters")
         assert hasattr(self, "target")
-        #assert hasattr(self, "catchment_index")
 
     def _fetch_target_timeseries(self):
         for repository in self.target:

@@ -1,4 +1,4 @@
-model_t: pt_gs_k.PTGSKModel  # model to construct
+model_t: !!python/name:shyft.api.pt_gs_k.PTGSKModel  # model to construct
 parameters:
   interpolation:
     btk:

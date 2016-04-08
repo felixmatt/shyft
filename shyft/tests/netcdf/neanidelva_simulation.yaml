@@ -6,8 +6,6 @@ neanidelva:
   start_datetime: 2013-09-01T00:00:00
   run_time_step: 3600  # 1 hour time step
   number_of_steps: 8760   # 1 year
-  #region_id: 1          # this is optional (default 0)
+  region_model_id: 'test'
   #interpolation_id: 2   # this is optional (default 0)
-  epsg: 32633
-
 ...

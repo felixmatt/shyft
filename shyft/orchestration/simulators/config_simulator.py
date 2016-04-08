@@ -11,7 +11,7 @@ class ConfigSimulatorError(Exception):
 
 class ConfigSimulator(simulator.DefaultSimulator):
     def __init__(self, config):
-        super().__init__(config.region_id,config.interpolation_id,config.region_model,
+        super().__init__(config.region_model_id,config.interpolation_id,config.region_model,
                          config.geo_ts, config.interp_repos)
         self.config = config
 
@@ -33,6 +33,25 @@ class ConfigSimulator(simulator.DefaultSimulator):
             save_list = [TsStoreItem(ts_info['uid'],self._extraction_method_1d(ts_info)) for ts_info in repo['1D_timeseries']]
             TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model)
 
+    def get_initial_state(self):
+        if hasattr(self.config.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+            self.config.initial_state_repo.n = self.region_model.size()
+        else:
+            states = self.config.initial_state_repo.find_state(
+                region_model_id_criteria = self.config.region_model_id,
+                utc_timestamp_criteria = self.config.time_axis.start,tag_criteria=None)
+            if len(states) > 0:
+                state_id = states[0].state_id #most_recent_state i.e. <= start time
+            else:
+                raise ConfigSimulatorError('No initial state matching criteria.')
+        return self.config.initial_state_repo.get_state(state_id)
+
+    def save_end_state(self):
+        endstate = self.region_model.state_t.vector_t()
+        self.region_model.get_states(endstate)  # get the state at end of simulation
+        self.config.end_state_repo.put_state(self.config.region_model_id, self.region_model.time_axis.total_period().end,
+                                             endstate, tags=None)
+
 
 class ConfigCalibrator(simulator.DefaultSimulator):
     @property
@@ -51,7 +70,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
 
     def __init__(self, config):
         sim_config = config.sim_config
-        super().__init__(sim_config.region_id,sim_config.interpolation_id,sim_config.region_model,
+        super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.region_model,
                          sim_config.geo_ts, sim_config.interp_repos)
         self._config = config
         self.tv = None
@@ -76,9 +95,10 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             t.calc_mode = self.obj_funcs[ts_info['obj_func']['name']]
             t.s_r = ts_info['obj_func']['scaling_factors']['s_corr']
             t.s_a = ts_info['obj_func']['scaling_factors']['s_var']
+            t.s_b = ts_info['obj_func']['scaling_factors']['s_bias']
             tsa = tst.to_average(ts_info['start_datetime'], ts_info['run_time_step'], ts_info['number_of_steps'], tsp)
             t.ts = tsa
-            self.tv.push_back(t)
+            self.tv.append(t)
             #print(ts_info['uid'], mapped_indx)
 
     def calibrate(self, time_axis, state, optim_method, optim_method_params, p_vec=None):

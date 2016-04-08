@@ -60,8 +60,8 @@ class CFTsRepository(TsRepository):
         ta = api.Timeaxis(int(t[0]), int(t[1]) - int(t[0]),  len(t))
         tsc = api.TsFactory().create_point_ts
         def construct(d):
-            return tsc(ta.size(), ta.start(), ta.delta(),
-                        api.DoubleVector_FromNdArray(d), 0)
+            return tsc(ta.size(), ta.start, ta.delta_t,
+                        api.DoubleVector.FromNdArray(d))
         ts = [construct(data[:,j]) for j in range(data.shape[-1])]
         return {k:v for k, v in zip(ts_id,ts)}
 

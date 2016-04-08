@@ -1,6 +1,5 @@
-neanidelva:
+﻿neanidelva:
   model_config_file: neanidelva_simulation.yaml
-  calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
   optimization_method:
     name: min_bobyqa # can be 'min_bobyqa', 'dream' or 'sceua'
     params:
@@ -51,7 +50,7 @@ neanidelva:
           s_bias: 1.0
   overrides:
     model:
-      model_t: pt_gs_k.PTGSKOptModel
+      model_t: !!python/name:shyft.api.pt_gs_k.PTGSKOptModel
   calibration_parameters:
     c1:
       min: -8.0 # -3.0
