@@ -25,6 +25,7 @@ def convert_netcdf_time(time_spec, t):
     u = utime(time_spec)
     t_origin = api.Calendar(int(u.tzoffset)).time(
         api.YMDhms(u.origin.year, u.origin.month, u.origin.day, u.origin.hour, u.origin.minute, u.origin.second))
-
+    #print (t[0],t_origin,delta_t_dic[u.units])
     delta_t = delta_t_dic[u.units]
-    return (t_origin + delta_t * t[:]).astype(np.int64)
+    #return (t_origin + delta_t * t[:]).astype(np.int64)
+    return t_origin + delta_t * t[:].astype(np.int64)
