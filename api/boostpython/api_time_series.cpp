@@ -4,6 +4,7 @@
 #include "core/time_axis.h"
 #include "core/timeseries.h"
 #include "api/api.h"
+#include "api/timeseries.h"
 
 namespace expose {
     using namespace shyft;
@@ -71,6 +72,79 @@ namespace expose {
             ;
     }
 
+    static void expose_apoint_ts() {
+        typedef shyft::api::apoint_ts pts_t;
+        typedef pts_t (pts_t::*self_dbl_t)(double) const;
+        typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
+        typedef  pts_t ( *static_ts_ts_t)(const pts_t&,const pts_t&);
+        static_ts_ts_t min_stat_ts_ts_f=&pts_t::min;
+        static_ts_ts_t max_stat_ts_ts_f=&pts_t::max;
+
+        self_dbl_t min_double_f=&pts_t::min;
+        self_ts_t  min_ts_f =&pts_t::min;
+        self_dbl_t max_double_f=&pts_t::max;
+        self_ts_t  max_ts_f =&pts_t::max;
+
+
+        class_<shyft::api::apoint_ts>("Timeseries","A timeseries providing mathematical and statistical operations and functionality")
+            .def(init<const time_axis::generic_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+            .def(init<const time_axis::generic_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+            .def(init<const shyft::api::apoint_ts&>(args("clone"),"creates a shallow copy of clone,TBD: make it deep copy.." ))
+            DEF_STD_TS_STUFF()
+            // operators
+            .def(self * self)
+            .def(double() * self )
+            .def(self * double())
+
+            .def(self + self)
+            .def(double() + self)
+            .def(self + double())
+
+            .def(self / self)
+            .def(double() / self)
+            .def(self / double())
+
+            .def(self - self)
+            .def(double() - self)
+            .def(self - double())
+
+            .def( - self)
+            .def("average",&shyft::api::apoint_ts::average,args("ta"),"create a new ts that is the true average of self over the specified time-axis ta")
+            .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
+            .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
+            .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
+            .def("max",max_ts_f,args("ts_other"),"create a new ts that contains the max of self and ts_other")
+            .def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
+            .def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
+
+        ;
+        typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
+        avg_func_t avg=shyft::api::average;
+        def("average",avg,args("ts","time_axis"),"creates a true average time-series of ts for intervals as specified by time_axis");
+        //def("max",shyft::api::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
+
+        typedef shyft::api::apoint_ts (*ts_op_ts_t)(const shyft::api::apoint_ts&a, const shyft::api::apoint_ts&b);
+        typedef shyft::api::apoint_ts (*double_op_ts_t)(double, const shyft::api::apoint_ts&b);
+        typedef shyft::api::apoint_ts (*ts_op_double_t)(const shyft::api::apoint_ts&a, double);
+
+        ts_op_ts_t max_ts_ts         = shyft::api::max;
+        double_op_ts_t max_double_ts = shyft::api::max;
+        ts_op_double_t max_ts_double = shyft::api::max;
+        def("max",max_ts_ts    ,args("ts_a","ts_b"),"returns a new ts as max(ts_a,ts_b)");
+        def("max",max_double_ts,args("a"   ,"ts_b"),"returns a new ts as max(a,ts_b)");
+        def("max",max_ts_double,args("ts_a","b"   ),"returns a new ts as max(ts_a,b)");
+
+        ts_op_ts_t min_ts_ts         = shyft::api::min;
+        double_op_ts_t min_double_ts = shyft::api::min;
+        ts_op_double_t min_ts_double = shyft::api::min;
+        def("min",min_ts_ts    ,args("ts_a","ts_b"),"returns a new ts as min(ts_a,ts_b)");
+        def("min",min_double_ts,args("a"   ,"ts_b"),"returns a new ts as min(a,ts_b)");
+        def("min",min_ts_double,args("ts_a","b"   ),"returns a new ts as min(ts_a,b)");
+
+
+
+    }
+
     void timeseries() {
         enum_<timeseries::point_interpretation_policy>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",timeseries::POINT_INSTANT_VALUE)
@@ -86,5 +160,6 @@ namespace expose {
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis");
         ITimeSeriesOfPoints();
         TsFactory();
+        expose_apoint_ts();
     }
 }

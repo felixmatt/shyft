@@ -62,6 +62,10 @@ Timeaxis.__str__= lambda self:  "Timeaxis({0},{1},{2})".format(Calendar().to_str
 Timeaxis.__len__= lambda self: self.size()
 Timeaxis.__call__= lambda self, i: self.period(i)
 
+Timeaxis2.__len__ = lambda self: self.size()
+Timeaxis2.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type,Calendar().to_string(self.total_period()), self.size())
+Timeaxis2.__call__ = lambda self, i: self.period(i)
+
 def ta_iter(x):
     x.counter = 0
     return x
@@ -75,6 +79,11 @@ def ta_next(ta):
 
 Timeaxis.__iter__= lambda self: ta_iter(self)
 Timeaxis.__next__= lambda self: ta_next(self)
+
+Timeaxis2.__iter__= lambda self: ta_iter(self)
+Timeaxis2.__next__= lambda self: ta_next(self)
+
+
 
 # Fix up PointTimeaxis
 PointTimeaxis.__str__= lambda self:  "PointTimeaxis(total_period={0}, n={1} )".format(str(self.total_period()), len(self))

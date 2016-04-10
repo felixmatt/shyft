@@ -28,7 +28,7 @@
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
 				</Compiler>
 				<Linker>
@@ -38,9 +38,8 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-O3" />
-			<Add option="-std=c++1y" />
 			<Add option="-Wall" />
+			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory=".." />
@@ -56,6 +55,8 @@
 		<Unit filename="pt_gs_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
+		<Unit filename="timeseries.cpp" />
+		<Unit filename="timeseries.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

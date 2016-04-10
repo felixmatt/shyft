@@ -55,6 +55,20 @@ class TimeAxis(unittest.TestCase):
             self.assertEqual(tap(i), self.ta(i))
         s=str(tap)
         self.assertTrue(len(s)>0)
-        
+
+    def test_generic_timeaxis(self):
+        c = api.Calendar()
+        dt = api.deltahours(1)
+        n = 240
+        t0 = c.time(2016,4,10)
+
+        tag1 = api.Timeaxis2(t0, dt, n)
+        self.assertEqual(len(tag1),n)
+        self.assertEqual(tag1.time(0),t0)
+
+        tag2 = api.Timeaxis2(c,t0,dt,n)
+        self.assertEqual(len(tag2), n)
+        self.assertEqual(tag2.time(0), t0)
+
 if __name__ == "__main__":
     unittest.main()

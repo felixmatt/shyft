@@ -943,14 +943,16 @@ namespace shyft{
 		*/
 		template <class ts_t,class ta_t>
 		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
-			std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
-			std::vector<point_ts<ta_t>> result;
-			for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
-				tsa_list.emplace_back(ts, ta);
+            std::vector<point_ts<ta_t>> result;
+
 			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
 				result.emplace_back(ta, 0.0);
 
-			auto partition_calc=[&result,&tsa_list,&ta,&percentiles](size_t i0,size_t n) {
+			auto partition_calc=[&result,&ts_list,&ta,&percentiles](size_t i0,size_t n) {
+                std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
+                for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
+                    tsa_list.emplace_back(ts, ta);
+
                 std::vector<double> samples(tsa_list.size(), 0.0);
 
                 for (size_t t = i0; t < i0+n; ++t) {//each time step t in the timeaxis, here we could do parallell partition

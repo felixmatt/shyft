@@ -143,6 +143,46 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(tt2.size(), tax.size())
         self.assertEqual(tt3.size(), tax.size())
 
+    def test_Timeseries(self):
+        """
+        Test that timeseries functionality is exposed, and briefly verify correctness
+        of operators (the  shyft core do the rest of the test job, not repeated here).
+        """
+        c = api.Calendar()
+        t0 = api.utctime_now()
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+
+        a = api.Timeseries(ta=ta, fill_value=3.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        b = api.Timeseries(ta=ta, fill_value=1.0)
+        b.fill(2.0) # demo how to fill a point ts
+        c = a + b*3.0 - a/2.0 # operator + * - /
+        d = -a # unary minus
+        e = a.average(ta) # average
+        f = api.max(c,  300.0)
+        g = api.min(c, -300.0)
+        h = a.max(c, 300)
+        k = a.min(c, -300)
+
+        self.assertEqual(a.size(), n)
+        self.assertEqual(b.size(), n)
+        self.assertEqual(c.size(), n)
+        self.assertAlmostEqual(c.value(0), 3.0 + 2.0*3.0 - 3.0/2.0)  # 7.5
+        for i in range(n):
+            self.assertAlmostEqual(c.value(i), a.value(i) +  b.value(i)*3.0 - a.value(i)/2.0, delta=0.0001)
+            self.assertAlmostEqual(d.value(i), - a.value(i), delta=0.0001)
+            self.assertAlmostEqual(e.value(i), a.value(i), delta=0.00001)
+            self.assertAlmostEqual(f.value(i), +300.0, delta=0.00001)
+            self.assertAlmostEqual(h.value(i), +300.0, delta=0.00001)
+            self.assertAlmostEqual(g.value(i), -300.0, delta=0.00001)
+            self.assertAlmostEqual(k.value(i), -300.0, delta=0.00001)
+        # now some more detailed tests for setting values
+        b.set(0, 3.0)
+        self.assertAlmostEqual(b.value(0), 3.0)
+        #  3.0 + 3 * 3 - 3.0/2.0
+        self.assertAlmostEqual(c.value(1), 7.5, delta=0.0001)  # 3 + 3*3  - 1.5 = 10.5
+        self.assertAlmostEqual(c.value(0), 10.5, delta=0.0001) #  3 + 3*3  - 1.5 = 10.5
 
 if __name__ == "__main__":
     unittest.main()

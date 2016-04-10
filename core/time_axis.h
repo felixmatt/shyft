@@ -273,9 +273,16 @@ namespace shyft {
             point_dt p;
             //---------------
             generic_dt(): gt( FIXED ) {}
+            // provide convinence constructors, to directly create the wanted time-axis, regardless underlying rep.
+            generic_dt( utctime t0,utctimespan dt,size_t n):gt(FIXED),f(t0,dt,n) {}
+            generic_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
+            generic_dt( const vector<utctime>& t, utctime t_end ):gt(POINT),p(t,t_end) {}
+            generic_dt( const vector<utctime>& all_points):gt(POINT),p(all_points){}
+            // --
             generic_dt( const fixed_dt&f ): gt( FIXED ), f( f ) {}
             generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
             generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
+            // --
             bool is_fixed_dt() const {return gt == POINT;}
 
             size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}
