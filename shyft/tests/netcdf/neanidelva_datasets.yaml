@@ -1,0 +1,23 @@
+---
+sources:
+  - repository: !!python/name:shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/precipitation.nc
+      selection_criteria: null
+  - repository: !!python/name:shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/temperature.nc
+      selection_criteria: null
+  - repository: !!python/name:shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/wind_speed.nc
+      selection_criteria: null
+  - repository: !!python/name:shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/relative_humidity.nc
+      selection_criteria: null
+  - repository: !!python/name:shyft.repository.netcdf.cf_geo_ts_repository.CFDataRepository
+    params:
+      stations_met: netcdf/orchestration-testdata/radiation.nc
+      selection_criteria: null
+...

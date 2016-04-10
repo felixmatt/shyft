@@ -294,7 +294,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         for tsn,ts in iter(read_ts_map.items()):
             geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
             attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
-            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
+            result[attr_name].append( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
         return result
 
     def _remap_to_ensemble_result(self,read_ts_map,ens_result,ts_to_geo_ts_info):
