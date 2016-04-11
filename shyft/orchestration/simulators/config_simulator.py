@@ -10,10 +10,14 @@ class ConfigSimulatorError(Exception):
 
 
 class ConfigSimulator(simulator.DefaultSimulator):
-    def __init__(self, config):
-        super().__init__(config.region_model_id,config.interpolation_id,config.region_model,
-                         config.geo_ts, config.interp_repos)
-        self.config = config
+    def __init__(self, arg):
+        if isinstance(arg, self.__class__):
+            super().__init__(arg)
+            self.config = arg.config
+        else:
+            super().__init__(arg.region_model_id,arg.interpolation_id,arg.region_model,
+                             arg.geo_ts, arg.interp_repos)
+            self.config = arg
 
     def _extraction_method_1d(self,ts_info):
         c_id = ts_info['catchment_id']
