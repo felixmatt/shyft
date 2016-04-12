@@ -253,11 +253,15 @@ class ReservoirFetcher(BaseGisDataFetcher):
 class CatchmentFetcher(BaseGisDataFetcher):
     def __init__(self, catchment_type, identifier, epsg_id):
         if catchment_type == 'regulated':
-            service_index = 7 # 6
-            # self.identifier = 'POWER_PLANT_ID'
+            if identifier == 'SUBCATCH_ID':
+                service_index = 4
+            elif identifier in ['CATCH_ID', 'POWER_PLANT_ID']:
+                service_index = 7
+            else:
+                raise GisDataFetchError(
+                    "Unknown identifier {} - use one of ['SUBCATCH_ID','CATCH_ID','POWER_PLANT_ID']".format(identifier))
         elif catchment_type == 'unregulated':
-            service_index = 8 # 7
-            # self.identifier = 'FELTNR'
+            service_index = 8
         else:
             raise GisDataFetchError(
                 "Undefined catchment type {} - use either regulated or unregulated".format(catchment_type))
