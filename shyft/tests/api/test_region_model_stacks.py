@@ -130,7 +130,7 @@ class RegionModel(unittest.TestCase):
         model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
         # This enables IDW with default temperature gradient.
         model_interpolation_parameter.use_idw_for_temperature = True
-
+        self.assertAlmostEqual(model_interpolation_parameter.precipitation.scale_factor,1.02)  # just verify this one is as before change to scale_factor
         model.run_interpolation(
                 model_interpolation_parameter, time_axis,
                 self.create_dummy_region_environment(time_axis,
