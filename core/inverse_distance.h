@@ -52,12 +52,14 @@ namespace shyft {
 
 	        /*\brief For precipitation,the scaling model needs the increase in precipitation for each 100 meters.
 			 * \sa temperature_model
+			 * precipitation_adjusted = (scale_factor)^(z-distance-in-meters/100.0)
+			 *
 	        */
 	        struct precipitation_parameter: public parameter {
 	            double scale_factor;
-	            precipitation_parameter(double increase_pct_m=2, size_t max_members=20, double max_distance=200000.0)
-	              : parameter(max_members, max_distance), scale_factor(1+increase_pct_m/100) {}
-	            double precipitation_scale_factor() const { return scale_factor; } // mm/m,  0.5 mm increase pr. 100 m height
+	            precipitation_parameter(double scale_factor=1.02, size_t max_members=20, double max_distance=200000.0)
+	              : parameter(max_members, max_distance), scale_factor(scale_factor) {}
+	            double precipitation_scale_factor() const { return scale_factor; }
 	        };
 
 

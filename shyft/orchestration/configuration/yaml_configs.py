@@ -72,16 +72,26 @@ class ModelConfig(config_interfaces.ModelConfig):
         if overrides is not None:
             self._config.__dict__.update(overrides)
 
-    def interpolation_parameters(self):
-        return self._config.parameters["interpolation"]
-
     def model_parameters(self):
-        return self._config.parameters["model"]
+        return self._config.model_parameters
 
     def model_type(self):
         #module, model_t = self._config.model_t.split(".")
         #return getattr(globals()[module], model_t)
         return self._config.model_t
+
+
+class InterpolationConfig(object):
+    """
+    Yaml based model configuration, using a YamlContent instance
+    for holding the content.
+    """
+
+    def __init__(self, config_file):
+        self._config = YamlContent(config_file)
+
+    def interpolation_parameters(self):
+        return self._config.interpolation_parameters
 
 
 class ConfigError(Exception):
@@ -152,6 +162,7 @@ class YAMLSimConfig(object):
         assert hasattr(self, "region_config_file")
         assert hasattr(self, "model_config_file")
         assert hasattr(self, "datasets_config_file")
+        assert hasattr(self, "interpolation_config_file")
         assert hasattr(self, "start_datetime")
         assert hasattr(self, "run_time_step")
         assert hasattr(self, "number_of_steps")
@@ -174,11 +185,15 @@ class YAMLSimConfig(object):
             self.config_dir, self.datasets_config_file)
         datasets_config = YamlContent(datasets_config_file)
 
+        interpolation_config_file = os.path.join(
+            self.config_dir, self.interpolation_config_file)
+        interpolation_config = InterpolationConfig(interpolation_config_file)
+
         # Construct RegionModelRepository
         self.region_model = r_m_repo_constructors[cls_path(region_config.repository()['class'])](
             region_config, model_config, self.region_model_id)
         # Construct InterpolationParameterRepository
-        self.interp_repos = InterpolationParameterRepository(model_config)
+        self.interp_repos = InterpolationParameterRepository(interpolation_config)
         # Construct GeoTsRepository
         geo_ts_repos = []
         for source in datasets_config.sources:

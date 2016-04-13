@@ -3,9 +3,10 @@ neanidelva:
   region_config_file: neanidelva_region.yaml
   model_config_file: neanidelva_model.yaml
   datasets_config_file: neanidelva_datasets.yaml
+  interpolation_config_file: neanidelva_interpolation.yaml
   start_datetime: 2013-09-01T00:00:00
   run_time_step: 3600  # 1 hour time step
   number_of_steps: 8760   # 1 year
-  region_model_id: 'test'
+  region_model_id: 'neanidelva-ptgsk'
   #interpolation_id: 2   # this is optional (default 0)
 ...

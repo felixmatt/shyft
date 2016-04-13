@@ -56,11 +56,12 @@ namespace expose {
 
         typedef shyft::core::inverse_distance::precipitation_parameter IDWPrecipitationParameter;
         class_<IDWPrecipitationParameter,bases<IDWParameter>>("IDWPrecipitationParameter",
-                    "For precipitation,the scaling model needs the increase in precipitation for each 100 meters.\n"
+                    "For precipitation,the scaling model needs the scale_factor.\n"
+                    "adjusted_precipitation = precipitation* (scale_factor)^(z-distance-in-meters/100.0)\n"
                     "Ref to IDWParameter for the other parameters\n"
             )
-            .def(init<double,optional<int,double>>(args("increase_pct_m", "max_members","max_distance"),"create IDW from supplied parameters"))
-            .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor,"mm/m,  default=1.02, mm/m, corresponding to 2 mm increase pr. 100 m height")
+            .def(init<double,optional<int,double>>(args("scale_factor", "max_members","max_distance"),"create IDW from supplied parameters"))
+            .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor," ref. formula for adjusted_precipitation,  default=1.02")
         ;
     }
     static void interpolation_parameter() {
