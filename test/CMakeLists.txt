@@ -40,7 +40,7 @@ add_definitions("-D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_ST
 
 add_executable(${target} ${sources})
 # Additional libraries
-target_link_libraries(${target} shyftcore blas lapack boost_filesystem boost_system)
+target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system)
 
 # This can be made more specific, but we would need the list of tests.
 #add_test(${target} ${target})
