@@ -42,3 +42,5 @@ workspace.xml
 ValgrindOut.xml
 cachegrind.out.*
 
+/SHyFT.VC.db
+*.opendb

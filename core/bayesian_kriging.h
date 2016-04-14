@@ -1,5 +1,5 @@
 #include "timeseries.h"
-        #include <armadillo>
+#include <armadillo>
 #include <algorithm>
 #include <exception>
 
