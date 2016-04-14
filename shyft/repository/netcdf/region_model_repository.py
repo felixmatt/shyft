@@ -348,7 +348,15 @@ class RegionModelRepository(interfaces.RegionModelRepository):
 
                 catchment_parameters[k] = param
         region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
+
+        def do_clone(x):
+            clone = x.__class__(x)
+            clone.bounding_region = bounding_region
+            return clone
+
         region_model.bounding_region = bounding_region
+        region_model.clone = do_clone
+
         return region_model
 
 

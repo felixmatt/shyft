@@ -576,4 +576,14 @@ class GisRegionModelRepository(RegionModelRepository):
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
         region_model.catchment_id_map = catchment_id_map  # needed to map from externa c_id to 0-based c_id used internally in
         region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
+
+        def do_clone(x):
+            clone = x.__class__(x)
+            clone.bounding_region = x.bounding_region
+            clone.catchment_id_map = catchment_id_map
+            clone.gis_info = result
+            return clone
+
+        region_model.clone = do_clone
+
         return region_model
