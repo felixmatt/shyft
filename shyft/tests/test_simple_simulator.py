@@ -134,6 +134,9 @@ class SimulationTestCase(unittest.TestCase):
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         simulator.run(cfg.time_axis, state_repos.get_state(0))
+        sim_copy = simulator.copy()
+        sim_copy.run(cfg.time_axis,state_repos.get_state(0))
+
 
     def run_calibration(self, model_t):
         # set up configuration

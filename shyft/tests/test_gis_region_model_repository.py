@@ -146,7 +146,7 @@ try:
         def test_region_model_nea_nidelv(self):
             nea_nidelv_grid_spec = GridSpecification(epsg_id=32633, x0=270000.0, y0=7035000.0, dx=1000, dy=1000, nx=105, ny=75)
             catch_ids = [1228, 1308, 1394, 1443, 1726, 1867, 1996, 2041, 2129, 2195, 2198, 2277, 2402, 2446, 2465, 2545,
-                         2640, 2718, 3002, 3536, 3630, 1000010, 1000011]
+                         2640, 2718, 3002, 3536, 3630]  #  , 1000010, 1000011]
             ptgsk_params = self.std_ptgsk_parameters
             cfg_list = [
                 RegionModelConfig("nea-nidelv-ptgsk", PTGSKModel, ptgsk_params, nea_nidelv_grid_spec, "regulated", "CATCH_ID", catch_ids)

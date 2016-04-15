@@ -306,7 +306,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint(), and plain result )
             attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
             result=geo_ts_info[2] # this should be the result dictionary of 'type':vector_t where this ts belongs to (ensembleset)
-            result[attr_name].push_back( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
+            result[attr_name].append( self.source_type_map[attr_name](geo_ts_info[1],ts) ) #pick up the vector, push back new geo-located ts
         return ens_result
 
 

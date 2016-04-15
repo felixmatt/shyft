@@ -30,12 +30,12 @@ try:
             #we test that for the same point, different projections, we get same heights
             #and approx. different positions
             utm32_loc=glr.get_locations(nea_nid,32632)
-            utm33_loc=glr.get_locations(nea_nid,32633);
+            utm33_loc=glr.get_locations(nea_nid,32633)
             self.assertIsNotNone(utm32_loc)
             self.assertIsNotNone(utm33_loc)
             for p in nea_nid:
                 self.assertAlmostEqual(utm32_loc[p][2],utm33_loc[p][2])
-                self.assertLess(fabs(utm32_loc[p][1]-utm33_loc[p][1]),10*1000,"expect y same")
+                self.assertGreater(fabs(utm32_loc[p][1]-utm33_loc[p][1]),10*1000,"expect y same")
                 self.assertGreater(fabs(utm32_loc[p][0]-utm33_loc[p][0]),30*1000,"expect x diff same")
             #print("Done gis location service testing")
 
@@ -62,7 +62,7 @@ try:
             self.assertIsNotNone(geo_ts_dict)
             for ts_type in ts_types:
                 self.assertTrue(ts_type in geo_ts_dict.keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
-                self.assertTrue(geo_ts_dict[ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
+                self.assertTrue(len(geo_ts_dict[ts_type])>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
         def test_get_forecast_using_known_service_and_db_content(self):
             utc = Calendar() # always use Calendar() stuff
@@ -87,7 +87,7 @@ try:
             self.assertIsNotNone(geo_ts_dict)
             for ts_type in ts_types:
                 self.assertTrue(ts_type in geo_ts_dict.keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
-                self.assertTrue(geo_ts_dict[ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
+                self.assertTrue(len(geo_ts_dict[ts_type])>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
         def test_get_ensemble_forecast_using_known_service_and_db_content(self):
             utc = Calendar() # always use Calendar() stuff
@@ -132,7 +132,7 @@ try:
             for i in range(ens_config.n_ensembles):
                 for ts_type in ts_types:
                     self.assertTrue(ts_type in ens_geo_ts_dict[i].keys(),"we ecpect to find an entry for each requested type (it could be empty list though")
-                    self.assertTrue(ens_geo_ts_dict[i][ts_type].size()>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
+                    self.assertTrue(len(ens_geo_ts_dict[i][ts_type])>0,"we expect to find the series that we pass in, given they have not changed the name in SmG PROD")
     
 
 except ImportError as ie:
