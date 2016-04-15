@@ -93,7 +93,12 @@ class DefaultSimulator(object):
         self.ip_repos = other.ip_repos
         self._geo_ts_names = other._geo_ts_names
         self.geo_ts_repository = other.geo_ts_repository
-        self.region_model = other.region_model.__class__(other.region_model)
+        clone_op = getattr(other.region_model, "clone", None)
+        if callable(clone_op):
+            self.region_model = clone_op(other.region_model)
+        else:
+            self.region_model = other.region_model.__class__(other.region_model)
+        #  self.region_model = other.region_model.clone() # __class__(other.region_model)
         self.epsg = other.epsg
         self.state = other.state
         self.time_axis = other.time_axis

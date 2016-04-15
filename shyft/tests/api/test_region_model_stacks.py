@@ -161,6 +161,7 @@ class RegionModel(unittest.TestCase):
         self.assertEqual(avg_temperature.size(), time_axis.size(),"expect results equal to time-axis size")
         copy_region_model = model.__class__(model)
         self.assertIsNotNone(copy_region_model)
+        copy_region_model.run_cells() #just to verify we can copy and run the new model
 
     def test_model_state_io(self):
         num_cells = 2
