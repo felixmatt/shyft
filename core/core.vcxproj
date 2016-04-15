@@ -74,7 +74,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -85,7 +85,7 @@
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\aramadillo\include;$(SolutionDir)..\dlib</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\lib64-msvc-14.0;</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;</LibraryPath>
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
