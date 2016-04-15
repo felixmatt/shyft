@@ -68,7 +68,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
+    <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(PYTHONHOME)\Lib\site-packages\numpy\core\include;$(SolutionDir)..\dlib</IncludePath>
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <TargetName>_pt_ss_k</TargetName>
     <TargetExt>.pyd</TargetExt>
@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
-    <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
+    <IncludePath>$(IncludePath);;$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(PYTHONHOME)\Include;$(PYTHONHOME)\Lib\site-packages\numpy\core\include;$(SolutionDir)..\dlib</IncludePath>
     <TargetName>_pt_ss_k</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
