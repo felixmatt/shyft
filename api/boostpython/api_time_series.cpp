@@ -38,29 +38,7 @@ namespace expose {
             ;
         register_ptr_to_python<shared_ptr<pts_t> >();
     }
-    static void ITimeSeriesOfPoints() {
-        typedef shyft::api::ITimeSeriesOfPoints pts_t;
-        class_<pts_t,bases<>,shared_ptr<pts_t>,boost::noncopyable>("ITimeSeriesOfPoints", "Generic interface to time-series of points, any type",no_init)
-            DEF_STD_TS_STUFF()
-            ;
-        register_ptr_to_python<shared_ptr<pts_t> >();
-        typedef shared_ptr<pts_t> pts_t_;
-        typedef vector<pts_t_> TsVector;
-        class_<TsVector>("TsVector","A vector of refs to ITimeSeriesOfPoints")
-            .def(vector_indexing_suite<TsVector>())
-            ;
 
-        //%template(AverageAccessorTs) average_accessor<shyft::api::ITimeSeriesOfPoints,shyft::time_axis::fixed_dt>;
-        typedef shyft::time_axis::fixed_dt ta_t;
-        typedef shyft::timeseries::average_accessor<pts_t,ta_t> AverageAccessorTs;
-        class_<AverageAccessorTs>("AverageAccessorTs","Accessor to get out true average for the time-axis intervals for a point time-series",no_init)
-            .def(init<const pts_t&,const ta_t&>(args("ts","ta"),"construct accessor from ts and time-axis ta"))
-            .def(init<shared_ptr<pts_t>,const ta_t&>(args("ts","ta"),"constructor from ref ts and time-axis ta"))
-            .def("value",&AverageAccessorTs::value,args("i"),"returns the i'th true average value" )
-            .def("size", &AverageAccessorTs::size,"returns number of intervals in the time-axis for this accessor")
-            ;
-
-    }
 
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(point_ts_overloads     ,shyft::api::TsFactory::create_point_ts,4,5);
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(time_point_ts_overloads,shyft::api::TsFactory::create_time_point_ts,3,4);
@@ -89,8 +67,18 @@ namespace expose {
         class_<shyft::api::apoint_ts>("Timeseries","A timeseries providing mathematical and statistical operations and functionality")
             .def(init<const time_axis::generic_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
             .def(init<const time_axis::generic_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
-            .def(init<const shyft::api::apoint_ts&>(args("clone"),"creates a shallow copy of clone,TBD: make it deep copy.." ))
+
+            .def(init<const time_axis::fixed_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+            .def(init<const time_axis::fixed_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+
+            .def(init<const time_axis::point_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+            .def(init<const time_axis::point_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+
+            .def(init<const shyft::api::apoint_ts&>(args("clone"),"creates a shallow copy of clone" ))
             DEF_STD_TS_STUFF()
+            // expose time_axis sih: would liek to use property, but no return value policy, so we use get_ + fixup in init.py
+            .def("get_time_axis",&shyft::api::apoint_ts::time_axis,"returns the time-axis",return_internal_reference<>())
+            .add_property("values",&shyft::api::apoint_ts::values,"return the values (possibly calculated on the fly")
             // operators
             .def(self * self)
             .def(double() * self )
@@ -142,7 +130,25 @@ namespace expose {
         def("min",min_ts_double,args("ts_a","b"   ),"returns a new ts as min(ts_a,b)");
 
 
+        register_ptr_to_python<shared_ptr<pts_t> >();
+        //typedef shared_ptr<pts_t> pts_t_;
+        typedef vector<pts_t> TsVector;
+        class_<TsVector>("TsVector","A vector of Ts")
+            .def(vector_indexing_suite<TsVector>())
+            ;
 
+        {
+
+
+        typedef shyft::time_axis::fixed_dt ta_t;
+        typedef shyft::timeseries::average_accessor<pts_t,ta_t> AverageAccessorTs;
+        class_<AverageAccessorTs>("AverageAccessorTs","Accessor to get out true average for the time-axis intervals for a point time-series",no_init)
+            .def(init<const pts_t&,const ta_t&>(args("ts","ta"),"construct accessor from ts and time-axis ta"))
+            .def(init<shared_ptr<pts_t>,const ta_t&>(args("ts","ta"),"constructor from ref ts and time-axis ta"))
+            .def("value",&AverageAccessorTs::value,args("i"),"returns the i'th true average value" )
+            .def("size", &AverageAccessorTs::size,"returns number of intervals in the time-axis for this accessor")
+            ;
+        }
     }
 
     void timeseries() {
@@ -158,7 +164,6 @@ namespace expose {
             ;
         point_ts<time_axis::fixed_dt>("TsFixed","A time-series with a fixed delta t time-axis");
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis");
-        ITimeSeriesOfPoints();
         TsFactory();
         expose_apoint_ts();
     }

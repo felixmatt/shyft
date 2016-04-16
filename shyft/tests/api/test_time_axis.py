@@ -15,7 +15,7 @@ class TimeAxis(unittest.TestCase):
         self.n=24
         #self.t= self.c.trim(api.utctime_now(),self.d)
         self.t= self.c.trim(self.c.time(api.YMDhms(1969,12,31,0,0,0)),self.d)
-        self.ta=api.Timeaxis(self.t,self.d,self.n)
+        self.ta=api.Timeaxis2(self.t,self.d,self.n)
         
     def tearDown(self):
         pass

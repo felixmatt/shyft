@@ -1,3 +1,4 @@
+#pragma once
 
 #include "core/core_pch.h"
 #include "core/utctime_utilities.h"
@@ -120,9 +121,18 @@ namespace shyft {
                 // constructors that we want to expose
                 // like
 
+                // these are for the python exposure
+                apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+
+                apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+
+                // these are the one we need.
                 apoint_ts(const gta_t& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const gta_t& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const gta_t& ta,std::vector<double>&& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+
                 apoint_ts(gta_t&& ta,std::vector<double>&& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(gta_t&& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
@@ -143,6 +153,8 @@ namespace shyft {
                     return *this;
                 }
 
+                /**\brief Easy to compare for equality, but tricky if performance needed */
+                bool operator==(const apoint_ts& other) const;
 
                 // interface we want to expose
                 // the standard ipoint-ts stuff:

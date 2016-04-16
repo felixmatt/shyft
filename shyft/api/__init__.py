@@ -63,8 +63,11 @@ Timeaxis.__len__= lambda self: self.size()
 Timeaxis.__call__= lambda self, i: self.period(i)
 
 Timeaxis2.__len__ = lambda self: self.size()
-Timeaxis2.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type,Calendar().to_string(self.total_period()), self.size())
+Timeaxis2.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type, Calendar().to_string(self.total_period()), self.size())
 Timeaxis2.__call__ = lambda self, i: self.period(i)
+
+# fix up property on timeseries
+Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 def ta_iter(x):
     x.counter = 0

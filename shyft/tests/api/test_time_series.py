@@ -1,6 +1,4 @@
-﻿from builtins import range
-
-from shyft import api
+﻿from shyft import api
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import unittest
@@ -29,7 +27,7 @@ class TimeSeries(unittest.TestCase):
 
     def test_operations_on_TsFixed(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         # test create
         tsa = api.TsFixed(self.ta, v)
         # assert its contains time and values as expected.
@@ -48,7 +46,7 @@ class TimeSeries(unittest.TestCase):
 
     def test_vector_of_timeseries(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         tsf = api.TsFactory();
         tsa = tsf.create_point_ts(self.n, self.t, self.d, v)
         tsvector = api.TsVector()
@@ -56,9 +54,9 @@ class TimeSeries(unittest.TestCase):
         tsvector.push_back(tsa)
         self.assertEqual(len(tsvector), 1)
 
-    def test_TsFixed(self):
+    def test_ts_fixed(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         xv = v.to_numpy()
 
         tsfixed = api.TsFixed(self.ta, v)
@@ -75,11 +73,10 @@ class TimeSeries(unittest.TestCase):
         del tsfixed
         assert_array_almost_equal(dv, ref_v.to_numpy())
 
-
-    def test_TsPoint(self):
+    def test_ts_point(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
-        t = api.UtcTimeVector();
+        v = api.DoubleVector.from_numpy(dv)
+        t = api.UtcTimeVector()
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(self.ta(self.ta.size() - 1).end)
@@ -89,9 +86,9 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
         self.assertEqual(tspoint.get(0).t, ta(0).start)
 
-    def test_TsFactory(self):
+    def test_ts_factory(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         t = api.UtcTimeVector();
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
@@ -104,9 +101,9 @@ class TimeSeries(unittest.TestCase):
         tslist.push_back(ts2)
         self.assertEqual(tslist.size(), 2)
 
-    def test_AverageAccessor(self):
+    def test_average_accessor(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         t = api.UtcTimeVector();
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
@@ -122,7 +119,7 @@ class TimeSeries(unittest.TestCase):
 
     def test_ts_transform(self):
         dv = np.arange(self.ta.size())
-        v = api.DoubleVector.FromNdArray(dv)
+        v = api.DoubleVector.from_numpy(dv)
         t = api.UtcTimeVector();
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
@@ -143,7 +140,7 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(tt2.size(), tax.size())
         self.assertEqual(tt3.size(), tax.size())
 
-    def test_Timeseries(self):
+    def test_basic_timeseries_math_operations(self):
         """
         Test that timeseries functionality is exposed, and briefly verify correctness
         of operators (the  shyft core do the rest of the test job, not repeated here).
@@ -154,13 +151,13 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.Timeaxis2(t0, dt, n)
 
-        a = api.Timeseries(ta=ta, fill_value=3.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        a = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.Timeseries(ta=ta, fill_value=1.0)
-        b.fill(2.0) # demo how to fill a point ts
-        c = a + b*3.0 - a/2.0 # operator + * - /
-        d = -a # unary minus
-        e = a.average(ta) # average
-        f = api.max(c,  300.0)
+        b.fill(2.0)  # demo how to fill a point ts
+        c = a + b * 3.0 - a / 2.0  # operator + * - /
+        d = -a  # unary minus
+        e = a.average(ta)  # average
+        f = api.max(c, 300.0)
         g = api.min(c, -300.0)
         h = a.max(c, 300)
         k = a.min(c, -300)
@@ -168,9 +165,9 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(a.size(), n)
         self.assertEqual(b.size(), n)
         self.assertEqual(c.size(), n)
-        self.assertAlmostEqual(c.value(0), 3.0 + 2.0*3.0 - 3.0/2.0)  # 7.5
+        self.assertAlmostEqual(c.value(0), 3.0 + 2.0 * 3.0 - 3.0 / 2.0)  # 7.5
         for i in range(n):
-            self.assertAlmostEqual(c.value(i), a.value(i) +  b.value(i)*3.0 - a.value(i)/2.0, delta=0.0001)
+            self.assertAlmostEqual(c.value(i), a.value(i) + b.value(i) * 3.0 - a.value(i) / 2.0, delta=0.0001)
             self.assertAlmostEqual(d.value(i), - a.value(i), delta=0.0001)
             self.assertAlmostEqual(e.value(i), a.value(i), delta=0.00001)
             self.assertAlmostEqual(f.value(i), +300.0, delta=0.00001)
@@ -182,7 +179,29 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(b.value(0), 3.0)
         #  3.0 + 3 * 3 - 3.0/2.0
         self.assertAlmostEqual(c.value(1), 7.5, delta=0.0001)  # 3 + 3*3  - 1.5 = 10.5
-        self.assertAlmostEqual(c.value(0), 10.5, delta=0.0001) #  3 + 3*3  - 1.5 = 10.5
+        self.assertAlmostEqual(c.value(0), 10.5, delta=0.0001)  # 3 + 3*3  - 1.5 = 10.5
+
+    def test_timeseries_vector(self):
+        c = api.Calendar()
+        t0 = api.utctime_now()
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis(t0, dt, n)
+
+        a = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        b = api.Timeseries(ta=ta, fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        v = api.TsVector()
+        v.append(a)
+        v.append(b)
+
+        self.assertEqual(len(v), 2)
+        self.assertAlmostEqual(v[0].value(0),3.0,"expect first ts to be 3.0")
+        aa = api.Timeseries(ta=a.time_axis, values=a.values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE  )  # copy construct (really copy the values!)
+        a.fill(1.0)
+        self.assertAlmostEqual(v[0].value(0), 1.0, "expect first ts to be 1.0, because the vector keeps a reference ")
+        self.assertAlmostEqual(aa.value(0), 3.0)
+
 
 if __name__ == "__main__":
     unittest.main()

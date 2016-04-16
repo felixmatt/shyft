@@ -15,11 +15,11 @@ namespace expose {
     using namespace std;
 
     struct TsTransform {
-        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::api::ITimeSeriesOfPoints& src) {
-            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>(start,dt,n,src);
+        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::api::apoint_ts& src) {
+            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::apoint_ts>(start,dt,n,src);
         }
-        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,shared_ptr<shyft::api::ITimeSeriesOfPoints> src) {
-            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>(start,dt,n,src);
+        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,shared_ptr<shyft::api::apoint_ts> src) {
+            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::apoint_ts>(start,dt,n,src);
         }
 
         shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::core::pts_t& src) {
@@ -77,8 +77,8 @@ namespace expose {
         //        %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>;
         //    %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::core::pts_t>;
 
-        shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::api::ITimeSeriesOfPoints& )=&TsTransform::to_average;
-        shared_ptr<shyft::core::pts_t> (TsTransform::*m2)(utctime , utctimespan , size_t ,shared_ptr<shyft::api::ITimeSeriesOfPoints> )=&TsTransform::to_average;
+        shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::api::apoint_ts& )=&TsTransform::to_average;
+        shared_ptr<shyft::core::pts_t> (TsTransform::*m2)(utctime , utctimespan , size_t ,shared_ptr<shyft::api::apoint_ts> )=&TsTransform::to_average;
         shared_ptr<shyft::core::pts_t> (TsTransform::*m3)(utctime , utctimespan , size_t ,const shyft::core::pts_t&) = &TsTransform::to_average;
         shared_ptr<shyft::core::pts_t> (TsTransform::*m4)(utctime , utctimespan , size_t ,shared_ptr<shyft::core::pts_t> ) = &TsTransform::to_average;
 

@@ -2,43 +2,43 @@
 
 namespace shyft{
     namespace api {
-            static double iop_add(double a,double b) {return a + b;}
-            static double iop_sub(double a,double b) {return a - b;}
-            static double iop_div(double a,double b) {return a/b;}
-            static double iop_mul(double a,double b) {return a*b;}
-            static double iop_min(double a,double b) {return std::min(a,b);}
-            static double iop_max(double a,double b) {return std::max(a,b);}
+        static double iop_add(double a,double b) {return a + b;}
+        static double iop_sub(double a,double b) {return a - b;}
+        static double iop_div(double a,double b) {return a/b;}
+        static double iop_mul(double a,double b) {return a*b;}
+        static double iop_min(double a,double b) {return std::min(a,b);}
+        static double iop_max(double a,double b) {return std::max(a,b);}
 
-           // add operators and functions to the apoint_ts class, of all variants that we want to expose
-            apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
-            apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
-
-
-            apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
-            apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
-            apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_add,rhs )); }
-
-            apoint_ts operator-(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_sub,rhs )); }
-            apoint_ts operator-(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_sub,rhs )); }
-            apoint_ts operator-(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_sub,rhs )); }
-            apoint_ts operator-(const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( -1.0,iop_mul,rhs )); }
-
-            apoint_ts operator/(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_div,rhs )); }
-            apoint_ts operator/(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_div,rhs )); }
-            apoint_ts operator/(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_div,rhs )); }
-
-            apoint_ts operator*(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_mul,rhs )); }
-            apoint_ts operator*(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_mul,rhs )); }
-            apoint_ts operator*(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_mul,rhs )); }
+       // add operators and functions to the apoint_ts class, of all variants that we want to expose
+        apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
+        apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
 
 
-            apoint_ts max(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_max,rhs ));}
-            apoint_ts max(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_max,rhs ));}
-            apoint_ts max(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_max,rhs ));}
+        apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
+        apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
+        apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_add,rhs )); }
 
-            apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
-            apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
-            apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
+        apoint_ts operator-(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_sub,rhs )); }
+        apoint_ts operator-(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_sub,rhs )); }
+        apoint_ts operator-(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_sub,rhs )); }
+        apoint_ts operator-(const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( -1.0,iop_mul,rhs )); }
+
+        apoint_ts operator/(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_div,rhs )); }
+        apoint_ts operator/(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_div,rhs )); }
+        apoint_ts operator/(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_div,rhs )); }
+
+        apoint_ts operator*(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_mul,rhs )); }
+        apoint_ts operator*(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_mul,rhs )); }
+        apoint_ts operator*(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_mul,rhs )); }
+
+
+        apoint_ts max(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_max,rhs ));}
+        apoint_ts max(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_max,rhs ));}
+        apoint_ts max(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_max,rhs ));}
+
+        apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
+        apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
+        apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
 
 
 
@@ -66,6 +66,25 @@ namespace shyft{
         apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,std::move(values),point_fx)) {
         }
+
+        // and python needs these:
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx)
+            :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
+        }
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+            :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
+        }
+
+        // and python needs these:
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx)
+            :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
+        }
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+            :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
+        }
+
+
+
         apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values),point_fx)) {
         }
@@ -93,6 +112,25 @@ namespace shyft{
             if(!gpts)
                 throw std::runtime_error("apoint_ts::scale_by(x) only allowed for ts of non-expression types");
             gpts->scale_by(x);
+        }
+
+        bool apoint_ts::operator==(const apoint_ts& other) const {
+            if(ts.get() == other.ts.get()) // equal by reference
+                return true;
+            // the time-consuming part, equal by value
+            // SiH: I am not sure if this is ever useful, nevertheless it's doable
+            //      given that it's ok with the zero-limit(not generally applicable!)
+
+            const double zero_limit=1e-9;// in hydrology, this is usually a small number
+            if(ts->size() != other.ts->size())
+                return false;
+            for(size_t i=0;i<ts->size();++i) {
+                if( ts->time_axis().period(i) != other.ts->time_axis().period(i))
+                    return false;
+                if( fabs(ts->value(i) - other.ts->value(i)) >zero_limit)
+                    return false;
+            }
+            return true;
         }
 
         apoint_ts apoint_ts::max(double a) const {return shyft::api::max(*this,a);}
@@ -125,6 +163,7 @@ namespace shyft{
             //if(isfinite(v1)) return 0.5*(v0 + v1);
             //return v0;
         }
+
 
     }
 }
