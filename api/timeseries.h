@@ -104,7 +104,7 @@ namespace shyft {
                 point get(size_t i) const {return point(time(i),value(i));}
 
             };
-
+            struct average_ts;
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
              *  This is the class that we expose to python, with operations, expressions etc.
@@ -116,8 +116,9 @@ namespace shyft {
             class apoint_ts {
                 /** a ref to the real implementation, could be a concrete point ts, or an expression */
                 std::shared_ptr<ipoint_ts> ts;// consider unique pointer instead,possibly public, to ease transparency in python
-                friend struct average_ts;
+
                public:
+				   friend struct average_ts;
                 // constructors that we want to expose
                 // like
 

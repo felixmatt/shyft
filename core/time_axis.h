@@ -532,8 +532,8 @@ namespace shyft {
                     return generic_dt( a );
             }
             // the hard way merge points in the intersection of periods
-            utctime t0 = max( pa.start, pb.start );
-            utctime te = min( pa.end, pb.end );
+            utctime t0 = std::max( pa.start, pb.start );
+            utctime te = std::min( pa.end, pb.end );
             size_t ia = a.open_range_index_of( t0 );// first possible candidate from a
             size_t ib = b.open_range_index_of( t0 );// first possible candidate from b
             size_t ea = 1 + a.open_range_index_of( te );// one past last possible candidate from a
@@ -595,8 +595,8 @@ namespace shyft {
             }
 
             // the hard way merge points in the intersection of periods
-            utctime t0 = max( pa.start, pb.start );
-            utctime te = min( pa.end, pb.end );
+            utctime t0 = std::max( pa.start, pb.start );
+            utctime te = std::min( pa.end, pb.end );
             utcperiod tp( t0, te );
             size_t ia = a.open_range_index_of( t0 );  //notice these have to be non-nan!
             size_t ib = b.open_range_index_of( t0 );
