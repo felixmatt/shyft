@@ -876,43 +876,48 @@ namespace shyft{
             return /*EDs=*/ sqrt(std::pow(s_r*(r - 1), 2) + std::pow(s_a*(a - 1), 2) + std::pow(s_b*(b - 1), 2));
 		}
 
-		        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
+        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
         /// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
         /// calculate percentile using full sort.. works nice for a larger set of percentiles.
         inline vector<double> calculate_percentiles_excel_method_full_sort(vector<double>& samples, const vector<int>& percentiles) {
             vector<double> result; result.reserve(percentiles.size());
-            const size_t n_samples = samples.size();
+            const int n_samples = (int)samples.size();
             const double silent_nan = std::numeric_limits<double>::quiet_NaN();
             if (n_samples == 0) {
                 for (size_t i = 0; i < percentiles.size(); ++i)
                     result.emplace_back(silent_nan);
-            } else for (auto i : percentiles) {
-                // use NIST definition for percentile
-                if (i < 0) { // hack: negative value,  aka. the mean value..
-                    double sum = 0; int n=0;
-                    for (auto x : samples) {
-                        if (std::isfinite(x)) { sum += x; ++n; }
-                    }
-                    result.emplace_back(n > 0 ? sum / n : silent_nan);
-                } else {
-                    // use Hyndman and fam R7 definition for percentile, R & excel
-                    const double eps = 1e-30;
-                    double nd = 1.0 + (n_samples - 1)*double(i) / 100.0;
-                    size_t n = int(nd);
-                    double delta = nd - n;
-                    if (n == 0 && delta <=eps ) result.emplace_back(*min_element(begin(samples), end(samples)));
-                    else if (n >= n_samples) result.emplace_back(*max_element(begin(samples), end(samples)));
-                    else {
-                        sort(begin(samples), end(samples));
+            } else {
+                //TODO: filter out Nans
+                sort(begin(samples), end(samples));
+                for (auto i : percentiles) {
+                    // use NIST definition for percentile
+                    if (i < 0) { // hack: negative value,  aka. the mean value..
+                        double sum = 0; int n = 0;
+                        for (auto x : samples) {
+                            if (std::isfinite(x)) { sum += x; ++n; }
+                        }
+                        result.emplace_back(n > 0 ? sum / n : silent_nan);
+                    } else {
+
+                        const double eps = 1e-30;
+                        // use Hyndman and fam R7 definition, excel, R, and python
+                        double nd = 1.0 + (n_samples - 1)*double(i) / 100.0;
+                        int  n = int(nd);
+                        double delta = nd - n;
                         --n;//0 based index
-                        if (delta < eps) { //direct hit on the index, use just one.
-                            result.emplace_back(samples[n]);
-                        } else { // in-between two samples, use positional weight
-                            auto lower = samples[n];
-                            if (n < n_samples - 1)
-                                n++;
-                            auto upper = samples[n];
-                            result.emplace_back(lower + (delta)*(upper-lower));
+                        if (n <= 0 && delta <= eps) result.emplace_back(samples.front());
+                        else if (n >= n_samples) result.emplace_back(samples.back());
+                        else {
+
+                            if (delta < eps) { //direct hit on the index, use just one.
+                                result.emplace_back(samples[n]);
+                            } else { // in-between two samples, use positional weight
+                                auto lower = samples[n];
+                                if (n < n_samples - 1)
+                                    n++;
+                                auto upper = samples[n];
+                                result.emplace_back(lower + (delta)*(upper - lower));
+                            }
                         }
                     }
                 }

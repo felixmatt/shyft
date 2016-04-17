@@ -137,6 +137,18 @@ namespace expose {
             .def(vector_indexing_suite<TsVector>())
             ;
 
+        TsVector (*percentile_1)(const TsVector&,const time_axis::generic_dt&, const std::vector<int>&)=shyft::api::percentiles;
+        TsVector (*percentile_2)(const TsVector&,const time_axis::fixed_dt&, const std::vector<int>&)=shyft::api::percentiles;
+        const char *percentile_doc="return the percentiles (as TsVector type) (NIST R7, excel,R definition) of the timeseries\n"
+            " over the specified time_axis.\n"
+            " the time-series point_fx interpretation is used when performing \n"
+            " the true-average over the time_axis periods\n"
+            " percentiles: 0..100, -1 means arithmetic average,e.g.\n"
+            "   [ 0, 25,50,-1,75,100] will return 6 time-series\n"
+            "";
+        def("percentiles",percentile_1,args("timeseries","time_axis","percentiles"),percentile_doc);
+        def("percentiles",percentile_2,args("timeseries","time_axis","percentiles"),percentile_doc);
+
         {
 
 

@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  time_axis_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -30,7 +30,6 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="gamma_snow_test" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />

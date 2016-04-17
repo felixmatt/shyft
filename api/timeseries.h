@@ -552,6 +552,9 @@ namespace shyft {
             apoint_ts min(const apoint_ts& lhs,double           rhs) ;
             apoint_ts min(double           lhs,const apoint_ts& rhs) ;
 
+            // percentiles, need to include several forms of time_axis for python
+            std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t & ta,const vector<int>& percentiles);
+            std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const time_axis::fixed_dt & ta,const vector<int>& percentiles);
 
 
     }

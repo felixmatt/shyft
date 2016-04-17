@@ -196,11 +196,38 @@ class TimeSeries(unittest.TestCase):
         v.append(b)
 
         self.assertEqual(len(v), 2)
-        self.assertAlmostEqual(v[0].value(0),3.0,"expect first ts to be 3.0")
-        aa = api.Timeseries(ta=a.time_axis, values=a.values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE  )  # copy construct (really copy the values!)
+        self.assertAlmostEqual(v[0].value(0), 3.0, "expect first ts to be 3.0")
+        aa = api.Timeseries(ta=a.time_axis, values=a.values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
         a.fill(1.0)
         self.assertAlmostEqual(v[0].value(0), 1.0, "expect first ts to be 1.0, because the vector keeps a reference ")
         self.assertAlmostEqual(aa.value(0), 3.0)
+
+    def test_percentiles(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis(t0, dt, n)
+        timeseries = api.TsVector()
+
+        for i in range(10):
+            timeseries.append(api.Timeseries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+
+        wanted_percentiles = api.IntVector([0, 10, 50, -1, 70, 100])
+        ta_day = api.Timeaxis(t0, dt * 24, n // 24)
+        ta_day2 = api.Timeaxis2(t0, dt * 24, n // 24)
+        percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
+        percentiles2 = timeseries.percentiles(ta_day2, wanted_percentiles)  # just to verify it works with alt. syntax
+
+        self.assertEqual(len(percentiles2), len(percentiles))
+
+        for i in range(len(ta_day)):
+            self.assertAlmostEqual(0.0, percentiles[0].value(i), 3, "  0-percentile")
+            self.assertAlmostEqual(0.9, percentiles[1].value(i), 3, " 10-percentile")
+            self.assertAlmostEqual(4.5, percentiles[2].value(i), 3, " 50-percentile")
+            self.assertAlmostEqual(4.5, percentiles[3].value(i), 3, "   -average")
+            self.assertAlmostEqual(6.3, percentiles[4].value(i), 3, " 70-percentile")
+            self.assertAlmostEqual(9.0, percentiles[5].value(i), 3, "100-percentile")
 
 
 if __name__ == "__main__":

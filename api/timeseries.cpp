@@ -142,7 +142,16 @@ namespace shyft{
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
 
-
+        std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t& ta, const vector<int>& percentile_list) {
+            std::vector<apoint_ts> r;r.reserve(percentile_list.size());
+            //-- use core calc here:
+            auto rp= shyft::timeseries::calculate_percentiles(ta,ts_list,percentile_list);
+            for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
+            return r;
+        }
+        std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const time_axis::fixed_dt& ta, const vector<int>& percentile_list) {
+            return percentiles(ts_list,time_axis::generic_dt(ta),percentile_list);
+        }
 
         double abin_op_ts::value(size_t i) const {
             if(i==std::string::npos || i>=ta.size() )
