@@ -229,6 +229,22 @@ class TimeSeries(unittest.TestCase):
             self.assertAlmostEqual(6.3, percentiles[4].value(i), 3, " 70-percentile")
             self.assertAlmostEqual(9.0, percentiles[5].value(i), 3, "100-percentile")
 
+    def test_time_shift(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        t1 = c.time(2017, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis(t0, dt, n)
+        ts0 = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        ts1 = api.time_shift(ts0, t1-t0)
+        ts2 = 2.0* ts1.time_shift(t0-t1)  # just to verify it still can take part in an expression
+
+        for i in range(ts0.size()):
+            self.assertAlmostEqual(ts0.value(i),ts1.value(i),3,"expect values to be equal")
+            self.assertAlmostEqual(ts0.value(i)*2.0, ts2.value(i),3,"expect values to be double value")
+            self.assertEqual(ts0.time(i)+ (t1-t0),ts1.time(i), "expect time to be offset delta_t different")
+            self.assertEqual(ts0.time(i), ts2.time(i), "expect time to be equal")
 
 if __name__ == "__main__":
     unittest.main()

@@ -172,7 +172,9 @@ namespace shyft{
             //if(isfinite(v1)) return 0.5*(v0 + v1);
             //return v0;
         }
-
+        apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
+            return apoint_ts( std::make_shared<shyft::api::time_shift_ts>(ts,dt));
+        }
 
     }
 }

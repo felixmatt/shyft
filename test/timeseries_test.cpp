@@ -838,3 +838,29 @@ void timeseries_test::test_ts_statistics_speed() {
 }
 
 
+void timeseries_test::test_timeshift_ts() {
+    using namespace shyft;
+    using namespace shyft::core;
+    using namespace shyft::timeseries;
+    typedef point_ts<time_axis::fixed_dt> pts_t;
+    calendar utc;
+    utctime t0=utc.time(2016,1,1);
+    utctime t1=utc.time(2016,1,1, 1);
+    utctimespan dt=deltahours(1);
+    size_t n = 24;
+    time_axis::fixed_dt ta0(t0,dt,n);
+    pts_t ts0(ta0,0.0);
+    auto ts1 = time_shift(ts0,t1-t0);
+    auto ts2 = time_shift(ts1,t0-t1);
+
+    TS_ASSERT(is_equal_ts(ts0,ts2));// time-shift back and forth, should give same ts
+    TS_ASSERT(!is_equal_ts(ts0,ts1));// the time-shifted ts is different from the other
+
+    for(size_t i=0;i<ts0.size();++i) {
+        TS_ASSERT_DELTA(ts0.value(i),ts1.value(i),1e-7);//The values should be exactly equal
+        TS_ASSERT_EQUALS(ts0.time(i)+(t1-t0), ts1.time(i));// just to verify the offsets are ok (also tested by time_axis fx)
+    }
+
+    auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
+
+}

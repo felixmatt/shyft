@@ -104,7 +104,8 @@ namespace shyft {
                 point get(size_t i) const {return point(time(i),value(i));}
 
             };
-            struct average_ts;
+            struct average_ts;//fwd api
+            struct time_shift_ts;// fwd api
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
              *  This is the class that we expose to python, with operations, expressions etc.
@@ -118,7 +119,9 @@ namespace shyft {
                 std::shared_ptr<ipoint_ts> ts;// consider unique pointer instead,possibly public, to ease transparency in python
 
                public:
+                   typedef gta_t ta_t;///< this is the generic time-axis type for apoint_ts, needed by timeseries namespace templates
 				   friend struct average_ts;
+				   friend struct time_shift_ts;
                 // constructors that we want to expose
                 // like
 
@@ -312,6 +315,71 @@ namespace shyft {
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
 
             };
+
+
+            /** \brief time_shift ts do a time-shift dt on the supplied ts
+             *
+             * The values are exactly the same as the supplied ts argument to the constructor
+             * but the time-axis is shifted utctimespan dt to the left.
+             * e.g.: t_new = t_original + dt
+             *
+             *       lets say you have a time-series 'a'  with time-axis covering 2015
+             *       and you want to time-shift so that you have a time- series 'b'data for 2016,
+             *       then you could do this to get 'b':
+             *
+             *           utc = calendar() // utc calendar
+             *           dt  = utc.time(2016,1,1) - utc.time(2015,1,1)
+             *            b  = timeshift_ts(a, dt)
+             *
+             */
+            struct time_shift_ts:ipoint_ts {
+                std::shared_ptr<ipoint_ts> ts;
+                gta_t ta;
+                utctimespan dt;// despite ta time-axis, we need it
+
+                //-- default stuff, ct/copy etc goes here
+                time_shift_ts():dt(0) {}
+                time_shift_ts(const time_shift_ts& c):ts(c.ts),ta(c.ta),dt(c.dt) {}
+                time_shift_ts(time_shift_ts&&c):ts(std::move(c.ts)),ta(std::move(c.ta)),dt(c.dt) {}
+                time_shift_ts& operator=(const time_shift_ts& o) {
+                    if(this != &o) {
+                        ts=o.ts;
+                        ta=o.ta;
+                        //fx_policy=o.fx_policy;
+                        dt=o.dt;
+                    }
+                    return *this;
+                }
+
+                time_shift_ts& operator=(time_shift_ts&& o) {
+                    ts=std::move(o.ts);
+                    ta=std::move(o.ta);
+                    //fx_policy=o.fx_policy;
+                    dt=o.dt;
+                    return *this;
+                }
+
+                //-- useful ct goes here
+                time_shift_ts(const apoint_ts& ats,utctimespan dt):ts(ats.ts),ta(time_axis::time_shift(ats.time_axis(),dt)),dt(dt) {}
+                time_shift_ts(apoint_ts&& ats, utctimespan dt):ts(std::move(ats.ts)),ta(time_axis::time_shift(ats.time_axis(),dt)),dt(dt) {}
+                time_shift_ts(const std::shared_ptr<ipoint_ts> &ts, utctime dt ):ts(ts),ta(time_axis::time_shift(ts->time_axis(),dt)),dt(dt){}
+
+                // implement ipoint_ts contract:
+                virtual point_interpretation_policy point_interpretation() const {return ts->point_interpretation();}
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {ts->set_point_interpretation(point_interpretation);}
+                virtual const gta_t& time_axis() const {return ta;}
+                virtual utcperiod total_period() const {return ta.total_period();}
+                virtual size_t index_of(utctime t) const {return ta.index_of(t);}
+                virtual size_t size() const {return ta.size();}
+                virtual utctime time(size_t i) const {return ta.time(i);};
+                virtual double value(size_t i) const {return ts->value(i);}
+                virtual double value_at(utctime t) const {return ts->value_at(t-dt);}
+                virtual std::vector<double> values() const {return ts->values();}
+
+            };
+
+
+
 
             /** The iop_t represent the basic 'binary' operation,
              *   a stateless function that takes two doubles and returns the binary operation.
@@ -552,10 +620,11 @@ namespace shyft {
             apoint_ts min(const apoint_ts& lhs,double           rhs) ;
             apoint_ts min(double           lhs,const apoint_ts& rhs) ;
 
-            // percentiles, need to include several forms of time_axis for python
+            ///< percentiles, need to include several forms of time_axis for python
             std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t & ta,const vector<int>& percentiles);
             std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const time_axis::fixed_dt & ta,const vector<int>& percentiles);
 
-
+            ///< time_shift i.e. same ts values, but time-axis is time-axis + dt
+            apoint_ts time_shift(const apoint_ts &ts, utctimespan dt);
     }
 }

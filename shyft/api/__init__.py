@@ -78,6 +78,9 @@ Timeaxis2.__call__ = lambda self, i: self.period(i)
 # fix up property on timeseries
 Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
+Timeseries.__len__ = lambda self: self.size()
+Timeseries.time_shift = lambda self,delta_t: time_shift(self,delta_t)
+
 
 def ta_iter(x):
     x.counter = 0

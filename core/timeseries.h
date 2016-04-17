@@ -34,20 +34,11 @@ namespace shyft{
         using namespace std;
         const double EPS=1e-12;
 
-
-
-
 		/** \brief simply a point identified by utctime t and value v */
         struct point {
             utctime t;
             double v;
             point(utctime t=0, double v=0.0) : t(t), v(v) { /* Do nothing */}
-#ifndef SWIG
-            friend std::ostream& operator<<(std::ostream& os, const point& pt) {
-                os << calendar().to_string(pt.t) << ", " << pt.v;
-                return os;
-            }
-#endif
         };
 
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
@@ -75,7 +66,7 @@ namespace shyft{
         inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
             return a==point_interpretation_policy::POINT_INSTANT_VALUE || b==point_interpretation_policy::POINT_INSTANT_VALUE?point_interpretation_policy::POINT_INSTANT_VALUE:point_interpretation_policy::POINT_AVERAGE_VALUE;
         }
-        #ifndef SWIG
+
         //--- to avoid duplicating algorithms in classes where the stored references are
         // either by shared_ptr, or by value, we use template function:
         //  to make shared_ptr<T> appear equal to T
@@ -104,7 +95,7 @@ namespace shyft{
         struct d_ref_t<T,typename enable_if<!is_shared_ptr<T>::value>::type > {
             typedef T type;
         };
-        #endif
+
         /**\brief point time-series, pts, defined by
          * its
          * templated time-axis, ta
@@ -179,6 +170,78 @@ namespace shyft{
 
         };
 
+        /** \brief time_shift ts do a time-shift dt on the supplied ts
+         *
+         * The values are exactly the same as the supplied ts argument to the constructor
+         * but the time-axis is shifted utctimespan dt to the left.
+         * e.g.: t_new = t_original + dt
+         *
+         *       lets say you have a time-series 'a'  with time-axis covering 2015
+         *       and you want to time-shift so that you have a time- series 'b'data for 2016,
+         *       then you could do this to get 'b':
+         *
+         *           utc = calendar() // utc calendar
+         *           dt  = utc.time(2016,1,1) - utc.time(2015,1,1)
+         *            b  = timeshift_ts(a, dt)
+         *
+         */
+        template<class Ts>
+        struct time_shift_ts {
+            typedef typename Ts::ta_t ta_t;
+            Ts ts;
+            // need to have a time-shifted time-axis here:
+            // TA, ta.timeshift(dt) -> a clone of ta...
+            ta_t ta;
+            point_interpretation_policy fx_policy; // inherited from ts
+            utctimespan dt;// despite ta time-axis, we need it
+
+            //-- default stuff, ct/copy etc goes here
+            time_shift_ts():fx_policy(POINT_AVERAGE_VALUE),dt(0) {}
+            time_shift_ts(const time_shift_ts& c):ts(c.ts),ta(c.ta),fx_policy(c.fx_policy),dt(c.dt) {}
+            time_shift_ts(time_shift_ts&&c):ts(std::move(c.ts)),ta(std::move(c.ta)),fx_policy(c.fx_policy),dt(c.dt) {}
+            time_shift_ts& operator=(const time_shift_ts& o) {
+                if(this != &o) {
+                    ts=o.ts;
+                    ta=o.ta;
+                    fx_policy=o.fx_policy;
+                    dt=o.dt;
+                }
+                return *this;
+            }
+
+            time_shift_ts& operator=(time_shift_ts&& o) {
+                ts=std::move(o.ts);
+                ta=std::move(o.ta);
+                fx_policy=o.fx_policy;
+                dt=o.dt;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_>
+            time_shift_ts(A_ && ts,utctimespan dt)
+                :ts(std::forward<A_>(ts)),
+                 ta(time_axis::time_shift(ts.time_axis(),dt)),
+                 fx_policy(ts.fx_policy),
+                 dt(dt) {}
+
+            const ta_t& time_axis() const { return ta;}
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+
+            point get(size_t i) const {return point(ta.time(i),ts.value(i));}
+
+            // BW compatiblity ?
+            size_t size() const { return ta.size();}
+            size_t index_of(utctime t) const {return ta.index_of(t);}
+            utcperiod total_period() const {return ta.total_period();}
+            utctime time(size_t i ) const {return ta.time(i);}
+
+            //--
+            double value(size_t i) const { return ts.value(i);}
+            double operator()(utctime t) const { return ts(t-dt);} ///< just here we needed the dt
+        };
+
 
         /**\brief average_ts, average time-series
          *
@@ -219,7 +282,7 @@ namespace shyft{
         };
 
 
-        #ifndef SWIG
+
 
         /** \brief Basic math operators
          *
@@ -331,10 +394,17 @@ namespace shyft{
         template<class T> struct is_ts {static const bool value=false;};
         template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
+        template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
 
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
         template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+
+        /** time_shift function, to ease syntax and usability */
+        template<class Ts>
+        time_shift_ts<typename std::decay<Ts>::type > time_shift( Ts &&ts, utctimespan dt) {return time_shift_ts< typename std::decay<Ts>::type >(std::forward<Ts>(ts),dt);}
 
         struct op_max {
             double operator()(const double&a,const double&b) const {return max(a,b);}
@@ -411,7 +481,6 @@ namespace shyft{
         }
 
 
-        #endif
 
         /** \brief A point source with a time_axis, and a function Fx(utctime t) that
          *  gives the value at utctime t, where t is from timeaxis(i).t

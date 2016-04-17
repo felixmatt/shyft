@@ -149,8 +149,12 @@ namespace expose {
         def("percentiles",percentile_1,args("timeseries","time_axis","percentiles"),percentile_doc);
         def("percentiles",percentile_2,args("timeseries","time_axis","percentiles"),percentile_doc);
 
-        {
+        def("time_shift", shyft::api::time_shift,args("timeseries","delta_t"),
+            "returns a delta_t time-shifted time-series\n"
+            " the values are the same as the original,\n"
+            " but the time_axis equals the original + delta_t\n");
 
+        /* local scope */ {
 
         typedef shyft::time_axis::fixed_dt ta_t;
         typedef shyft::timeseries::average_accessor<pts_t,ta_t> AverageAccessorTs;
