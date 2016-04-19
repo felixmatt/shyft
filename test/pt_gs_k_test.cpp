@@ -25,6 +25,11 @@ namespace pc = shyft::core::precipitation_correction;
 
 typedef TSPointTarget<point_timeaxis> catchment_t;
 
+static std::ostream& operator<<(std::ostream& os, const point& pt) {
+    os << calendar().to_string(pt.t) << ", " << pt.v;
+    return os;
+}
+
 void pt_gs_k_test::test_call_stack()
 {
     xpts_t temp;

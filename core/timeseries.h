@@ -39,12 +39,6 @@ namespace shyft{
             utctime t;
             double v;
             point(utctime t=0, double v=0.0) : t(t), v(v) { /* Do nothing */}
-#ifndef SWIG
-            friend std::ostream& operator<<(std::ostream& os, const point& pt) {
-                os << calendar().to_string(pt.t) << ", " << pt.v;
-                return os;
-            }
-#endif
         };
 
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
@@ -72,7 +66,7 @@ namespace shyft{
         inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
             return a==point_interpretation_policy::POINT_INSTANT_VALUE || b==point_interpretation_policy::POINT_INSTANT_VALUE?point_interpretation_policy::POINT_INSTANT_VALUE:point_interpretation_policy::POINT_AVERAGE_VALUE;
         }
-        #ifndef SWIG
+
         //--- to avoid duplicating algorithms in classes where the stored references are
         // either by shared_ptr, or by value, we use template function:
         //  to make shared_ptr<T> appear equal to T
@@ -101,7 +95,7 @@ namespace shyft{
         struct d_ref_t<T,typename enable_if<!is_shared_ptr<T>::value>::type > {
             typedef T type;
         };
-        #endif
+
         /**\brief point time-series, pts, defined by
          * its
          * templated time-axis, ta
@@ -115,6 +109,7 @@ namespace shyft{
         struct point_ts {
             typedef TA ta_t;
             TA ta;
+            const TA& time_axis() const {return ta;}
             vector<double> v;
             point_interpretation_policy fx_policy;
 
@@ -175,6 +170,78 @@ namespace shyft{
 
         };
 
+        /** \brief time_shift ts do a time-shift dt on the supplied ts
+         *
+         * The values are exactly the same as the supplied ts argument to the constructor
+         * but the time-axis is shifted utctimespan dt to the left.
+         * e.g.: t_new = t_original + dt
+         *
+         *       lets say you have a time-series 'a'  with time-axis covering 2015
+         *       and you want to time-shift so that you have a time- series 'b'data for 2016,
+         *       then you could do this to get 'b':
+         *
+         *           utc = calendar() // utc calendar
+         *           dt  = utc.time(2016,1,1) - utc.time(2015,1,1)
+         *            b  = timeshift_ts(a, dt)
+         *
+         */
+        template<class Ts>
+        struct time_shift_ts {
+            typedef typename Ts::ta_t ta_t;
+            Ts ts;
+            // need to have a time-shifted time-axis here:
+            // TA, ta.timeshift(dt) -> a clone of ta...
+            ta_t ta;
+            point_interpretation_policy fx_policy; // inherited from ts
+            utctimespan dt;// despite ta time-axis, we need it
+
+            //-- default stuff, ct/copy etc goes here
+            time_shift_ts():fx_policy(POINT_AVERAGE_VALUE),dt(0) {}
+            time_shift_ts(const time_shift_ts& c):ts(c.ts),ta(c.ta),fx_policy(c.fx_policy),dt(c.dt) {}
+            time_shift_ts(time_shift_ts&&c):ts(std::move(c.ts)),ta(std::move(c.ta)),fx_policy(c.fx_policy),dt(c.dt) {}
+            time_shift_ts& operator=(const time_shift_ts& o) {
+                if(this != &o) {
+                    ts=o.ts;
+                    ta=o.ta;
+                    fx_policy=o.fx_policy;
+                    dt=o.dt;
+                }
+                return *this;
+            }
+
+            time_shift_ts& operator=(time_shift_ts&& o) {
+                ts=std::move(o.ts);
+                ta=std::move(o.ta);
+                fx_policy=o.fx_policy;
+                dt=o.dt;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_>
+            time_shift_ts(A_ && ts,utctimespan dt)
+                :ts(std::forward<A_>(ts)),
+                 ta(time_axis::time_shift(ts.time_axis(),dt)),
+                 fx_policy(ts.fx_policy),
+                 dt(dt) {}
+
+            const ta_t& time_axis() const { return ta;}
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+
+            point get(size_t i) const {return point(ta.time(i),ts.value(i));}
+
+            // BW compatiblity ?
+            size_t size() const { return ta.size();}
+            size_t index_of(utctime t) const {return ta.index_of(t);}
+            utcperiod total_period() const {return ta.total_period();}
+            utctime time(size_t i ) const {return ta.time(i);}
+
+            //--
+            double value(size_t i) const { return ts.value(i);}
+            double operator()(utctime t) const { return ts(t-dt);} ///< just here we needed the dt
+        };
+
 
         /**\brief average_ts, average time-series
          *
@@ -189,6 +256,8 @@ namespace shyft{
             TA ta;
             TS ts;
             point_interpretation_policy fx_policy;
+            const TA& time_axis() const {return ta;}
+
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts)
             ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
@@ -213,7 +282,7 @@ namespace shyft{
         };
 
 
-        #ifndef SWIG
+
 
         /** \brief Basic math operators
          *
@@ -231,11 +300,11 @@ namespace shyft{
             B rhs;
             TA ta;
             point_interpretation_policy fx_policy;
-
+            const TA& time_axis() const {return ta;}
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
-                ta=time_axis::combine(d_ref(lhs).ta,d_ref(rhs).ta);
+                ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
                 fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
             }
             double operator()(utctime t) const {
@@ -265,10 +334,10 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-
+            const TA& time_axis() const {return ta;}
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(rhs).ta;
+                ta=d_ref(rhs).time_axis();
                 fx_policy = d_ref(rhs).fx_policy;
             }
 
@@ -285,10 +354,10 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-
+            const TA& time_axis() const {return ta;}
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(lhs).ta;
+                ta=d_ref(lhs).time_axis();
                 fx_policy = d_ref(lhs).fx_policy;
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
@@ -325,10 +394,17 @@ namespace shyft{
         template<class T> struct is_ts {static const bool value=false;};
         template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
+        template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
 
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
         template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+
+        /** time_shift function, to ease syntax and usability */
+        template<class Ts>
+        time_shift_ts<typename std::decay<Ts>::type > time_shift( Ts &&ts, utctimespan dt) {return time_shift_ts< typename std::decay<Ts>::type >(std::forward<Ts>(ts),dt);}
 
         struct op_max {
             double operator()(const double&a,const double&b) const {return max(a,b);}
@@ -337,7 +413,13 @@ namespace shyft{
             double operator()(const double&a,const double&b) const {return min(a,b);}
         };
 
-        template <class A,class B, typename = enable_if_t< is_ts<A>::value || is_ts<B>::value > >
+        template <class A,class B, typename =
+                    enable_if_t<
+                        (is_ts<A>::value && (is_floating_point<B>::value || is_ts<B>::value))
+                      ||(is_ts<B>::value && (is_floating_point<A>::value || is_ts<A>::value))
+                    >
+                  >
+
         auto operator+ (const A& lhs, const B& rhs) {
             return bin_op<A,B,plus<double>,typename op_axis<A,B>::type> (lhs,plus<double>(),rhs);
         }
@@ -399,97 +481,7 @@ namespace shyft{
         }
 
 
-        #endif
-        /** \brief A point source with time_axis.
-         *
-         * The point_source template class contains a time axis and an equally sized
-         * vector of corresponding values. It implements the shyft::timeseries::point_source_with_no_regularity interface
-         * and the Accessor interface, in addition to a custom interface for efficient time series arithmetics.
-         *
-         * \tparam TA Time axis type that supports:
-         *  -# .index_of(tx) const --> -1(npos) or lowerbound index
-         *  -# .size() const       --> number of periods on time-axis
-         *  -#  op() (i) const        --> utcperiod of the i'th interval
-         */
-        #if 0
-        template<typename TA>
-        class point_timeseries {
-          public:
-            typedef TA timeaxis_t;
-            TA time_axis;
-            vector<double> v;
-            /** point intepretation: how we should map points to f(t) */
-            point_interpretation_policy point_fx=POINT_INSTANT_VALUE;
-            point_interpretation_policy point_interpretation() const { return point_fx; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
-                point_fx=point_interpretation;
-            }
 
-
-            point_timeseries() { }
-            // make it move-able
-            point_timeseries(const point_timeseries &c) : time_axis(c.time_axis),v(c.v) {}
-            #ifndef SWIG
-            point_timeseries(point_timeseries&& c)
-             : time_axis(std::move(c.time_axis)), v(std::move(c.v)), point_fx(c.point_fx) {}
-            point_timeseries& operator=(point_timeseries&& c) {
-                time_axis = std::move(c.time_axis);
-                v = std::move(c.v);
-                point_fx = c.point_fx;
-                return *this;
-            }
-            point_timeseries& operator=(const point_timeseries& c) {
-                if (&c == this) return *this;
-                time_axis = c.time_axis;
-                v = c.v;
-                point_fx = c.point_fx;
-                return *this;
-            }
-            #endif
-
-            point_timeseries(const TA &time_axis_ref, double fill_value,
-                    point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-             : time_axis(time_axis_ref), v(time_axis_ref.size(), fill_value),
-               point_fx(interpretation) {}
-            point_timeseries(const TA &time_axis, const vector<double> &fill_values,
-                    point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-              : time_axis(time_axis), v(fill_values), point_fx(interpretation) {
-                if(time_axis.size() != v.size())
-                    throw std::runtime_error("ct with ta and values: timeaxis.size() vs. values missmatch ");
-              }
-            template<typename S>
-            point_timeseries(const TA& time_axis, S value_begin, S value_end,
-                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-             : time_axis(time_axis), v(value_begin, value_end), point_fx(interpretation) {
-                if(time_axis.size() != v.size())
-                    throw std::runtime_error("ct with iterators timeaxis.size() vs. values missmatch ");
-            }
-                        // constructor from interators
-
-            const timeaxis_t& get_time_axis() const { return time_axis; }
-            utcperiod total_period() const { return time_axis.total_period(); }
-            // Source read interface:
-            point get(size_t i) const { return point(time_axis.time(i), v[i]); } // maybe verify v.size(), vs. time_axis size ?
-            size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
-            size_t size() const { return time_axis.size(); }
-            // Source write interface
-            void set(size_t i, double value) { v[i] = value; }
-
-            /**< .value() implements the Accessor pattern */
-            double value(size_t i) const { return v[i]; }
-            utctime time(size_t i) const { return time_axis.time(i); }
-            // Additional write interface
-            void add(size_t i, double value) { v[i] += value; }
-            void add(const point_timeseries<TA>& other) {
-                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), std::plus<double>());
-            }
-            void add_scale(const point_timeseries<TA>&other,double scale) {
-                std::transform(begin(v), end(v), other.v.cbegin(), begin(v), [scale](double a, double b) {return a + b*scale; });
-            }
-            void fill(double value) { std::fill(begin(v), end(v), value); }
-			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
-        };
-        #endif
         /** \brief A point source with a time_axis, and a function Fx(utctime t) that
          *  gives the value at utctime t, where t is from timeaxis(i).t
          *  suitable for functional type of time series
@@ -503,7 +495,7 @@ namespace shyft{
          */
         template<typename TA,typename F>
         class function_timeseries {
-            TA time_axis;
+            TA ta;
             F fx;
             point_interpretation_policy point_fx=POINT_INSTANT_VALUE;
           public:
@@ -512,14 +504,16 @@ namespace shyft{
             point_interpretation_policy point_interpretation() const {return point_fx;}
             void set_point_interpretation(point_interpretation_policy point_interpretation) {point_fx=point_interpretation;}
 
-            function_timeseries(const TA& time_axis, const F& f,point_interpretation_policy point_interpretation=POINT_INSTANT_VALUE):time_axis(time_axis),fx(f) {}
+            function_timeseries(const TA& ta, const F& f,point_interpretation_policy point_interpretation=POINT_INSTANT_VALUE):ta(ta),fx(f) {}
+            const TA& time_axis() const {return ta;}
+
             // Source read interface:
             point get(size_t i) const {
-                utctime t = time_axis.time(i);
+                utctime t = ta.time(i);
                 return point(t, (*this)(t));
             } // maybe verify v.size(), vs. time_axis size ?
-            size_t size() const {return time_axis.size();}
-            size_t index_of(const utctime tx) const {return time_axis.index_of(tx);}
+            size_t size() const {return ta.size();}
+            size_t index_of(const utctime tx) const {return ta.index_of(tx);}
 
             // Specific methods
             double operator()(utctime t) const {return fx(t);}
@@ -950,6 +944,119 @@ namespace shyft{
             // We use EDs to scale, and KGEs = (1-EDs) with max at 1.0, we use 1-KGEs to get minimum as 0 for minbobyqa
             return /*EDs=*/ sqrt(std::pow(s_r*(r - 1), 2) + std::pow(s_a*(a - 1), 2) + std::pow(s_b*(b - 1), 2));
 		}
+
+        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
+        /// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
+        /// calculate percentile using full sort.. works nice for a larger set of percentiles.
+        inline vector<double> calculate_percentiles_excel_method_full_sort(vector<double>& samples, const vector<int>& percentiles) {
+            vector<double> result; result.reserve(percentiles.size());
+            const int n_samples = (int)samples.size();
+            const double silent_nan = std::numeric_limits<double>::quiet_NaN();
+            if (n_samples == 0) {
+                for (size_t i = 0; i < percentiles.size(); ++i)
+                    result.emplace_back(silent_nan);
+            } else {
+                //TODO: filter out Nans
+                sort(begin(samples), end(samples));
+                for (auto i : percentiles) {
+                    // use NIST definition for percentile
+                    if (i < 0) { // hack: negative value,  aka. the mean value..
+                        double sum = 0; int n = 0;
+                        for (auto x : samples) {
+                            if (std::isfinite(x)) { sum += x; ++n; }
+                        }
+                        result.emplace_back(n > 0 ? sum / n : silent_nan);
+                    } else {
+
+                        const double eps = 1e-30;
+                        // use Hyndman and fam R7 definition, excel, R, and python
+                        double nd = 1.0 + (n_samples - 1)*double(i) / 100.0;
+                        int  n = int(nd);
+                        double delta = nd - n;
+                        --n;//0 based index
+                        if (n <= 0 && delta <= eps) result.emplace_back(samples.front());
+                        else if (n >= n_samples) result.emplace_back(samples.back());
+                        else {
+
+                            if (delta < eps) { //direct hit on the index, use just one.
+                                result.emplace_back(samples[n]);
+                            } else { // in-between two samples, use positional weight
+                                auto lower = samples[n];
+                                if (n < n_samples - 1)
+                                    n++;
+                                auto upper = samples[n];
+                                result.emplace_back(lower + (delta)*(upper - lower));
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+       /** \brief calculate specified percentiles for supplied list of time-series over the specified time-axis
+
+		Percentiles for a set of timeseries, over a time-axis
+		we would like to :
+		percentiles_timeseries = calculate_percentiles(ts-id-list,time-axis,percentiles={0,25,50,100})
+		done like this
+		1..m ts-id, time-axis( start,dt, n),
+		read 1..m ts into memory
+		percentiles specified is np
+		result is percentiles_timeseries
+		accessor "accumulate" on time-axis to dt, using stair-case or linear between points
+		create result vector[1..n] (the time-axis dimension)
+		where each element is vector[1..np] (for each timestep, we get the percentiles
+		for each timestep_i in timeaxis
+		for each tsa_i: accessors(timeaxis,ts)
+		samplevector[timestep_i].emplace_back( tsa_i(time_step_i) )
+		percentiles_timeseries[timestep_i]= calculate_percentiles(..)
+
+		\return percentiles_timeseries
+
+		*/
+		template <class ts_t,class ta_t>
+		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
+            std::vector<point_ts<ta_t>> result;
+
+			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
+				result.emplace_back(ta, 0.0);
+
+			auto partition_calc=[&result,&ts_list,&ta,&percentiles](size_t i0,size_t n) {
+                std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
+                for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
+                    tsa_list.emplace_back(ts, ta);
+
+                std::vector<double> samples(tsa_list.size(), 0.0);
+
+                for (size_t t = i0; t < i0+n; ++t) {//each time step t in the timeaxis, here we could do parallell partition
+                    for (size_t i = 0; i < tsa_list.size(); ++i) // get samples from all the "tsa"
+                        samples[i] = tsa_list[i].value(t);
+                    // possible with pipe-line to percentile calc here !
+                    std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
+                    for (size_t p = 0; p < result.size(); ++p)
+                        result[p].set(t, percentiles_at_t[p]);
+                }
+
+			};
+			if(ta.size()<min_t_steps) {
+                partition_calc(0,ta.size());
+			} else {
+                vector<future<void>> calcs;
+                //size_t n_partitions= 1+ ta.size()/min_t_steps;
+                for(size_t p=0;p<ta.size(); ) {
+                    size_t np = p+ min_t_steps<= ta.size()?min_t_steps:ta.size()-p;
+                    calcs.push_back(std::async(std::launch::async,partition_calc,p,np));
+                    p+=np;
+                }
+                for(auto &f:calcs)
+                    f.get();
+
+			}
+
+			return std::move(result);
+		}
+
 
     } // timeseries
 } // shyft

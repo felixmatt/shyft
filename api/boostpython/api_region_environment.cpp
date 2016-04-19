@@ -17,7 +17,7 @@ namespace expose {
     template<class T>
     static void GeoPointSourceX(const char *py_name,const char *py_vector,const char *py_doc) {
         py::class_<T,py::bases<sa::GeoPointSource>>(py_name,py_doc)
-            .def(py::init<py::optional<sc::geo_point,sa::ITimeSeriesOfPoints_ >>(py::args("midpoint","ts")))
+            .def(py::init<py::optional<sc::geo_point,sa::apoint_ts >>(py::args("midpoint","ts")))
             ;
         typedef std::vector<T> TSourceVector;
         py::class_<TSourceVector,py::bases<>,std::shared_ptr<TSourceVector> > (py_vector)
@@ -33,7 +33,7 @@ namespace expose {
             "for the point sources in SHyFT.\n"
             "Typically it contains a GeoPoint (3d position), plus a time-series\n"
             )
-            .def(py::init<py::optional<sc::geo_point,sa::ITimeSeriesOfPoints_ >>(py::args("midpoint","ts")))
+            .def(py::init<py::optional<sc::geo_point,sa::apoint_ts >>(py::args("midpoint","ts")))
             .def_readwrite("mid_point_",&sa::GeoPointSource::mid_point_,"reference to internal mid_point")
             .def("mid_point",&sa::GeoPointSource::mid_point,"returns a copy of mid_point")
             // does not work  yet:.def_readwrite("ts",&sa::GeoPointSource::ts)

@@ -156,3 +156,20 @@ void time_axis_test::test_all() {
     }
 
 }
+
+namespace shyft {
+    namespace time_axis {
+    }
+}
+
+void time_axis_test::test_time_shift() {
+    calendar utc;
+    utctime t0=utc.time(2015,1,1);
+    utctime t1=utc.time(2016,1,1);
+    auto dt=deltahours(1);
+    size_t n=24;
+    time_axis::fixed_dt ta0(t0,dt,n);
+    time_axis::fixed_dt ta1(time_shift(ta0,t1-t0));
+    TS_ASSERT( test_if_equal( time_axis::fixed_dt(t1,dt, n), ta1 ) );
+
+}

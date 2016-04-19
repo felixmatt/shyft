@@ -37,130 +37,41 @@
 #include "core/pt_hs_k_cell_model.h"
 #include "core/pt_ss_k_cell_model.h"
 
+#include "timeseries.h"
 
 namespace shyft {
   using namespace shyft::core;
-  using namespace shyft::timeseries;
   using namespace std;
   namespace api {
 
-    /** \brief class ITimeSeriesOfPoints: is a simple Native timeseries class interface used
-     * to marshal timeseries data between the native client libraries and python wrapper.
-     *
-     * In the c++ core, timeseries are templates, - but in the python parts we need concrete
-     * classes that we can rely on (stable/efficient interfaces).
-     *
-     * It should reflect the interfaces/concept of the core timeseries
-     * sufficient to put data into the core-model, and to extract data back.
-     *
-     */
-    class ITimeSeriesOfPoints {
-    public:
-        virtual ~ITimeSeriesOfPoints(){}
-        virtual point_interpretation_policy point_interpretation() const =0;
-        virtual void set_point_interpretation(point_interpretation_policy point_interpretation) =0;
-
-        virtual utcperiod total_period() const=0;   ///< Returns period that covers points, given
-        virtual size_t size() const=0;        ///< number of points that descr. y=f(t) on t ::= period
-        virtual utctime time(size_t i) const=0;///< get the i'th time point
-        virtual double value(size_t i) const=0;///< get the i'th value
-        #ifndef SWIG
-        double operator()(utctime t) const {
-            size_t i=index_of(t);
-            if(i==std::string::npos) {
-                return nan;
-            }
-            double v1=value(i);
-            if( point_interpretation()==point_interpretation_policy::POINT_INSTANT_VALUE
-                    && i+1<size()
-                    && isfinite(value(i+1)) ) {
-                utctime t1=time(i);
-                utctime t2=time(i+1);
-                double f= double(t2-t)/double(t2-t1);
-                return v1*f + (1.0-f)*value(i+1);
-            }
-            return v1;
-        }
-        #endif
-        // core friendly interface
-        virtual size_t index_of(utctime t) const=0;
-        virtual void set(size_t i, double x)=0;
-        virtual void fill(double x) =0;
-        virtual void scale_by(double x)=0;
-        point get(size_t i) const { return point(time(i), value(i)); }
-    };
-
-    typedef std::shared_ptr<ITimeSeriesOfPoints> ITimeSeriesOfPoints_;
-
-
-    /** \brief The GenericTs is a templated wrapper of core time-series that comply with the interface
-     *
-     * \note we could consider extending the core timeseries with method implementations that 'throws' on use
-     *       (the alternative is that it does not compile)
-     *
-     */
-    template<typename TsRep>
-    struct GenericTs : public ITimeSeriesOfPoints {
-        typedef TsRep ts_t;//export the ts type, so we can use it as tag later
-        TsRep ts_rep;
-        GenericTs(){}
-        GenericTs(const TsRep& ts):ts_rep(ts){}
-        #ifndef SWIG
-        GenericTs(TsRep&& ts):ts_rep(std::move(ts)){}
-        #endif
-        //ITimeSeriesOfPoints implementation
-        point_interpretation_policy point_interpretation() const { return ts_rep.point_interpretation(); }
-        void set_point_interpretation(point_interpretation_policy point_interpretation) {
-            ts_rep.set_point_interpretation(point_interpretation);
-        }
-
-
-        utcperiod total_period() const { return ts_rep.ta.total_period(); }
-        size_t size() const { return ts_rep.ta.size(); }
-        utctime time(size_t i) const { return ts_rep.ta.time(i); }
-        double value(size_t i) const { return ts_rep.value(i); }
-        size_t index_of(utctime t) const { return ts_rep.ta.index_of(t);}
-        // utility
-        void set(size_t i, double x) { ts_rep.set(i, x);}
-        void fill(double x) {ts_rep.fill(x);}
-        void scale_by(double x) {ts_rep.scale_by(x);}
-    };
 
     /** \brief TsFactor provides time-series creation function using supplied primitives like vector of double, start, delta-t, n etc.
      */
     struct TsFactory {
 
-        std::shared_ptr<ITimeSeriesOfPoints>
+        apoint_ts
         create_point_ts(int n, utctime tStart, utctimespan dt,
                         const std::vector<double>& values,
-                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE)
-        {
-            return shared_ptr<ITimeSeriesOfPoints> (
-                new GenericTs<point_ts<time_axis::fixed_dt> >(point_ts<time_axis::fixed_dt>(time_axis::fixed_dt(tStart,
-                            dt, n), values, interpretation)));
+                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE){
+            return apoint_ts( time_axis::fixed_dt(tStart,dt, n), values, interpretation);
         }
 
 
-        std::shared_ptr<ITimeSeriesOfPoints>
+        apoint_ts
         create_time_point_ts(utcperiod period, const std::vector<utctime>& times,
                              const std::vector<double>& values,
                              point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
             if (times.size() == values.size() + 1) {
-                return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_ts<time_axis::point_dt> >(point_ts<time_axis::point_dt>(
-                            time_axis::point_dt(times), values, interpretation)));
+                return apoint_ts( time_axis::point_dt(times), values, interpretation);
             } else if (times.size() == values.size()) {
                 auto tx(times);
                 tx.push_back(period.end > times.back()?period.end:times.back() + utctimespan(1));
-                return std::shared_ptr<ITimeSeriesOfPoints>(
-                    new GenericTs<point_ts<time_axis::point_dt> >(point_ts<time_axis::point_dt>(
-                            time_axis::point_dt(tx), values, interpretation)));
+                return apoint_ts( time_axis::point_dt(tx), values, interpretation);
             } else {
                 throw std::runtime_error("create_time_point_ts times and values arrays must have corresponding count");
             }
         }
     };
-
 
 
     /** \brief GeoPointSource contains common properties, functions
@@ -169,49 +80,49 @@ namespace shyft {
      */
     class GeoPointSource {
       public:
-        GeoPointSource(geo_point midpoint=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        GeoPointSource(geo_point midpoint=geo_point(), apoint_ts ts=apoint_ts())
           : mid_point_(midpoint), ts(ts) {}
 
-        typedef ITimeSeriesOfPoints ts_t;
+        typedef apoint_ts ts_t;
         typedef geo_point geo_point_t;
 
         geo_point mid_point_;
-        ITimeSeriesOfPoints_ ts;
+        apoint_ts ts;
         // boost python fixes for attributes and shared_ptr
-        ITimeSeriesOfPoints_ get_ts()  {return ts;}
-        void set_ts(ITimeSeriesOfPoints_ x) {ts=x;}
-        bool is_equal(const GeoPointSource& x) const {return mid_point_==x.mid_point_ && ts.get()== x.ts.get();}
+        apoint_ts get_ts()  {return ts;}
+        void set_ts(apoint_ts x) {ts=x;}
+        bool is_equal(const GeoPointSource& x) const {return mid_point_==x.mid_point_ && ts == x.ts;}
         geo_point mid_point() const { return mid_point_; }
     };
 
     struct TemperatureSource : GeoPointSource {
-        TemperatureSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        TemperatureSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
-        const ITimeSeriesOfPoints& temperatures() const { return *ts; }
+        const apoint_ts& temperatures() const { return ts; }
         bool operator==(const TemperatureSource& x) {return is_equal(x);}
     };
 
     struct PrecipitationSource : GeoPointSource {
-        PrecipitationSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        PrecipitationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
-        const ITimeSeriesOfPoints& precipitations() const { return *ts; }
+        const apoint_ts& precipitations() const { return ts; }
         bool operator==(const PrecipitationSource& x) {return is_equal(x);}
     };
 
     struct WindSpeedSource : GeoPointSource {
-        WindSpeedSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        WindSpeedSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
         bool operator==(const WindSpeedSource& x) {return is_equal(x);}
     };
 
     struct RelHumSource : GeoPointSource {
-        RelHumSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        RelHumSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
         bool operator==(const RelHumSource& x) {return is_equal(x);}
     };
 
     struct RadiationSource : GeoPointSource {
-        RadiationSource(geo_point p=geo_point(), ITimeSeriesOfPoints_ ts=nullptr)
+        RadiationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
         bool operator==(const RadiationSource& x) {return is_equal(x);}
     };

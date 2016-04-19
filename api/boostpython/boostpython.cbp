@@ -129,6 +129,7 @@
 			<Add library="blas" />
 			<Add library="lapack" />
 			<Add library="shyftcore" />
+			<Add library="shyftapi" />
 			<Add library="boost_python3" />
 			<Add library="python3.4m" />
 			<Add directory="$(#python.lib)" />

@@ -45,12 +45,7 @@ namespace shyft {
          *
          *  In the shyft::core this is the most useful&fast variant
          */
-        struct fixed_dt
-        #ifndef SWIG
-        : continuous<true>
-        #endif
-        {
-
+        struct fixed_dt: continuous<true> {
             utctime t;
             utctimespan dt;
             size_t n;
@@ -90,11 +85,7 @@ namespace shyft {
          *  e.g.: a calendar day might be 23,24 or 25 hour long in a DST calendar.
          *  If delta-t is less or equal to one hour, it's close to as efficient as time_axis
          */
-        struct calendar_dt
-        #ifndef SWIG
-            :continuous<true>
-        #endif
-            {
+        struct calendar_dt :continuous<true> {
             static constexpr utctimespan dt_h = 3600;
             shared_ptr<const calendar> cal;
             utctime t;
@@ -104,7 +95,6 @@ namespace shyft {
             calendar_dt() : t( no_utctime ), dt( 0 ), n( 0 ) {}
             calendar_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : cal( cal ), t( t ), dt( dt ), n( n ) {}
             calendar_dt(const calendar_dt&c):cal(c.cal),t(c.t),dt(c.dt),n(c.n) {}
-            #ifndef SWIG
             calendar_dt(calendar_dt &&c):cal(std::move(c.cal)),t(c.t),dt(c.dt),n(c.n){}
             calendar_dt& operator=(calendar_dt&&c) {
                 cal=std::move(c.cal);
@@ -122,7 +112,6 @@ namespace shyft {
                 }
                 return *this;
             }
-            #endif // SWIG
 
             size_t size() const {return n;}
 
@@ -169,11 +158,7 @@ namespace shyft {
         *  TODO: maybe even do some smarter partitioning, guessing equidistance on average between points.
         *        then guess the area (+-10), if within range, search there ?
         */
-        struct point_dt
-        #ifndef SWIG
-            :continuous<true>
-        #endif
-            {
+        struct point_dt:continuous<true>{
             vector<utctime> t;
             utctime  t_end;// need one extra, after t.back(), to give the last period!
             point_dt() {}
@@ -260,11 +245,7 @@ namespace shyft {
          * It's useful when combining time-axis, and we would like to keep
          * the internal rep. to the most efficient as determined at runtime.
          */
-        struct generic_dt
-        #ifndef SWIG
-            :continuous<true>
-        #endif
-             {
+        struct generic_dt:continuous<true> {
             //--possible implementation types:
             enum generic_type { FIXED = 0, CALENDAR = 1, POINT = 2};
             generic_type gt;
@@ -273,9 +254,16 @@ namespace shyft {
             point_dt p;
             //---------------
             generic_dt(): gt( FIXED ) {}
+            // provide convinence constructors, to directly create the wanted time-axis, regardless underlying rep.
+            generic_dt( utctime t0,utctimespan dt,size_t n):gt(FIXED),f(t0,dt,n) {}
+            generic_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
+            generic_dt( const vector<utctime>& t, utctime t_end ):gt(POINT),p(t,t_end) {}
+            generic_dt( const vector<utctime>& all_points):gt(POINT),p(all_points){}
+            // --
             generic_dt( const fixed_dt&f ): gt( FIXED ), f( f ) {}
             generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
             generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
+            // --
             bool is_fixed_dt() const {return gt == POINT;}
 
             size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}
@@ -287,6 +275,34 @@ namespace shyft {
 
         };
 
+        /** create a new time-shifted dt time-axis */
+        inline fixed_dt time_shift(const fixed_dt &src, utctimespan dt) {
+            return fixed_dt(src.t+dt,src.dt,src.n);
+        }
+
+        /** create a new time-shifted dt time-axis */
+        inline calendar_dt time_shift(const calendar_dt& src,utctimespan dt) {
+            calendar_dt r(src);
+            r.t+=dt;
+            return r;
+        }
+
+        /** create a new time-shifted dt time-axis */
+        inline point_dt time_shift(const point_dt& src, utctimespan dt) {
+            point_dt r(src);
+            for(auto& t: r.t) t+=dt; // potential cost, we could consider other approaches with refs..
+            r.t_end+=dt;
+            return r;
+        }
+
+        /** create a new time-shifted dt time-axis */
+        inline generic_dt time_shift(const generic_dt&src, utctimespan dt) {
+            if(src.gt==generic_dt::FIXED) return generic_dt(time_shift(src.f,dt));
+            if(src.gt==generic_dt::CALENDAR) return generic_dt(time_shift(src.c,dt));
+            return generic_dt(time_shift(src.p,dt));
+        }
+
+
         /** \brief Yet another variant of calendar time-axis.
          *
          * This one is similar to calendar_dt, except, each main-period given by
@@ -296,11 +312,7 @@ namespace shyft {
          * If the sub-period(s) specified are null, then this time_axis is equal to calendar_dt.
          * \note this is a non-continuous| sparse time-axis concept
          */
-        struct calendar_dt_p
-        #ifndef SWIG
-            :continuous<false>
-        #endif
-            {
+        struct calendar_dt_p:continuous<false> {
             calendar_dt cta;
             vector<utcperiod> p;// sub-periods within each cta.period, using cta.period.start as t0
             calendar_dt_p(){}
@@ -314,7 +326,6 @@ namespace shyft {
 
             }
             calendar_dt_p(const calendar_dt_p&c):cta(c.cta),p(c.p) {}
-            #ifndef SWIG
             calendar_dt_p(calendar_dt_p &&c):cta(std::move(c.cta)),p(std::move(c.p)){}
             calendar_dt_p& operator=(calendar_dt_p&&c) {
                 cta=std::move(c.cta);
@@ -328,7 +339,6 @@ namespace shyft {
                 }
                 return *this;
             }
-            #endif // SWIG
 
             size_t size() const { return cta.size() * ( p.size() ? p.size() : 1 );}
 
@@ -389,11 +399,7 @@ namespace shyft {
          * an ordered sequence of non-overlapping periods
          *
          */
-        struct period_list
-        #ifndef SWIG
-            :continuous<false>
-        #endif
-            {
+        struct period_list:continuous<false>{
             vector<utcperiod> p;
             period_list() {}
             period_list( const vector<utcperiod>& p ) : p( p ) {
@@ -480,7 +486,6 @@ namespace shyft {
             }
         };
 
-        #ifndef SWIG
         /** \brief fast&efficient combine for two fixed_dt time-axis */
         inline fixed_dt combine( const fixed_dt& a, const fixed_dt& b )  {
             // 0. check if they overlap (todo: this could hide dt-errors checked for later)
@@ -525,8 +530,8 @@ namespace shyft {
                     return generic_dt( a );
             }
             // the hard way merge points in the intersection of periods
-            utctime t0 = max( pa.start, pb.start );
-            utctime te = min( pa.end, pb.end );
+            utctime t0 = std::max( pa.start, pb.start );
+            utctime te = std::min( pa.end, pb.end );
             size_t ia = a.open_range_index_of( t0 );// first possible candidate from a
             size_t ib = b.open_range_index_of( t0 );// first possible candidate from b
             size_t ea = 1 + a.open_range_index_of( te );// one past last possible candidate from a
@@ -588,8 +593,8 @@ namespace shyft {
             }
 
             // the hard way merge points in the intersection of periods
-            utctime t0 = max( pa.start, pb.start );
-            utctime te = min( pa.end, pb.end );
+            utctime t0 = std::max( pa.start, pb.start );
+            utctime te = std::min( pa.end, pb.end );
             utcperiod tp( t0, te );
             size_t ia = a.open_range_index_of( t0 );  //notice these have to be non-nan!
             size_t ib = b.open_range_index_of( t0 );
@@ -648,7 +653,5 @@ namespace shyft {
         /** specialization for all continuous time_axis types */
         template<typename T_A, typename T_B> // then take care of all the continuous type of time-axis, they all goes into generic_dt type
         struct combine_type < T_A, T_B, typename enable_if < T_A::continuous::value && T_B::continuous::value >::type > {typedef generic_dt type;};
-        #endif
     }
-
 }

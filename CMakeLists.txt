@@ -55,7 +55,7 @@ message("You can override the above via the $SHYFT_DEPENDENCIES_DIR environment 
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # The flags for compile the beast
-set(CMAKE_CXX_FLAGS "-Wall -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/local/lib" CACHE STRING "CXX flags." FORCE)
+set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/local/lib" CACHE STRING "CXX flags." FORCE)
 
 # add defines that need to be consistent across sub-projects
 add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG")
@@ -131,6 +131,7 @@ DownloadAndExtractTarball(
 if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(core)
+  add_subdirectory(api)
   add_subdirectory(test)
 endif(BUILD_TESTING)
 

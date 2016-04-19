@@ -4,6 +4,8 @@
 #include "mocks.h"
 #include "core/timeseries.h"
 #include "core/time_axis.h"
+#include "api/api.h"
+#include "api/timeseries.h"
 #include <armadillo>
 #include <cmath>
 #include <functional>
@@ -621,12 +623,15 @@ void timeseries_test::test_sin_fx_ts() {
 
 }
 
+
 template <class A,class B>
 static bool is_equal_ts(const A& a,const B& b) {
-    if(a.ta.size()!=b.ta.size())
+    const auto &a_ta=a.time_axis();
+    const auto &b_ta=b.time_axis();
+    if(a_ta.size()!=b_ta.size())
         return false;
-    for(size_t i=0;i<a.ta.size();++i) {
-        if(a.ta.period(i)!= b.ta.period(i))
+    for(size_t i=0;i<a_ta.size();++i) {
+        if(a_ta.period(i)!= b_ta.period(i))
             return false;
         if (fabs(a.value(i)-b.value(i))>1e-6)
             return false;
@@ -667,6 +672,7 @@ static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value
     TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
 
 }
+
 
 void timeseries_test::test_binary_operator() {
     /** Test strategy here is to ensure that
@@ -732,7 +738,129 @@ void timeseries_test::test_binary_operator() {
     }
 
 }
+void timeseries_test::test_api_ts() {
+    using namespace shyft::api;
+    calendar utc;
+    utctime start = utc.time(YMDhms(2016,3,8));
+    utctimespan dt = deltahours(1);
+    size_t  n = 4;
+    double a_value=3.0;
+    double b_value=2.0;
+
+    gta_t ta(shyft::time_axis::fixed_dt(start,dt,n));
+    apoint_ts a(ta,a_value);
+    apoint_ts b(ta,b_value);
+    test_bin_op<apoint_ts>(a,b,ta,a_value,b_value);
+
+    gta_t ta2(shyft::time_axis::fixed_dt(start,dt*2,n/2));
+    auto c= average( a+3*b,ta2) * 4 + (b*a/2.0).average(ta2);
+    auto cv= c.values();
+    TS_ASSERT_EQUALS(cv.size(),ta2.size());
+    for(const auto&v:cv) {
+        TS_ASSERT_DELTA(v,(a_value+3*b_value)*4 +(a_value*b_value/2.0), 0.001);
+    }
+    // verify some special fx
+    a.set(0,a_value*b_value);
+    TS_ASSERT_DELTA(a.value(0),a_value*b_value,0.0001);
+    a.fill(b_value);
+    for(auto v:a.values())
+        TS_ASSERT_DELTA(v,b_value,0.00001);
+
+    // verify expression is updated when terminals changes
+    a.fill(a_value);
+    b.fill(b_value);
+    auto d= a + b;
+    TS_ASSERT_DELTA(d.value(0),a_value+b_value,0.00001);
+    a.set(0,b_value);
+    TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
+
+}
+
+typedef shyft::time_axis::fixed_dt tta_t;
+typedef shyft::timeseries::point_ts<tta_t> tts_t;
+
+template<typename Fx>
+std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
+    std::vector<tts_t> r;r.reserve(n);
+    for (size_t i = 0;i < n;++i) {
+        std::vector<double> v;v.reserve(ta.size());
+        for (size_t j = 0;j < ta.size();++j)
+            v.push_back(f(i, ta.time(j)));
+        r.push_back(tts_t(ta, v));
+    }
+    return std::move(r);
+}
+
+/** just verify that it calculate the right things */
+void timeseries_test::test_ts_statistics_calculations() {
+    calendar utc;
+    auto t0 = utc.time(2015, 1, 1);
+    auto fx_1 = [t0](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
+    auto n_days=1;
+    auto n_ts=10;
+    tta_t  ta(t0, calendar::HOUR, n_days*24);
+    tta_t tad(t0, calendar::DAY, n_days);
+    auto tsv1 = create_test_ts(n_ts, ta, fx_1);
+    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
+    TS_ASSERT_EQUALS(size_t(6), r1.size());//, "expect ts equal to percentiles wanted");
+    // using excel percentile.inc(..) as correct answer, values 0..9 incl
+    TS_ASSERT_DELTA(r1[0].value(0), 0.0,0.0001);// " 0-percentile");
+    TS_ASSERT_DELTA(r1[1].value(0), 0.9,0.0001);// "10-percentile");
+    TS_ASSERT_DELTA(r1[2].value(0), 4.5,0.0001);// "50-percentile");
+    TS_ASSERT_DELTA(r1[3].value(0), 4.5,0.0001);// "avg");
+    TS_ASSERT_DELTA(r1[4].value(0), 6.3,0.0001);// "70-percentile");
+    TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
+    //cout<<"Done statistics tests!"<<endl;
+}
+/** just verify that it calculate at full speed */
+void timeseries_test::test_ts_statistics_speed() {
+    calendar utc;
+    auto t0 = utc.time(2015, 1, 1);
+
+    auto fx_1 = [t0](size_t i, utctime t)->double {return double( rand()/36000.0 );};// should generate 0..9 constant ts.
+    auto n_days=365*100;
+    auto n_ts=10;
+    tta_t  ta(t0, calendar::HOUR, n_days*24);
+    tta_t tad(t0, deltahours(24), n_days);
+    auto tsv1 = create_test_ts(n_ts, ta, fx_1);
+    cout<<"\nStart calc percentiles "<< n_days<<" days, x "<<n_ts<< " ts\n";
+    //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
+    vector<tts_t> r1;
+    auto f1 = [&tad,&tsv1,&r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
+    for(int sz=tad.size();sz>100;sz/=2) {
+        auto msec1 = measure<>::execution(f1,sz);
+        cout<<"statistics speed tests,"<<tad.size()<<" steps, pr.thread="<<sz<<"steps :"<<msec1<<" ms"<<endl;
+    }
+    //auto msec2= measure<>::execution(f1,tad.size()/4);
+    //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;
 
 
+}
 
 
+void timeseries_test::test_timeshift_ts() {
+    using namespace shyft;
+    using namespace shyft::core;
+    using namespace shyft::timeseries;
+    typedef point_ts<time_axis::fixed_dt> pts_t;
+    calendar utc;
+    utctime t0=utc.time(2016,1,1);
+    utctime t1=utc.time(2016,1,1, 1);
+    utctimespan dt=deltahours(1);
+    size_t n = 24;
+    time_axis::fixed_dt ta0(t0,dt,n);
+    pts_t ts0(ta0,0.0);
+    auto ts1 = time_shift(ts0,t1-t0);
+    auto ts2 = time_shift(ts1,t0-t1);
+
+    TS_ASSERT(is_equal_ts(ts0,ts2));// time-shift back and forth, should give same ts
+    TS_ASSERT(!is_equal_ts(ts0,ts1));// the time-shifted ts is different from the other
+
+    for(size_t i=0;i<ts0.size();++i) {
+        TS_ASSERT_DELTA(ts0.value(i),ts1.value(i),1e-7);//The values should be exactly equal
+        TS_ASSERT_EQUALS(ts0.time(i)+(t1-t0), ts1.time(i));// just to verify the offsets are ok (also tested by time_axis fx)
+    }
+
+    auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
+
+}

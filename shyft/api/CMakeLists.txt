@@ -65,7 +65,7 @@ set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT
 #set(CMAKE_CXX_FLAGS ${C_FLAGS} CACHE STRING "CXX flags." FORCE)
 
 # Set the common C++ files
-set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp)
+set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp ${CMAKE_SOURCE_DIR}/api/timeseries.cpp)
 
 # Create the API destination directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
@@ -81,7 +81,7 @@ foreach(python_api_extension  "api" )
   # Python extensions do not use the 'lib' prefix
   set_target_properties(${python_api_extension} PROPERTIES PREFIX "_")
   set_property(TARGET ${python_api_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
-  target_link_libraries(${python_api_extension} ${LIBS})
+  target_link_libraries(${python_api_extension} ${LIBS}  )
   install(TARGETS ${python_api_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api)
 
 endforeach(python_api_extension)
@@ -93,7 +93,7 @@ foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k")
   # Python extensions do not use the 'lib' prefix
   set_target_properties(${python_extension} PROPERTIES PREFIX "_")
   set_property(TARGET ${python_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
-  target_link_libraries(${python_extension} ${LIBS})
+  target_link_libraries(${python_extension}  ${LIBS} )
   install(TARGETS ${python_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api/${python_extension})
 
 endforeach(python_extension)
