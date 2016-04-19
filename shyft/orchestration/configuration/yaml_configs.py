@@ -128,7 +128,7 @@ class YAMLSimConfig(object):
         self._config_section = config_section
 
         # Load main configuration file
-        with open(self._config_file) as cfg:
+        with open(self._config_file,encoding='utf8') as cfg:
             config = yaml.load(cfg)[config_section]
         # Expose all keys in yaml file as attributes
         self.__dict__.update(config)
