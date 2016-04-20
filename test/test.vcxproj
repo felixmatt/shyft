@@ -74,8 +74,8 @@
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\boost_1_57_0\stage\lib;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+    <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(SHYFT_DEPENDENCIES)\cxxtest</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -86,9 +86,9 @@
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\cxxtest\cxxtest-4.3;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(SolutionDir)..\dlib</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;$(SolutionDir)..\cxxtest</IncludePath>
-    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(SHYFT_DEPENDENCIES)\cxxtest</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+	<LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -124,6 +124,7 @@
       <AdditionalIncludeDirectories>.;..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
