@@ -32,7 +32,6 @@ namespace shyft {
 
 			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
 			parameter(){}
-			#ifndef SWIG
 			parameter& operator=(const parameter &c) {
                 if(&c != this) {
                     pt = c.pt;
@@ -43,9 +42,8 @@ namespace shyft {
                 }
                 return *this;
 			}
-			#endif
             ///< Calibration support, size is the total number of calibration parameters
-            size_t size() const { return 13; }
+            size_t size() const { return 15; }
 
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -64,6 +62,8 @@ namespace shyft {
                 snow.ts = p[i++];
                 snow.cfr = p[i++];
                 p_corr.scale_factor = p[i++];
+				pt.albedo = p[i++];
+				pt.alpha = p[i++];
             }
             //
             ///< calibration support, get the value of i'th parameter
@@ -82,6 +82,9 @@ namespace shyft {
                     case 10:return snow.ts;
                     case 11:return snow.cfr;
                     case 12:return p_corr.scale_factor;
+					case 13:return pt.albedo;
+					case 14:return pt.alpha;
+
                 default:
                     throw runtime_error("pt_ss_k parameter accessor:.get(i) Out of range.");
                 }
@@ -93,7 +96,9 @@ namespace shyft {
                 static const char *names[] = {
                     "c1", "c2", "c3", "ae_scale_factor",
                     "alpha_0", "d_range", "unit_size", "max_water_fraction",
-                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor"};
+                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor",
+					"pt_albedo","pt_alpha"
+				};
                 if (i >= size())
                     throw runtime_error("pt_ss_k parameter accessor:.get_name(i) Out of range.");
                 return names[i];
@@ -129,7 +134,7 @@ namespace shyft {
             double total_discharge;
         };
 
-#ifndef SWIG
+
         template<template <typename, typename> class A, class R, class T_TS, class P_TS,
                  class WS_TS, class RH_TS, class RAD_TS, class T, class S, class GCD,
                  class P, class SC, class RC>
@@ -217,7 +222,6 @@ namespace shyft {
             }
             response_collector.set_end_response(response);
         }
-#endif
     } // pt_hs_k
   } // core
 } // shyft

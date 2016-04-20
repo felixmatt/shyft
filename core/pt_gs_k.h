@@ -47,7 +47,7 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 19; }
+            size_t size() const { return 21; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -72,6 +72,8 @@ namespace shyft {
                 p_corr.scale_factor = p[i++];
                 gs.snow_cv_forest_factor=p[i++];
                 gs.snow_cv_altitude_factor=p[i++];
+				pt.albedo = p[i++];
+				pt.alpha = p[i++];
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -96,6 +98,8 @@ namespace shyft {
                     case 16:return p_corr.scale_factor;
                     case 17:return gs.snow_cv_forest_factor;
                     case 18:return gs.snow_cv_altitude_factor;
+					case 19:return pt.albedo;
+					case 20:return pt.alpha;
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
                 }
@@ -109,7 +113,8 @@ namespace shyft {
                     "TX","wind_scale","max_water","wind_const",
                     "fast_albedo_decay_rate","slow_albedo_decay_rate",
                     "surface_magnitude", "max_albedo", "min_albedo", "snowfall_reset_depth", "snow_cv",
-                    "glacier_albedo", "p_corr_scale_factor","snow_cv_forest_factor","snow_cv_altitude_factor"
+                    "glacier_albedo", "p_corr_scale_factor","snow_cv_forest_factor","snow_cv_altitude_factor",
+					"pt_albedo","pt_alpha"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");
