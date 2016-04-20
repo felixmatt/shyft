@@ -83,8 +83,8 @@
     <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\boost_1_57_0\stage\lib;</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;</LibraryPath>
+    <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -95,8 +95,8 @@
     <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(SolutionDir)..\dlib;</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\stage\lib;</LibraryPath>
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost;$(SolutionDir)..\armadillo\include;$(SolutionDir)..\dlib;</IncludePath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;</LibraryPath>
+    <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;</IncludePath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -126,6 +126,7 @@
       <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -165,6 +166,7 @@
       <AdditionalIncludeDirectories>..;../../cxxtest/cxxtest-4.2.1</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
