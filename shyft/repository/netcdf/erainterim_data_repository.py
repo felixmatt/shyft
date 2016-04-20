@@ -39,16 +39,15 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
     __T0=273.16 # K
     __Tice=205.16 # K
                      
-    def __init__(self, params, region_config):
+    #def __init__(self, params, region_config):
+    def __init__(self, epsg, filename, bounding_box=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
         """
-        self._rconf = region_config
-        epsg = self._rconf.domain()["EPSG"]
-        #epsg = self._rconf["EPSG"]
-        #directory = params['data_dir']
-        filename = params["stations_met"]
+        #self._rconf = region_config
+        #epsg = self._rconf.domain()["EPSG"]
+        #filename = params["stations_met"]
 
         #if not path.isdir(directory):
         #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
@@ -67,7 +66,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
 
         self.shyft_cs = "+init=EPSG:{}".format(epsg)
         #self._bounding_box = None # bounding_box
-        self.bounding_box = None # bounding_box
+        self.bounding_box = bounding_box
 
         # Field names and mappings netcdf_name: shyft_name
         self._era_shyft_map = {"u10": "x_wind",
@@ -142,7 +141,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
                     raise ERAInterimDataRepositoryError("Time axis size {} not equal to the number of "
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
-                return tsc(ta.size(), ta.start(), ta.delta(),
+                return tsc(ta.size(), ta.start, ta.delta_t,
                            api.DoubleVector_FromNdArray(d.flatten()), self.series_type[key])
 
             time_series[key] = np.array([[construct(data[fslice + [i, j]])
@@ -173,8 +172,8 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         lon_mask = lon_upper == lon_lower
         lat_mask = lat_upper == lat_lower
         
-        print (lon_inds,lat_inds)
-        print (lon[lon_inds],lat[lat_inds])
+        #print (lon_inds,lat_inds)
+        #print (lon[lon_inds],lat[lat_inds])
 
         if lon_inds.size == 0:
             raise ERAInterimDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
@@ -211,7 +210,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
             raise ERAInterimDataRepositoryError("Something is wrong with the dataset."
                                          " lat/lon coords or time not found.")
         time = convert_netcdf_time(time.units,time)
-        print (time[0])
+        #print (time[0])
         t_indx = np.argsort(time)
         time = time[t_indx]
         self.time=time
@@ -220,8 +219,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         idx_max = time.searchsorted(utc_period.end, side='right')
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)  
-        print (idx_min, idx_max)
-        #time = time[time_slice]
+        #print (idx_min, idx_max)
 
         x, y, (m_lon, m_lat), _ = self._limit(lon[:], lat[:], self.shyft_cs)
 
@@ -302,7 +300,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
             return T - 273.15
 
         def prec_acc_conv(p):
-            indx = np.nonzero([self.cal.calendar_units(ti).hour in self.analysis_hours for ti in time])[0]
+            indx = np.nonzero([self.cal.calendar_units(int(ti)).hour in self.analysis_hours for ti in time])[0]
             f = 1000.*api.deltahours(1)/(time[1] - time[0]) # conversion from m/delta_t to mm/1hour
             dp = (p[1:] - p[:-1])*f
             dp[indx] = p[indx+1]*f
@@ -310,7 +308,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
             return dp
 
         def rad_conv(r):
-            indx = np.nonzero([self.cal.calendar_units(ti).hour in self.analysis_hours for ti in time])[0]        
+            indx = np.nonzero([self.cal.calendar_units(int(ti)).hour in self.analysis_hours for ti in time])[0]
             dr = (r[1:] - r[:-1])/(time[1] - time[0])
             dr[indx] = r[indx+1]/(time[1] - time[0])
             #return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
@@ -330,8 +328,13 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         res = {}
         for name, ts in iteritems(data):
             tpe = self.source_type_map[name]
-            res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
-                                      ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            # YSA: It seems that the boost-based interface does not handle conversion straight from list of objects
+            #res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
+            #                          ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
+            tpe_v=tpe.vector_t()
+            for idx in np.ndindex(pts.shape[:-1]):
+                tpe_v.append(tpe(api.GeoPoint(*pts[idx]), ts[idx]))
+            res[name] = tpe_v
         return res
         
     
@@ -358,20 +361,3 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         qsat = cls.calc_q(T,p,alpha)
         q = cls.calc_q(Td,p,alpha)
         return q/qsat
-        
-if __name__ == "__main__":
-    rconf = {'EPSG':32633}
-    params = {'data_dir':'D:/users/ysa/shyft_main/shyft-data',
-              'stations_met':'netcdf/orchestration-testdata/All_variables_z_201408_5-31E_58-71N_0.75.nc'}
-    utc = api.Calendar()  # No offset gives Utc
-    time_axis = api.Timeaxis(utc.time(api.YMDhms(2014, 8,1, 2)), api.deltahours(3), 10*8)
-    #grid_spec = (xll, yll, delta x, delta y, nx, ny)
-    xll, yll, dx, dy, nx, ny = 266000, 6960000, 1000.0, 1000.0, 109, 80
-    #bbox =[[x_min, x_max, x_max, x_min],
-    #       [y_min, y_min, y_max, y_max]]
-    bbox =[[xll, xll+dx*nx, xll+dx*nx, xll],
-           [yll, yll, yll+dy*ny, yll+dy*ny]]
-    repo = ERAInterimDataRepository(params,rconf)
-    res = repo.get_timeseries(['temperature','wind_speed','relative_humidity','radiation','precipitation'], 
-                              time_axis.total_period(), 
-                              geo_location_criteria=bbox)

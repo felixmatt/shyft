@@ -24,20 +24,20 @@ class CFDataRepository(interfaces.GeoTsRepository):
 
     """
                      
-    def __init__(self, params, region_config):
+    #def __init__(self, params, region_config):
+    def __init__(self, epsg, stations_met, selection_criteria=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
         """
-        self._rconf = region_config
-        epsg = self._rconf.domain()["EPSG"]
-        #epsg = self._rconf["EPSG"]
-        #directory = params['data_dir']
-        filename = params["stations_met"]
-        self.selection_criteria = params["selection_criteria"]
+        #self._rconf = region_config
+        #epsg = self._rconf.domain()["EPSG"]
+        #filename = params["stations_met"]
+        #self.selection_criteria = params["selection_criteria"]
 
-        #if not path.isdir(directory):
-        #    raise CFDataRepositoryError("No such directory '{}'".format(directory))
+        filename = stations_met
+        self.selection_criteria = selection_criteria
+
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
             filename = path.join(shyftdata_dir, filename)
