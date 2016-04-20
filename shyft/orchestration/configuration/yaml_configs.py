@@ -8,15 +8,12 @@ from shyft import api
 from shyft.repository.interpolation_parameter_repository import (
     InterpolationParameterRepository)
 from shyft.repository import geo_ts_repository_collection
-from .yaml_constructors import (r_m_repo_constructors, geo_ts_repo_constructors, target_repo_constructors)
+from .yaml_constructors import (region_model_repo_constructor, geo_ts_repo_constructor, target_repo_constructor)
 from . import config_interfaces
 
 def utctime_from_datetime(dt):
     utc_calendar = api.Calendar()
     return utc_calendar.time(api.YMDhms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second))
-
-def cls_path(cls):
-    return cls.__module__+'.'+cls.__name__
 
 
 class YamlContent(object):
@@ -190,20 +187,20 @@ class YAMLSimConfig(object):
         interpolation_config = InterpolationConfig(interpolation_config_file)
 
         # Construct RegionModelRepository
-        self.region_model = r_m_repo_constructors[cls_path(region_config.repository()['class'])](
+        self.region_model = region_model_repo_constructor(region_config.repository()['class'],
             region_config, model_config, self.region_model_id)
         # Construct InterpolationParameterRepository
         self.interp_repos = InterpolationParameterRepository(interpolation_config)
         # Construct GeoTsRepository
         geo_ts_repos = []
         for source in datasets_config.sources:
-            geo_ts_repos.append(geo_ts_repo_constructors[cls_path(source['repository'])](source['params'],region_config))
+            geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], region_config))
         self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos)
         # Construct destination repository
         self.dst_repo = []
         if hasattr(datasets_config, 'destinations'):
             for repo in datasets_config.destinations:
-                repo['repository'] = target_repo_constructors[cls_path(repo['repository'])](repo['params'])
+                repo['repository'] = target_repo_constructor(repo['repository'],repo['params'])
                 #[dst['time_axis'].update({'start_datetime': utctime_from_datetime(dst['time_axis']['start_datetime'])})
                 # for dst in repo['1D_timeseries'] if dst['time_axis'] is not None]
                 [dst.update({'time_axis':self.time_axis}) if dst['time_axis'] is None
@@ -257,7 +254,7 @@ class YAMLCalibConfig(object):
 
     def _fetch_target_timeseries(self):
         for repository in self.target:
-            ts_repository = target_repo_constructors[cls_path(repository['repository'])](repository['params'])
+            ts_repository = target_repo_constructor(repository['repository'],repository['params'])
             for target in repository['1D_timeseries']:
                 target['start_datetime'] = utctime_from_datetime(target['start_datetime'])
                 period = api.UtcPeriod(target['start_datetime'],
