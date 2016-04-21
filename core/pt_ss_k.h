@@ -18,7 +18,7 @@ namespace shyft {
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
             pt_parameter_t pt;
-            snow_parameter_t snow;
+            snow_parameter_t ss;
             ae_parameter_t ae;
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
@@ -28,14 +28,14 @@ namespace shyft {
                       ae_parameter_t ae,
                       kirchner_parameter_t kirchner,
                       precipitation_correction_parameter_t p_corr)
-             : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
+             : pt(pt), ss(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
 
-			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+			parameter(const parameter &c) : pt(c.pt), ss(c.ss), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
 			parameter(){}
 			parameter& operator=(const parameter &c) {
                 if(&c != this) {
                     pt = c.pt;
-                    snow = c.snow;
+                    ss = c.ss;
                     ae = c.ae;
                     kirchner = c.kirchner;
                     p_corr = c.p_corr;
@@ -53,14 +53,14 @@ namespace shyft {
                 kirchner.c2 = p[i++];
                 kirchner.c3 = p[i++];
                 ae.ae_scale_factor = p[i++];
-                snow.alpha_0 = p[i++];
-                snow.d_range = p[i++];
-                snow.unit_size = p[i++];
-                snow.max_water_fraction = p[i++];
-                snow.tx = p[i++];
-                snow.cx = p[i++];
-                snow.ts = p[i++];
-                snow.cfr = p[i++];
+                ss.alpha_0 = p[i++];
+                ss.d_range = p[i++];
+                ss.unit_size = p[i++];
+                ss.max_water_fraction = p[i++];
+                ss.tx = p[i++];
+                ss.cx = p[i++];
+                ss.ts = p[i++];
+                ss.cfr = p[i++];
                 p_corr.scale_factor = p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
@@ -73,14 +73,14 @@ namespace shyft {
                     case  1:return kirchner.c2;
                     case  2:return kirchner.c3;
                     case  3:return ae.ae_scale_factor;
-                    case  4:return snow.alpha_0;
-                    case  5:return snow.d_range;
-                    case  6:return snow.unit_size;
-                    case  7:return snow.max_water_fraction;
-                    case  8:return snow.tx;
-                    case  9:return snow.cx;
-                    case 10:return snow.ts;
-                    case 11:return snow.cfr;
+                    case  4:return ss.alpha_0;
+                    case  5:return ss.d_range;
+                    case  6:return ss.unit_size;
+                    case  7:return ss.max_water_fraction;
+                    case  8:return ss.tx;
+                    case  9:return ss.cx;
+                    case 10:return ss.ts;
+                    case 11:return ss.cfr;
                     case 12:return p_corr.scale_factor;
 					case 13:return pt.albedo;
 					case 14:return pt.alpha;
@@ -94,10 +94,21 @@ namespace shyft {
             ///< calibration and python support, get the i'th parameter name
             string get_name(size_t i) const {
                 static const char *names[] = {
-                    "c1", "c2", "c3", "ae_scale_factor",
-                    "alpha_0", "d_range", "unit_size", "max_water_fraction",
-                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor",
-					"pt_albedo","pt_alpha"
+                    "kirchner.c1",
+                    "kirchner.c2",
+                    "kirchner.c3",
+                    "ae.ae_scale_factor",
+                    "snow.alpha_0",
+                    "snow.d_range",
+                    "snow.unit_size",
+                    "snow.max_water_fraction",
+                    "snow.tx",
+                    "snow.cx",
+                    "snow.ts",
+                    "snow.cfr",
+                    "p_corr.scale_factor",
+                    "pt.albedo",
+                    "pt.alpha"
 				};
                 if (i >= size())
                     throw runtime_error("pt_ss_k parameter accessor:.get_name(i) Out of range.");
@@ -191,7 +202,7 @@ namespace shyft {
                 response.pt.pot_evapotranspiration = pot_evap;
 
                 // Snow
-                skaugen_snow.step(period.timespan(), parameter.snow, temp, prec, rad, wind_speed, snow_state, response.snow);
+                skaugen_snow.step(period.timespan(), parameter.ss, temp, prec, rad, wind_speed, snow_state, response.snow);
 
                 // TODO: Snow transport
                 // At my pos xx mm of snow moves in direction d.

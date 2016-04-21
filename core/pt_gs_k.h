@@ -109,12 +109,27 @@ namespace shyft {
             ///< calibration and python support, get the i'th parameter name
             string get_name(size_t i) const {
                 static const char *names[] = {
-                    "c1","c2","c3","ae_scale_factor",
-                    "TX","wind_scale","max_water","wind_const",
-                    "fast_albedo_decay_rate","slow_albedo_decay_rate",
-                    "surface_magnitude", "max_albedo", "min_albedo", "snowfall_reset_depth", "snow_cv",
-                    "glacier_albedo", "p_corr_scale_factor","snow_cv_forest_factor","snow_cv_altitude_factor",
-					"pt_albedo","pt_alpha"
+                    "kirchner.c1",
+                    "kirchner.c2",
+                    "kirchner.c3",
+                    "ae.ae_scale_factor",
+                    "gs.tx",
+                    "gs.wind_scale",
+                    "gs.max_water",
+                    "gs.wind_const",
+                    "gs.fast_albedo_decay_rate",
+                    "gs.slow_albedo_decay_rate",
+                    "gs.surface_magnitude",
+                    "gs.max_albedo",
+                    "gs.min_albedo",
+                    "gs.snowfall_reset_depth",
+                    "gs.snow_cv",
+                    "gs.glacier_albedo",
+                    "p_corr.scale_factor",
+                    "gs.snow_cv_forest_factor",
+                    "gs.snow_cv_altitude_factor",
+                    "pt.albedo",
+                    "pt.alpha"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");

@@ -19,7 +19,7 @@ namespace shyft {
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
 
             pt_parameter_t pt;
-            snow_parameter_t snow;
+            snow_parameter_t hs;
             ae_parameter_t ae;
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
@@ -29,13 +29,13 @@ namespace shyft {
                         const ae_parameter_t& ae,
                         const kirchner_parameter_t& kirchner,
                         const precipitation_correction_parameter_t& p_corr)
-             : pt(pt), snow(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
-             			parameter(const parameter &c) : pt(c.pt), snow(c.snow), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
+             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
 			parameter(){}
 			parameter& operator=(const parameter &c) {
                 if(&c != this) {
                     pt = c.pt;
-                    snow = c.snow;
+                    hs = c.hs;
                     ae = c.ae;
                     kirchner = c.kirchner;
                     p_corr = c.p_corr;
@@ -53,11 +53,11 @@ namespace shyft {
                 kirchner.c2 = p[i++];
                 kirchner.c3 = p[i++];
                 ae.ae_scale_factor = p[i++];
-                snow.lw = p[i++];
-                snow.tx = p[i++];
-                snow.cx = p[i++];
-                snow.ts = p[i++];
-                snow.cfr = p[i++];
+                hs.lw = p[i++];
+                hs.tx = p[i++];
+                hs.cx = p[i++];
+                hs.ts = p[i++];
+                hs.cfr = p[i++];
                 p_corr.scale_factor = p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
@@ -70,11 +70,11 @@ namespace shyft {
                     case  1:return kirchner.c2;
                     case  2:return kirchner.c3;
                     case  3:return ae.ae_scale_factor;
-                    case  4:return snow.lw;
-                    case  5:return snow.tx;
-                    case  6:return snow.cx;
-                    case  7:return snow.ts;
-                    case  8:return snow.cfr;
+                    case  4:return hs.lw;
+                    case  5:return hs.tx;
+                    case  6:return hs.cx;
+                    case  7:return hs.ts;
+                    case  8:return hs.cfr;
                     case  9:return p_corr.scale_factor;
 					case 10:return pt.albedo;
 					case 11:return pt.alpha;
@@ -87,10 +87,18 @@ namespace shyft {
             ///< calibration and python support, get the i'th parameter name
             string get_name(size_t i) const {
                 static const char *names[] = {
-                    "c1", "c2", "c3", "ae_scale_factor",
-                    "lw",
-                    "tx", "cx", "ts", "cfr", "p_corr_scale_factor",
-					"pt_albedo","pt_alpha"
+                    "kirchner.c1",
+                    "kirchner.c2",
+                    "kirchner.c3",
+                    "ae.ae_scale_factor",
+                    "snow.lw",
+                    "snow.tx",
+                    "snow.cx",
+                    "snow.ts",
+                    "snow.cfr",
+                    "p_corr.scale_factor",
+                    "pt.albedo",
+                    "pt.alpha"
 				};
                 if (i >= size())
                     throw runtime_error("pt_hs_k parameter accessor:.get_name(i) Out of range.");
@@ -161,7 +169,7 @@ namespace shyft {
             // Initialize the method stack
             precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
             priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
-            hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> hbv_snow(parameter.snow, state.snow);
+            hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> hbv_snow(parameter.hs, state.snow);
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
 
             // Step through times in axis
@@ -181,7 +189,7 @@ namespace shyft {
                 response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan();
 
                 // HBVSnow
-                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.snow, prec, temp);
+                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp);
 
                 // Communicate snow
                 // At my pos xx mm of snow moves in direction d.
