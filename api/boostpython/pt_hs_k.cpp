@@ -34,7 +34,7 @@ namespace expose {
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
 				.def_readwrite("ae", &parameter::ae, "actual evapotranspiration parameter")
-                .def_readwrite("snow",&parameter::snow,"hbv-snow parameter")
+                .def_readwrite("snow",&parameter::hs,"hbv-snow parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
                 .def("size",&parameter::size,"returns total number of calibration parameters")
