@@ -129,7 +129,7 @@ class DefaultSimulator(object):
         else:
             raise SimulatorError("Model not runnable.")
 
-    def run(self, time_axis, state):
+    def run(self, time_axis=None, state=None):
         """
         Forward simulation over time axis
 

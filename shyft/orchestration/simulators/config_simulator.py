@@ -21,6 +21,9 @@ class ConfigSimulator(simulator.DefaultSimulator):
                              arg.geo_ts, arg.interp_repos)
             self.config = arg
 
+        self.time_axis = self.config.time_axis
+        self.state = self.get_initial_state()
+
     def _extraction_method_1d(self,ts_info):
         c_id = ts_info['catchment_id']
         t_st, t_dt, t_n = ts_info['time_axis'].start(), ts_info['time_axis'].delta(), ts_info['time_axis'].size()
@@ -58,6 +61,14 @@ class ConfigSimulator(simulator.DefaultSimulator):
         self.region_model.get_states(endstate)  # get the state at end of simulation
         self.config.end_state_repo.put_state(self.config.region_model_id, self.region_model.time_axis.total_period().end,
                                              endstate, tags=None)
+
+    def run(self, time_axis=None, state=None):
+        if time_axis is not None:
+            self.time_axis = time_axis
+        if state is not None:
+            self.state = state
+        super().run(self.time_axis, self.state)
+
 
 
 class ConfigCalibrator(simulator.DefaultSimulator):
