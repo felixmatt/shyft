@@ -9,4 +9,10 @@ neanidelva:
   number_of_steps: 8760   # 1 year
   region_model_id: 'neanidelva-ptgsk'
   #interpolation_id: 2   # this is optional (default 0)
+  initial_state:
+    repository:
+      class: !!python/name:shyft.repository.generated_state_repository.GeneratedStateRepository
+      params:
+        model: !!python/name:shyft.api.pt_gs_k.PTGSKModel
+    tags: []
 ...
