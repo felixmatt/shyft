@@ -1,4 +1,6 @@
 import numpy as np
+import yaml
+import os
 
 from .. import simulator
 from shyft import api
@@ -38,6 +40,7 @@ class ConfigSimulator(simulator.DefaultSimulator):
             TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model)
 
     def get_initial_state(self):
+        state_id = 0
         if hasattr(self.config.initial_state_repo, 'n'): # No stored state, generated on-the-fly
             self.config.initial_state_repo.n = self.region_model.size()
         else:
@@ -149,3 +152,33 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
         return p_res
+
+    def save_calibrated_model(self, optim_param, outfile=None):
+        """Save calibrated params in a model-like YAML file."""
+        name_map = {"pt": "priestley_taylor", "kirchner": "kirchner",
+                    "p_corr": "precipitation_correction", "ae": "actual_evapotranspiration",
+                    "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow"}
+        mapped_results = {optim_param.get_name(i): optim_param.get(i) for i in range(optim_param.size())}
+
+        # Existing model parameters structure
+        model_file = self._config.sim_config.model_config_file
+        model_dict = yaml.load(open(model_file))
+        model = model_dict['model_parameters']
+        # Overwrite overlapping params
+        for k, v in mapped_results.items():
+            routine_name, param_name = k.split('.')
+            model[name_map[routine_name]][param_name] = v
+
+        # Finally, save the update parameters on disk
+        if outfile is None:
+            outfile = self._config.calibrated_model_file
+        else:
+            if not os.path.isabs(outfile):
+                outfile = os.path.join(os.path.dirname(model_file), outfile)
+        print("Storing calibrated params in:", outfile)
+        cls_rep_str = '!!python/name:'+model_dict['model_t'].__module__+'.'+model_dict['model_t'].__name__
+        model_dict['model_t'] = cls_rep_str
+        with open(outfile, "w") as out:
+            out.write("# This file has been automatically generated after a calibration run\n")
+            #yaml.dump(model_dict, out, default_flow_style=False)
+            out.write(yaml.dump(model_dict, default_flow_style=False).replace("'"+cls_rep_str+"'",cls_rep_str))
