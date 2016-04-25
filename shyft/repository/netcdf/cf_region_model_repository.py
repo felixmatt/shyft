@@ -178,9 +178,9 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
 
 
         # Construct region parameter:
-        name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
-                    "kirchner": "kirchner", "actual_evapotranspiration": "ae",
-                    "skaugen": "skaugen", "hbv_snow": "snow"}
+        name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
+                    "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
+                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
         region_parameter = self._region_model.parameter_t()
         for p_type_name, value_ in iteritems(self._mconf.model_parameters()):
             if p_type_name in name_map:
@@ -193,8 +193,8 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
                             raise RegionConfigError("Invalid parameter '{}' for parameter set '{}'".format(p, p_type_name))
                 else:
                     raise RegionConfigError("Invalid parameter set '{}' for selected model '{}'".format(p_type_name, self._region_model.__name__))
-            elif p_type_name == "p_corr_scale_factor":
-                region_parameter.p_corr.scale_factor = value_
+            #elif p_type_name == "p_corr_scale_factor":
+            #    region_parameter.p_corr.scale_factor = value_
             else:
                 raise RegionConfigError("Unknown parameter set '{}'".format(p_type_name))
 

@@ -24,7 +24,8 @@ model_parameters:
     c1: -3.336197322290274
     c2: 0.33433661533385695
     c3: -0.12503959620315988
-  p_corr_scale_factor: 1.0
+  precipitation_correction:
+    scale_factor: 1.0
   priestley_taylor:
     albedo: 0.2
     alpha: 1.26
