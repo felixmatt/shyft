@@ -174,9 +174,9 @@ class YAMLSimConfig(object):
             self.config_dir, self.region_config_file)
         region_config = RegionConfig(region_config_file)
 
-        model_config_file = os.path.join(
+        self.model_config_file = os.path.join(
             self.config_dir, self.model_config_file)
-        model_config = ModelConfig(model_config_file, overrides=overrides.get("model", {}))
+        model_config = ModelConfig(self.model_config_file, overrides=overrides.get("model", {}))
 
         datasets_config_file = os.path.join(
             self.config_dir, self.datasets_config_file)
@@ -193,9 +193,12 @@ class YAMLSimConfig(object):
         self.interp_repos = InterpolationParameterRepository(interpolation_config)
         # Construct GeoTsRepository
         geo_ts_repos = []
+        src_types_to_extract = []
         for source in datasets_config.sources:
             geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], region_config))
-        self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos)
+            src_types_to_extract.append(source['types'])
+        self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos,
+                                                                             src_types_per_repo = src_types_to_extract)
         # Construct destination repository
         self.dst_repo = []
         if hasattr(datasets_config, 'destinations'):
@@ -233,6 +236,7 @@ class YAMLCalibConfig(object):
 
         self.validate()
 
+
         # Get the location of the model_config_file relative to the calibration config file
         if not os.path.isabs(self.model_config_file):
             model_config_file = os.path.join(
@@ -240,6 +244,11 @@ class YAMLCalibConfig(object):
         # Create a new sim_config attribute
         self.sim_config = YAMLSimConfig(
             model_config_file, config_section, overrides=getattr(self, "overrides", None))
+        # Get the location of the calibrated_model_file relative to the calibration config file
+        if hasattr(self, 'calibrated_model_file'):
+            if not os.path.isabs(self.calibrated_model_file):
+                self.calibrated_model_file = os.path.join(
+                    os.path.dirname(os.path.abspath(config_file)), self.calibrated_model_file)
 
         self.target_ts = []
 

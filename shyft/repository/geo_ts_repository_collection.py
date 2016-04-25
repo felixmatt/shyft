@@ -23,15 +23,17 @@ class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
              
     """
 
-    def __init__(self, geo_ts_repositories, reduce_type="replace"):
+    def __init__(self, geo_ts_repositories, reduce_type="replace", src_types_per_repo=None):
         if reduce_type not in ("replace", "add"):
             raise GeoTsRepositoryCollectionError("reduce_type must be either 'replace' or 'add'")
         self.reduce_type = reduce_type
         self.geo_ts_repositories = geo_ts_repositories
+        self.src_types_per_repo = src_types_per_repo
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
-        tss = [r.get_timeseries(input_source_types, utc_period, geo_location_criteria)
-               for r in self.geo_ts_repositories]
+        src_types = self._get_src_types_per_repo(input_source_types)
+        tss = [r.get_timeseries(src_type, utc_period, geo_location_criteria)
+               for r, src_type in zip(self.geo_ts_repositories, src_types)]
         if self.reduce_type == "replace":
             sources = tss[0]
             for ts in tss[1:]:
@@ -41,8 +43,9 @@ class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
         return sources
 
     def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria=None):
-        tss = [r.get_forecast(input_source_types, utc_period, t_c, geo_location_criteria)
-               for r in self.geo_ts_repositories]
+        src_types = self._get_src_types_per_repo(input_source_types)
+        tss = [r.get_forecast(src_type, utc_period, t_c, geo_location_criteria)
+               for r, src_type in zip(self.geo_ts_repositories, src_types)]
         if self.reduce_type == "replace":
             sources = tss[0]
             for ts in tss[1:]:
@@ -53,9 +56,10 @@ class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
 
     def get_forecast_ensemble(self, input_source_types, utc_period,
                               t_c, geo_location_criteria=None):
-        ensembles = [r.get_forecast_ensemble(input_source_types, utc_period, t_c, 
+        src_types = self._get_src_types_per_repo(input_source_types)
+        ensembles = [r.get_forecast_ensemble(src_type, utc_period, t_c,
                                              geo_location_criteria)
-                     for r in self.geo_ts_repositories]
+                     for r, src_type in zip(self.geo_ts_repositories, src_types)]
         ensemble = ensembles[0]
         for ens in ensembles[1:]:
             for i, s2 in enumerate(ens):
@@ -64,5 +68,8 @@ class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
                 else:
                     raise GeoTsRepositoryCollectionError("Only replace is supported yet")
         return ensemble
+
+    def _get_src_types_per_repo(self, input_source_types):
+        return [[name for name in types if name in input_source_types] for types in self.src_types_per_repo]
 
 
