@@ -70,6 +70,9 @@ class GeoTsRepositoryCollection(interfaces.GeoTsRepository):
         return ensemble
 
     def _get_src_types_per_repo(self, input_source_types):
-        return [[name for name in types if name in input_source_types] for types in self.src_types_per_repo]
+        if self.src_types_per_repo is None:
+            return [input_source_types for _ in self.geo_ts_repositories]
+        else:
+            return [[name for name in types if name in input_source_types] for types in self.src_types_per_repo]
 
 

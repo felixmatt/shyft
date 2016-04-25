@@ -91,9 +91,13 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.region_model,
                          sim_config.geo_ts, sim_config.interp_repos)
         self._config = config
+        self._sim_config = sim_config
         self.tv = None
         self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
         self.verbose_level = 1
+        self.time_axis = self._sim_config.time_axis
+        self.state = self.get_initial_state()
+        self.optimum_parameters = None
 
     def init(self):
         self.calib_param_names = [self.param_accessor.get_name(i) for i in range(self.param_accessor.size())]
@@ -119,7 +123,15 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             self.tv.append(t)
             #print(ts_info['uid'], mapped_indx)
 
-    def calibrate(self, time_axis, state, optim_method, optim_method_params, p_vec=None):
+    def calibrate(self, time_axis=None, state=None, optim_method=None, optim_method_params=None, p_vec=None):
+        if time_axis is not None:
+            self.time_axis = time_axis
+        if state is not None:
+            self.state = state
+        if optim_method is None:
+            optim_method = self._config.optimization_method['name']
+        if optim_method_params is None:
+            optim_method_params = self._config.optimization_method['params']
         if p_vec is None:
             # p_vec = [(a + b) * 0.5 for a, b in zip(self.p_min, self.p_max)]
             p_vec = [a + (b - a) * 0.5 for a, b in zip(self.p_min, self.p_max)]
@@ -135,12 +147,11 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         p_vec_max = self.p_max # [p_max.get(i) for i in range(p_max.size())]
 
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-        period = time_axis.total_period()
+        period = self.time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
                                                         geo_location_criteria=bbox)
         self.region_env = self._get_region_environment(sources)
-        self.state = state
-        self.time_axis = time_axis
+
         interp_params = self.ip_repos.get_parameters(self.interpolation_id)
         self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
         self.region_model.set_states(self.state)
@@ -162,6 +173,10 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             raise ValueError("Unknown optimization method: %s" % optim_method)
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
+        if hasattr(self._config, 'calibrated_model_file'):
+            self.save_calibrated_model(p_res)
+        self.optimum_parameters = self.region_model.parameter_t() # To keep a copy
+        self.optimum_parameters.set(p_vec_opt)
         return p_res
 
     def save_calibrated_model(self, optim_param, outfile=None):
@@ -193,3 +208,23 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             out.write("# This file has been automatically generated after a calibration run\n")
             #yaml.dump(model_dict, out, default_flow_style=False)
             out.write(yaml.dump(model_dict, default_flow_style=False).replace("'"+cls_rep_str+"'",cls_rep_str))
+
+    def get_initial_state(self):
+        state_id = 0
+        if hasattr(self._sim_config.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+            self._sim_config.initial_state_repo.n = self.region_model.size()
+        else:
+            states = self._sim_config.initial_state_repo.find_state(
+                region_model_id_criteria=self._sim_config.region_model_id,
+                utc_timestamp_criteria=self._sim_config.time_axis.start,tag_criteria=None)
+            if len(states) > 0:
+                state_id = states[0].state_id #most_recent_state i.e. <= start time
+            else:
+                raise ConfigSimulatorError('No initial state matching criteria.')
+        return self._sim_config.initial_state_repo.get_state(state_id)
+
+    def run_calibrated_model(self):
+        if self.optimum_parameters is None:
+            raise ConfigSimulatorError('The model has noe been calibrated.')
+        optim_params_vct = [self.optimum_parameters.get(i) for i in range(self.optimum_parameters.size())]
+        return 1-self.optimizer.calculate_goal_function(optim_params_vct)
