@@ -157,7 +157,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         bb_proj = transform(target_proj, data_proj, bbox[0], bbox[1])
         lon_min, lon_max = min(bb_proj[0]), max(bb_proj[0])
         lat_min, lat_max = min(bb_proj[1]), max(bb_proj[1])
-        print(lon_min,lon_max,lat_min,lat_max)
+        #print(lon_min,lon_max,lat_min,lat_max)
 
         # Limit data
         lon_upper = lon >= lon_min
@@ -302,16 +302,14 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         def prec_acc_conv(p):
             indx = np.nonzero([self.cal.calendar_units(int(ti)).hour in self.analysis_hours for ti in time])[0]
             f = 1000.*api.deltahours(1)/(time[1] - time[0]) # conversion from m/delta_t to mm/1hour
-            dp = (p[1:] - p[:-1])*f
+            dp = np.clip((p[1:] - p[:-1])*f, 0.0, 10000.) # np.clip b/c negative values may occur after deaccumulation
             dp[indx] = p[indx+1]*f
-            #return np.clip(p[1:] - p[:-1], 0.0, 1000.0)
             return dp
 
         def rad_conv(r):
             indx = np.nonzero([self.cal.calendar_units(int(ti)).hour in self.analysis_hours for ti in time])[0]
-            dr = (r[1:] - r[:-1])/(time[1] - time[0])
+            dr = np.clip((r[1:] - r[:-1])/(time[1] - time[0]), 0.0, 10000.) # np.clip b/c negative values may occur after deaccumulation
             dr[indx] = r[indx+1]/(time[1] - time[0])
-            #return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
             return dr
 
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
@@ -328,7 +326,7 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
         res = {}
         for name, ts in iteritems(data):
             tpe = self.source_type_map[name]
-            # YSA: It seems that the boost-based interface does not handle conversion straight from list of objects
+            # YSA: It seems that the boost-based interface does not handle conversion straight from list of non-primitive objects
             #res[name] = tpe.vector_t([tpe(api.GeoPoint(*pts[idx]),
             #                          ts[idx]) for idx in np.ndindex(pts.shape[:-1])])
             tpe_v=tpe.vector_t()

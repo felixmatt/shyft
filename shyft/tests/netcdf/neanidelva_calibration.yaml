@@ -1,5 +1,6 @@
 ﻿neanidelva:
   model_config_file: neanidelva_simulation.yaml
+  calibrated_model_file: calibrated_model.yaml  # file where the calibrated params will go
   optimization_method:
     name: min_bobyqa # can be 'min_bobyqa', 'dream' or 'sceua'
     params:
@@ -52,60 +53,66 @@
     model:
       model_t: !!python/name:shyft.api.pt_gs_k.PTGSKOptModel
   calibration_parameters:
-    c1:
+    kirchner.c1:
       min: -8.0 # -3.0
       max: 0.0 # 2.0
-    c2:
+    kirchner.c2:
       min: -1.0 # 0.8
       max: 1.2 # 1.2
-    c3:
+    kirchner.c3:
       min: -0.15
       max: -0.05
-    ae_scale_factor:
+    ae.ae_scale_factor:
       min: 1.5
       max: 1.5
-    TX:
+    gs.tx:
       min: -3.0
       max: 2.0
-    wind_scale:
+    gs.wind_scale:
       min: 1.0
       max: 6.0
-    max_water:
+    gs.max_water:
       min: 0.1
       max: 0.1
-    wind_const:
+    gs.wind_const:
       min: 1.0
       max: 1.0
-    fast_albedo_decay_rate:
+    gs.fast_albedo_decay_rate:
       min: 5.0 # 5.0
       max: 15.0 # 15.0
-    slow_albedo_decay_rate:
+    gs.slow_albedo_decay_rate:
       min: 20.0 # 20.0
       max: 40.0 # 40.0
-    surface_magnitude:
+    gs.surface_magnitude:
       min: 30.0
       max: 30.0
-    max_albedo:
+    gs.max_albedo:
       min: 0.9
       max: 0.9
-    min_albedo:
+    gs.min_albedo:
       min: 0.6
       max: 0.6
-    snowfall_reset_depth:
+    gs.snowfall_reset_depth:
       min: 5.0
       max: 5.0
-    snow_cv:
+    gs.snow_cv:
       min: 0.4
       max: 0.4
-    snow_cv_forest_factor:
+    gs.snow_cv_forest_factor:
       min: 0.0
       max: 0.0
-    snow_cv_altitude_factor:
+    gs.snow_cv_altitude_factor:
       min: 0.0
       max: 0.0
-    glacier_albedo:
+    gs.glacier_albedo:
       min: 0.4
       max: 0.4
-    p_corr_scale_factor:
+    p_corr.scale_factor:
       min: 1.0
       max: 1.0
+    pt.albedo:
+      min: 0.2
+      max: 0.2
+    pt.alpha:
+      min: 1.26
+      max: 1.26

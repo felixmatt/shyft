@@ -44,9 +44,9 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
                                                d['step_x'], d['step_y'], d['nx'], d['ny'])
         region_model_type = model_config.model_type()
         # Construct region parameter:
-        name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
-                    "kirchner": "kirchner", "actual_evapotranspiration": "ae",
-                    "skaugen": "skaugen", "hbv_snow": "snow"}
+        name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
+                    "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
+                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
         region_parameter = region_model_type.parameter_t()
         for p_type_name, value_ in iteritems(model_config.model_parameters()):
             if p_type_name in name_map:
@@ -59,8 +59,8 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
                             raise ConfigError("Invalid parameter '{}' for parameter set '{}'".format(p, p_type_name))
                 else:
                     raise ConfigError("Invalid parameter set '{}' for selected model '{}'".format(p_type_name, region_model_type.__name__))
-            elif p_type_name == "p_corr_scale_factor":
-                region_parameter.p_corr.scale_factor = value_
+            #elif p_type_name == "p_corr_scale_factor":
+            #    region_parameter.p_corr.scale_factor = value_
             else:
                 raise ConfigError("Unknown parameter set '{}'".format(p_type_name))
 
