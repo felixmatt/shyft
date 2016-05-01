@@ -211,9 +211,9 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
                                          " lat/lon coords or time not found.")
         time = convert_netcdf_time(time.units,time)
         #print (time[0])
-        t_indx = np.argsort(time)
-        time = time[t_indx]
-        self.time=time
+        #t_indx = np.argsort(time)
+        #time = time[t_indx]
+        #self.time=time
         
         idx_min = time.searchsorted(utc_period.start, side='left')
         idx_max = time.searchsorted(utc_period.end, side='right')
@@ -234,19 +234,14 @@ class ERAInterimDataRepository(interfaces.GeoTsRepository):
                 #data_slice[data.dimensions.index("ens")] = self.ensemble_idx
                 data_slice[data.dimensions.index("longitude")] = m_lon
                 data_slice[data.dimensions.index("latitude")] = m_lat
-                #data_slice[data.dimensions.index("time")] = time_slice
-                
+                data_slice[data.dimensions.index("time")] = data_time_slice
+
                 pure_arr = data[data_slice]
-                
+
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
                     #print(pure_arr.fill_value)
                     pure_arr = pure_arr.filled(np.nan)
-                data_slice = len(data.dimensions)*[slice(None)]
-                data_slice[data.dimensions.index("time")] = t_indx
-                pure_arr = pure_arr[data_slice]
-                data_slice = len(data.dimensions)*[slice(None)]
-                data_slice[data.dimensions.index("time")] = data_time_slice
-                raw_data[self._era_shyft_map[k]] = pure_arr[data_slice], k
+                raw_data[self._era_shyft_map[k]] = pure_arr, k
                 
         if "z" in dataset.variables.keys():
             data = dataset.variables["z"]
