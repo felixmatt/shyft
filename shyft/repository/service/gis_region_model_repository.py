@@ -60,7 +60,7 @@ class GridSpecification(BoundingRegion):
         x0, dx = self.x0, self.dx
         y0, dy = self.y0, self.dy
         return [(box(x0 + i * dx, y0 + j * dy, x0 + (i + 1) * dx, y0 + (j + 1) * dy), float(e))
-                for (i, j), e in np.ndenumerate(elevations.T)]
+                for (i, j), e in np.ndenumerate(np.flipud(elevations).T)]
 
     def bounding_box(self, epsg):
         """Implementation of interface.BoundingRegion"""
