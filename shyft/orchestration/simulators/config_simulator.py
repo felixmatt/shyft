@@ -236,15 +236,30 @@ class ConfigForecaster(object):
         self.forecast_cfg = config.forecast_config
         self.historical_sim = ConfigSimulator(self.historical_cfg)
         self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}
-        for name in self.forecast_cfg:
-            self.forecast_sim[name].geo_ts_repository = self.forecast_cfg[name].geo_ts
-            self.forecast_sim[name].ip_repos = self.forecast_cfg[name].interp_repos
-            self.forecast_sim[name].time_axis = self.forecast_cfg[name].time_axis
+        for k, v in self.forecast_sim.items():
+            v.geo_ts_repository = self.forecast_cfg[k].geo_ts
+            v.ip_repos = self.forecast_cfg[k].interp_repos
+            v.time_axis = self.forecast_cfg[k].time_axis
+        # for name in self.forecast_cfg:
+        #     self.forecast_sim[name].geo_ts_repository = self.forecast_cfg[name].geo_ts
+        #     self.forecast_sim[name].ip_repos = self.forecast_cfg[name].interp_repos
+        #     self.forecast_sim[name].time_axis = self.forecast_cfg[name].time_axis
 
     def run(self):
         self.historical_sim.run()
         state = self.historical_sim.reg_model_state
-        for name in self.forecast_cfg:
-            self.forecast_sim[name].run_forecast(self.forecast_sim[name].time_axis,
-                                                 self.forecast_sim[name].time_axis.start, state)
-            state = self.forecast_sim[name].reg_model_state
+        for k, v in self.forecast_sim.items():
+            v.run_forecast(v.time_axis, v.time_axis.start, state)
+            state = v.reg_model_state
+        # for name in self.forecast_cfg:
+        #     self.forecast_sim[name].run_forecast(self.forecast_sim[name].time_axis,
+        #                                          self.forecast_sim[name].time_axis.start, state)
+        #     state = self.forecast_sim[name].reg_model_state
+
+    def save_end_state(self):
+        self.historical_sim.save_end_state()
+
+    def save_result_timeseries(self):
+        self.historical_sim.save_result_timeseries()
+        for k, v in self.forecast_sim.items():
+            v.save_result_timeseries()
