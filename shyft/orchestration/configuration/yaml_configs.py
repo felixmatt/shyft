@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 import yaml
-import numpy as np
+#import numpy as np
+from datetime import datetime
 
 from shyft import api
 #from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
@@ -131,6 +132,8 @@ class YAMLSimConfig(object):
         self.__dict__.update(config)
         # Override the parameters with kwargs
         #self.__dict__.update(kwargs)
+        self.__dict__.update(overrides.get("config", {}))
+
 
         self.validate()
 
@@ -172,7 +175,7 @@ class YAMLSimConfig(object):
         # Read region, model and datasets config files
         region_config_file = os.path.join(
             self.config_dir, self.region_config_file)
-        region_config = RegionConfig(region_config_file)
+        self.region_config = RegionConfig(region_config_file)
 
         self.model_config_file = os.path.join(
             self.config_dir, self.model_config_file)
@@ -187,15 +190,15 @@ class YAMLSimConfig(object):
         interpolation_config = InterpolationConfig(interpolation_config_file)
 
         # Construct RegionModelRepository
-        self.region_model = region_model_repo_constructor(region_config.repository()['class'],
-            region_config, model_config, self.region_model_id)
+        self.region_model = region_model_repo_constructor(self.region_config.repository()['class'],
+            self.region_config, model_config, self.region_model_id)
         # Construct InterpolationParameterRepository
         self.interp_repos = InterpolationParameterRepository(interpolation_config)
         # Construct GeoTsRepository
         geo_ts_repos = []
         src_types_to_extract = []
         for source in datasets_config.sources:
-            geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], region_config))
+            geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], self.region_config))
             src_types_to_extract.append(source['types'])
         self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos,
                                                                              src_types_per_repo = src_types_to_extract)
@@ -270,3 +273,63 @@ class YAMLCalibConfig(object):
                                        target['start_datetime'] + target['number_of_steps'] * target['run_time_step'])
                 target.update({'ts':ts_repository.read([target['uid']],period)[target['uid']]})
                 self.target_ts.append(target)
+
+
+class YAMLForecastConfig(object):
+
+    def __init__(self, config_file, config_section, forecast_names, forecast_time=None, overrides=None):
+        """
+        Setup a config instance for a netcdf orchestration from a YAML file.
+
+        Parameters
+        ----------
+        config_file : string
+          Path to the YAML configuration file
+        config_section : string
+          Section in YAML file for simulation parameters.
+
+        Returns
+        -------
+        YAMLConfig instance
+        """
+        if overrides is None:
+            overrides = {}
+        # The config_file needs to be an absolute path
+        if os.path.isabs(config_file):
+            self._config_file = config_file
+            self.config_dir = os.path.dirname(config_file)
+        else:
+            raise ConfigError(
+                "'config_file' must be an absolute path ")
+
+        self._config_section = config_section
+
+        self.sim_config = YAMLSimConfig(self._config_file, self._config_section)
+        if forecast_time is None:
+            self.forecast_time = self.sim_config.time_axis.total_period().end
+        else:
+            self.forecast_time = forecast_time
+            self.sim_config.start_time = self.forecast_time - self.sim_config.number_of_steps * self.sim_config.run_time_step
+            self.sim_config.time_axis = api.Timeaxis(self.sim_config.start_time,
+                                                     self.sim_config.run_time_step, self.sim_config.number_of_steps)
+
+        #self.region_config = self.sim_config.region_config
+
+        self.forecast_names = forecast_names
+
+        # Load main configuration file
+        with open(self._config_file,encoding='utf8') as cfg:
+            configs = yaml.load(cfg)[self._config_section]['forecast_runs']
+        for name in self.forecast_names:
+            assert name in configs
+
+        fc0 = self.forecast_names[0]
+        configs[fc0].update({'start_datetime': datetime.utcfromtimestamp(self.forecast_time)})
+        fc_time = self.forecast_time
+        for i in range(1,len(self.forecast_names)):
+            fc_1 = self.forecast_names[i-1]
+            fc_time += configs[fc_1]['number_of_steps']*configs[fc_1]['run_time_step']
+            configs[self.forecast_names[i]].update({'start_datetime': datetime.utcfromtimestamp(fc_time)})
+
+        self.forecast_config = {name: YAMLSimConfig(self._config_file, self._config_section, overrides={'config':configs[name]})
+                                for name in self.forecast_names}
