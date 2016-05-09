@@ -153,7 +153,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         filename = self._filename
 
         if not path.isfile(filename):
-            raise AromeDataRepositoryError("File '{}' not found".format(filename))
+            #raise AromeDataRepositoryError("File '{}' not found".format(filename))
+            filename = self._get_files(utc_period.start, "_(\d{8})_(\d{2}).nc$")
         with Dataset(filename) as dataset:
             return self._get_data_from_dataset(dataset, input_source_types,
                                                utc_period, geo_location_criteria)
