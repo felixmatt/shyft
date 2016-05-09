@@ -228,3 +228,23 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             raise ConfigSimulatorError('The model has noe been calibrated.')
         optim_params_vct = [self.optimum_parameters.get(i) for i in range(self.optimum_parameters.size())]
         return 1-self.optimizer.calculate_goal_function(optim_params_vct)
+
+
+class ConfigForecaster(object):
+    def __init__(self, config):
+        self.historical_cfg = config.sim_config
+        self.forecast_cfg = config.forecast_config
+        self.historical_sim = ConfigSimulator(self.historical_cfg)
+        self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}
+        for name in self.forecast_cfg:
+            self.forecast_sim[name].geo_ts_repository = self.forecast_cfg[name].geo_ts
+            self.forecast_sim[name].ip_repos = self.forecast_cfg[name].interp_repos
+            self.forecast_sim[name].time_axis = self.forecast_cfg[name].time_axis
+
+    def run(self):
+        self.historical_sim.run()
+        state = self.historical_sim.reg_model_state
+        for name in self.forecast_cfg:
+            self.forecast_sim[name].run_forecast(self.forecast_sim[name].time_axis,
+                                                 self.forecast_sim[name].time_axis.start, state)
+            state = self.forecast_sim[name].reg_model_state
