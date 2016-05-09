@@ -26,7 +26,7 @@ class ConfigSimulator(simulator.DefaultSimulator):
 
     def _extraction_method_1d(self,ts_info):
         c_id = ts_info['catchment_id']
-        t_st, t_dt, t_n = ts_info['time_axis'].start(), ts_info['time_axis'].delta(), ts_info['time_axis'].size()
+        t_st, t_dt, t_n = ts_info['time_axis'].start, ts_info['time_axis'].delta_t, ts_info['time_axis'].size()
         tst = api.TsTransform()
         found_indx = np.in1d(self.region_model.catchment_id_map,c_id)
         if np.count_nonzero(found_indx) != len(c_id):
