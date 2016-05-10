@@ -11,7 +11,7 @@ class ShyftApi(unittest.TestCase):
     Verify basic SHyFT api calibration related functions and structures
     """
 
-    def verify_parameter_for_calibration(self, param, expected_size):
+    def verify_parameter_for_calibration(self, param, expected_size,valid_names):
         min_p_value = -1e+10
         max_p_value = +1e+10
         self.assertEqual(expected_size, param.size(), "expected parameter size changed")
@@ -25,6 +25,7 @@ class ShyftApi(unittest.TestCase):
             self.assertAlmostEqual(v * 1.01, x, 3, "Expect new value when setting value")
             p_name = param.get_name(i)
             self.assertTrue(len(p_name) > 0, "parameter name should exist")
+            self.assertEqual(valid_names[i],p_name)
 
     def test_pt_hs_k_param(self):
         pthsk_size = 12
@@ -37,15 +38,72 @@ class ShyftApi(unittest.TestCase):
         self.assertIsNotNone(snow)
         snow.lw = 0.2
         self.assertAlmostEqual(snow.lw, 0.2)
-        self.verify_parameter_for_calibration(pthsk, pthsk_size)
+        valid_names = [
+                    "kirchner.c1",
+                    "kirchner.c2",
+                    "kirchner.c3",
+                    "ae.ae_scale_factor",
+                    "hs.lw",
+                    "hs.tx",
+                    "hs.cx",
+                    "hs.ts",
+                    "hs.cfr",
+                    "p_corr.scale_factor",
+                    "pt.albedo",
+                    "pt.alpha"
+				]
+        self.verify_parameter_for_calibration(pthsk, pthsk_size,valid_names)
+
+
 
     def test_pt_gs_k_param(self):
         ptgsk_size = 21
-        self.verify_parameter_for_calibration(pt_gs_k.PTGSKParameter(), ptgsk_size)
+        valid_names = [
+        "kirchner.c1",
+        "kirchner.c2",
+        "kirchner.c3",
+        "ae.ae_scale_factor",
+        "gs.tx",
+        "gs.wind_scale",
+        "gs.max_water",
+        "gs.wind_const",
+        "gs.fast_albedo_decay_rate",
+        "gs.slow_albedo_decay_rate",
+        "gs.surface_magnitude",
+        "gs.max_albedo",
+        "gs.min_albedo",
+        "gs.snowfall_reset_depth",
+        "gs.snow_cv",
+        "gs.glacier_albedo",
+        "p_corr.scale_factor",
+        "gs.snow_cv_forest_factor",
+        "gs.snow_cv_altitude_factor",
+        "pt.albedo",
+        "pt.alpha"
+        ]
+        self.verify_parameter_for_calibration(pt_gs_k.PTGSKParameter(), ptgsk_size,valid_names)
 
     def test_pt_ss_k_param(self):
         ptssk_size = 15
-        self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size)
+        valid_names=[
+            "kirchner.c1",
+            "kirchner.c2",
+            "kirchner.c3",
+            "ae.ae_scale_factor",
+            "ss.alpha_0",
+            "ss.d_range",
+            "ss.unit_size",
+            "ss.max_water_fraction",
+            "ss.tx",
+            "ss.cx",
+            "ss.ts",
+            "ss.cfr",
+            "p_corr.scale_factor",
+            "pt.albedo",
+            "pt.alpha"
+        ]
+        self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size,valid_names)
+
 
     def _create_std_ptgsk_param(self):
         ptp = api.PriestleyTaylorParameter(albedo=0.85, alpha=1.23)
