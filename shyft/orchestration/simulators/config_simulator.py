@@ -26,7 +26,7 @@ class ConfigSimulator(simulator.DefaultSimulator):
 
     def _extraction_method_1d(self,ts_info):
         c_id = ts_info['catchment_id']
-        t_st, t_dt, t_n = ts_info['time_axis'].start(), ts_info['time_axis'].delta(), ts_info['time_axis'].size()
+        t_st, t_dt, t_n = ts_info['time_axis'].start, ts_info['time_axis'].delta_t, ts_info['time_axis'].size()
         tst = api.TsTransform()
         found_indx = np.in1d(self.region_model.catchment_id_map,c_id)
         if np.count_nonzero(found_indx) != len(c_id):
@@ -228,3 +228,32 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             raise ConfigSimulatorError('The model has noe been calibrated.')
         optim_params_vct = [self.optimum_parameters.get(i) for i in range(self.optimum_parameters.size())]
         return 1-self.optimizer.calculate_goal_function(optim_params_vct)
+
+
+class ConfigForecaster(object):
+    def __init__(self, config):
+        self.historical_cfg = config.sim_config
+        self.forecast_cfg = config.forecast_config
+        self.historical_sim = ConfigSimulator(self.historical_cfg)
+        # self.forecast_sim = {k: ConfigSimulator(v) for k, v in self.forecast_cfg}  # creating ConfigSimulator from config
+        self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}  # making copy rather than creating ConfigSimulator from config to avoid get_region_model being called multiple times
+        for k, v in self.forecast_sim.items():
+            v.geo_ts_repository = self.forecast_cfg[k].geo_ts
+            v.ip_repos = self.forecast_cfg[k].interp_repos
+            v.time_axis = self.forecast_cfg[k].time_axis
+            v.config = self.forecast_cfg[k]
+
+    def run(self):
+        self.historical_sim.run()
+        state = self.historical_sim.reg_model_state
+        for k, v in self.forecast_sim.items():
+            v.run_forecast(v.time_axis, v.time_axis.start, state)
+            state = v.reg_model_state
+
+    def save_end_state(self):
+        self.historical_sim.save_end_state()
+
+    def save_result_timeseries(self):
+        self.historical_sim.save_result_timeseries()
+        for k, v in self.forecast_sim.items():
+            v.save_result_timeseries()
