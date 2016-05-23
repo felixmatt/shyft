@@ -462,7 +462,7 @@ class RegionModelConfig(object):
     """
 
     def __init__(self, name, region_model_type, region_parameters, grid_specification,
-                 catchment_regulated_type, service_id_field_name, id_list):
+                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={}):
         """
         Parameters
         ----------
@@ -480,6 +480,8 @@ class RegionModelConfig(object):
          - specifies the service- where clause field, that is matched up against the id_list
         id_list:list of identifiers, int
          - specifies the identifiers that should be fetched (matched against the service_id_field_name)
+        catchment_parameters: dictionary with catchment id as key and region_model_type.parameter_t() as value
+         - specifies catchment level parameters
          
         TODO: consider also to add catchment level parameters
         
@@ -491,6 +493,7 @@ class RegionModelConfig(object):
         self.catchment_regulated_type = catchment_regulated_type
         self.service_id_field_name = service_id_field_name
         self.id_list = id_list
+        self.catchment_parameters = catchment_parameters
 
     @property
     def epsg_id(self):
@@ -571,6 +574,9 @@ class GisRegionModelRepository(RegionModelRepository):
                     cell.geo = api.GeoCellData(geopoint, area, c_id_0, radiation_slope_factor, ltf)
                     cell_vector.append(cell)
         catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
+        for cid, param in rm.catchment_parameters.items():
+            if cid in catchment_id_map:
+                catchment_parameter_map[catchment_id_map.index(cid)] = param
         # todo add catchment level parameters to map
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
