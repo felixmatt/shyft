@@ -193,8 +193,6 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
                             raise RegionConfigError("Invalid parameter '{}' for parameter set '{}'".format(p, p_type_name))
                 else:
                     raise RegionConfigError("Invalid parameter set '{}' for selected model '{}'".format(p_type_name, self._region_model.__name__))
-            #elif p_type_name == "p_corr_scale_factor":
-            #    region_parameter.p_corr.scale_factor = value_
             else:
                 raise RegionConfigError("Unknown parameter set '{}'".format(p_type_name))
 
@@ -211,22 +209,24 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
 
         # Construct catchment overrides
         catchment_parameters = self._region_model.parameter_t.map_t()
-        for k, v in iteritems(self._rconf.parameter_overrides()):
-            if k in c_ids_unique:
+        for cid, catch_param in iteritems(self._rconf.parameter_overrides()):
+            if cid in c_ids_unique:
                 param = self._region_model.parameter_t(region_parameter)
-                for p_type_name, value_ in iteritems(v):
+                for p_type_name, value_ in iteritems(catch_param):
                     if p_type_name in name_map:
-                        sub_param = getattr(param, name_map[p_type_name])
-                        for p, pv in iteritems(value_):
-                            setattr(sub_param, p, pv)
-                    elif p_type_name == "p_corr_scale_factor":
-                        param.p_corr.scale_factor = value_
+                        if hasattr(param, name_map[p_type_name]):
+                            sub_param = getattr(param, name_map[p_type_name])
+                            for p, v in iteritems(value_):
+                                if hasattr(sub_param, p):
+                                    setattr(sub_param, p, v)
+                                else:
+                                    raise RegionConfigError("Invalid parameter '{}' for catchment parameter set '{}'".format(p, p_type_name))
+                        else:
+                            raise RegionConfigError("Invalid catchment parameter set '{}' for selected model '{}'".format(p_type_name, self._region_model.__name__))
                     else:
-                        # Avoid unknown params to go unadvertised
-                        raise RegionConfigError(
-                            "parameter {} is not in the set of allowed ones".format(p_type_name))
+                        raise RegionConfigError("Unknown catchment parameter set '{}'".format(p_type_name))
 
-                catchment_parameters[c_ids_unique.index(k)] = param
+                catchment_parameters[c_ids_unique.index(cid)] = param
         region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
         region_model.bounding_region = bounding_region
         region_model.catchment_id_map = c_ids_unique

@@ -38,6 +38,7 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
 
         repo_params = region_config.repository()['params']
+        c_ids = region_config.catchments()
         d = region_config.domain()
         grid_specification = GridSpecification(d['EPSG'],
                                                d['lower_left_x'], d['lower_left_y'],
@@ -59,15 +60,34 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
                             raise ConfigError("Invalid parameter '{}' for parameter set '{}'".format(p, p_type_name))
                 else:
                     raise ConfigError("Invalid parameter set '{}' for selected model '{}'".format(p_type_name, region_model_type.__name__))
-            #elif p_type_name == "p_corr_scale_factor":
-            #    region_parameter.p_corr.scale_factor = value_
             else:
                 raise ConfigError("Unknown parameter set '{}'".format(p_type_name))
+
+        # Construct catchment overrides
+        catchment_parameters = {}
+        for c_id, catch_param in iteritems(region_config.parameter_overrides()):
+            if c_id in c_ids:
+                param = region_model_type.parameter_t(region_parameter)
+                for p_type_name, value_ in iteritems(catch_param):
+                    if p_type_name in name_map:
+                        if hasattr(param, name_map[p_type_name]):
+                            sub_param = getattr(param, name_map[p_type_name])
+                            for p, v in iteritems(value_):
+                                if hasattr(sub_param, p):
+                                    setattr(sub_param, p, v)
+                                else:
+                                    raise ConfigError("Invalid parameter '{}' for catchment parameter set '{}'".format(p, p_type_name))
+                        else:
+                            raise ConfigError("Invalid catchment parameter set '{}' for selected model '{}'".format(p_type_name, region_model_type.__name__))
+                    else:
+                        raise ConfigError("Unknown catchment parameter set '{}'".format(p_type_name))
+
+                catchment_parameters[c_id] = param
 
         cfg_list=[
             RegionModelConfig(region_model_id, region_model_type, region_parameter, grid_specification,
                               repo_params['catchment_regulated_type'], repo_params['service_id_field_name'],
-                              region_config.catchments()),
+                              region_config.catchments(), catchment_parameters=catchment_parameters),
         ]
         rm_cfg_dict = {x.name: x for x in cfg_list}
         # return GisRegionModelRepository(rm_cfg_dict)
