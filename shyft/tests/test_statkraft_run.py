@@ -144,7 +144,7 @@ try:
             endstate = ptgsk.region_model.state_t.vector_t()
             ptgsk.region_model.get_states(endstate)  # get the state at end of obs
             ptgsk.geo_ts_repository = self.arome_repository  # switch to arome here
-            ptgsk.run_forecast(fc_time_axis, fc_time_axis.start(), endstate)  # now forecast
+            ptgsk.run_forecast(fc_time_axis, fc_time_axis.start, endstate)  # now forecast
             print("Done forecast")
             fc_save_list = [
                 TsStoreItem(u'/test/x/shyft/tistel/fc_discharge_m3s', lambda m: m.statistics.discharge(cids)),
