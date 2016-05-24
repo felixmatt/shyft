@@ -107,8 +107,14 @@ class ConfigCalibrator(simulator.DefaultSimulator):
     def _create_target_specvect(self):
         self.tv = api.TargetSpecificationVector()
         tst = api.TsTransform()
+        cid_map = self.region_model.catchment_id_map
         for ts_info in self._config.target_ts:
-            mapped_indx = [i for i, j in enumerate(self.region_model.catchment_id_map) if j in ts_info['catch_id']]
+            cid = ts_info['catch_id']
+            mapped_indx = [cid_map.index(ID) for ID in cid if ID in cid_map]
+            if len(mapped_indx) != len(cid):
+                raise ConfigSimulatorError(
+                    "Catchment index {} for target series {} not found.".format(
+                        ','.join([str(val) for val in [i for i in cid if i not in cid_map]]), ts_info['uid']))
             catch_indx = api.IntVector(mapped_indx)
             tsp = ts_info['ts']
             t = api.TargetSpecificationPts()
