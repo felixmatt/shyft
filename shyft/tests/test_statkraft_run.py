@@ -28,22 +28,51 @@ try:
 
         def interpolation_parameters(self):
             return {
-                'btk': {
-                    'gradient': -0.6,
-                    'gradient_sd': 0.25,
-                    'nugget': 0.5,
-                    'range': 2000000.0,
-                    'sill': 25.0,
-                    'zscale': 20.0,
+                'temperature': {
+                    'method': 'btk',
+                    'params': {
+                            'temperature_gradient': -0.6,
+                            'temperature_gradient_sd': 0.25,
+                            'nug': 0.5,
+                            'range': 200000.0,
+                            'sill': 25.0,
+                            'zscale': 20.0
+                    }
                 },
-
-                'idw': {
-                    'max_distance': 2000000.0,
+                'precipitation': {
+                    'method': 'idw',
+                    'params': {
+                    'max_distance': 600000.0,
                     'max_members': 10,
-                    'precipitation_gradient': 2.0
+                    'distance_measure_factor': 1,
+                    'scale_factor': 1.02
+                    }
+                },
+                'radiation': {
+                    'method': 'idw',
+                    'params':{
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1.0
+                    }
+                },
+                'wind_speed': {
+                    'method': 'idw',
+                    'params': {
+                        'max_distance': 600000.0,
+                        'max_members': 10,
+                        'distance_measure_factor': 1.0
+                    }
+                },
+                'relative_humidity': {
+                    'method': 'idw',
+                    'params':{
+                        'max_distance': 600000.0,
+                        'max_members': 10,
+                        'distance_measure_factor': 1.0
+                    }
                 }
             }
-
 
     class StatkraftTistelTest(unittest.TestCase):
         """
