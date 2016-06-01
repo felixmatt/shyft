@@ -10,6 +10,6 @@ TestHeaders = $(CoreTests)
 #TestHeaders=calibration_test.h
 #TestHeaders=gamma_snow_test.h
 
-TestGenerator=../../cxxtest/bin/cxxtestgen
+TestGenerator=$(SHYFT_DEPENDENCIES)/cxxtest/bin/cxxtestgen
 
 runner.cpp: $(TestHeaders) Makefile.testupdate; $(TestGenerator) -o runner.cpp --runner=StdioPrinter $(TestHeaders)

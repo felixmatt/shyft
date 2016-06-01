@@ -6,6 +6,6 @@ TestHeaders=  $(CoreTests)
 #TestHeaders=timeseries_test.h
 #region_model_test.h
 
-TestGenerator=python ../../cxxtest/bin/cxxtestgen
+TestGenerator=python $(SHYFT_DEPENDENCIES)/cxxtest/bin/cxxtestgen
 
 runner.cpp: $(TestHeaders) NMakeFile.testupdate; $(TestGenerator) -o runner.cpp --include=test_pch.h --have-std --have-eh --runner=StdioPrinter  $(TestHeaders)
