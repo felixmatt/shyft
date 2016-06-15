@@ -22,9 +22,11 @@ from shyft.api import KLING_GUPTA
 
 from shyft.api.pt_gs_k import PTGSKModel
 from shyft.api.pt_gs_k import PTGSKOptModel
+from shyft.api.pt_gs_k import PTGSKParameter
 
 from shyft.api.pt_hs_k import PTHSKModel
 from shyft.api.pt_hs_k import PTHSKOptModel
+from shyft.api.pt_hs_k import PTHSKParameter
 
 # from shyft_config import tistel
 from shyft.repository.default_state_repository import DefaultStateRepository
@@ -45,9 +47,14 @@ from shyft.api import LandTypeFractions, GeoPoint, GeoCellData
 from shyft.api import KirchnerParameter
 from shyft.api import PriestleyTaylorParameter
 from shyft.api import HbvSnowParameter
+from shyft.api import GammaSnowParameter
 from shyft.api import ActualEvapotranspirationParameter
 from shyft.api import PrecipitationCorrectionParameter
-from shyft.api.pt_hs_k import PTHSKParameter
+
+from shyft.repository.interpolation_parameter_repository import InterpolationParameterRepository
+from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
+from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
+from shyft.repository.service.ssa_geo_ts_repository import GeoLocationRepository
 
 
 class GridSpecification(BoundingRegion):
@@ -102,6 +109,10 @@ class GridSpecification(BoundingRegion):
     def epsg(self):
         """Implementation of interface.BoundingRegion"""
         return str(self._epsg_id)
+
+    @property
+    def epsg_id(self):
+        return self._epsg_id
 
 
 class HbvZone(object):
@@ -180,33 +191,197 @@ class HbvRegionModelConfig(object):
         return self.grid_specification.epsg_id
 
 
-def ltm2_kjela_hbv_zone_config(x0=65000, y0=6655000, dx=1000):
-    hbv_zones = [  # as fetched from LTM2-Kjela HBV
-        HbvZone(1, x0 + 0 * dx, y0, 889, 982, 44.334, 0.000, 6.194, 0.0),
-        HbvZone(2, x0 + 1 * dx, y0, 982, 1090, 41.545, 0.000, 5.804, 0.0),
-        HbvZone(3, x0 + 2 * dx, y0, 1090, 1106, 14.877, 0.000, 2.078, 0.0),
-        HbvZone(4, x0 + 3 * dx, y0, 1106, 1203, 68.043, 0.000, 9.506, 0.0),
-        HbvZone(5, x0 + 4 * dx, y0, 1203, 1252, 32.093, 0.000, 4.484, 0.0),
-        HbvZone(6, x0 + 5 * dx, y0, 1252, 1313, 32.336, 0.068, 4.517, 0.0),
-        HbvZone(7, x0 + 6 * dx, y0, 1313, 1355, 15.017, 0.034, 2.098, 0.0),
-        HbvZone(8, x0 + 7 * dx, y0, 1355, 1463, 23.420, 0.346, 3.272, 0.0),
-        HbvZone(9, x0 + 8 * dx, y0, 1463, 1542, 11.863, 0.868, 1.657, 0.0),
-        HbvZone(10, x0 + 9 * dx, y0, 1542, 1690, 11.673, 2.620, 1.631, 0.0)
-    ]
-    return hbv_zones
+class HbvGeoLocationError(Exception):
+    pass
 
 
-ltm2_kjela_grid_spec=GridSpecification(epsg_id=32633, x0=65000.0, y0=6655000.0, dx=295.201 * 1000.0 / 10.0 / 10.0, dy=10 * 1000.0, nx=10, ny=1)
+class HbvGeoLocationRepository(GeoLocationRepository):
+    """
+    Provide a yaml-based key-location map for gis-identites not available(yet)
 
-ltm2_kjela_region_parameters=PTHSKParameter(
-        PriestleyTaylorParameter(0.2, 1.26), 
-        HbvSnowParameter(tx=-0.1, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001) , 
-        ActualEvapotranspirationParameter(1.5),
-        KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
-        PrecipitationCorrectionParameter(1.0940)
-    )
+    """
+
+    def __init__(self, geo_location_dict, epsg_id):
+        """
+        Parameters
+        ----------
+        geo_location_dict:dict(int,[x,y,z])
+            map of location id and corresponding x,y,z
+        epsg: int
+            the epsg valid for coordinates
+        """
+        if not isinstance(geo_location_dict,dict):
+            raise HbvGeoLocationError("geo_location_dict must be a dict(),  of type dict(int,[x,y,z])")
+        if epsg_id is None:
+            raise HbvGeoLocationError("epsg_id must be specified as a valid epsg_id, like 32633")
+        self._geo_location_dict = geo_location_dict
+        self._epsg_id = epsg_id
+
+    def get_locations(self, location_id_list, epsg_id=32633):
+        if epsg_id != self._epsg_id:
+            raise HbvGeoLocationError("HbvGeoLocationRepository does not yet implement epsg-coordindate transforms, wanted epsg_id={0}, available = {1}".format(epsg_id,self._epsg_id))
+        locations = {}
+        for location_id in location_id_list:
+            if self._geo_location_dict.get(location_id) is not None:
+                locations[location_id] = tuple(self._geo_location_dict[location_id])
+            else:
+                raise HbvGeoLocationError("Could not get location of geo point-id!")
+        return locations
+
+class HbvModelConfigError(Exception):
+    pass
+
+class HbvModelConfig:
+
+    def __init__(self,grid_spec,hbv_zones,met_stations,met_station_heights):
+
+        if not isinstance(grid_spec,GridSpecification):
+            raise HbvModelConfigError("argument grid_spec must be of type GridSpecification")
+        if not isinstance(met_stations,list):
+            raise HbvModelConfigError("argument met_stations must be of type list[MetStationConfig]")
+        if not isinstance(met_station_heights, list):
+            raise HbvModelConfigError("argument met_station_heights must be of type list[double]")
+        if len(met_stations) != 2:
+            raise HbvModelConfigError("met_stations list must contain exactly 2 metstations")
+        if len(met_station_heights) != 2:
+            raise HbvModelConfigError("met_station_heights list must contain exactly 2 metstation heights")
+
+        self._grid_spec = grid_spec
+        self._hbv_zones = hbv_zones
+        self._met_stations = met_stations
+        self._met_station_heights = met_station_heights
 
 
+    @property
+    def hbv_zone_config(self,x0=65000, y0=6655000, dx=1000):
+        return self._hbv_zones
+
+    @property
+    def grid_specification(self):
+        return self._grid_spec
+
+    @property
+    def region_parameters(self):
+        return PTHSKParameter(
+            PriestleyTaylorParameter(0.2, 1.26),
+            HbvSnowParameter(tx=-0.1, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001),
+            ActualEvapotranspirationParameter(1.5),
+            KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
+            PrecipitationCorrectionParameter(1.0940)
+        )
+        #return PTGSKParameter(
+        #    PriestleyTaylorParameter(0.2, 1.26),
+        #    GammaSnowParameter(),#(tx=-0.1, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001),
+        #    ActualEvapotranspirationParameter(1.5),
+        #    KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
+        #    PrecipitationCorrectionParameter(1.0940)
+        #)
+
+
+    @property
+    def geo_ts_repository(self):
+        bbox=self.grid_specification.geometry # gives us [x0,y0,x1,y1], the corners of the bounding box
+        fake_station_1_pos = [bbox[0],bbox[1], self._met_station_heights[0]]
+        fake_station_2_pos = [bbox[2],bbox[3], self._met_station_heights[1]]
+        gis_location_repository = HbvGeoLocationRepository(
+            geo_location_dict={self._met_stations[0].gis_id:fake_station_1_pos,self._met_stations[1].gis_id:fake_station_2_pos},
+            epsg_id=self.grid_specification._epsg_id)  # this provides the gis locations for my stations
+        smg_ts_repository = SmGTsRepository(PROD, FC_PROD)  # this provide the read function for my time-series
+
+        return GeoTsRepository(epsg_id=self.grid_specification._epsg_id, geo_location_repository=gis_location_repository,
+                               ts_repository=smg_ts_repository, met_station_list=self._met_stations,
+                               ens_config=None)
+
+
+kjela_x0 = 65000
+kjela_y0 = 6655000
+dx = 1000
+
+kjela = HbvModelConfig(
+    grid_spec=GridSpecification(epsg_id=32633, x0=65000.0, y0=6655000.0, dx=295.201 * 1000.0 / 10.0 / 10.0, dy=10 * 1000.0, nx=10, ny=1),
+    hbv_zones=[  # as fetched from LTM2-Kjela HBV
+            HbvZone(1, kjela_x0 + 0 * dx, kjela_y0, 889, 982, 44.334, 0.000, 6.194, 0.0),
+            HbvZone(2, kjela_x0 + 1 * dx, kjela_y0, 982, 1090, 41.545, 0.000, 5.804, 0.0),
+            HbvZone(3, kjela_x0 + 2 * dx, kjela_y0, 1090, 1106, 14.877, 0.000, 2.078, 0.0),
+            HbvZone(4, kjela_x0 + 3 * dx, kjela_y0, 1106, 1203, 68.043, 0.000, 9.506, 0.0),
+            HbvZone(5, kjela_x0 + 4 * dx, kjela_y0, 1203, 1252, 32.093, 0.000, 4.484, 0.0),
+            HbvZone(6, kjela_x0 + 5 * dx, kjela_y0, 1252, 1313, 32.336, 0.068, 4.517, 0.0),
+            HbvZone(7, kjela_x0 + 6 * dx, kjela_y0, 1313, 1355, 15.017, 0.034, 2.098, 0.0),
+            HbvZone(8, kjela_x0 + 7 * dx, kjela_y0, 1355, 1463, 23.420, 0.346, 3.272, 0.0),
+            HbvZone(9, kjela_x0 + 8 * dx, kjela_y0, 1463, 1542, 11.863, 0.868, 1.657, 0.0),
+            HbvZone(10, kjela_x0 + 9 * dx, kjela_y0, 1542, 1690, 11.673, 2.620, 1.631, 0.0)
+        ],
+    met_stations=[
+            # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
+            MetStationConfig(gis_id=1,  # 1 _LO 889.0 masl
+                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_LO',
+                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_LO',
+                             radiation=u'/ENKI/STS/Radiation/Sim.-Hestvollan....-T0006V0B-0119-0.8',# clear sky,reduced to 0.8
+                             wind_speed=u'/Tokk-Vågsli........-D0015A9KI0120'),
+
+            MetStationConfig(gis_id=2,  # 2 _HI 1690.0 masl
+                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_HI',
+                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_HI',
+                             radiation=None,
+                             wind_speed=None,
+                             relative_humidity=u'/SHFT-rel-hum-dummy.-T0002A3R-0103'),
+        ],
+    met_station_heights=[889.0,1690.0]
+)
+
+class InterpolationConfig(object):
+    """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
+
+    def interpolation_parameters(self):
+        return {
+            'temperature': {
+                'method': 'idw',
+                'params': {
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1,
+                    'default_temp_gradient': -0.006
+                }
+            },
+            'precipitation': {
+                'method': 'idw',
+                'params': {
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1,
+                    'scale_factor': 1.02
+                }
+            },
+            'radiation': {
+                'method': 'idw',
+                'params': {
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1
+                }
+            },
+            'wind_speed': {
+                'method': 'idw',
+                'params': {
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1
+                }
+            },
+            'relative_humidity': {
+                'method': 'idw',
+                'params': {
+                    'max_distance': 600000.0,
+                    'max_members': 10,
+                    'distance_measure_factor': 1
+                }
+            }
+        }
+
+
+interpolation_repository = InterpolationParameterRepository(InterpolationConfig())
+
+del InterpolationConfig
 
 class HbvRegionModelRepository(RegionModelRepository):
     """
@@ -290,16 +465,18 @@ class HbvRegionModelRepository(RegionModelRepository):
 
 
 def create_kjela_simulator(model, geo_ts_repository):
-    region_id = "LTM2-Kjela-pt_hs_k"
+    region_id = "LTM2-Kjela"
     interpolation_id = 0
     cfg_list = [
-        HbvRegionModelConfig(region_id, PTHSKModel.cell_t, ltm2_kjela_region_parameters, ltm2_kjela_grid_spec, ltm2_kjela_hbv_zone_config())
+        HbvRegionModelConfig(region_id, model, kjela.region_parameters, kjela.grid_specification, kjela.hbv_zone_config)
     ]
     reg_model_repository = HbvRegionModelRepository({x.name: x for x in cfg_list})
-    pthsk = Simulator(region_id, interpolation_id, reg_model_repository,
-                      geo_ts_repository,
-                      tistel.interpolation_repository, None)
-    return pthsk
+    model_simulator = Simulator(region_id, interpolation_id, reg_model_repository,
+                      kjela.geo_ts_repository,
+                      interpolation_repository, None)
+    model_simulator.region_model.set_snow_sca_swe_collection(-1,True)
+    model_simulator.region_model.set_state_collection(-1,True)
+    return model_simulator
 
 
 def observed_kjela_discharge(period):
@@ -307,14 +484,18 @@ def observed_kjela_discharge(period):
     result = smg_ts_repository.read([u"/Tokk-Kjela.........-D9100A3B5132R016.206"], period)
     return next(iter(result.values()))
 
+model_dt= deltahours(1) # could be 1,2,3,6,8,12,24
 
 def burn_in_state(simulator, t_start, t_stop, q_obs_m3s_ts):
-    dt = deltahours(1)
+    dt = model_dt
     n = int(round((t_stop - t_start) / dt))
     time_axis = Timeaxis(t_start, dt, n)
     n_cells = simulator.region_model.size()
     state_repos = DefaultStateRepository(simulator.region_model.__class__, n_cells)
-    simulator.run(time_axis, state_repos.get_state(0))
+    s0 = state_repos.get_state(0)
+    for s in s0:
+        s.kirchner.q = 0.5
+    simulator.run(time_axis,s0)
     # Go back in time (to t_start) and adjust q with observed discharge at that time.
     # This will give us a good initial state at t_start
     return adjust_simulator_state(simulator, t_start, q_obs_m3s_ts)
@@ -337,36 +518,74 @@ def construct_calibration_parameters(simulator):
     return p, p_min, p_max
 
 
-def plot_results(ptgsk, q_obs=None):
+def plot_results(ptxsk, q_obs=None):
     h_obs = None
-    if ptgsk is not None:
-        plt.subplot(3, 1, 1)
-        discharge = ptgsk.region_model.statistics.discharge([0])
-        temp = ptgsk.region_model.statistics.temperature([0])
-        precip = ptgsk.region_model.statistics.precipitation([0])
+    n_temp = 1
+    temp=[]
+    precip = None
+    discharge = None
+    if ptxsk is not None:
+        plt.subplot(8, 1, 1)
+        discharge = ptxsk.region_model.statistics.discharge([])
+        n_temp=ptxsk.region_model.size()
+        temp = [ptxsk.region_model.statistics.temperature([i]) for i in range(n_temp)]
+        precip = [ptxsk.region_model.statistics.precipitation([i]) for i in range(n_temp)]
+        radiation = [ptxsk.region_model.statistics.radiation([i]) for i in range(n_temp)]
+        rel_hum = [ptxsk.region_model.statistics.rel_hum([i]) for i in range(n_temp)]
+        wind_speed = [ptxsk.region_model.statistics.wind_speed([i]) for i in range(n_temp)]
+        snow_sca = [ptxsk.region_model.hbv_snow_state.sca([i]) for i in range(n_temp)]
+        snow_swe = [ptxsk.region_model.hbv_snow_state.swe([i]) for i in range(n_temp)]
         # Results on same time axis, so we only need one
         times = utc_to_greg([discharge.time(i) for i in range(discharge.size())])
-        plt.plot(times, np.array(discharge.v))
-        plt.gca().set_xlim(times[0], times[-1])
-        plt.ylabel(r"Discharge in $\mathbf{m^3s^{-1}}$")
+        plt.plot(times, np.array(discharge.v),color='blue')
+        ax=plt.gca()
+        ax.set_xlim(times[0], times[-1])
+        plt.ylabel(r"Discharge in $\mathbf{m^3/s}$")
         set_calendar_formatter(Calendar())
     if q_obs is not None:
         obs_times = utc_to_greg([q_obs.time(i) for i in range(q_obs.size())])
         ovs = [q_obs.value(i) for i in range(q_obs.size())]
-        h_obs, = plt.plot(obs_times, ovs, linewidth=2, color='k')
-        ax = plt.gca()
-        ax.set_xlim(obs_times[0], obs_times[-1])
-    if ptgsk is not None:
-        plt.subplot(3, 1, 2)
-        plt.plot(times, np.array(temp.v))
+        h_obs, = plt.plot(obs_times, ovs, linewidth=2,color='green')
+
+
+    if ptxsk is not None:
+        plt.subplot(8, 1, 2,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.array(temp[i].v))
         set_calendar_formatter(Calendar())
         plt.gca().set_xlim(times[0], times[-1])
         plt.ylabel(r"Temperature in C")
-        plt.subplot(3, 1, 3)
-        plt.plot(times, np.array(precip.v))
-        set_calendar_formatter(Calendar())
-        plt.gca().set_xlim(times[0], times[-1])
+
+        plt.subplot(8, 1, 3,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.array(precip[i].v))
         plt.ylabel(r"Precipitation in mm")
+
+        plt.subplot(8,1,4,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times,np.array(radiation[i].v))
+        plt.ylabel(r"Radiation w/m2")
+
+        plt.subplot(8, 1, 5,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.array(rel_hum[i].v))
+        plt.ylabel(r"Rel.hum  %")
+
+        plt.subplot(8, 1, 6,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.array(wind_speed[i].v))
+        plt.ylabel(r"Wind speed  m/s")
+
+        plt.subplot(8, 1, 7,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.asarray(snow_swe[i].v)[:-1])
+        plt.ylabel(r"SWE  mm")
+
+        plt.subplot(8, 1, 8,sharex=ax)
+        for i in range(n_temp):
+            plt.plot(times, np.asarray(snow_sca[i].v)[:-1])
+        plt.ylabel(r"SCA  %")
+
     return h_obs
 
 
@@ -410,61 +629,28 @@ def forecast_demo():
     are plotted as simple timeseries.
 
     """
-    utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
+    utc = Calendar(3600)
+    t_start = utc.time(YMDhms(2010, 9, 1))
     t_fc_start = utc.time(YMDhms(2015, 10, 1))
-    dt = deltahours(1)
+    dt = model_dt
     n_obs = int(round((t_fc_start - t_start) / dt))
     n_fc = 65
     obs_time_axis = Timeaxis(t_start, dt, n_obs)
     fc_time_axis = Timeaxis(t_fc_start, dt, n_fc)
     total_time_axis = Timeaxis(t_start, dt, n_obs + n_fc)
     q_obs_m3s_ts = observed_kjela_discharge(total_time_axis.total_period())
-    ptgsk = create_kjela_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
-    ptgsk.run(obs_time_axis, initial_state)
-    plot_results(ptgsk, q_obs_m3s_ts)
+    model = create_kjela_simulator(PTHSKModel, kjela.geo_ts_repository)
+    initial_state = burn_in_state(model, t_start, utc.time(YMDhms(2011, 9, 1)), q_obs_m3s_ts)
+    model.run(obs_time_axis, initial_state)
+    plot_results(model, q_obs_m3s_ts)
 
-    current_state = adjust_simulator_state(ptgsk, t_fc_start, q_obs_m3s_ts)
+    #current_state = adjust_simulator_state(ptgsk, t_fc_start, q_obs_m3s_ts)
 
-    ptgsk_fc = create_kjela_simulator(PTGSKModel, tistel.arome_repository(tistel.grid_spec, t_fc_start))
-    ptgsk_fc.run(fc_time_axis, current_state)
-    plt.figure()
-    q_obs_m3s_ts = observed_kjela_discharge(fc_time_axis.total_period())
-    plot_results(ptgsk_fc, q_obs_m3s_ts)
-    # plt.interactive(1)
-    plt.show()
-
-
-def ensemble_demo():
-    utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_ens_start = utc.time(YMDhms(2015, 7, 26))
-    disp_start = utc.time(YMDhms(2015, 7, 20))
-    dt = deltahours(1)
-    n_obs = int(round((t_fc_ens_start - t_start) / dt))
-    n_fc_ens = 30
-    n_disp = int(round(t_fc_ens_start - disp_start) / dt) + n_fc_ens + 24 * 7
-
-    obs_time_axis = Timeaxis(t_start, dt, n_obs + 1)
-    fc_ens_time_axis = Timeaxis(t_fc_ens_start, dt, n_fc_ens)
-    display_time_axis = Timeaxis(disp_start, dt, n_disp)
-
-    q_obs_m3s_ts = observed_kjela_discharge(obs_time_axis.total_period())
-    ptgsk = create_kjela_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
-
-    ptgsk.run(obs_time_axis, initial_state)
-    current_state = adjust_simulator_state(ptgsk, t_fc_ens_start, q_obs_m3s_ts)
-    q_obs_m3s_ts = observed_kjela_discharge(display_time_axis.total_period())
-    ens_repos = tistel.arome_ensemble_repository(tistel.grid_spec)
-    ptgsk_fc_ens = create_kjela_simulator(PTGSKModel, ens_repos)
-    sims = ptgsk_fc_ens.create_ensembles(fc_ens_time_axis, t_fc_ens_start, current_state)
-    for sim in sims:
-        sim.simulate()
-    plt.hold(1)
-    percentiles = [10, 25, 50, 75, 90]
-    plot_percentiles(sims, percentiles, obs=q_obs_m3s_ts)
+    #ptgsk_fc = create_kjela_simulator(PTHSKModel, tistel.arome_repository(tistel.grid_spec, t_fc_start))
+    #ptgsk_fc.run(fc_time_axis, current_state)
+    #plt.figure()
+    #q_obs_m3s_ts = observed_kjela_discharge(fc_time_axis.total_period())
+    #plot_results(ptgsk_fc, q_obs_m3s_ts)
     # plt.interactive(1)
     plt.show()
 
@@ -472,13 +658,13 @@ def ensemble_demo():
 def continuous_calibration():
     utc = Calendar()
     t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_start = utc.time(YMDhms(2015, 10, 1))
+    t_fc_start = utc.time(YMDhms(2012, 10, 1))
     dt = deltahours(1)
     n_obs = int(round((t_fc_start - t_start) / dt))
     obs_time_axis = Timeaxis(t_start, dt, n_obs + 1)
     q_obs_m3s_ts = observed_kjela_discharge(obs_time_axis.total_period())
 
-    ptgsk = create_kjela_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
+    ptgsk = create_kjela_simulator(PTHSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
     initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
 
     num_opt_days = 30
@@ -532,6 +718,6 @@ def continuous_calibration():
 if __name__ == "__main__":
     import sys
 
-    demos = [forecast_demo, ensemble_demo, continuous_calibration]
+    demos = [forecast_demo, continuous_calibration]
     demo = demos[int(sys.argv[1]) if len(sys.argv) == 2 else 0]
     result = demo()
