@@ -57,6 +57,14 @@ from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
 from shyft.repository.service.ssa_geo_ts_repository import GeoLocationRepository
 
 
+#--------------------------------
+#  This section contains building blocks, classes that are
+#  candidates for promotion into SHyFT standard library
+#  The main purpose here is to provide an easy path from a
+#  HBV Lump model, to a similar SHyFT lump model
+#  utilizing and extendingstandard SHyFT building blocks/repositories
+#
+
 class GridSpecification(BoundingRegion):
     """
     Defines a grid, as lower left x0, y0, dx, dy, nx, ny
@@ -232,8 +240,11 @@ class HbvModelConfigError(Exception):
     pass
 
 class HbvModelConfig:
-
-    def __init__(self,grid_spec,hbv_zones,met_stations,met_station_heights):
+    """
+    represents the 'things' that we need in order to
+    map a type HBV model information into SHyFT models
+    """
+    def __init__(self,grid_spec,hbv_zones,met_stations,met_station_heights,model_parameters):
 
         if not isinstance(grid_spec,GridSpecification):
             raise HbvModelConfigError("argument grid_spec must be of type GridSpecification")
@@ -250,6 +261,7 @@ class HbvModelConfig:
         self._hbv_zones = hbv_zones
         self._met_stations = met_stations
         self._met_station_heights = met_station_heights
+        self._model_parameters = model_parameters
 
 
     @property
@@ -262,20 +274,7 @@ class HbvModelConfig:
 
     @property
     def region_parameters(self):
-        return PTHSKParameter(
-            PriestleyTaylorParameter(0.2, 1.26),
-            HbvSnowParameter(tx=-0.1, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001),
-            ActualEvapotranspirationParameter(1.5),
-            KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
-            PrecipitationCorrectionParameter(1.0940)
-        )
-        #return PTGSKParameter(
-        #    PriestleyTaylorParameter(0.2, 1.26),
-        #    GammaSnowParameter(),#(tx=-0.1, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001),
-        #    ActualEvapotranspirationParameter(1.5),
-        #    KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
-        #    PrecipitationCorrectionParameter(1.0940)
-        #)
+        return self._model_parameters
 
 
     @property
@@ -291,43 +290,6 @@ class HbvModelConfig:
         return GeoTsRepository(epsg_id=self.grid_specification._epsg_id, geo_location_repository=gis_location_repository,
                                ts_repository=smg_ts_repository, met_station_list=self._met_stations,
                                ens_config=None)
-
-
-kjela_x0 = 65000
-kjela_y0 = 6655000
-dx = 1000
-
-kjela = HbvModelConfig(
-    grid_spec=GridSpecification(epsg_id=32633, x0=65000.0, y0=6655000.0, dx=295.201 * 1000.0 / 10.0 / 10.0, dy=10 * 1000.0, nx=10, ny=1),
-    hbv_zones=[  # as fetched from LTM2-Kjela HBV
-            HbvZone(1, kjela_x0 + 0 * dx, kjela_y0, 889, 982, 44.334, 0.000, 6.194, 0.0),
-            HbvZone(2, kjela_x0 + 1 * dx, kjela_y0, 982, 1090, 41.545, 0.000, 5.804, 0.0),
-            HbvZone(3, kjela_x0 + 2 * dx, kjela_y0, 1090, 1106, 14.877, 0.000, 2.078, 0.0),
-            HbvZone(4, kjela_x0 + 3 * dx, kjela_y0, 1106, 1203, 68.043, 0.000, 9.506, 0.0),
-            HbvZone(5, kjela_x0 + 4 * dx, kjela_y0, 1203, 1252, 32.093, 0.000, 4.484, 0.0),
-            HbvZone(6, kjela_x0 + 5 * dx, kjela_y0, 1252, 1313, 32.336, 0.068, 4.517, 0.0),
-            HbvZone(7, kjela_x0 + 6 * dx, kjela_y0, 1313, 1355, 15.017, 0.034, 2.098, 0.0),
-            HbvZone(8, kjela_x0 + 7 * dx, kjela_y0, 1355, 1463, 23.420, 0.346, 3.272, 0.0),
-            HbvZone(9, kjela_x0 + 8 * dx, kjela_y0, 1463, 1542, 11.863, 0.868, 1.657, 0.0),
-            HbvZone(10, kjela_x0 + 9 * dx, kjela_y0, 1542, 1690, 11.673, 2.620, 1.631, 0.0)
-        ],
-    met_stations=[
-            # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
-            MetStationConfig(gis_id=1,  # 1 _LO 889.0 masl
-                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_LO',
-                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_LO',
-                             radiation=u'/ENKI/STS/Radiation/Sim.-Hestvollan....-T0006V0B-0119-0.8',# clear sky,reduced to 0.8
-                             wind_speed=u'/Tokk-Vågsli........-D0015A9KI0120'),
-
-            MetStationConfig(gis_id=2,  # 2 _HI 1690.0 masl
-                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_HI',
-                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_HI',
-                             radiation=None,
-                             wind_speed=None,
-                             relative_humidity=u'/SHFT-rel-hum-dummy.-T0002A3R-0103'),
-        ],
-    met_station_heights=[889.0,1690.0]
-)
 
 class InterpolationConfig(object):
     """ A bit clumsy, but to reuse dictionary based InterpolationRepository:"""
@@ -377,7 +339,6 @@ class InterpolationConfig(object):
                 }
             }
         }
-
 
 interpolation_repository = InterpolationParameterRepository(InterpolationConfig())
 
@@ -463,59 +424,92 @@ class HbvRegionModelRepository(RegionModelRepository):
 
         return region_model
 
+#-------------------------------------------------------------
+# This section is for experimenting with one concrete HBV model
+# and utilize the classes above to work with lump HBV models in SHyFT
+#
 
-def create_kjela_simulator(model, geo_ts_repository):
+kjela_x0 = 65000
+kjela_y0 = 6655000
+dx = 1000
+
+kjela = HbvModelConfig(
+    grid_spec=GridSpecification(epsg_id=32633, x0=kjela_x0, y0=kjela_y0, dx=295.201 * 1000.0 / 10.0 / 10.0, dy=10 * 1000.0, nx=10, ny=1),
+    hbv_zones=[  # as fetched from LTM2-Kjela HBV
+            HbvZone(1, kjela_x0 + 0 * dx, kjela_y0, 889, 982, 44.334, 0.000, 6.194, 0.0),
+            HbvZone(2, kjela_x0 + 1 * dx, kjela_y0, 982, 1090, 41.545, 0.000, 5.804, 0.0),
+            HbvZone(3, kjela_x0 + 2 * dx, kjela_y0, 1090, 1106, 14.877, 0.000, 2.078, 0.0),
+            HbvZone(4, kjela_x0 + 3 * dx, kjela_y0, 1106, 1203, 68.043, 0.000, 9.506, 0.0),
+            HbvZone(5, kjela_x0 + 4 * dx, kjela_y0, 1203, 1252, 32.093, 0.000, 4.484, 0.0),
+            HbvZone(6, kjela_x0 + 5 * dx, kjela_y0, 1252, 1313, 32.336, 0.068, 4.517, 0.0),
+            HbvZone(7, kjela_x0 + 6 * dx, kjela_y0, 1313, 1355, 15.017, 0.034, 2.098, 0.0),
+            HbvZone(8, kjela_x0 + 7 * dx, kjela_y0, 1355, 1463, 23.420, 0.346, 3.272, 0.0),
+            HbvZone(9, kjela_x0 + 8 * dx, kjela_y0, 1463, 1542, 11.863, 0.868, 1.657, 0.0),
+            HbvZone(10, kjela_x0 + 9 * dx, kjela_y0, 1542, 1690, 11.673, 2.620, 1.631, 0.0)
+        ],
+    met_stations=[
+            # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
+            MetStationConfig(gis_id=1,  # 1 _LO 889.0 masl
+                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_LO',
+                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_LO',
+                             radiation=u'/ENKI/STS/Radiation/Sim.-Hestvollan....-T0006V0B-0119-0.8',# clear sky,reduced to 0.8
+                             wind_speed=u'/Tokk-Vågsli........-D0015A9KI0120'),
+
+            MetStationConfig(gis_id=2,  # 2 _HI 1690.0 masl
+                             temperature=u'/LTM2-Kjela.........-D0017F3A-HBVSHYFT_HI',
+                             precipitation=u'/LTM2-Kjela.........-D0000F9A-HBVSHYFT_HI',
+                             radiation=None,
+                             wind_speed=None,
+                             relative_humidity=u'/SHFT-rel-hum-dummy.-T0002A3R-0103'),
+        ],
+    met_station_heights=[889.0,1690.0],
+    model_parameters=PTHSKParameter(
+            PriestleyTaylorParameter(0.2, 1.26),
+            HbvSnowParameter(tx=-0.2, cx=0.5 * (3.1 + 3.8), ts=0.5 * (-0.9 - 1.0), lw=0.05, cfr=0.001),
+            ActualEvapotranspirationParameter(1.5),
+            KirchnerParameter(c1=-2.810,c2=0.377,c3=-0.050),
+            PrecipitationCorrectionParameter(1.0940)
+        )
+)
+#note: this is the model_dt for the hbv
+#  seems that this greatly influences the snow response, so we suspect there is
+#  a parameter dimension somewhere that is not well formed
+model_dt= deltahours(6) # could be 1,2,3,6,8,12,24
+
+def create_kjela_model(shyft_model_type, geo_ts_repository):
     region_id = "LTM2-Kjela"
     interpolation_id = 0
     cfg_list = [
-        HbvRegionModelConfig(region_id, model, kjela.region_parameters, kjela.grid_specification, kjela.hbv_zone_config)
+        HbvRegionModelConfig(region_id, shyft_model_type, kjela.region_parameters, kjela.grid_specification, kjela.hbv_zone_config)
     ]
     reg_model_repository = HbvRegionModelRepository({x.name: x for x in cfg_list})
     model_simulator = Simulator(region_id, interpolation_id, reg_model_repository,
                       kjela.geo_ts_repository,
                       interpolation_repository, None)
-    model_simulator.region_model.set_snow_sca_swe_collection(-1,True)
-    model_simulator.region_model.set_state_collection(-1,True)
+    model_simulator.region_model.set_snow_sca_swe_collection(-1,True) # so that we could calibrate on sca/swe
+    model_simulator.region_model.set_state_collection(-1,True) # so that we can get out state information swe/sca
     return model_simulator
 
 
 def observed_kjela_discharge(period):
     smg_ts_repository = SmGTsRepository(PROD, FC_PROD)
-    result = smg_ts_repository.read([u"/Tokk-Kjela.........-D9100A3B5132R016.206"], period)
-    return next(iter(result.values()))
+    discharge_ts_name=u'/Tokk-Kjela.........-D9100A3B5132R016.206'
+    result = smg_ts_repository.read([discharge_ts_name], period)
+    return result[discharge_ts_name]
 
-model_dt= deltahours(1) # could be 1,2,3,6,8,12,24
 
-def burn_in_state(simulator, t_start, t_stop, q_obs_m3s_ts):
-    dt = model_dt
-    n = int(round((t_stop - t_start) / dt))
-    time_axis = Timeaxis(t_start, dt, n)
-    n_cells = simulator.region_model.size()
-    state_repos = DefaultStateRepository(simulator.region_model.__class__, n_cells)
-    s0 = state_repos.get_state(0)
+
+def burn_in_state(shyft_model, time_axis, q_obs_m3s_at_start):
+    n_cells = shyft_model.region_model.size()
+    state_repos = DefaultStateRepository(shyft_model.region_model.__class__, n_cells)
+    s0 = state_repos.get_state(0) # get out a state to start with
     for s in s0:
-        s.kirchner.q = 0.5
-    simulator.run(time_axis,s0)
+        s.kirchner.q = 0.5 # insert some more water than the default 0.001 mm
+    shyft_model.run(time_axis, s0)
     # Go back in time (to t_start) and adjust q with observed discharge at that time.
     # This will give us a good initial state at t_start
-    return adjust_simulator_state(simulator, t_start, q_obs_m3s_ts)
+    return shyft_model.discharge_adjusted_state(q_obs_m3s_at_start)
 
-
-def adjust_simulator_state(sim, t, q_obs):
-    return sim.discharge_adjusted_state(q_obs.value(q_obs.index_of(t)))
-
-
-def construct_calibration_parameters(simulator):
-    p = simulator.region_model.get_region_parameter()
-    p_min = simulator.region_model.parameter_t(p)
-    p_max = simulator.region_model.parameter_t(p)
-    p_min.kirchner.c1 *= 0.8
-    p_max.kirchner.c1 *= 1.2
-    p_min.kirchner.c2 *= 0.8
-    p_max.kirchner.c2 *= 1.2
-    p_min.kirchner.c3 *= 0.8
-    p_max.kirchner.c3 *= 1.2
-    return p, p_min, p_max
 
 
 def plot_results(ptxsk, q_obs=None):
@@ -524,9 +518,10 @@ def plot_results(ptxsk, q_obs=None):
     temp=[]
     precip = None
     discharge = None
+    plt.figure() # to start a new plot window
     if ptxsk is not None:
-        plt.subplot(8, 1, 1)
-        discharge = ptxsk.region_model.statistics.discharge([])
+        plt.subplot(8, 1, 1) # dimension 8 rows of plots
+        discharge = ptxsk.region_model.statistics.discharge([]) # get the sum discharge all areas
         n_temp=ptxsk.region_model.size()
         temp = [ptxsk.region_model.statistics.temperature([i]) for i in range(n_temp)]
         precip = [ptxsk.region_model.statistics.precipitation([i]) for i in range(n_temp)]
@@ -552,8 +547,7 @@ def plot_results(ptxsk, q_obs=None):
         plt.subplot(8, 1, 2,sharex=ax)
         for i in range(n_temp):
             plt.plot(times, np.array(temp[i].v))
-        set_calendar_formatter(Calendar())
-        plt.gca().set_xlim(times[0], times[-1])
+        #set_calendar_formatter(Calendar())
         plt.ylabel(r"Temperature in C")
 
         plt.subplot(8, 1, 3,sharex=ax)
@@ -588,136 +582,43 @@ def plot_results(ptxsk, q_obs=None):
 
     return h_obs
 
-
-def plot_percentiles(sim, percentiles, obs=None):
-    discharges = [s.region_model.statistics.discharge([0]) for s in sim]
-    times = utc_to_greg(np.array([discharges[0].time(i) for i in range(discharges[0].size())], dtype='d'))
-    all_discharges = np.array([d.v for d in discharges])
-    perc_arrs = [a for a in np.percentile(all_discharges, percentiles, 0)]
-    h, fill_handles = plot_np_percentiles(times, perc_arrs, base_color=(51 / 256, 102 / 256, 193 / 256))
-    percentile_texts = ["{} - {}".format(percentiles[i], percentiles[-(i + 1)]) for i in range(len(percentiles) // 2)]
-    ax = plt.gca()
-    maj_loc = AutoDateLocator(tz=pytz.UTC, interval_multiples=True)
-    ax.xaxis.set_major_locator(maj_loc)
-    set_calendar_formatter(Calendar())
-    if len(percentiles) % 2:
-        fill_handles.append(h[0])
-        percentile_texts.append("{}".format(percentiles[len(percentiles) // 2]))
-    if obs is not None:
-        h_obs = plot_results(None, obs)
-        fill_handles.append(h_obs)
-        percentile_texts.append("Observed")
-
-    ax.legend(fill_handles, percentile_texts)
-    ax.grid(b=True, color=(51 / 256, 102 / 256, 193 / 256), linewidth=0.1, linestyle='-', axis='y')
-    plt.xlabel("Time in UTC")
-    plt.ylabel(r"Discharge in $\mathbf{m^3s^{-1}}$", verticalalignment="top", rotation="horizontal")
-    ax.yaxis.set_label_coords(0, 1.1)
-    return h, ax
-
-
-def forecast_demo():
-    """Simple forecast demo using arome data from met.no. Initial state
-    is bootstrapped by simulating one hydrological year (starting
-    Sept 1. 2011), and then calculating the state August 31. 2012. This
-    state is then used as initial state for simulating Sept 1, 2011,
-    after scaling with observed discharge. The validity of this approach
-    is limited by the temporal variation of the spatial distribution of
-    the discharge state, q, in the Kirchner method. The model is then
-    stepped forward until Oct 1, 2015, and then used to compute the
-    discharge for 65 hours using Arome data. At last, the results
-    are plotted as simple timeseries.
+def simple_run_demo():
+    """Simple demo using HBV time-series and similar model-values
 
     """
-    utc = Calendar(3600)
-    t_start = utc.time(YMDhms(2010, 9, 1))
-    t_fc_start = utc.time(YMDhms(2015, 10, 1))
-    dt = model_dt
-    n_obs = int(round((t_fc_start - t_start) / dt))
-    n_fc = 65
-    obs_time_axis = Timeaxis(t_start, dt, n_obs)
-    fc_time_axis = Timeaxis(t_fc_start, dt, n_fc)
-    total_time_axis = Timeaxis(t_start, dt, n_obs + n_fc)
-    q_obs_m3s_ts = observed_kjela_discharge(total_time_axis.total_period())
-    model = create_kjela_simulator(PTHSKModel, kjela.geo_ts_repository)
-    initial_state = burn_in_state(model, t_start, utc.time(YMDhms(2011, 9, 1)), q_obs_m3s_ts)
-    model.run(obs_time_axis, initial_state)
-    plot_results(model, q_obs_m3s_ts)
+    # 1. Setup the time-axis for our simulation
+    normal_calendar = Calendar(3600) # we need UTC+1, since day-boundaries in day series in SmG is at UTC+1
+    t_start = normal_calendar.time(2010, 9, 1) # we start at
+    t_end   = normal_calendar.add(t_start,Calendar.YEAR,5) # 5 years period for simulation
+    time_axis = Timeaxis(t_start, model_dt, normal_calendar.diff_units(t_start,t_end,model_dt))
 
-    #current_state = adjust_simulator_state(ptgsk, t_fc_start, q_obs_m3s_ts)
+    # 2. Create the shyft model from the HBV model-repository
+    shyft_model = create_kjela_model(PTHSKModel, kjela.geo_ts_repository)
 
-    #ptgsk_fc = create_kjela_simulator(PTHSKModel, tistel.arome_repository(tistel.grid_spec, t_fc_start))
-    #ptgsk_fc.run(fc_time_axis, current_state)
-    #plt.figure()
-    #q_obs_m3s_ts = observed_kjela_discharge(fc_time_axis.total_period())
-    #plot_results(ptgsk_fc, q_obs_m3s_ts)
-    # plt.interactive(1)
+    # 3. establish the initial state
+    # using the *pattern* of distribution after one year (so hbv-zone 1..10 get approximate distribution of discharge)
+    #      *and* the observed discharge at the start time t_start
+    #
+    t_burnin = normal_calendar.add(t_start,Calendar.YEAR,1) # use one year to get distribution between hbvzones
+    burnin_time_axis = Timeaxis(t_start, model_dt, normal_calendar.diff_units(t_start, t_burnin, model_dt))
+    q_obs_m3s_ts = observed_kjela_discharge(time_axis.total_period()) # get out the observation ts
+    q_obs_m3s_at_t_start= q_obs_m3s_ts(t_start) # get the m3/s at t_start
+    initial_state = burn_in_state(shyft_model,burnin_time_axis, q_obs_m3s_at_t_start)
+
+    # 4. now run the model with the established state
+    #    that will start out with the burn in state
+    shyft_model.run(time_axis, initial_state)
+
+    # 5. display results etc. goes here
+    plot_results(shyft_model, q_obs_m3s_ts)
     plt.show()
 
 
-def continuous_calibration():
-    utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_start = utc.time(YMDhms(2012, 10, 1))
-    dt = deltahours(1)
-    n_obs = int(round((t_fc_start - t_start) / dt))
-    obs_time_axis = Timeaxis(t_start, dt, n_obs + 1)
-    q_obs_m3s_ts = observed_kjela_discharge(obs_time_axis.total_period())
-
-    ptgsk = create_kjela_simulator(PTHSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
-
-    num_opt_days = 30
-    # Step forward num_opt_days days and store the state for each day:
-    recal_start = t_start + deltahours(num_opt_days * 24)
-    t = t_start
-    state = initial_state
-    opt_states = {t: state}
-    while t < recal_start:
-        ptgsk.run(Timeaxis(t, dt, 24), state)
-        t += deltahours(24)
-        state = ptgsk.reg_model_state
-        opt_states[t] = state
-
-    recal_stop = utc.time(YMDhms(2011, 10, 30))
-    recal_stop = utc.time(YMDhms(2012, 5, 30))
-    curr_time = recal_start
-    q_obs_avg = TsTransform().to_average(t_start, dt, n_obs + 1, q_obs_m3s_ts)
-    target_spec = TargetSpecificationPts(q_obs_avg, IntVector([0]), 1.0, KLING_GUPTA)
-    target_spec_vec = TargetSpecificationVector([target_spec])
-    i = 0
-    times = []
-    values = []
-    p, p_min, p_max = construct_calibration_parameters(ptgsk)
-    while curr_time < recal_stop:
-        print(i)
-        i += 1
-        opt_start = curr_time - deltahours(24 * num_opt_days)
-        opt_state = opt_states.pop(opt_start)
-        p = ptgsk.region_model.get_region_parameter()
-        p_opt = ptgsk.optimize(Timeaxis(opt_start, dt, 24 * num_opt_days), opt_state, target_spec_vec,
-                               p, p_min, p_max, tr_stop=1.0e-5)
-        ptgsk.region_model.set_region_parameter(p_opt)
-        corr_state = adjust_simulator_state(ptgsk, curr_time, q_obs_m3s_ts)
-        ptgsk.run(Timeaxis(curr_time, dt, 24), corr_state)
-        curr_time += deltahours(24)
-        opt_states[curr_time] = ptgsk.reg_model_state
-        discharge = ptgsk.region_model.statistics.discharge([0])
-        times.extend(discharge.time(i) for i in range(discharge.size()))
-        values.extend(list(np.array(discharge.v)))
-    plt.plot(utc_to_greg(times), values)
-    plot_results(None, q_obs=observed_kjela_discharge(UtcPeriod(recal_start, recal_stop)))
-    set_calendar_formatter(Calendar())
-    # plt.interactive(1)
-    plt.title("Continuously recalibrated discharge vs observed")
-    plt.xlabel("Time in UTC")
-    plt.ylabel(r"Discharge in $\mathbf{m^3s^{-1}}$", verticalalignment="top", rotation="horizontal")
-    plt.gca().yaxis.set_label_coords(0, 1.1)
 
 
 if __name__ == "__main__":
     import sys
 
-    demos = [forecast_demo, continuous_calibration]
+    demos = [simple_run_demo]
     demo = demos[int(sys.argv[1]) if len(sys.argv) == 2 else 0]
     result = demo()

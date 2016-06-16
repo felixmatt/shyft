@@ -287,7 +287,7 @@ namespace shyft {
                     }
 
                     if (total_water < swe) {
-                        if (total_water - swe < -1.0e-10) {// we do have about 15-16 digits accuracy
+                        if (total_water - swe < -1.0e-6) {// we do have about 15-16 digits accuracy
                             ostringstream buff;
                             buff << "Negative outflow: total_water (" << total_water << ") - swe (" << swe << ") = " << total_water - swe;
                             throw runtime_error(buff.str());

@@ -4,7 +4,7 @@ Simulator classes for running SHyFT forward simulations.
 from __future__ import print_function
 from __future__ import absolute_import
 import numpy as np
-
+import math
 from shyft import api
 
 
@@ -231,5 +231,8 @@ class DefaultSimulator(object):
         discharge_ratios = state_discharge/avg_state_discharge
         updated_state_discharge = avg_obs_discharge*discharge_ratios
         for i in range(state.size()):
-            state[i].kirchner.q = updated_state_discharge[i]
+            if not math.isnan(updated_state_discharge[i]):
+                state[i].kirchner.q = updated_state_discharge[i]
+            else:
+                state[i].kirchner.q = 0.5
         return state
