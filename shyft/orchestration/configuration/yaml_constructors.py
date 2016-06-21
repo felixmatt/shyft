@@ -9,14 +9,15 @@ def cls_path(cls):
 def target_repo_constructor(cls, params):
     return cls(**params)
 
-def geo_ts_repo_constructor(cls, params,region_config):
+def geo_ts_repo_constructor(cls, params): # ,region_config):
     if cls_path(cls) == 'shyft.repository.service.ssa_geo_ts_repository.GeoTsRepository':
         # from shyft.repository.service.ssa_geo_ts_repository import GeoTsRepository
         from shyft.repository.service.ssa_geo_ts_repository import MetStationConfig
         from shyft.repository.service.gis_location_service import GisLocationService
         from shyft.repository.service.ssa_smg_db import SmGTsRepository, PROD, FC_PROD
 
-        epsg = region_config.domain()["EPSG"]
+        #epsg = region_config.domain()["EPSG"]
+        epsg = params['epsg']
         met_stations = [MetStationConfig(**s) for s in params['stations_met']]
         gis_location_repository=GisLocationService() # this provides the gis locations for my stations
         smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
@@ -27,7 +28,7 @@ def geo_ts_repo_constructor(cls, params,region_config):
                                ts_repository=smg_ts_repository, met_station_list=met_stations,
                                ens_config=None)
     else:
-        params.update({'epsg': region_config.domain()["EPSG"]})
+        #params.update({'epsg': region_config.domain()["EPSG"]})
         return cls(**params)
 
 def region_model_repo_constructor(cls,region_config, model_config, region_model_id):

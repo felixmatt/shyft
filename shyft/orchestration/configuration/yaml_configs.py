@@ -16,6 +16,20 @@ def utctime_from_datetime(dt):
     utc_calendar = api.Calendar()
     return utc_calendar.time(api.YMDhms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second))
 
+def geots_repo_from_config(datasets_config_file, epsg=None):
+    datasets_config = YamlContent(datasets_config_file)
+    # Construct GeoTsRepository
+    geo_ts_repos = []
+    src_types_to_extract = []
+    for source in datasets_config.sources:
+        if epsg is not None:
+            source['params'].update({'epsg': epsg})
+        # geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], self.region_config))
+        geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params']))
+        src_types_to_extract.append(source['types'])
+    return geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos,
+                                                                         src_types_per_repo=src_types_to_extract)
+
 
 class YamlContent(object):
     """
@@ -192,16 +206,13 @@ class YAMLSimConfig(object):
         # Construct RegionModelRepository
         self.region_model = region_model_repo_constructor(self.region_config.repository()['class'],
             self.region_config, model_config, self.region_model_id)
+
         # Construct InterpolationParameterRepository
         self.interp_repos = InterpolationParameterRepository(interpolation_config)
+
         # Construct GeoTsRepository
-        geo_ts_repos = []
-        src_types_to_extract = []
-        for source in datasets_config.sources:
-            geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], self.region_config))
-            src_types_to_extract.append(source['types'])
-        self.geo_ts = geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos,
-                                                                             src_types_per_repo = src_types_to_extract)
+        self.geo_ts = geots_repo_from_config(datasets_config_file, self.region_config.domain()["EPSG"])
+
         # Construct destination repository
         self.dst_repo = []
         if hasattr(datasets_config, 'destinations'):
