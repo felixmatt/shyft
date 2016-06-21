@@ -175,7 +175,7 @@ def forecast_demo():
     plt.figure()
     q_obs_m3s_ts = observed_tistel_discharge(fc_time_axis.total_period())
     plot_results(ptgsk_fc, q_obs_m3s_ts)
-    plt.interactive(1)
+    #plt.interactive(1)
     plt.show()
 
 
@@ -208,7 +208,7 @@ def ensemble_demo():
     plt.hold(1)
     percentiles = [10, 25, 50, 75, 90]
     plot_percentiles(sims, percentiles, obs=q_obs_m3s_ts)
-    plt.interactive(1)
+    #plt.interactive(1)
     plt.show()
 
 
@@ -265,7 +265,7 @@ def continuous_calibration():
     plt.plot(utc_to_greg(times), values)
     plot_results(None, q_obs=observed_tistel_discharge(UtcPeriod(recal_start, recal_stop)))
     set_calendar_formatter(Calendar())
-    plt.interactive(1)
+    #plt.interactive(1)
     plt.title("Continuously recalibrated discharge vs observed")
     plt.xlabel("Time in UTC")
     plt.ylabel(r"Discharge in $\mathbf{m^3s^{-1}}$", verticalalignment="top", rotation="horizontal")
