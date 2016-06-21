@@ -215,6 +215,14 @@ class YAMLSimConfig(object):
                                                            dst['time_axis']['number_of_steps'])}) for dst in repo['1D_timeseries']]
                 self.dst_repo.append(repo)
 
+        # Construct reference data repository
+        self.ref_repo = []
+        if hasattr(self, 'references'):
+            for repo in self.references:
+                repo_ = target_repo_constructor(repo['repository'],repo['params'])
+                [dst.update({'repo': repo_}) for dst in repo['1D_timeseries']]
+                self.ref_repo.extend(repo['1D_timeseries'])
+
         # Construct StateRepository
         if hasattr(self, 'initial_state'):
             self.initial_state_repo = self.initial_state['repository']['class'](
