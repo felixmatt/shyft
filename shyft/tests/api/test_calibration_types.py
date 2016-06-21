@@ -128,6 +128,10 @@ class ShyftApi(unittest.TestCase):
         ptgsk_p.ae.ae_scale_factor = 1.2  # sih: just to demo ae scale_factor can be set directly
         return ptgsk_p
 
+    def test_precipitation_correction_constructor(self):
+        spcp = api.PrecipitationCorrectionParameter(scale_factor=0.9)
+        self.assertAlmostEqual(0.9, spcp.scale_factor)
+
     def test_create_ptgsk_param(self):
         ptgsk_p = self._create_std_ptgsk_param()
         copy_p = pt_gs_k.PTGSKParameter(ptgsk_p)
