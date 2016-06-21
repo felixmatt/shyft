@@ -62,6 +62,9 @@ class ConfigSimulator(simulator.DefaultSimulator):
         self.config.end_state_repo.put_state(self.config.region_model_id, self.region_model.time_axis.total_period().end,
                                              endstate, tags=None)
 
+    def update_state(self, var='discharge', catch_id=None):
+        pass
+
     def run(self, time_axis=None, state=None):
         if time_axis is not None:
             self.time_axis = time_axis
