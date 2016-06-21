@@ -259,12 +259,14 @@ class CatchmentFetcher(BaseGisDataFetcher):
                 service_index = 7
             else:
                 raise GisDataFetchError(
-                    "Unknown identifier {} - use one of ['SUBCATCH_ID','CATCH_ID','POWER_PLANT_ID']".format(identifier))
+                    "Unknown identifier {} for ctachment_type {}- use one of ['SUBCATCH_ID','CATCH_ID','POWER_PLANT_ID']".format(identifier,catchment_type))
         elif catchment_type == 'unregulated':
             service_index = 8
+        elif catchment_type == 'LTM':
+            service_index = 3
         else:
             raise GisDataFetchError(
-                "Undefined catchment type {} - use either regulated or unregulated".format(catchment_type))
+                "Undefined catchment type {}. Use one of these three: 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
         super(CatchmentFetcher, self).__init__(geometry=None, server_name="oslwvagi001p",
                                                server_port="6080", service_index=service_index,
                                                epsg_id=epsg_id)
@@ -276,6 +278,8 @@ class CatchmentFetcher(BaseGisDataFetcher):
         q = self.get_query(kwargs.pop("geometry", None))
         id_list = kwargs.pop("id_list", None)
         if id_list:
+            if isinstance(id_list[0], str):
+                id_list = ["'%s'" % value for value in id_list]
             q["where"] = "{} IN ({})".format(self.identifier, ", ".join([str(i) for i in id_list]))
         return q
 
