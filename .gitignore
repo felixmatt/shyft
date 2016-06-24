@@ -44,3 +44,4 @@ cachegrind.out.*
 
 /SHyFT.VC.db
 *.opendb
+*.user
