@@ -214,7 +214,7 @@ class RegionModel(unittest.TestCase):
         cell_vector = model.get_cells()
         geo_cell_data_string = cell_vector.geo_cell_data_string(cell_vector)  # This gives a string, ultra fast, containing the serialized form of all geo-cell data
         self.assertTrue(len(geo_cell_data_string) > 10 * 10)
-        cell_vector2 = cell_vector.create_from_geo_cell_data_string(geo_cell_data_string) # This gives a cell_vector, of specified type, with exactly the same geo-cell data as the original
+        cell_vector2 = pt_gs_k.PTGSKCellAllVector.create_from_geo_cell_data_string(geo_cell_data_string) # This gives a cell_vector, of specified type, with exactly the same geo-cell data as the original
         self.assertEqual(len(cell_vector), len(cell_vector2))  #  just verify equal size, and then geometry, the remaining tests are covered by C++ testing
         for i in range(len(cell_vector)):
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().z, cell_vector2[i].mid_point().z)
