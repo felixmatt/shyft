@@ -571,5 +571,45 @@ namespace shyft {
 				[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
 	};
+
+	/**\brief geo_cell_data_io provide fast conversion to-from string
+	 *
+	 * In the context of orchestration/repository, we found that it could be useful to
+     * cache information as retrieved from a GIS system
+     *
+     * This only makes sense to keep as long as we need it for performance reasons
+     *
+	 */
+	struct geo_cell_data_io {
+
+        static string to_string(const geo_cell_data& gcd) {
+            char s[500];// 500 should be able to keep text of 12 double with 12 digits precicion
+            sprintf(s,"gcd(gpt(%.12lf,%.12lf,%.12lf),%.12lf,%d,%.12lf,ltf(%.12lf,%.12lf,%.12lf,%.12lf,%.12lf));",
+                    gcd.mid_point().x,gcd.mid_point().y,gcd.mid_point().z,
+                    gcd.area(),int(gcd.catchment_id()),gcd.radiation_slope_factor(),
+                    gcd.land_type_fractions_info().glacier(),
+                    gcd.land_type_fractions_info().lake(),
+                    gcd.land_type_fractions_info().reservoir(),
+                    gcd.land_type_fractions_info().forest(),
+                    gcd.land_type_fractions_info().unspecified());
+            return s;
+        }
+
+        static geo_cell_data from_string(const char *s) {
+            double x,y,z;
+            double a;
+            int cid;
+            double rsf;
+            double g,l,r,f,u;
+            if( s==nullptr || sscanf(s,"gcd(gpt(%lf,%lf,%lf),%lf,%d,%lf,ltf(%lf,%lf,%lf,%lf,%lf));",
+                   &x,&y,&z,&a,&cid,&rsf,&g,&l,&r,&f,&u
+                   )!= 11)
+                throw invalid_argument("geo_cell_data string not well formatted");
+            land_type_fractions ltf;
+            ltf.set_fractions(g,l,r,f);
+            return geo_cell_data(geo_point(x,y,z),a,cid,rsf,ltf);
+        }
+
+    };
   } // Namespace api
 }// Namespace shyft

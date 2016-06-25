@@ -1,6 +1,6 @@
 #pragma once
 #include "expose_statistics.h"
-
+#include "api/api.h"
 namespace expose {
     using namespace boost::python;
     using namespace std;
@@ -18,6 +18,30 @@ namespace expose {
     }
 
     template <class T>
+    static string geo_cell_data_string(shared_ptr<vector<T>> cell_vector) {
+        string r; r.reserve(200*cell_vector->size());//Assume approx 200 chars pr. cell
+        for(const auto& cell:*cell_vector)
+            r += shyft::api::geo_cell_data_io::to_string(cell.geo);
+        return r;
+    }
+    template <class T>
+    static vector<T> create_from_geo_cell_data_string(const string& s) {
+        vector<T> r; r.reserve(3000);// assume this is ok size for now
+        size_t i=0;
+        while(i!= string::npos) {
+            size_t e= s.find_first_of(';',i);
+            if(e == string::npos)
+                break;
+            T cell;
+            cell.geo=shyft::api::geo_cell_data_io::from_string(s.data()+i);
+            r.push_back(cell);
+            i=e+1;// skip ;
+        }
+        return r;
+    }
+
+
+    template <class T>
     static void cell(const char *cell_name,const char* cell_doc) {
       class_<T>(cell_name,cell_doc)
         .def_readwrite("geo",&T::geo,"geo_cell_data information for the cell")
@@ -33,6 +57,19 @@ namespace expose {
       char cv[200];sprintf(cv,"%sVector",cell_name);
       class_<vector<T>,bases<>,shared_ptr<vector<T>> > (cv,"vector of cells")
         .def(vector_indexing_suite<vector<T>>())
+        .def("geo_cell_data_string", geo_cell_data_string<T>,
+             "returns a persistable representation of of geo_cell_data for all cells.\n"
+             "that string can in turn be used to construct a <Cell>Vector of any cell type\n"
+             "using the <Cell>Vector.create_from_geo_cell_data_string")
+             .staticmethod("geo_cell_data_string")
+        .def("create_from_geo_cell_data_string",create_from_geo_cell_data_string<T>,
+             "create a cell-vector filling in the geo_cell_data records as given by the string.\n"
+             "This function works together with the geo_cell_data_string static method\n"
+             "that provides a correctly formatted persistable string\n"
+             "Notice that the context and usage of these two functions is related\n"
+             "to python orchestration and repository data-caching\n")
+             .staticmethod("create_from_geo_cell_data_string")
+
         ;
       register_ptr_to_python<std::shared_ptr<std::vector<T>> >();
       expose::statistics::basic_cell<T>(cell_name);//common for all type of cells, so expose it here
