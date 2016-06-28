@@ -117,9 +117,9 @@ void api_test::test_pthsk_state_io() {
 void api_test::test_geo_cell_data_io() {
     geo_cell_data gcd(geo_point(1,2,3),4,5,0.6,land_type_fractions(2,4,6,8,10));
 
-    string gcd_s=geo_cell_data_io::to_string(gcd);
+    auto gcd_s=geo_cell_data_io::to_vector(gcd);
     TS_ASSERT(gcd_s.size()>0);
-    geo_cell_data gcd2= geo_cell_data_io::from_string(gcd_s.data());
+    geo_cell_data gcd2= geo_cell_data_io::from_vector(gcd_s);
     double eps=1e-12;
     TS_ASSERT_DELTA(gcd2.area(),gcd.area(),eps);
     TS_ASSERT_EQUALS(gcd2.mid_point(),gcd.mid_point());

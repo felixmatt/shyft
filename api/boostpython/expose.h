@@ -18,26 +18,23 @@ namespace expose {
     }
 
     template <class T>
-    static string geo_cell_data_string(shared_ptr<vector<T>> cell_vector) {
-        string r; r.reserve(200*cell_vector->size());//Assume approx 200 chars pr. cell
+    static vector<double> geo_cell_data_vector(shared_ptr<vector<T>> cell_vector) {
+        vector<double> r; r.reserve(shyft::api::geo_cell_data_io::size()*cell_vector->size());//Assume approx 200 chars pr. cell
         for(const auto& cell:*cell_vector)
-            r += shyft::api::geo_cell_data_io::to_string(cell.geo);
-        return r;
+            shyft::api::geo_cell_data_io::push_to_vector(r,cell.geo);
+        return move(r);
     }
     template <class T>
-    static vector<T> create_from_geo_cell_data_string(const string& s) {
-        vector<T> r; r.reserve(3000);// assume this is ok size for now
-        size_t i=0;
-        while(i!= string::npos) {
-            size_t e= s.find_first_of(';',i);
-            if(e == string::npos)
-                break;
+    static vector<T> create_from_geo_cell_data_vector(const vector<double>& s) {
+        if(s.size()==0 || s.size()% shyft::api::geo_cell_data_io::size())
+            throw invalid_argument("create_from_geo_cell_data_vector: size of vector of double must be multiple of 11");
+        vector<T> r; r.reserve(s.size()/shyft::api::geo_cell_data_io::size());// assume this is ok size for now
+        for(size_t i=0;i<s.size();i+=shyft::api::geo_cell_data_io::size()) {
             T cell;
-            cell.geo=shyft::api::geo_cell_data_io::from_string(s.data()+i);
+            cell.geo=shyft::api::geo_cell_data_io::from_raw_vector(s.data()+i);
             r.push_back(cell);
-            i=e+1;// skip ;
         }
-        return r;
+        return move(r);
     }
 
 
@@ -57,18 +54,18 @@ namespace expose {
       char cv[200];sprintf(cv,"%sVector",cell_name);
       class_<vector<T>,bases<>,shared_ptr<vector<T>> > (cv,"vector of cells")
         .def(vector_indexing_suite<vector<T>>())
-        .def("geo_cell_data_string", geo_cell_data_string<T>,
-             "returns a persistable representation of of geo_cell_data for all cells.\n"
-             "that string can in turn be used to construct a <Cell>Vector of any cell type\n"
-             "using the <Cell>Vector.create_from_geo_cell_data_string")
-             .staticmethod("geo_cell_data_string")
-        .def("create_from_geo_cell_data_string",create_from_geo_cell_data_string<T>,
-             "create a cell-vector filling in the geo_cell_data records as given by the string.\n"
-             "This function works together with the geo_cell_data_string static method\n"
-             "that provides a correctly formatted persistable string\n"
+        .def("geo_cell_data_vector", geo_cell_data_vector<T>,
+             "returns a persistable DoubleVector representation of of geo_cell_data for all cells.\n"
+             "that object can in turn be used to construct a <Cell>Vector of any cell type\n"
+             "using the <Cell>Vector.create_from_geo_cell_data_vector")
+             .staticmethod("geo_cell_data_vector")
+        .def("create_from_geo_cell_data_vector",create_from_geo_cell_data_vector<T>,
+             "create a cell-vector filling in the geo_cell_data records as given by the DoubleVector.\n"
+             "This function works together with the geo_cell_data_vector static method\n"
+             "that provides a correctly formatted persistable vector\n"
              "Notice that the context and usage of these two functions is related\n"
              "to python orchestration and repository data-caching\n")
-             .staticmethod("create_from_geo_cell_data_string")
+             .staticmethod("create_from_geo_cell_data_vector")
 
         ;
       register_ptr_to_python<std::shared_ptr<std::vector<T>> >();
