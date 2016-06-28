@@ -206,14 +206,21 @@ class RegionModel(unittest.TestCase):
         """
         This test the bulding block for the geo-cell caching mechanism that can be
         implemented in GeoCell repository to cache complex information from the GIS system.
-        The test illustrates how to convert existing cell-vector geo info into a peristable string,
-        and then how to re-create the cell-vector,(of any given type actually) based on the geo-cell data.
+        The test illustrates how to convert existing cell-vector geo info into a DoubleVector,
+        that can be converted .to_nump(),
+        and then how to re-create the cell-vector,(of any given type actually) based on
+        the geo-cell data DoubleVector (that can be created from .from_numpy(..)
+
+        Notice that the from_numpy(np array) could have limited functionality when it comes
+        to strides etc, so if problem flatten out the np.array before passing it.
 
         """
-        model = self.build_model(pt_gs_k.PTGSKModel, pt_gs_k.PTGSKParameter, 3)
+        n_cells = 3
+        n_values_pr_gcd = 11  # number of values in a geo_cell_data stride
+        model = self.build_model(pt_gs_k.PTGSKModel, pt_gs_k.PTGSKParameter, n_cells)
         cell_vector = model.get_cells()
         geo_cell_data_vector = cell_vector.geo_cell_data_vector(cell_vector)  # This gives a string, ultra fast, containing the serialized form of all geo-cell data
-        self.assertEqual(len(geo_cell_data_vector) , 11 * 3)
+        self.assertEqual(len(geo_cell_data_vector) , n_values_pr_gcd * n_cells)
         cell_vector2 = pt_gs_k.PTGSKCellAllVector.create_from_geo_cell_data_vector(geo_cell_data_vector) # This gives a cell_vector, of specified type, with exactly the same geo-cell data as the original
         self.assertEqual(len(cell_vector), len(cell_vector2))  #  just verify equal size, and then geometry, the remaining tests are covered by C++ testing
         for i in range(len(cell_vector)):
