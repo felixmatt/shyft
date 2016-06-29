@@ -11,7 +11,7 @@ print('Building SHyFT')
 
 if "Windows" in platform.platform():
     msbuild = r'C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe'
-    cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64'] # '/t:Rebuild'
+    cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64', '/t:Rebuild', '/m']
     
     p = subprocess.Popen(cmd,
         universal_newlines=True,
