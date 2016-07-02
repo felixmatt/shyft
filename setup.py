@@ -56,12 +56,9 @@ setup(
     description='An OpenSource hydrological toolbox',
     license='LGPL v3',
     packages=find_packages(),
-    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'tests/netcdf/*']},
+    package_data={'shyft': ['api/*.so', 'api/*.pyd','api/pt_gs_k/*.pyd','api/pt_gs_k/*.so','api/pt_hs_k/*.pyd','api/pt_hs_k/*.so','api/pt_ss_k/*.pyd','api/pt_ss_k/*.so', 'tests/netcdf/*']},
     entry_points={
-        'console_scripts': [
-            #################### orchestration #######################
-            'shyft_runner = orchestration2.shyft_runner:main',
-        ]
+        
     },
     requires=["numpy", "nose", "netCDF4"]
 )
