@@ -212,7 +212,14 @@ namespace shyft {
                     }
                 } break;
                 default: {
-                    remainder = t2 - (t1+n_units*deltaT);
+					if (deltaT > HOUR) {// a bit tricky, tz might jeopardize interval size by 1h (again assuming dst=1h)
+						auto utc_diff_1 = tz_info->utc_offset(t1);//assuming dst=1h!
+						auto utc_diff_2 = tz_info->utc_offset(t2);//assuming dst=1h!
+						n_units = (t2 - t1 - (utc_diff_1 - utc_diff_2)) / deltaT;
+						remainder = t2 - add(t1, deltaT, n_units);
+					} else { // simple case, hour< 15 min etc.
+						remainder = t2 - (t1 + n_units*deltaT);
+					}
                 } break;
             }
             return n_units*sgn;

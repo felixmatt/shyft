@@ -127,7 +127,7 @@ namespace shyft {
             }
 
             utcperiod period( size_t i ) const {
-                if( i < n ) return dt < dt_h ? utcperiod( t + i * dt, t + ( i + 1 ) * dt ) : utcperiod( cal->add( t, dt, long( i) ), cal->add( t, dt, long(i + 1) ) );
+                if( i < n ) return dt <= dt_h ? utcperiod( t + i * dt, t + ( i + 1 ) * dt ) : utcperiod( cal->add( t, dt, long( i) ), cal->add( t, dt, long(i + 1) ) );
                 throw out_of_range( "calendar_dt.period(i)" );
             }
 
@@ -254,7 +254,7 @@ namespace shyft {
             point_dt p;
             //---------------
             generic_dt(): gt( FIXED ) {}
-            // provide convinence constructors, to directly create the wanted time-axis, regardless underlying rep.
+            // provide convinience constructors, to directly create the wanted time-axis, regardless underlying rep.
             generic_dt( utctime t0,utctimespan dt,size_t n):gt(FIXED),f(t0,dt,n) {}
             generic_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
             generic_dt( const vector<utctime>& t, utctime t_end ):gt(POINT),p(t,t_end) {}
