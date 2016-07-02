@@ -181,7 +181,7 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
     TS_ASSERT_EQUALS(t1_2,t0+deltahours(1));
     TS_ASSERT_EQUALS(YMDhms(2016,3,27,1),cet.calendar_units(t1_2));
     TS_ASSERT_EQUALS(t1_3,t0+deltahours(2));
-
+	TS_ASSERT_EQUALS(1,cet.diff_units(t0,t1_3,deltahours(3)))
     /// case 2: 25 hour, summer->winter
     t0 = cet.time(YMDhms(2016,10,30));
     t1 = cet.add(t0,calendar::DAY,1);

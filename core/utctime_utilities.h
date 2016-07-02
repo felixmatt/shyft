@@ -255,6 +255,7 @@ namespace shyft {
 			static const utctimespan MONTH=30*24*3600L;
 			static const utctimespan WEEK = 7*24*3600L;
 			static const utctimespan DAY =  1*24*3600L;
+			static const utctimespan HOUR_3 = 3 * 3600L;
 			// these are just timespan constants with no calendar semantics
 			static const utctimespan HOUR = 3600L;
 			static const utctimespan MINUTE = 60L;

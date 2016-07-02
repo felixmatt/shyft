@@ -57,6 +57,15 @@ class Calendar(unittest.TestCase):
         self.assertEqual("2016-11-06T00:00:00+01", osl.to_string(t1))
         self.assertEqual(168+1, osl.diff_units(t0, t1, api.Calendar.HOUR))
 
+    def test_calendar_add_3h_during_dst(self):
+        osl = api.Calendar("Europe/Oslo")
+        t0 = osl.time(2016, 3, 27)  # dst change during spring
+        t1 = osl.add(t0, api.Calendar.DAY,  1)
+        dt3h=api.deltahours(3)
+        d3h= osl.diff_units(t0,t1,dt3h)
+        self.assertEqual(8, d3h)
+
+
     def test_trim_day(self):
         t = api.utctime_now()
         td = self.std.trim(t, api.Calendar.DAY)
