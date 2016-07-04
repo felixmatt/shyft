@@ -506,8 +506,8 @@ class RegionModelConfig(object):
         return self.grid_specification.epsg_id
 
 class CellDataCache(object):
-    def __init__(self, folder):
-        #self.file_type = file_type
+    def __init__(self, folder, file_type):
+        self.file_type = file_type
         self.folder = folder
         self.reader = {'pickle': self._load_from_pkl,
                        #'netcdf': self._load_from_nc,
@@ -522,36 +522,36 @@ class CellDataCache(object):
                          #'numpy': 'npy'
                          }
 
-    def _make_filename(self, file_type, service_id_field_name, grid_specification):
+    def _make_filename(self, service_id_field_name, grid_specification):
         gs = grid_specification
         file_name = 'EPSG_{}_ID_{}_dX_{}_dY_{}.{}'.format(gs.epsg(), service_id_field_name, int(gs.dx), int(gs.dy),
-                                                     self.file_ext[file_type])
+                                                     self.file_ext[self.file_type])
         return os.path.join(self.folder, file_name)
 
-    def is_file_available(self, file_type, service_id_field_name, grid_specification):
-        file_path = self._make_filename(file_type, service_id_field_name, grid_specification)
+    def is_file_available(self, service_id_field_name, grid_specification):
+        file_path = self._make_filename(service_id_field_name, grid_specification)
         #file_path = os.path.join(self.folder, file_name)
         return os.path.isfile(file_path),file_path
 
-    def remove_cache(self,file_type,service_id_field_name, grid_specification):
-        file_exists, file_path = self.is_file_available(file_type, service_id_field_name, grid_specification)
+    def remove_cache(self,service_id_field_name, grid_specification):
+        file_exists, file_path = self.is_file_available(service_id_field_name, grid_specification)
         if file_exists:
             print('Deleting file {}'.format(file_path))
             os.remove(file_path)
         else:
             print('No cashe file to remove!')
 
-    def get_cell_data(self, file_type, service_id_field_name, grid_specification, id_list):
+    def get_cell_data(self, service_id_field_name, grid_specification, id_list):
         #file_path = 'All_regions_as_dict_poly_wkb.pkl'
-        file_path = self._make_filename(file_type, service_id_field_name, grid_specification)
+        file_path = self._make_filename(service_id_field_name, grid_specification)
         #file_path = os.path.join(self.folder, file_name)
-        return self.reader[file_type](file_path, id_list)
+        return self.reader[self.file_type](file_path, id_list)
 
-    def save_cell_data(self, file_type, service_id_field_name, grid_specification, cell_data):
-        file_path = self._make_filename(file_type, service_id_field_name, grid_specification)
-        file_status = self.is_file_available(file_type, service_id_field_name, grid_specification)[0]
+    def save_cell_data(self, service_id_field_name, grid_specification, cell_data):
+        file_path = self._make_filename(service_id_field_name, grid_specification)
+        file_status = self.is_file_available(service_id_field_name, grid_specification)[0]
         #file_path = os.path.join(self.folder, file_name)
-        self.saver[file_type](file_path, cell_data, file_status)
+        self.saver[self.file_type](file_path, cell_data, file_status)
 
     def _load_from_pkl(self, file_path, cids):
         print('Loading from cache_file {}...'.format(file_path))
@@ -573,10 +573,10 @@ class CellDataCache(object):
 
     def _dump_to_pkl(self, file_path, cell_data, is_existing_file):
         print('Saving to cache_file {}...'.format(file_path))
-        new_geo_data = cell_data['geo_data']
+        new_geo_data = cell_data['geo_data'].copy()
         cid_map = cell_data['cid_map']
         new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
-        cell_info = {'geo_data': cell_data['geo_data'], 'polygons': cell_data['polygons'].tolist()}
+        cell_info = {'geo_data': new_geo_data, 'polygons': cell_data['polygons'].tolist()}
         if is_existing_file:
             with open(file_path, 'rb') as pkl_file_in:
                 old = pickle.load(pkl_file_in)
@@ -601,10 +601,10 @@ class GisRegionModelRepository(RegionModelRepository):
     """
     Statkraft GIS service based version of repository for RegionModel objects.
     """
-    cell_data_cache = CellDataCache(shyftdata_dir)
-    cache_file_type = 'pickle'
+    cell_data_cache = CellDataCache(shyftdata_dir, 'pickle')
+    #cache_file_type = 'pickle'
 
-    def __init__(self, region_id_config, use_cache=True, cache_folder=None, cache_file_type=None):
+    def __init__(self, region_id_config, use_cache=False, cache_folder=None, cache_file_type=None):
         """
         Parameters
         ----------
@@ -612,6 +612,10 @@ class GisRegionModelRepository(RegionModelRepository):
         """
         self._region_id_config = region_id_config
         self.use_cache = use_cache
+        if cache_folder is not None:
+            self.cell_data_cache.folder = cache_folder
+        if cache_file_type is not None:
+            self.cell_data_cache.file_type = cache_file_type
 
     def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
@@ -628,20 +632,21 @@ class GisRegionModelRepository(RegionModelRepository):
         result = cell_info_service.fetch()  # clumsy result, we can adjust this.. (I tried to adjust it below)
         cell_data = result['cell_data']  # this is the part we need here
         radiation_slope_factor = 0.9  # todo: get it from service layer
-        extra_geo_attribute = 0.0 # todo: should we just remove this
+        unknown_fraction = 0.0 # todo: should we just remove this
         print('Making cell_data from gis_data...')
         cids = np.sort(list(cell_data.keys()))
         geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, idx,
                                radiation_slope_factor,c.get('glacier', 0.0), c.get('lake', 0.0),c.get('reservoir', 0.0),
-                               c.get('forest', 0.0), extra_geo_attribute] for c in cell_data[cid]]
+                               c.get('forest', 0.0), unknown_fraction] for c in cell_data[cid]]
                              for idx, cid in enumerate(cids))
+        geo_data[:, -1] = 1 - geo_data[:, -5:-1].sum(axis=1) # calculating the unknown fraction
         polys = np.concatenate(tuple([c['cell'] for c in cell_data[cid]] for cid in cids))
         return {'cid_map': cids, 'geo_data': geo_data, 'polygons': polys}
 
     @classmethod
     def get_cell_data_from_cache(cls, service_id_field_name, grid_specification, id_list):
-        if cls.cell_data_cache.is_file_available(cls.cache_file_type, service_id_field_name, grid_specification)[0]:
-            cell_info = cls.cell_data_cache.get_cell_data(cls.cache_file_type, service_id_field_name,
+        if cls.cell_data_cache.is_file_available(service_id_field_name, grid_specification)[0]:
+            cell_info = cls.cell_data_cache.get_cell_data(service_id_field_name,
                                                           grid_specification, id_list)
             if len(cell_info['cid_map'])!=0:
                 return cell_info
@@ -655,15 +660,15 @@ class GisRegionModelRepository(RegionModelRepository):
     @classmethod
     def update_cache(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
         cell_info = cls.get_cell_data_from_gis(catchment_regulated_type, service_id_field_name, grid_specification, id_list)
-        cls.cell_data_cache.save_cell_data(cls.cache_file_type, service_id_field_name, grid_specification, cell_info)
+        cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
 
     @classmethod
     def remove_cache(cls, service_id_field_name, grid_specification):
-        cls.cell_data_cache.remove_cache(cls.cache_file_type,service_id_field_name, grid_specification)
+        cls.cell_data_cache.remove_cache(service_id_field_name, grid_specification)
 
     @classmethod
     def save_cell_data_to_cache(cls, service_id_field_name, grid_specification, cell_info):
-        cls.cell_data_cache.save_cell_data(cls.cache_file_type, service_id_field_name, grid_specification, cell_info)
+        cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
 
     @classmethod
     def build_cell_vector(cls, region_model_type, cell_geo_data):
@@ -735,4 +740,11 @@ class GisRegionModelRepository(RegionModelRepository):
         return region_model
 
 
-
+def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad):
+    catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id)
+    catch = catchment_fetcher.fetch(id_list=catch_ids)
+    box = np.array(MultiPolygon(polygons=list(catch.values())).bounds)  # [xmin, ymin, xmax, ymax]
+    box_ = box / dxy
+    xll, yll, xur, yur = (np.array(
+        [np.floor(box_[0]), np.floor(box_[1]), np.ceil(box_[2]), np.ceil(box_[3])]) + [-pad, -pad, pad, pad]) * dxy
+    return GridSpecification(epsg_id, int(xll), int(yll), dxy, dxy, int((xur - xll) / dxy), int((yur - yll) / dxy))
