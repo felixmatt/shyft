@@ -9,9 +9,8 @@ namespace shyft {
         namespace io {
             /**\brief in a clever way, figure out the root directory for tests so that we can use relative paths for the remaining names */
             static boost::filesystem::path test_root_dir() {
-                auto cwd=boost::filesystem::current_path();
-                boost::filesystem::path test_path;
-                test_path= cwd/".."/".."/".."/"shyft-data"; // assume current dir is <shyftroot>/bin/Debug|Release
+                auto cwd = boost::filesystem::current_path();
+                boost::filesystem::path test_path = cwd/".."/".."/"shyft-data"; // assume cwd is <shyftroot>/bin/Debug|Release
                 test_path.normalize();
                 return test_path;
             }
