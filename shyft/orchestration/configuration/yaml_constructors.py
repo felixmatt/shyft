@@ -34,16 +34,32 @@ def geo_ts_repo_constructor(cls, params): # ,region_config):
 def region_model_repo_constructor(cls,region_config, model_config, region_model_id):
     if cls_path(cls) == 'shyft.repository.service.gis_region_model_repository.GisRegionModelRepository':
         #from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
+        from shyft.repository.service.gis_region_model_repository import get_grid_spec_from_catch_poly
         from shyft.repository.service.gis_region_model_repository import RegionModelConfig
         from shyft.repository.service.gis_region_model_repository import GridSpecification
         from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
 
         repo_params = region_config.repository()['params']
+        use_cache = repo_params.get('use_cache', False)
+        cache_folder = repo_params.get('cache_folder', None)
+        cache_file_type = repo_params.get('cache_file_type', None)
+
         c_ids = region_config.catchments()
         d = region_config.domain()
-        grid_specification = GridSpecification(d['EPSG'],
-                                               d['lower_left_x'], d['lower_left_y'],
-                                               d['step_x'], d['step_y'], d['nx'], d['ny'])
+        get_bbox_from_catchment_boundary = d.get('get_bbox_from_catchment_boundary', False)
+        pad = d.get('buffer', 5)
+        epsg_id = d['EPSG']
+        dx, dy = [d['step_x'], d['step_y']]
+        if use_cache or get_bbox_from_catchment_boundary:
+            if dx != dy:
+                raise ConfigError("step_x({}) and step_y({}) should be the same "
+                                  "if 'use_cache' or 'get_bbox_from_catchment_boundary' is enabled".format(dx, dy))
+        if get_bbox_from_catchment_boundary:
+            grid_specification = get_grid_spec_from_catch_poly(c_ids, repo_params['catchment_regulated_type'],
+                                                               repo_params['service_id_field_name'], epsg_id, dx, pad)
+        else:
+            grid_specification = GridSpecification(epsg_id, d['lower_left_x'], d['lower_left_y'],
+                                                   dx, dy, d['nx'], d['ny'])
         region_model_type = model_config.model_type()
         # Construct region parameter:
         name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
@@ -92,6 +108,6 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         ]
         rm_cfg_dict = {x.name: x for x in cfg_list}
         # return GisRegionModelRepository(rm_cfg_dict)
-        return cls(rm_cfg_dict)
+        return cls(rm_cfg_dict, use_cache=use_cache, cache_folder=cache_folder, cache_file_type=cache_file_type)
     else:
         return cls(region_config, model_config)
