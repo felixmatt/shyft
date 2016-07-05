@@ -78,7 +78,7 @@ namespace expose {
             DEF_STD_TS_STUFF()
             // expose time_axis sih: would liek to use property, but no return value policy, so we use get_ + fixup in init.py
             .def("get_time_axis",&shyft::api::apoint_ts::time_axis,"returns the time-axis",return_internal_reference<>())
-            .add_property("values",&shyft::api::apoint_ts::values,"return the values (possibly calculated on the fly")
+            .add_property("values",&shyft::api::apoint_ts::values,"return the values (possibly calculated on the fly)")
             // operators
             .def(self * self)
             .def(double() * self )

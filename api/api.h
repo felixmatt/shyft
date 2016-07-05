@@ -571,5 +571,48 @@ namespace shyft {
 				[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
 	};
+
+	/**\brief geo_cell_data_io provide fast conversion to-from string
+	 *
+	 * In the context of orchestration/repository, we found that it could be useful to
+     * cache information as retrieved from a GIS system
+     *
+     * This only makes sense to keep as long as we need it for performance reasons
+     *
+	 */
+	struct geo_cell_data_io {
+        static size_t size() {return 11;}// number of doubles to store a gcd
+        static void push_to_vector(vector<double>&v,const geo_cell_data& gcd ){
+            v.push_back(gcd.mid_point().x);
+            v.push_back(gcd.mid_point().y);
+            v.push_back(gcd.mid_point().z);
+            v.push_back(gcd.area());
+            v.push_back(int(gcd.catchment_id()));
+            v.push_back(gcd.radiation_slope_factor());
+            v.push_back(gcd.land_type_fractions_info().glacier());
+            v.push_back(gcd.land_type_fractions_info().lake());
+            v.push_back(gcd.land_type_fractions_info().reservoir());
+            v.push_back(gcd.land_type_fractions_info().forest());
+            v.push_back(gcd.land_type_fractions_info().unspecified());// not really needed, since it can be computed from 1- theothers
+        }
+        static vector<double> to_vector(const geo_cell_data& gcd) {
+            vector<double> v;v.reserve(11);
+            push_to_vector(v,gcd);
+            return std::move(v);
+        }
+        static geo_cell_data from_raw_vector(const double *v) {
+            land_type_fractions ltf; ltf.set_fractions(v[6],v[7],v[8],v[9]);
+            //                               x    y    z    a    cid       rsl
+            return geo_cell_data(geo_point(v[0],v[1],v[2]),v[3],int(v[4]),v[5],ltf);
+        }
+        static geo_cell_data from_vector(const vector<double>&v) {
+            if(v.size()!= size())
+                throw invalid_argument("geo_cell_data_io::from_vector: size of vector must be equal to geo_cell_data_io::size()");
+            return from_raw_vector(v.data());
+
+        }
+
+
+    };
   } // Namespace api
 }// Namespace shyft

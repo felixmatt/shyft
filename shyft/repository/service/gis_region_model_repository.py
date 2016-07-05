@@ -13,6 +13,8 @@ import os
 from ..interfaces import RegionModelRepository
 from ..interfaces import BoundingRegion
 from shyft import api
+from shyft import shyftdata_dir
+import pickle
 
 
 class GisDataFetchError(Exception):
@@ -503,25 +505,176 @@ class RegionModelConfig(object):
     def epsg_id(self):
         return self.grid_specification.epsg_id
 
+class CellDataCache(object):
+    def __init__(self, folder, file_type):
+        self.file_type = file_type
+        self.folder = folder
+        self.reader = {'pickle': self._load_from_pkl,
+                       #'netcdf': self._load_from_nc,
+                       #'numpy': self._load_from_npy
+                        }
+        self.saver = {'pickle': self._dump_to_pkl,
+                       #'netcdf': self._load_from_nc,
+                       #'numpy': self._load_from_npy
+                      }
+        self.file_ext = {'pickle': 'pkl',
+                         #'netcdf': 'nc',
+                         #'numpy': 'npy'
+                         }
+
+    def _make_filename(self, service_id_field_name, grid_specification):
+        gs = grid_specification
+        file_name = 'EPSG_{}_ID_{}_dX_{}_dY_{}.{}'.format(gs.epsg(), service_id_field_name, int(gs.dx), int(gs.dy),
+                                                     self.file_ext[self.file_type])
+        return os.path.join(self.folder, file_name)
+
+    def is_file_available(self, service_id_field_name, grid_specification):
+        file_path = self._make_filename(service_id_field_name, grid_specification)
+        #file_path = os.path.join(self.folder, file_name)
+        return os.path.isfile(file_path),file_path
+
+    def remove_cache(self,service_id_field_name, grid_specification):
+        file_exists, file_path = self.is_file_available(service_id_field_name, grid_specification)
+        if file_exists:
+            print('Deleting file {}'.format(file_path))
+            os.remove(file_path)
+        else:
+            print('No cashe file to remove!')
+
+    def get_cell_data(self, service_id_field_name, grid_specification, id_list):
+        #file_path = 'All_regions_as_dict_poly_wkb.pkl'
+        file_path = self._make_filename(service_id_field_name, grid_specification)
+        #file_path = os.path.join(self.folder, file_name)
+        return self.reader[self.file_type](file_path, id_list)
+
+    def save_cell_data(self, service_id_field_name, grid_specification, cell_data):
+        file_path = self._make_filename(service_id_field_name, grid_specification)
+        file_status = self.is_file_available(service_id_field_name, grid_specification)[0]
+        #file_path = os.path.join(self.folder, file_name)
+        self.saver[self.file_type](file_path, cell_data, file_status)
+
+    def _load_from_pkl(self, file_path, cids):
+        print('Loading from cache_file {}...'.format(file_path))
+        with open(file_path, 'rb') as pkl_file:
+            cell_info = pickle.load(pkl_file)
+        geo_data = cell_info['geo_data']
+        polygons = np.array(cell_info['polygons'])
+        cids_ = np.sort(cids)
+        cid_map = cids_
+        cids_in_cache = geo_data[:, 4].astype(int)
+        if np.in1d(cids,cids_in_cache).sum()!= len(cids_): # Disable fetching if not all cids are found
+            geo_data_ext = polygons_ext = cid_map = []
+        else:
+            idx = np.in1d(cids_in_cache, cids).nonzero()[0]
+            geo_data_ext = geo_data[idx]
+            polygons_ext = polygons[idx]
+            geo_data_ext[:, 4] = np.searchsorted(cids_, geo_data_ext[:, 4])
+        return {'cid_map': cid_map, 'geo_data': geo_data_ext, 'polygons': polygons_ext}
+
+    def _dump_to_pkl(self, file_path, cell_data, is_existing_file):
+        print('Saving to cache_file {}...'.format(file_path))
+        new_geo_data = cell_data['geo_data'].copy()
+        cid_map = cell_data['cid_map']
+        new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
+        cell_info = {'geo_data': new_geo_data, 'polygons': cell_data['polygons'].tolist()}
+        if is_existing_file:
+            with open(file_path, 'rb') as pkl_file_in:
+                old = pickle.load(pkl_file_in)
+            #new_geo_data = cell_data['geo_data']
+            #cid_map = cell_data['cid_map']
+            #new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
+            old['polygons'] = np.array(old['polygons'])
+            old_geo_data = old['geo_data']
+            old_cid = old_geo_data[:, 4].astype(int)
+            idx_keep = np.invert(np.in1d(old_cid, cid_map)).nonzero()[0]
+            if len(idx_keep) > 0:
+                cell_info = {'geo_data': np.vstack((old_geo_data[idx_keep], new_geo_data)),
+                             'polygons': np.concatenate((old['polygons'][idx_keep], cell_data['polygons']))
+                             }
+        with open(file_path, 'wb') as pkl_file_out:
+            pickle.dump(cell_info, pkl_file_out, -1)
+
+
+
 
 class GisRegionModelRepository(RegionModelRepository):
     """
     Statkraft GIS service based version of repository for RegionModel objects.
     """
+    cell_data_cache = CellDataCache(shyftdata_dir, 'pickle')
+    #cache_file_type = 'pickle'
 
-    def __init__(self, region_id_config):
+    def __init__(self, region_id_config, use_cache=False, cache_folder=None, cache_file_type=None):
         """
         Parameters
         ----------
         region_id_config: dictionary(region_id:RegionModelConfig)
         """
         self._region_id_config = region_id_config
+        self.use_cache = use_cache
+        if cache_folder is not None:
+            self.cell_data_cache.folder = cache_folder
+        if cache_file_type is not None:
+            self.cell_data_cache.file_type = cache_file_type
 
     def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
         # neanidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
         return self._region_id_config[
             region_id]  # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
+
+    @classmethod
+    def get_cell_data_from_gis(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
+        print('Fetching gis_data from online GIS database...')
+        cell_info_service = CellDataFetcher(catchment_regulated_type, service_id_field_name,
+                                            grid_specification, id_list)
+
+        result = cell_info_service.fetch()  # clumsy result, we can adjust this.. (I tried to adjust it below)
+        cell_data = result['cell_data']  # this is the part we need here
+        radiation_slope_factor = 0.9  # todo: get it from service layer
+        unknown_fraction = 0.0 # todo: should we just remove this
+        print('Making cell_data from gis_data...')
+        cids = np.sort(list(cell_data.keys()))
+        geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, idx,
+                               radiation_slope_factor,c.get('glacier', 0.0), c.get('lake', 0.0),c.get('reservoir', 0.0),
+                               c.get('forest', 0.0), unknown_fraction] for c in cell_data[cid]]
+                             for idx, cid in enumerate(cids))
+        geo_data[:, -1] = 1 - geo_data[:, -5:-1].sum(axis=1) # calculating the unknown fraction
+        polys = np.concatenate(tuple([c['cell'] for c in cell_data[cid]] for cid in cids))
+        return {'cid_map': cids, 'geo_data': geo_data, 'polygons': polys}
+
+    @classmethod
+    def get_cell_data_from_cache(cls, service_id_field_name, grid_specification, id_list):
+        if cls.cell_data_cache.is_file_available(service_id_field_name, grid_specification)[0]:
+            cell_info = cls.cell_data_cache.get_cell_data(service_id_field_name,
+                                                          grid_specification, id_list)
+            if len(cell_info['cid_map'])!=0:
+                return cell_info
+            else:
+                print('MESSAGE: not all catchment IDs requested were found in cache!')
+                return None
+        else:
+            print('MESSAGE: no cache file found!')
+            return None
+
+    @classmethod
+    def update_cache(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
+        cell_info = cls.get_cell_data_from_gis(catchment_regulated_type, service_id_field_name, grid_specification, id_list)
+        cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
+
+    @classmethod
+    def remove_cache(cls, service_id_field_name, grid_specification):
+        cls.cell_data_cache.remove_cache(service_id_field_name, grid_specification)
+
+    @classmethod
+    def save_cell_data_to_cache(cls, service_id_field_name, grid_specification, cell_info):
+        cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
+
+    @classmethod
+    def build_cell_vector(cls, region_model_type, cell_geo_data):
+        print('Building cell_vector from cell_data...')
+        return region_model_type.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
+
 
     def get_region_model(self, region_id, catchments=None):
         """
@@ -552,48 +705,46 @@ class GisRegionModelRepository(RegionModelRepository):
         """
 
         rm = self._get_cell_data_info(region_id, catchments)  # fetch region model info needed to fetch efficiently
-        cell_info_service = CellDataFetcher(rm.catchment_regulated_type, rm.service_id_field_name,
-                                            rm.grid_specification, rm.id_list)
-        result = cell_info_service.fetch()  # clumsy result, we can adjust this..
-        cell_info = result['cell_data']  # this is the part we need here
-        cell_vector = rm.region_model_type.cell_t.vector_t()
-        radiation_slope_factor = 0.9  # todo: get it from service layer 
-        catchment_id_map = []  # needed to build up the external c-id to shyft core internal 0-based c-ids
-        for c_id, c_info_list in cell_info.items():
-            if not c_id == 0:  # only cells with c_id different from 0
-                if not c_id in catchment_id_map:
-                    catchment_id_map.append(c_id)
-                    c_id_0 = len(catchment_id_map) - 1
-                else:
-                    c_id_0 = catchment_id_map.index(c_id)
-                for c_info in c_info_list:
-                    shape = c_info['cell']  # todo fetcher should return geopoint,area, ltf..
-                    z = c_info['elevation']
-                    geopoint = api.GeoPoint(shape.centroid.x, shape.centroid.y, z)
-                    area = shape.area
-                    ltf = api.LandTypeFractions()
-                    ltf.set_fractions(c_info.get('glacier', 0.0), c_info.get('lake', 0.0),
-                                      c_info.get('reservoir', 0.0), c_info.get('forest', 0.0))
-                    cell = rm.region_model_type.cell_t()
-                    cell.geo = api.GeoCellData(geopoint, area, c_id_0, radiation_slope_factor, ltf)
-                    cell_vector.append(cell)
+        if self.use_cache:
+            cell_info = self.get_cell_data_from_cache(rm.service_id_field_name, rm.grid_specification, rm.id_list)
+            if cell_info is None:
+                print('MESSAGE: Reverting to online GIS database and updating cache!')
+                cell_info = self.get_cell_data_from_gis(rm.catchment_regulated_type, rm.service_id_field_name,
+                                                        rm.grid_specification, rm.id_list)
+                self.save_cell_data_to_cache(rm.service_id_field_name, rm.grid_specification, cell_info)
+        else:
+            cell_info = self.get_cell_data_from_gis(rm.catchment_regulated_type, rm.service_id_field_name,
+                                                    rm.grid_specification, rm.id_list)
+        catchment_id_map, cell_geo_data, polygons = [cell_info[k] for k in['cid_map', 'geo_data', 'polygons']]
+        cell_vector = self.build_cell_vector(rm.region_model_type, cell_geo_data)
+
         catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
         for cid, param in rm.catchment_parameters.items():
             if cid in catchment_id_map:
                 catchment_parameter_map[catchment_id_map.index(cid)] = param
-        # todo add catchment level parameters to map
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
         region_model.catchment_id_map = catchment_id_map  # needed to map from externa c_id to 0-based c_id used internally in
-        region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
+        #region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
+        region_model.gis_info = polygons # opt:needed for internal statkraft use/presentation
 
         def do_clone(x):
             clone = x.__class__(x)
             clone.bounding_region = x.bounding_region
             clone.catchment_id_map = catchment_id_map
-            clone.gis_info = result
+            clone.gis_info = polygons
             return clone
 
         region_model.clone = do_clone
 
         return region_model
+
+
+def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad):
+    catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id)
+    catch = catchment_fetcher.fetch(id_list=catch_ids)
+    box = np.array(MultiPolygon(polygons=list(catch.values())).bounds)  # [xmin, ymin, xmax, ymax]
+    box_ = box / dxy
+    xll, yll, xur, yur = (np.array(
+        [np.floor(box_[0]), np.floor(box_[1]), np.ceil(box_[2]), np.ceil(box_[3])]) + [-pad, -pad, pad, pad]) * dxy
+    return GridSpecification(epsg_id, int(xll), int(yll), dxy, dxy, int((xur - xll) / dxy), int((yur - yll) / dxy))

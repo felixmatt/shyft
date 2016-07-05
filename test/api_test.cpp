@@ -18,42 +18,7 @@ using namespace shyft::timeseries;
 
 using namespace shyft::api;
 
-#if 0
-bool operator==(const pt_gs_k_state_t& a, const pt_gs_k_state_t& b) {
-	const double tol = 1e-9;
-	return fabs(a.gs.albedo - b.gs.albedo) < tol
-		&& fabs(a.gs.alpha - b.gs.alpha) < tol
-		&& fabs(a.gs.sdc_melt_mean - b.gs.sdc_melt_mean) < tol
-		&& fabs(a.gs.acc_melt - b.gs.acc_melt) < tol
-		&& fabs(a.gs.iso_pot_energy - b.gs.iso_pot_energy) < tol
-		&& fabs(a.gs.temp_swe - b.gs.temp_swe) < tol
-		&& fabs(a.kirchner.q - b.kirchner.q) < tol
-		&& fabs(a.gs.lwc - b.gs.lwc) < tol
-		&& fabs(a.gs.surface_heat - b.gs.surface_heat) < tol;
 
-}
-
-bool operator==(const pt_ss_k_state_t& a, const pt_ss_k_state_t& b) {
-	const double tol = 1e-9;
-	return fabs(a.snow.nu - b.snow.nu) < tol
-		&& fabs(a.snow.alpha - b.snow.alpha) < tol
-		&& fabs(a.snow.sca - b.snow.sca) < tol
-		&& fabs(a.snow.swe - b.snow.swe) < tol
-		&& fabs(a.snow.free_water - b.snow.free_water) < tol
-		&& fabs(a.snow.residual - b.snow.residual) < tol
-		&& fabs(a.kirchner.q - b.kirchner.q) < tol
-		&& (a.snow.num_units == b.snow.num_units);
-
-}
-bool operator==(const pt_hs_k_state_t& a, const pt_hs_k_state_t& b) {
-	const double tol = 1e-9;
-	return
-		   fabs(a.snow.sca - b.snow.sca) < tol
-		&& fabs(a.snow.swe - b.snow.swe) < tol
-		&& fabs(a.kirchner.q - b.kirchner.q) < tol;
-
-}
-#endif
 void api_test::test_ptgsk_state_io() {
 	using namespace shyft::api;
 	pt_gs_k_state_t s;
@@ -147,4 +112,22 @@ void api_test::test_pthsk_state_io() {
 		TS_ASSERT_EQUALS(rsv[i], sv[i]);
 	}
 
+}
+
+void api_test::test_geo_cell_data_io() {
+    geo_cell_data gcd(geo_point(1,2,3),4,5,0.6,land_type_fractions(2,4,6,8,10));
+
+    auto gcd_s=geo_cell_data_io::to_vector(gcd);
+    TS_ASSERT(gcd_s.size()>0);
+    geo_cell_data gcd2= geo_cell_data_io::from_vector(gcd_s);
+    double eps=1e-12;
+    TS_ASSERT_DELTA(gcd2.area(),gcd.area(),eps);
+    TS_ASSERT_EQUALS(gcd2.mid_point(),gcd.mid_point());
+    TS_ASSERT_EQUALS(gcd2.catchment_id(),gcd.catchment_id());
+    TS_ASSERT_DELTA(gcd2.radiation_slope_factor(),gcd.radiation_slope_factor(),eps);
+    TS_ASSERT_DELTA(gcd2.land_type_fractions_info().glacier(),gcd.land_type_fractions_info().glacier(),eps);
+    TS_ASSERT_DELTA(gcd2.land_type_fractions_info().lake(),gcd.land_type_fractions_info().lake(),eps);
+    TS_ASSERT_DELTA(gcd2.land_type_fractions_info().reservoir(),gcd.land_type_fractions_info().reservoir(),eps);
+    TS_ASSERT_DELTA(gcd2.land_type_fractions_info().forest(),gcd.land_type_fractions_info().forest(),eps);
+    TS_ASSERT_DELTA(gcd2.land_type_fractions_info().unspecified(),gcd.land_type_fractions_info().unspecified(),eps);
 }
