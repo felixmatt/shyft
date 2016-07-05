@@ -3,6 +3,7 @@ import glob
 import platform
 from setuptools import setup, find_packages
 import subprocess
+import sys
 
 # Build shyft using the build_script
 # Create package using 'python setup.py bdist_conda'
@@ -10,8 +11,11 @@ import subprocess
 print('Building SHyFT')
 
 if "Windows" in platform.platform():
-    msbuild = r'C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe'
-    cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64', '/t:Rebuild', '/m']
+    msbuild = r'C:\Program Files (x86)\MSBuild\14.0\Bin\amd64\MSBuild.exe'
+    cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64', '/m']
+    if '--rebuild' in sys.argv:
+        cmd.append('/t:Rebuild')
+        sys.argv.remove('--rebuild')
     
     p = subprocess.Popen(cmd,
         universal_newlines=True,
@@ -20,6 +24,11 @@ if "Windows" in platform.platform():
 
     for line in iter(p.stdout.readline, ''):
        print(line.rstrip())
+    
+    p.wait()
+    if p.returncode != 0:
+        print('\nMSBuild FAILED.')
+        exit()
     
 elif not glob.glob("shyft/api/___init__*"):
     try:
