@@ -16,14 +16,14 @@ namespace expose {
             .def_readwrite("ae",&response::ae)
             ;
         def("ActualEvapotranspirationCalculate_step",calculate_step,args("water_level","potential_evapotranspiration","scale_factor","snow_fraction","dt"),
-             " actual_evapotranspiration calculates actual evapotranspiration for a timestep dt\n"
+             " actual_evapotranspiration calculates actual evapotranspiration for a timestep dt[s]\n"
              " based on supplied parameters\n"
              "\n"
-             " * param water_level\n"
-             " * param potential_evapotranspiration\n"
-             " * param scale_factor typically 1.5\n"
+             " * param water_level[mm]\n"
+             " * param potential_evapotranspiration[mm/x]\n"
+             " * param scale_factor typically 1.5[mm]\n"
              " * param snow_fraction 0..1\n"
-             " * return calculated actual evapotranspiration\n"
+             " * return calculated actual evapotranspiration[mm/x]\n"
              "\n"
             );
     }
