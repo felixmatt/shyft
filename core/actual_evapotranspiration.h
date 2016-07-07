@@ -52,9 +52,7 @@ namespace shyft {
 				const double scale_factor,
 				const double snow_fraction,
 				const utctime dt) {
-				const double dh = double(dt)/calendar::HOUR;
-				const double scale = scale_factor*dh/3.0;
-				return potential_evapotranspiration*(1.0 - exp(-water_level/scale))*(1.0 - snow_fraction)/dh;
+				return potential_evapotranspiration*(1.0 - exp(-water_level*3.0/ scale_factor))*(1.0 - snow_fraction);
 			}
 		};
 	};

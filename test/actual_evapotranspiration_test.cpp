@@ -13,13 +13,15 @@ void actual_evapotranspiration_test::test_water() {
     const double sca = 0.0;
     const double pot_evap = 5.0; // [mm/h]
     const double scale_factor = 1.0;
-    const utctime dt = deltahours(1);
+    const utctime dt = deltahours(3);
     double act_evap;
 	act_evap = calculate_step(0.0, pot_evap, scale_factor, sca, dt);
     TS_ASSERT_DELTA(act_evap, 0.0, shyfttest::EPS);
 
 	act_evap = calculate_step(1.0e8, pot_evap, scale_factor, sca, dt);
     TS_ASSERT_DELTA(act_evap, pot_evap, shyfttest::EPS);
+
+	TS_ASSERT_DELTA((1-exp(-3*1.0/1.0)), calculate_step(1.0, 1.0, 1.0, 0.0, dt), shyfttest::EPS)
 }
 
 void actual_evapotranspiration_test::test_snow() {
