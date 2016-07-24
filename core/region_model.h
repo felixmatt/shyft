@@ -228,11 +228,14 @@ namespace shyft {
                 cid_to_cix.clear();
                 cix_to_cid.clear();
                 for(auto&c:*cells) {
-                    if(cid_to_cix.find(c.geo.catchment_id())==cid_to_cix.end()) {
+					auto found = cid_to_cix.find(c.geo.catchment_id());
+                    if(found==cid_to_cix.end()) {
                         cid_to_cix[c.geo.catchment_id()]=cix_to_cid.size();
                         c.geo.catchment_ix=cix_to_cid.size();// assign catchment ix to cell.
                         cix_to_cid.push_back(c.geo.catchment_id());// keep map
-                    }
+					} else {
+						c.geo.catchment_ix = found->second;// assign corresponding ix.
+					}
                 }
             }
 
@@ -606,7 +609,7 @@ namespace shyft {
              *  -# .ct(timeaxis_t, double) fills a series with 0.0 for all time_axis elements
              *  -# .add( const some_ts & ts)
              * \note the ts type should have proper move/copy etc. semantics
-             *
+             * \treturns filled in cr, dimensioned to number of catchments, where the i'th entry correspond to cid using cix_to_cid(i)
              */
             template <class TSV>
             void catchment_discharges( TSV& cr) const {

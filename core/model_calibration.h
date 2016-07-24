@@ -517,7 +517,7 @@ namespace shyft{
                     model.catchment_discharges(catchment_d);
                 pts_t discharge_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
                 for(auto i : t.catchment_indexes)
-                    discharge_sum.add(catchment_d[i]);
+                    discharge_sum.add(catchment_d[model.cix_from_cid(i)]);// important! the catchment_d(ischarge) is in internal index order
                 return discharge_sum;
             }
 
