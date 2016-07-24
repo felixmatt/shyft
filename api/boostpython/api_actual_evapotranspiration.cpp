@@ -16,7 +16,7 @@ namespace expose {
             .def_readwrite("ae",&response::ae)
             ;
         def("ActualEvapotranspirationCalculate_step",calculate_step,args("water_level","potential_evapotranspiration","scale_factor","snow_fraction","dt"),
-             " actual_evapotranspiration calculates actual evapotranspiration for a timestep dt[s]\n"
+             " actual_evapotranspiration calculates actual evapotranspiration, returning same unit as input pot.evap\n"
              " based on supplied parameters\n"
              "\n"
              " * param water_level[mm]\n"

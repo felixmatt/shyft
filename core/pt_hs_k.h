@@ -186,7 +186,7 @@ namespace shyft {
                 //
 
                 // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan();
+                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan()/calendar::HOUR;// mm/h
 
                 // HBVSnow
                 hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp);
