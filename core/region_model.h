@@ -215,9 +215,29 @@ namespace shyft {
             //     we can extract cell-level into into the catchments
 
             parameter_t_ region_parameter;///< applies to all cells, except those with catchment override
-            std::map<int, parameter_t_> catchment_parameters;///<  for each catchment parameter is possible
+            std::map<int, parameter_t_> catchment_parameters;///<  for each catchment (with cid) parameter is possible
 
             std::vector<bool> catchment_filter;///<if active (alias .size()>0), only calc if catchment_filter[catchment_id] is true.
+            std::vector<int> cix_to_cid;///< maps internal zero-based catchment index ix to externally supplied catchment id.
+            std::map<int,int> cid_to_cix;///< map external catchment id to internal index
+
+            void update_ix_to_id_mapping() {
+                // iterate over cell-vector
+                // map<id,ix>
+                // if new id, push it, map-it
+                cid_to_cix.clear();
+                cix_to_cid.clear();
+                for(auto&c:*cells) {
+					auto found = cid_to_cix.find(c.geo.catchment_id());
+                    if(found==cid_to_cix.end()) {
+                        cid_to_cix[c.geo.catchment_id()]=cix_to_cid.size();
+                        c.geo.catchment_ix=cix_to_cid.size();// assign catchment ix to cell.
+                        cix_to_cid.push_back(c.geo.catchment_id());// keep map
+					} else {
+						c.geo.catchment_ix = found->second;// assign corresponding ix.
+					}
+                }
+            }
 
             size_t n_catchments;///< optimized//extracted as max(cell.geo.catchment_id())+1 in run interpolate
 
@@ -229,6 +249,8 @@ namespace shyft {
                 n_catchments = c.n_catchments;
                 catchment_parameters.clear();
                 // Then, clone from c
+                cix_to_cid=c.cix_to_cid;
+                cid_to_cix=c.cid_to_cix;
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
                 set_region_parameter(*(c.region_parameter));
                 for(const auto& pair:c.catchment_parameters)
@@ -246,32 +268,29 @@ namespace shyft {
              : cells(cells) {
                 set_region_parameter(region_param);// ensure we have a correct model
                 ncore = thread::hardware_concurrency()*4;
+                update_ix_to_id_mapping();
             }
             region_model(std::shared_ptr<std::vector<C> >& cells,
                          const parameter_t &region_param,
                          const std::map<int, parameter_t>& catchment_parameters)
              : cells(cells) {
                 set_region_parameter(region_param);
+                update_ix_to_id_mapping();
                 for(const auto & pair:catchment_parameters)
                      set_catchment_parameter(pair.first, pair.second);
                 ncore = thread::hardware_concurrency()*4;
             }
             region_model(const region_model& model) { clone(model); }
-			#ifndef SWIG
 			region_model& operator=(const region_model& c) {
                 if (&c != this)
                     clone(c);
                 return *this;
             }
-			#endif
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const {
-                size_t max_catchment_id=0;
-                for(const auto&c:*cells)
-                    if(c.geo.catchment_id()>max_catchment_id) max_catchment_id=c.geo.catchment_id();
-                return max_catchment_id+1;
+                return cix_to_cid.size();
             }
             /** \brief run_interpolation interpolates region_environment temp,precip,rad.. point sources
             * to a value representative for the cell.mid_point().
@@ -292,7 +311,6 @@ namespace shyft {
             */
             template < class RE, class IP>
             void run_interpolation(const IP& interpolation_parameter, const timeaxis_t& time_axis, const RE& env) {
-                #ifndef SWIG
                 for(auto&c:*cells){
                     c.init_env_ts(time_axis);
                 }
@@ -401,7 +419,6 @@ namespace shyft {
                 idw_radiation.get();
                 idw_wind_speed.get();
                 idw_rel_hum.get();
-                #endif
             }
 
             /** \brief run_cells calculations over specified time_axis
@@ -512,10 +529,14 @@ namespace shyft {
              */
             void set_catchment_calculation_filter(const std::vector<int>& catchment_id_list) {
                 if (catchment_id_list.size()) {
-                    int mx = 0;
-                    for (auto i : catchment_id_list) mx = i > mx ? i : mx;
-                    catchment_filter = vector<bool>(mx + 1, false);
-                    for (auto i : catchment_id_list) catchment_filter[i] = true;
+                    if(catchment_id_list.size()> cix_to_cid.size())
+                        throw std::runtime_error("set_catchment_calculation_filter: supplied list > available catchments");
+                    for(auto cid:catchment_id_list) {
+                        if(cid_to_cix.find(cid)==cid_to_cix.end())
+                            throw std::runtime_error("set_catchment_calculation_filter: no cells have supplied cid");
+                    }
+                    catchment_filter = vector<bool>(cix_to_cid.size(), false);
+                    for (auto i : catchment_id_list) catchment_filter[cid_to_cix[i]] = true;
                 } else {
                     catchment_filter.clear();
                 }
@@ -525,8 +546,18 @@ namespace shyft {
              * \param cid  catchment id
              * \returns true if catchment id is calculated during runs
              */
-            bool is_calculated(size_t cid) const { return catchment_filter.size() == 0 || (catchment_filter[cid]); }
+            bool is_calculated(size_t cid) const {
+                return is_calculated_by_catchment_ix(cix_from_cid(cid));
+            }
 
+            bool is_calculated_by_catchment_ix(size_t cix) const {return catchment_filter.size() == 0 || (catchment_filter[cix]);}
+
+            size_t cix_from_cid(size_t cid) const {
+                auto cix=cid_to_cix.find(cid);
+                if(cix == cid_to_cix.end())
+                    throw runtime_error("region_model: no match for cid in map lookup");
+                return cix->second;
+            }
             /** \brief collects current state from all the cells
             * \note that catchment filter can influence which states are calculated/updated.
             *\param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.
@@ -578,9 +609,8 @@ namespace shyft {
              *  -# .ct(timeaxis_t, double) fills a series with 0.0 for all time_axis elements
              *  -# .add( const some_ts & ts)
              * \note the ts type should have proper move/copy etc. semantics
-             *
+             * \treturns filled in cr, dimensioned to number of catchments, where the i'th entry correspond to cid using cix_to_cid(i)
              */
-            #ifndef SWIG
             template <class TSV>
             void catchment_discharges( TSV& cr) const {
                 typedef typename TSV::value_type ts_t;
@@ -590,13 +620,11 @@ namespace shyft {
                     cr.emplace_back(ts_t(time_axis, 0.0));
                 }
                 for(const auto& c: *cells) {
-                    if (is_calculated(c.geo.catchment_id()))
-                        cr[c.geo.catchment_id()].add(c.rc.avg_discharge);
+                    if ( is_calculated_by_catchment_ix(c.geo.catchment_ix))
+                        cr[c.geo.catchment_ix].add(c.rc.avg_discharge);
                 }
             }
-            #endif
         protected:
-            #ifndef SWIG
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *
              * \param time_axis forwarded to the cell.run(time_axis)
@@ -605,7 +633,7 @@ namespace shyft {
              */
             void single_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc) {
                 for(auto& cell:boost::make_iterator_range(beg,endc)) {
-                     if (catchment_filter.size() == 0 || (cell.geo.catchment_id() < catchment_filter.size() && catchment_filter[cell.geo.catchment_id()]))
+                     if (is_calculated_by_catchment_ix(cell.geo.catchment_ix))
                         cell.run(time_axis);
                 }
             }
@@ -641,12 +669,7 @@ namespace shyft {
                     f.get();
                 return;
             }
-            #endif
         };
-
-
-
-
 
     } // core
 } // shyft

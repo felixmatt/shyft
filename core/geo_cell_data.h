@@ -6,8 +6,8 @@ namespace shyft {
         /** \brief LandTypeFractions are used to describe 'type of land'
          *   like glacier, lake, reservoir and forest.
          *
-         *   It is designed as a part of GeoCellData (could be nested, but 
-         *   we take python/swig into consideration). It's of course 
+         *   It is designed as a part of GeoCellData (could be nested, but
+         *   we take python/swig into consideration). It's of course
          *   questionable, since we could have individual models for each type
          *   of land, - but current approach is to use a cell-area, and then
          *   describe fractional properties.
@@ -18,12 +18,12 @@ namespace shyft {
 
             /** \brief LandTypeFraction constructor
              *
-             *  Construct the land type fractions based on the sizes of the 
-             *  different land types. Each size should be greater or equal to 
+             *  Construct the land type fractions based on the sizes of the
+             *  different land types. Each size should be greater or equal to
              *  zero.
              */
-            land_type_fractions(double glacier_size, double lake_size, 
-                               double reservoir_size, double forest_size, 
+            land_type_fractions(double glacier_size, double lake_size,
+                               double reservoir_size, double forest_size,
                                double unspecified_size) {
                 // TODO: Is this needed?
                 glacier_size = std::max(0.0, glacier_size);
@@ -39,7 +39,7 @@ namespace shyft {
                     reservoir_ = reservoir_size/sum;
                     forest_ = forest_size/sum;
                 }
-                else 
+                else
                     glacier_ = lake_ = reservoir_ = forest_ = 0.0;
             }
             double glacier() const { return glacier_; }
@@ -55,7 +55,7 @@ namespace shyft {
                     lake /= sum;
                     reservoir /= sum;
                     forest /= sum;
-                } else if (sum > 1.0  || 
+                } else if (sum > 1.0  ||
                           (glacier < 0.0 || lake < 0.0 || reservoir < 0.0 || forest < 0.0))
                    throw std::invalid_argument("LandTypeFractions:: must be >=0.0 and sum <= 1.0");
                 glacier_ = glacier; lake_ = lake; reservoir_ = reservoir; forest_ = forest;
@@ -82,7 +82,7 @@ namespace shyft {
 		 */
 		struct geo_cell_data {
 		    static const int default_area_m2=1000000;
-			geo_cell_data() :area_m2(default_area_m2),catchment_id_(-1),radiation_slope_factor_(default_radiation_slope_factor){}
+			geo_cell_data() :catchment_ix(0),area_m2(default_area_m2),catchment_id_(-1),radiation_slope_factor_(default_radiation_slope_factor){}
 
 			geo_cell_data(geo_point mid_point,double area=default_area_m2,
                 int catchment_id = -1, double radiation_slope_factor=default_radiation_slope_factor,const land_type_fractions& land_type_fractions=land_type_fractions()):
@@ -95,6 +95,7 @@ namespace shyft {
 			const land_type_fractions& land_type_fractions_info() const { return fractions; }
 			void set_land_type_fractions(const land_type_fractions& ltf) { fractions = ltf; }
 			double area() const { return area_m2; }
+			size_t catchment_ix; // internally generated zero-based catchment index, used to correlate to calc-filter, ref. region_model
 		  private:
 
 			geo_point mid_point_; // midpoint

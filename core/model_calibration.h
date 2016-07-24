@@ -176,7 +176,6 @@ namespace shyft{
 			typedef PS target_time_series_t;
 			target_specification()
               : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {}
-#ifndef SWIG
 			target_specification(const target_specification& c)
               : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
                 calc_mode(c.calc_mode),catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
@@ -207,11 +206,10 @@ namespace shyft{
 			bool operator==(const target_specification& x) const {
 			    return catchment_indexes == x.catchment_indexes && catchment_property==x.catchment_property;
 			}
-#endif
             /** \brief Constructs a target specification element for calibration, specifying all neede parameters
              *
              * \param ts; the target time-series that contain the target/observed discharge values
-             * \param cids;  a vector of the catchment ids (zero-based) in the model that together should add up to the target time-series
+             * \param cids;  a vector of the catchment ids in the model that together should add up to the target time-series
              * \param scale_factor; the weight that this target_specification should have relative to the possible other target_specs.
              */
 			target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
@@ -220,7 +218,7 @@ namespace shyft{
               : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
                 calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b) {}
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
-			std::vector<int> catchment_indexes; ///< the catchment_indexes (zero based) that denotes the catchments in the model that together should match the target ts
+			std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
 			target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
 			catchment_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT
@@ -230,7 +228,6 @@ namespace shyft{
 		};
 
 
-        #ifndef SWIG
         ///< template helper classes to be used in enable_if_t in the optimizer for snow swe/sca:
         template< bool B, class T = void >
         using enable_if_tx = typename enable_if<B,T>::type;
@@ -281,7 +278,6 @@ namespace shyft{
                 }
             };
 
-        #endif // SWIG
 
 		/** \brief The optimizer for parameters in a \ref shyft::core::region_model
 		 * provides needed functionality to orchestrate a search for the optimal parameters so that the goal function
@@ -317,7 +313,6 @@ namespace shyft{
             typedef typename M::cell_t cell_t;
             typedef typename cell_t::response_collector_t response_collector_t;
           private:
-#ifndef SWIG
 		public:
             PA& parameter_accessor; ///<  a *reference* to the model parameters in the target  model, all cells share this!
             region_model_t& model; ///< a reference to the region model that we optimize
@@ -352,7 +347,6 @@ namespace shyft{
 				return r;
 			}
 
-#endif
 		public:
 			/**\brief construct an opt model for ptgsk, use p_min=p_max to disable optimization for a parameter
 			* \param model reference to the model to be optimized, the model should be initialized, i.e. the interpolation step done.
@@ -477,7 +471,6 @@ namespace shyft{
 				p_expanded = full_vector_of_parameters;// ensure all parameters are  according to full_vector..
 				return run(reduce_p_vector(full_vector_of_parameters));// then run with parameters as if from optimize
 			}
-#ifndef SWIG
             friend class calibration_test;// to enable testing of individual methods
 			/** called by bobyqua: */
             double operator() (const column_vector& p_s) { return run(from_scaled(p_s)); }
@@ -524,7 +517,7 @@ namespace shyft{
                     model.catchment_discharges(catchment_d);
                 pts_t discharge_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
                 for(auto i : t.catchment_indexes)
-                    discharge_sum.add(catchment_d[i]);
+                    discharge_sum.add(catchment_d[model.cix_from_cid(i)]);// important! the catchment_d(ischarge) is in internal index order
                 return discharge_sum;
             }
 
@@ -537,13 +530,13 @@ namespace shyft{
             vector<area_ts> extract_area_ts_property( property_ts_function && tsf) const {
                 vector<area_ts> r(n_catchments,area_ts(0.0,pts_t(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE)));
                 for(const auto& c: *model.get_cells()) {
-                    if (model.is_calculated(c.geo.catchment_id())){
-                        r[c.geo.catchment_id()].ts.add_scale(tsf(c),c.geo.area());//the only ref. to snow_sca
-                        r[c.geo.catchment_id()].area += c.geo.area(); //using entire cell geo area for now.
+                    if (model.is_calculated_by_catchment_ix(c.geo.catchment_ix)){
+                        r[c.geo.catchment_ix].ts.add_scale(tsf(c),c.geo.area());//the only ref. to snow_sca
+                        r[c.geo.catchment_ix].area += c.geo.area(); //using entire cell geo area for now.
                     }
                 }
                 for(size_t i=0;i<n_catchments;++i)
-                    if(model.is_calculated(i))
+                    if(model.is_calculated_by_catchment_ix(i))
                         r[i].ts.scale_by(1/r[i].area);
                 return r;
             }
@@ -552,7 +545,8 @@ namespace shyft{
             pts_t compute_weighted_area_ts_average(const target_specification_t& t, const vector<area_ts>& ats) const {
                 pts_t ts_sum(model.time_axis,0.0,shyft::timeseries::POINT_AVERAGE_VALUE);
                 double a_sum=0.0;
-                for(auto i:t.catchment_indexes) {
+                for(auto cid:t.catchment_indexes) {
+                    auto i=model.cix_from_cid(cid); // need to get the catchment zero-based index here
                     ts_sum.add_scale(ats[i].ts,ats[i].area);
                     a_sum += ats[i].area;
                 }
@@ -652,7 +646,6 @@ namespace shyft{
 				}
 				return goal_function_value;
 			}
-#endif
         };
 
 

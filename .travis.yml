@@ -41,7 +41,7 @@ before_install:
   - ln -s $HOME/miniconda/include/python3.5m $HOME/miniconda/include/python3.5
 
   # Install dependencies (including fix for boost python build that do not recognize the m -letter variant)
-  - conda create -n shyft_env  pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj 
+  - conda create -n shyft_env  -c osgeo pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj 
   - source activate shyft_env
   - ln -s $HOME/miniconda/envs/shyft_env/include/python3.5m $HOME/miniconda/envs/shyft_env/include/python3.5
   - python -V
