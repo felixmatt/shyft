@@ -75,7 +75,7 @@ namespace expose {
 
             class_<generic_dt>("Timeaxis2","A timeaxis that internally could be a (Fixed delta) TimeAxis, a CalendarTimeAxis or Point TimeAxis")
                 .def(init<utctime,utctimespan,long>(args("start","delta_t","n"),"creates a timeaxis with n intervals, fixed delta_t, starting at start"))
-                .def(init<shared_ptr<const calendar>,utctime,utctimespan,long>(args("calendar","start","delta_t","n"),"creates a calendar timeaxis with n intervals, fixed calendar delta_t, starting at start"))
+                .def(init<shared_ptr<calendar>,utctime,utctimespan,long>(args("calendar","start","delta_t","n"),"creates a calendar timeaxis with n intervals, fixed calendar delta_t, starting at start"))
                 .def(init<const vector<utctime>&,utctime>(args("time_points","t_end"),"creates a time-axis with n intervals using time-points plus the end-points"))
                 .def(init<const vector<utctime>& >(args("time_points"),"create a time-axis supplying n+1 points to define n intervals"))
                 .def(init<const calendar_dt&>(args("calendar_dt"),"creates a generic from a calendar timeaxis"))

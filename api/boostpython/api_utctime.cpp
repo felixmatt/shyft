@@ -20,7 +20,7 @@ namespace expose {
         utctime (calendar::*time_YMDhms)(YMDhms) const = &calendar::time;
         utctime (calendar::*time_6)(int,int,int,int,int,int) const = &calendar::time;
 
-        class_<calendar,shared_ptr<const calendar>>("Calendar",
+        class_<calendar,shared_ptr<calendar>>("Calendar",
             "Calendar deals with the concept of human calendar\n"
             " In SHyFT we practice the 'utctime-perimeter' principle,\n"
             "  * so the core is utc-time only \n"
@@ -76,7 +76,7 @@ namespace expose {
         .def_readonly("SECOND",&calendar::SECOND)
         .add_property("tz_info",&calendar::get_tz_info,"The TzInfo keeping the time-zone name, utc-offset and DST rules (if any)")//,return_value_policy<return_internal_reference>())
         ;
-        register_ptr_to_python<shared_ptr<const calendar> >();
+        register_ptr_to_python<shared_ptr<calendar> >();
 
         class_<YMDhms>("YMDhms","Defines calendar coordinates as Year Month Day hour minute second")
         .def(init<int,optional<int,int,int,int,int>>( args("Y","M","D","h","m","s" ),"Creates calendar coordinates specifying Y,M,D,h,m,s"))
