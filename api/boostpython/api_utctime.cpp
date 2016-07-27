@@ -76,7 +76,6 @@ namespace expose {
         .def_readonly("SECOND",&calendar::SECOND)
         .add_property("tz_info",&calendar::get_tz_info,"The TzInfo keeping the time-zone name, utc-offset and DST rules (if any)")//,return_value_policy<return_internal_reference>())
         ;
-        register_ptr_to_python<shared_ptr<calendar> >();
 
         class_<YMDhms>("YMDhms","Defines calendar coordinates as Year Month Day hour minute second")
         .def(init<int,optional<int,int,int,int,int>>( args("Y","M","D","h","m","s" ),"Creates calendar coordinates specifying Y,M,D,h,m,s"))
@@ -106,7 +105,6 @@ namespace expose {
         .def("utc_offset",&time_zone::tz_info_t::utc_offset,args("t"),"returns the utc_offset at specified utc-time, takes DST into account if applicable")
         .def("is_dst",&time_zone::tz_info_t::is_dst,args("t"),"returns true if DST is observed at given utc-time t")
         ;
-        register_ptr_to_python<time_zone::tz_info_t_ >();
     }
 
 
