@@ -131,7 +131,7 @@
 			<Add library="shyftcore" />
 			<Add library="shyftapi" />
 			<Add library="boost_python3" />
-			<Add library="python3.4m" />
+			<Add library="python3.5m" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">

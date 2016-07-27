@@ -68,7 +68,6 @@ namespace expose {
              .staticmethod("create_from_geo_cell_data_vector")
 
         ;
-      register_ptr_to_python<std::shared_ptr<std::vector<T>> >();
       expose::statistics::basic_cell<T>(cell_name);//common for all type of cells, so expose it here
     }
 

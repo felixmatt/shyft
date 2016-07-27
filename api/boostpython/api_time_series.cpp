@@ -36,7 +36,6 @@ namespace expose {
             DEF_STD_TS_STUFF()
             .def_readonly("v",&pts_t::v,"the point vector<double>")
             ;
-        register_ptr_to_python<shared_ptr<pts_t> >();
     }
 
 
@@ -130,8 +129,6 @@ namespace expose {
         def("min",min_ts_double,args("ts_a","b"   ),"returns a new ts as min(ts_a,b)");
 
 
-        register_ptr_to_python<shared_ptr<pts_t> >();
-        //typedef shared_ptr<pts_t> pts_t_;
         typedef vector<pts_t> TsVector;
         class_<TsVector>("TsVector","A vector of Ts")
             .def(vector_indexing_suite<TsVector>())

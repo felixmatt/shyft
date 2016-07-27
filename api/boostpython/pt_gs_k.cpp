@@ -44,7 +44,6 @@ namespace expose {
                 .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
                 .def("get_name",&parameter::get_name,args("i"),"returns the i'th parameter name, see also .get()/.set() and .size()")
                 ;
-            register_ptr_to_python<std::shared_ptr<parameter> >();
 
             typedef std::map<int,parameter> PTGSKParameterMap;
             class_<PTGSKParameterMap>("PTGSKParameterMap","dict (int,parameter)  where the int is 0-based catchment_id")

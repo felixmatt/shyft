@@ -24,7 +24,6 @@ namespace expose {
             .def(py::vector_indexing_suite<TSourceVector>())
             .def(py::init<const TSourceVector&>(py::args("src"),"clone src"))
             ;
-        py::register_ptr_to_python<std::shared_ptr<TSourceVector> >();
     }
 
     static void GeoPointSource(void) {
