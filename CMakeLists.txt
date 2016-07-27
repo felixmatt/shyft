@@ -72,7 +72,7 @@ set(DLIB_URL http://sourceforge.net/projects/dclib/files/dlib/v${DLIB_VERSION}/$
 
 set(ARMADILLO_PREFIX "armadillo")
 set(ARMADILLO_VERSION "7.300.0")
-set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.gz)
+set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.xz)
 set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL})
 
 set(BOOST_PREFIX "boost")
