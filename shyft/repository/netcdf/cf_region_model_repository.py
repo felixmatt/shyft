@@ -202,7 +202,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         # Construct cells
         cell_geo_data = np.column_stack([x[mask], y[mask], elevation, areas, c_indx.astype(int), np.full(len(c_indx),
                                    radiation_slope_factor), gf, lf, rf, ff, unknown_fraction])
-        self._region_model.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
+        cell_vector = self._region_model.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
 
         # Construct catchment overrides
         catchment_parameters = self._region_model.parameter_t.map_t()
