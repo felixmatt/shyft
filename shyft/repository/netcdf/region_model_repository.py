@@ -326,7 +326,7 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, catchments, ff, lf, rf, gf):
             cell = self._region_model.cell_t()
             cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, int(c_id), radiation_slope_factor,
-                                       api.LandTypeFractions(gf, lf, rf, ff, 0.0))
+                                       api.LandTypeFractions(gf, lf, rf, ff, 1.0-gf-lf-rf-ff))
             cell_vector.append(cell)
 
         # Construct catchment overrides

@@ -24,6 +24,7 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="config_simulator.py" />
     <Compile Include="simulator.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>

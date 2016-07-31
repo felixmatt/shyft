@@ -24,6 +24,7 @@
     <Compile Include="demo_statkraft_stuff.py" />
     <Compile Include="patch.py" />
     <Compile Include="test_arome_respository.py" />
+    <Compile Include="test_config_simulator.py" />
     <Compile Include="test_geo_ts_repository_collection.py" />
     <Compile Include="test_gis_region_model_repository.py">
       <SubType>Code</SubType>

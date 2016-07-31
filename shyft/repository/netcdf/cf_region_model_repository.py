@@ -196,16 +196,13 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
             else:
                 raise RegionConfigError("Unknown parameter set '{}'".format(p_type_name))
 
-        # TODO: Move into yaml file similar to p_corr_scale_factor
-        radiation_slope_factor = 0.9
+        radiation_slope_factor = 0.9 # TODO: Move into yaml file similar to p_corr_scale_factor
+        unknown_fraction = 1.0 - gf - lf - rf - ff
 
         # Construct cells
-        cell_vector = self._region_model.cell_t.vector_t()
-        for pt, a, c_id, ff, lf, rf, gf in zip(coordinates, areas, c_indx, ff, lf, rf, gf):
-            cell = self._region_model.cell_t()
-            cell.geo = api.GeoCellData(api.GeoPoint(*pt), a, int(c_id), radiation_slope_factor,
-                                       api.LandTypeFractions(gf, lf, rf, ff, 0.0))
-            cell_vector.append(cell)
+        cell_geo_data = np.column_stack([x[mask], y[mask], elevation, areas, c_indx.astype(int), np.full(len(c_indx),
+                                   radiation_slope_factor), gf, lf, rf, ff, unknown_fraction])
+        cell_vector = self._region_model.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
 
         # Construct catchment overrides
         catchment_parameters = self._region_model.parameter_t.map_t()
