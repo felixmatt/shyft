@@ -284,7 +284,7 @@ namespace shyft {
                 //
 
                 // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                double pot_evap = pt.potential_evapotranspiration(temp, rad, rel_hum)*period.timespan()/calendar::HOUR; // mm/h 
+                double pot_evap = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h
                 response.pt.pot_evapotranspiration=pot_evap;
 
                 // Gamma Snow
