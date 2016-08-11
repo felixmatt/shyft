@@ -1,17 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -25,23 +17,10 @@
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -54,28 +33,13 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\boost_1_57_0\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
-    <TargetName>_api</TargetName>
-    <TargetExt>.pyd</TargetExt>
-    <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(PYTHONHOME)\Include;$(PYTHONHOME)\Lib\site-packages\numpy\core\include</IncludePath>
     <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
@@ -86,15 +50,6 @@
     <OutDir>$(SolutionDir)\shyft\api\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\api\</IntDir>
     <PreBuildEventUseInBuild />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
-    <LibraryPath>$(LibraryPath);$(SolutionDir)..\boost\boost_1_57_0\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\armadillo\blaslapack</LibraryPath>
-    <IncludePath>$(IncludePath);$(SolutionDir)..\boost\boost_1_57_0;$(SolutionDir)..\armadillo\armadillo-4.550.2\include;$(PYTHONHOME)\Include;$(SolutionDir)..\dlib</IncludePath>
-    <TargetName>_api</TargetName>
-    <TargetExt>.pyd</TargetExt>
-    <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(PYTHONHOME)\libs;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
@@ -108,33 +63,6 @@
     <PreBuildEventUseInBuild>
     </PreBuildEventUseInBuild>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>SWIG_NO_SCL_SECURE_NO_DEPRECATE;SWIG_NO_CRT_SECURE_NO_DEPRECATE;SWIG_PYTHON_INTERPRETER_NO_DEBUGX;BOOSTSERIAL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1; WIN32;_DEBUG;_WINDOWS;_USRDLL;HAVE_LAPACK;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..;../..;$(PYTHON27_32_ROOT)\Include;;$(PYTHON27_32_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>blas_win32_MT.lib;lapack_win32_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <IgnoreSpecificDefaultLibraries>
-      </IgnoreSpecificDefaultLibraries>
-      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-    </Link>
-    <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Message>Update swig generated files</Message>
-    </PreBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -142,7 +70,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_NO_SCL_SECURE_NO_DEPRECATE;SWIG_NO_CRT_SECURE_NO_DEPRECATE;SWIG_PYTHON_INTERPRETER_NO_DEBUGX;BOOSTSERIAL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1; WIN32;_DEBUG;_WINDOWS;_USRDLL;HAVE_LAPACK;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>../boostpython;..;../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..;../..</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -167,36 +95,6 @@
       </Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>SWIG_PYTHON_INTERPRETER_NO_DEBUG;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>..;../..;$(PYTHON27_32_ROOT)\Include;;$(PYTHON27_32_ROOT)\lib\site-packages\numpy\core\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ErrorReporting>Send</ErrorReporting>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>blas_win32_MT.lib;lapack_win32_MT.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-    </Link>
-    <PreBuildEvent>
-      <Command>nmake /Nologo /F NMakefile.swig_run</Command>
-    </PreBuildEvent>
-    <PreBuildEvent>
-      <Message>Update swig generated files</Message>
-    </PreBuildEvent>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -206,7 +104,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_PYTHON_INTERPRETER_NO_DEBUG;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>../boostpython;..;../..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..;../..</AdditionalIncludeDirectories>
       <ErrorReporting>Send</ErrorReporting>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
