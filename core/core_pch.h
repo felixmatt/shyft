@@ -17,13 +17,14 @@
 ///	directory in two files named COPYING.txt and COPYING_LESSER.txt.
 ///	If not, see <http://www.gnu.org/licenses/>.
 ///
-///
-///
-
 
 #if defined(_WINDOWS)
 #pragma once
+#pragma warning (disable : 4267)
+#pragma warning (disable : 4244)
+#pragma warning (disable : 4503)
 #endif
+
 
 #include <memory>
 #include <limits>
@@ -43,7 +44,3 @@
 #include <random>
 #include <algorithm>
 #include <boost/range.hpp>
-
-
-
-
