@@ -5,14 +5,18 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9d4b92c2-21e7-4de4-8295-fe87cb43cda3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_ssa_geo_ts_repository.py</StartupFile>
-    <SearchPath>..\..\</SearchPath>
+    <StartupFile>test_arome_respository.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId />
     <InterpreterVersion />
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <Environment>PYTHONPATH=%PYTHONPATH%;$(SolutionDir)</Environment>
+    <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />

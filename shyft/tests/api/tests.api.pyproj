@@ -6,7 +6,8 @@
     <ProjectGuid>{3e3b8f45-003f-4f88-bf3f-400e7af8cb1f}</ProjectGuid>
     <ProjectHome />
     <StartupFile>test_calendar_and_time.py</StartupFile>
-    <SearchPath>..\..\..\shyft</SearchPath>
+    <SearchPath>
+    </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <InterpreterId>
@@ -23,6 +24,7 @@
     </InterpreterPath>
     <InterpreterArguments />
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <Environment>PYTHONPATH=%PYTHONPATH%;$(SolutionDir)</Environment>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
