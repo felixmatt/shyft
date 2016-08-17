@@ -7,6 +7,7 @@
 
 #include <ctime>
 #include <cmath>
+
 #ifdef WIN32
 #if _MSC_VER < 1800
 	const unsigned long nanx[2]={0xffffffff, 0x7fffffff};
@@ -124,8 +125,6 @@ namespace shyfttest_idw {
 
     using namespace shyfttest_idw;
     using namespace std;
-
-
 
 void inverse_distance_test::test_temperature_model() {
     //
@@ -532,7 +531,6 @@ static inline
 arma::vec3 p_vec(geo_point a, geo_point b) {
         return arma::vec3({b.x-a.x,b.y-a.y,b.z-a.z});
 }
-
 
 void inverse_distance_test::test_temperature_gradient_model() {
     using namespace arma;
