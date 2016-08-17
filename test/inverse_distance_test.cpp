@@ -131,33 +131,33 @@ void inverse_distance_test::test_temperature_model() {
     //
     // Verify temperature gradient calculator, needs to be robust ...
     //
-    Parameter p(100*1000.0,10);
+    Parameter p(100*1000.0, 10);
     TestTemperatureModel::scale_computer gc(p);
-    TS_ASSERT_DELTA(gc.compute(), p.default_gradient(), TEST_EPS);// should give default gradient by default
+    TS_ASSERT_DELTA(gc.compute(), p.default_gradient(), TEST_EPS); // should give default gradient by default
 
     geo_point p1(1000,1000,100);
     Source   s1(p1,10);
     utctime  t0=3600L*24L*365L*44L;
 
     gc.add(s1,t0);
-    TS_ASSERT_DELTA(gc.compute(), p.default_gradient(), TEST_EPS);// should give default gradient if just one point
+    TS_ASSERT_DELTA(gc.compute(), p.default_gradient(), TEST_EPS); // should give default gradient if just one point
 
     geo_point p1b(1000,1000,149);
     Source   s1b(p1b,10-0.005*59);
     gc.add(s1b,t0);
 
-    TS_ASSERT_DELTA(gc.compute(),p.default_gradient(),TEST_EPS);// mi-max z-distance less than 50 m., return default.
+    TS_ASSERT_DELTA(gc.compute(),p.default_gradient(),TEST_EPS); // mi-max z-distance less than 50 m., return default.
 
 
     geo_point p2(2000,2000,200);
     Source   s2(p2,9.5);
     gc.add(s2,t0);
-    TS_ASSERT_DELTA(gc.compute(), -0.005, TEST_EPS);// should give -0.005 gradient if just two points
+    TS_ASSERT_DELTA(gc.compute(), -0.005, TEST_EPS); // should give -0.005 gradient if just two points
 
     geo_point p3(3000,3000,300);
     Source   s3(p3,9.0);
     gc.add(s3,t0);
-    TS_ASSERT_DELTA(gc.compute(), -0.005, TEST_EPS);// should give -0.005 gradient for these 3 points
+    TS_ASSERT_DELTA(gc.compute(), -0.005, TEST_EPS); // should give -0.005 gradient for these 3 points
 
     geo_point p4(4000,4000,500);
     Source   s4(p4,8.0);
@@ -182,13 +182,15 @@ void inverse_distance_test::test_temperature_model() {
     TS_ASSERT_DELTA(transformedValue, sourceValue + scaleValue*(d1.point.z - s1.point.z),TEST_EPS);
 
 }
+
 void inverse_distance_test::test_temperature_model_default_gradient() {
     inverse_distance::temperature_parameter p;
-    p.default_temp_gradient=1.0;
+    p.default_temp_gradient = 1.0;
     inverse_distance::temperature_default_gradient_scale_computer gsc(p);
-    TS_ASSERT_DELTA(p.default_temp_gradient,gsc.compute(),TEST_EPS);
-    TS_ASSERT(inverse_distance::temperature_default_gradient_scale_computer::is_source_based()==false);
+    TS_ASSERT_DELTA(p.default_temp_gradient, gsc.compute(), TEST_EPS);
+    TS_ASSERT(inverse_distance::temperature_default_gradient_scale_computer::is_source_based() == false);
 }
+
 void inverse_distance_test::test_radiation_model() {
     //
     // Verify temperature gradient calculator, needs to be robust ...
@@ -296,6 +298,7 @@ void inverse_distance_test::test_one_source_one_dest_calculation() {
 
 
 }
+
 void inverse_distance_test::test_two_sources_one_dest_calculation() {
     //
     // Arrange
@@ -490,43 +493,39 @@ void inverse_distance_test::test_performance() {
     //
     // Arrange
     //
-    utctime Tstart=calendar().time(YMDhms(2000,1,1));
-    utctimespan dt=3600L;
-    int n=24*36;// number of timesteps
-    const int n_xy=3;// number for xy-squares for sources
-    const int nx=3*n_xy;// 3 times more for grid-cells, typical arome -> cell
-    const int ny=3*n_xy;
-
-    const int s_nx=n_xy;
-    const int s_ny=n_xy;
-
-    const int n_sources=(s_nx*s_ny);
-    double s_dxy=3*1000;// arome typical 3 km.
-    TimeAxis ta(Tstart,dt,n);//hour, 10 steps
-    vector<Source> s(move(Source::GenerateTestSourceGrid(ta,s_nx,s_ny,-0.5*1000,-0.5*1000,s_dxy)));
-    vector<MCell> d(move(MCell::GenerateTestGrid(nx,ny)));
-    Parameter p(s_dxy*2,min(8,n_sources/2));// for practical purposes, 8 neighbours or less.
+    utctime Tstart = calendar().time(YMDhms(2000, 1, 1));
+    utctimespan dt = 3600L;
+    int n = 24 * 36; // number of timesteps
+    const int n_xy = 3; // number for xy-squares for sources
+    const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
+    const int ny = 3 * n_xy;
+    const int s_nx = n_xy;
+    const int s_ny = n_xy;
+    const int n_sources = s_nx * s_ny;
+    double s_dxy = 3 * 1000; // arome typical 3 km.
+    TimeAxis ta(Tstart, dt, n); // hour, 10 steps
+    vector<Source> s(move(Source::GenerateTestSourceGrid(ta, s_nx, s_ny, -0.5*1000, -0.5*1000, s_dxy)));
+    vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
+    Parameter p(s_dxy*2, min(8, n_sources/2)); // for practical purposes, 8 neighbours or less.
 
     //
     // Act
     //
     const clock_t start = clock();
 
-    run_interpolation<TestTemperatureModel>(begin(s),end(s),begin(d),end(d),idw_timeaxis<TimeAxis>(ta),p,
-                                                       [](MCell&d ,size_t ix,double v) {d.set_value(ix,v);});
+    run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+                                                       [](MCell& d, size_t ix, double v) {d.set_value(ix, v);} );
     const clock_t total = clock() - start;
-    cout << "Alg. IDW2i:\n";
-    cout << "Temperature interpolation took: " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << endl;
-    cout << "Each temperature timestep took: " << 1000*(total)/((double)(CLOCKS_PER_SEC)*n) << " ms" << endl;
+    cout << "\nAlg. IDW2i:\n";
+	double time = 1000 * double(total) / double(CLOCKS_PER_SEC);
+    cout << "Temperature interpolation took: " << time << " ms" << endl;
+    cout << "Each temperature timestep took: " << time / double(n) << " ms" << endl;
 
     //
     // Assert
     //
-    TS_ASSERT_EQUALS(count_if(begin(d),end(d),[n](const MCell&d) { return d.set_count==n ;}), nx*ny);
-
-    TS_ASSERT_EQUALS(count_if(begin(d),end(d),[n](const MCell&d) { return d.v >=0.0 ;}), nx*ny);
-
-
+    TS_ASSERT_EQUALS(count_if( begin(d), end(d), [n](const MCell& d) {return d.set_count == n;} ), nx*ny);
+    TS_ASSERT_EQUALS(count_if( begin(d), end(d), [n](const MCell& d) {return d.v >= 0.0;} ), nx*ny);
 }
 
 static inline
