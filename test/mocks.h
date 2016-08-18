@@ -1,11 +1,15 @@
+#pragma once
 #include "core/utctime_utilities.h"
 #include "core/timeseries.h"
+#include "core/inverse_distance.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
+#include "core/geo_point.h"
 #include <armadillo>
 
-namespace shyfttest {
 
+namespace shyfttest
+{
 	using namespace shyft::core;
 	using namespace shyft::timeseries;
 	using namespace std::chrono;
@@ -13,14 +17,8 @@ namespace shyfttest {
 	typedef std::vector<point> point_vector_t;
 	typedef point_ts<point_timeaxis> xpts_t;
 
-	void create_time_series(xpts_t& temp,
-		xpts_t& prec,
-		xpts_t& rel_hum,
-		xpts_t& wind_speed,
-		xpts_t& radiation,
-		utctime T0,
-		utctimespan dt,
-		size_t n_points);
+	void create_time_series(xpts_t& temp, xpts_t& prec, xpts_t& rel_hum, xpts_t& wind_speed, xpts_t& radiation,
+		utctime T0, utctimespan dt, size_t n_points);
 
 	template<typename TimeT = milliseconds>
 	struct measure
@@ -311,5 +309,127 @@ namespace shyfttest {
 		};
 
 	}; // End namespace mock
+
+	namespace idw
+	{
+		typedef shyft::timeseries::timeaxis TimeAxis;
+
+		const double TEST_EPS = 0.00000001;
+
+		struct Source
+		{
+			typedef geo_point geo_point_t; // Why is it declared here?
+
+			geo_point point;
+			double v;
+			utctime t_special;
+			double v_special;
+			mutable int get_count;
+
+			Source(geo_point p, double v) : point(p), v(v), t_special(0), v_special(v), get_count(0) {}
+
+			geo_point mid_point() const { return point; }
+
+			double value(utcperiod p) const { return value(p.start); }
+
+			double value(utctime t) const
+			{
+				get_count++;
+				return t == t_special ? v_special : v;
+			}
+
+			// For testing
+			void set_value(double vx) { v = vx; }
+
+			void set_value_at_t(utctime tx, double vx) { t_special = tx; v_special = vx; }
+
+			static vector<Source> GenerateTestSources(const TimeAxis& time_axis, size_t n, double x, double y, double radius)
+			{
+				vector<Source> r;
+				r.reserve(n);
+				const double pi = 3.1415;
+				double delta = 2.0 * pi / n;
+				for (double angle = 0; angle < 2 * pi; angle += delta)
+				{
+					double xa = x + radius * sin(angle);
+					double ya = y + radius * cos(angle);
+					double za = (xa + ya) / 1000.0;
+					r.emplace_back(geo_point(xa, ya, za), 10.0 + za * -0.006); // reasonable temperature, dependent on height
+				}
+				return move(r);
+			}
+
+			static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis, size_t nx, size_t ny, double x, double y, double dxy)
+			{
+				vector<Source> r;
+				r.reserve(nx * ny);
+				const double max_dxy = dxy * (nx + ny);
+				for (size_t i = 0; i < nx; ++i)
+				{
+					double xa = x + i * dxy;
+					for (size_t j = 0; j < ny; ++j)
+					{
+						double ya = y + j * dxy;
+						double za = 1000.0 * (xa + ya) / max_dxy;
+						r.emplace_back(geo_point(xa, ya, za), 10.0 + za * -0.006); // reasonable temperature, dependent on height
+					}
+				}
+				return move(r);
+			}
+		};
+
+		struct MCell
+		{
+			geo_point point;
+			double v;
+			int set_count;
+			double slope;
+
+			MCell() : point(), v(-1.0), set_count(0), slope(1.0) {}
+
+			MCell(geo_point p) : point(p), v(-1.0), set_count(0), slope(1.0) {}
+
+			geo_point mid_point() const { return point; }
+			double slope_factor() const { return 1.0; }
+			void set_slope_factor(double x) { slope = x; }
+			void set_value(size_t t, double vt)
+			{
+				set_count++;
+				v = vt;
+			}
+
+			static vector<MCell> GenerateTestGrid(size_t nx, size_t ny)
+			{
+				vector<MCell> r;
+				r.reserve(nx * ny);
+				const double z_min = 100.0;
+				const double z_max = 800.0;
+				const double dz = (z_max - z_min) / (nx + ny);
+				for (size_t x = 0; x < nx; ++x)
+					for (size_t y = 0; y < ny; ++y)
+						r.emplace_back(geo_point(500.0 + x * 1000, 500.0 + y * 1000, z_min + (x + y) * dz));
+				return move(r);
+			}
+		};
+
+		struct Parameter
+		{
+			double max_distance;
+			size_t max_members;
+
+			Parameter(double max_distance, size_t max_neigbours) : max_distance(max_distance), max_members(max_neigbours) {}
+
+			bool gradient_by_equation = false; // just use min/max for existing tests (bw compatible)
+			double default_gradient() const { return -0.006; }  // C/m decrease 0.6 degC/100m
+			double precipitation_scale_factor() const { return 1.0 + 2.0 / 100.0; } // 2 pct /100m
+			double distance_measure_factor = 2.0; // Square distance
+		};
+
+		using namespace shyft::core::inverse_distance;
+		typedef temperature_model<Source, MCell, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel;
+		typedef radiation_model<Source, MCell, Parameter, geo_point> TestRadiationModel;
+		typedef precipitation_model<Source, MCell, Parameter, geo_point> TestPrecipitationModel;
+
+	}; // End namespace idw
 
 }; // End namespace shyfttest
