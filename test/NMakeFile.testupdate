@@ -1,4 +1,4 @@
-# Makefile for test_shyft on Windows
+# Makefile for test_shyft on Windows. Please keep in sync with the Linux MakeFile.testupdate
 
 CoreTests = time_axis_test.h \
 	inverse_distance_test.h \

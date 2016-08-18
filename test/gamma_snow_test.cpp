@@ -139,7 +139,7 @@ void gamma_snow_test::test_warm_winter_effect() {
     gs.set_glacier_fraction(param_glacier_fraction);
     auto dt = shyft::core::deltahours(1);
     size_t num_days = 100;
-	bool verbose = getenv("SHYFT_VERBOSE");
+	bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
     for (size_t i = 0; i < 24*num_days; ++i) {
         gs.step(states, response, dt*24*232+i*dt, dt, param, temp, rad, prec, wind_speed, rel_hum,0.0,0.0);
 
