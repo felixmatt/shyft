@@ -8,8 +8,7 @@
 #include <armadillo>
 
 
-namespace shyfttest
-{
+namespace shyfttest {
 	using namespace shyft::core;
 	using namespace shyft::timeseries;
 	using namespace std::chrono;
@@ -21,11 +20,9 @@ namespace shyfttest
 		utctime T0, utctimespan dt, size_t n_points);
 
 	template<typename TimeT = milliseconds>
-	struct measure
-	{
+	struct measure {
 		template<typename F, typename ...Args>
-		static typename TimeT::rep execution(F func, Args&&... args)
-		{
+		static typename TimeT::rep execution(F func, Args&&... args) {
 			auto start = system_clock::now();
 			func(std::forward<Args>(args)...);
 			auto duration = duration_cast<TimeT>(system_clock::now() - start);
@@ -33,24 +30,20 @@ namespace shyfttest
 		}
 	};
 
-	namespace mock
-	{
-		struct PTGSKResponseCollector
-		{
+	namespace mock {
+		struct PTGSKResponseCollector {
 			std::vector<shyft::timeseries::point> evap;
 			std::vector<shyft::timeseries::point> snow_storage;
 			std::vector<shyft::timeseries::point> avg_discharge;
 
-			PTGSKResponseCollector(size_t n_pts)
-			{
+			PTGSKResponseCollector(size_t n_pts) {
 				evap.reserve(n_pts);
 				snow_storage.reserve(n_pts);
 				avg_discharge.reserve(n_pts);
 			}
 
 			template<class R>
-			void collect(const shyft::core::utctime time, const R& response)
-			{
+			void collect(const shyft::core::utctime time, const R& response) {
 				evap.emplace_back(time, response.pt.pot_evapotranspiration);
 				snow_storage.emplace_back(time, response.gs.storage);
 				avg_discharge.emplace_back(time, response.kirchner.q_avg);
@@ -61,8 +54,7 @@ namespace shyfttest
 		};
 
 		template<class T>
-		struct StateCollector
-		{
+		struct StateCollector {
 			// Collected from the response, to better understand the model
 			shyft::timeseries::point_ts<T> _inst_discharge; // Kirchner instant Discharge in m^3/s
 
@@ -70,52 +62,44 @@ namespace shyfttest
 
 			StateCollector(const T& time_axis) : _inst_discharge(time_axis, 0.0) {}
 
-			void initialize(const T& time_axis)
-			{
+			void initialize(const T& time_axis) {
 				_inst_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 			}
 
 			template<class S>
-			void collect(size_t idx, const S& state)
-			{
+			void collect(size_t idx, const S& state) {
 				_inst_discharge.set(idx, state.kirchner.q);
 			}
 
-			const shyft::timeseries::point_ts<T>& kirchner_state() const
-			{
+			const shyft::timeseries::point_ts<T>& kirchner_state() const {
 				return _inst_discharge;
 			}
 		};
 
-		template<class T> class TSPointTarget
-		{
+		template<class T> class TSPointTarget {
 		private:
 			std::vector<shyft::timeseries::point> _values;
 
 		public:
 			TSPointTarget() {}
 
-			TSPointTarget(const T& time_axis)
-			{
+			TSPointTarget(const T& time_axis) {
 				_values.reserve(time_axis.size());
 				for (size_t i = 0; i < time_axis.size(); ++i)
 					_values.emplace_back(time_axis.period(i).end, 0.0);
 			}
 
-			shyft::timeseries::point& value(size_t idx)
-			{
+			shyft::timeseries::point& value(size_t idx) {
 				return _values[idx];
 			}
 
-			size_t size() const
-			{
+			size_t size() const {
 				return _values.size();
 			}
 		};
 
 		template<class T>
-		struct DischargeCollector
-		{
+		struct DischargeCollector {
 			double destination_area;
 			shyft::timeseries::point_ts<T> avg_discharge; // Discharge in m^3
 
@@ -124,33 +108,28 @@ namespace shyfttest
 			DischargeCollector(const double destination_area, const T& time_axis)
 				: destination_area(destination_area), avg_discharge(time_axis, 0.0) {}
 
-			void initialize(const T& time_axis)
-			{
+			void initialize(const T& time_axis) {
 				avg_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 			}
 
 			template<class R>
-			void collect(size_t idx, const R& resp)
-			{
+			void collect(size_t idx, const R& resp) {
 				avg_discharge.set(idx, destination_area * resp.kirchner.q_avg / 1000.0 / 3600.0); // q_avg in mm
 			}
 
 			template<class R>
 			void set_end_response(const R& response) {}
 
-			const shyft::timeseries::point_ts<T>& discharge() const
-			{
+			const shyft::timeseries::point_ts<T>& discharge() const {
 				return avg_discharge;
 			}
 		};
 
 		template<class T>
-		struct ResponseCollector
-		{
+		struct ResponseCollector {
 			double destination_area; // in m^2
 
-			double mmh_to_m3s(double mm_pr_hour) const
-			{
+			double mmh_to_m3s(double mm_pr_hour) const {
 				const double mmh_to_m3s_scale_factor = 1.0 / 3600.0 / 1000.0;
 				return destination_area * mm_pr_hour * mmh_to_m3s_scale_factor;
 			}
@@ -176,8 +155,7 @@ namespace shyfttest
 				_ae_output(time_axis, 0.0),
 				_pe_output(time_axis, 0.0) {}
 
-			void initialize(const T& time_axis)
-			{
+			void initialize(const T& time_axis) {
 				avg_discharge = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 				_snow_sca = shyft::timeseries::point_ts<T>(time_axis, 0.0);
 				_snow_swe = shyft::timeseries::point_ts<T>(time_axis, 0.0);
@@ -188,8 +166,7 @@ namespace shyfttest
 			}
 
 			template<class R>
-			void collect(size_t idx, const R& response)
-			{
+			void collect(size_t idx, const R& response) {
 				avg_discharge.set(idx, mmh_to_m3s(response.total_discharge)); // want m3/s, q_avg is in mm/h, so compute the totals in mm/s
 				_snow_sca.set(idx, response.gs.sca);
 				_snow_output.set(idx, response.gs.outflow); // current mm/h, but want m3/s, but we get mm/h from snow output
@@ -209,8 +186,7 @@ namespace shyfttest
 			const shyft::timeseries::point_ts<T>& pe_output() const { return _pe_output; }
 		};
 
-		template<class R, class S, class P, class TS> class MCell
-		{
+		template<class R, class S, class P, class TS> class MCell {
 		public:
 			typedef R response_t;
 			typedef S state_t;
@@ -251,13 +227,11 @@ namespace shyfttest
 				_rel_hum(rh),
 				_radiation(rad),
 				_state(state),
-				_parameter(parameter)
-			{
+				_parameter(parameter) {
 				geo_cell_data_.set_catchment_id(catchment_number);
 			}
 
-			state_t& get_state(shyft::core::utctime time)
-			{
+			state_t& get_state(shyft::core::utctime time) {
 				return _state; // TODO Make sure the input time corresponds to the actual time stamp of the state vec!!!
 			}
 
@@ -269,8 +243,7 @@ namespace shyfttest
 			template<class SRC, class D, class T>
 			void add_discharge(const SRC& discharge_source,
 				D& discharge_target,
-				const T& time_axis) const
-			{
+				const T& time_axis) const {
 				auto discharge_accessor = shyft::timeseries::average_accessor<SRC, T>(discharge_source, time_axis);
 				for (size_t i = 0; i < time_axis.size(); ++i)
 					discharge_target.add(i, discharge_accessor.value(i));
@@ -278,8 +251,7 @@ namespace shyfttest
 		};
 
 		template<typename P>
-		class GRFDestination
-		{
+		class GRFDestination {
 		private:
 			const P _geo_point;
 			arma::vec _source_anisotropic_distances; // TODO: Not sure we need this, please check when method is fully understood
@@ -295,8 +267,7 @@ namespace shyfttest
 			void set_source_covariances(const arma::vec& source_covariances) { _source_covariances = source_covariances; }
 			void set_source_sort_order(const arma::uvec& source_sort_order) { _source_sort_order = source_sort_order; }
 
-			void set_weights(const arma::vec& weights, const arma::uvec& indices)
-			{
+			void set_weights(const arma::vec& weights, const arma::uvec& indices) {
 				_weights = weights;
 				_weight_indices = indices;
 			}
@@ -310,14 +281,12 @@ namespace shyfttest
 
 	}; // End namespace mock
 
-	namespace idw
-	{
+	namespace idw {
 		typedef shyft::timeseries::timeaxis TimeAxis;
 
 		const double TEST_EPS = 0.00000001;
 
-		struct Source
-		{
+		struct Source {
 			typedef geo_point geo_point_t; // Why is it declared here?
 
 			geo_point point;
@@ -332,8 +301,7 @@ namespace shyfttest
 
 			double value(utcperiod p) const { return value(p.start); }
 
-			double value(utctime t) const
-			{
+			double value(utctime t) const {
 				get_count++;
 				return t == t_special ? v_special : v;
 			}
@@ -343,14 +311,12 @@ namespace shyfttest
 
 			void set_value_at_t(utctime tx, double vx) { t_special = tx; v_special = vx; }
 
-			static vector<Source> GenerateTestSources(const TimeAxis& time_axis, size_t n, double x, double y, double radius)
-			{
+			static vector<Source> GenerateTestSources(const TimeAxis& time_axis, size_t n, double x, double y, double radius) {
 				vector<Source> r;
 				r.reserve(n);
 				const double pi = 3.1415;
 				double delta = 2.0 * pi / n;
-				for (double angle = 0; angle < 2 * pi; angle += delta)
-				{
+				for (double angle = 0; angle < 2 * pi; angle += delta) {
 					double xa = x + radius * sin(angle);
 					double ya = y + radius * cos(angle);
 					double za = (xa + ya) / 1000.0;
@@ -359,16 +325,13 @@ namespace shyfttest
 				return move(r);
 			}
 
-			static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis, size_t nx, size_t ny, double x, double y, double dxy)
-			{
+			static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis, size_t nx, size_t ny, double x, double y, double dxy) {
 				vector<Source> r;
 				r.reserve(nx * ny);
 				const double max_dxy = dxy * (nx + ny);
-				for (size_t i = 0; i < nx; ++i)
-				{
+				for (size_t i = 0; i < nx; ++i) {
 					double xa = x + i * dxy;
-					for (size_t j = 0; j < ny; ++j)
-					{
+					for (size_t j = 0; j < ny; ++j) {
 						double ya = y + j * dxy;
 						double za = 1000.0 * (xa + ya) / max_dxy;
 						r.emplace_back(geo_point(xa, ya, za), 10.0 + za * -0.006); // reasonable temperature, dependent on height
@@ -378,8 +341,7 @@ namespace shyfttest
 			}
 		};
 
-		struct MCell
-		{
+		struct MCell {
 			geo_point point;
 			double v;
 			int set_count;
@@ -392,14 +354,12 @@ namespace shyfttest
 			geo_point mid_point() const { return point; }
 			double slope_factor() const { return 1.0; }
 			void set_slope_factor(double x) { slope = x; }
-			void set_value(size_t t, double vt)
-			{
+			void set_value(size_t t, double vt) {
 				set_count++;
 				v = vt;
 			}
 
-			static vector<MCell> GenerateTestGrid(size_t nx, size_t ny)
-			{
+			static vector<MCell> GenerateTestGrid(size_t nx, size_t ny) {
 				vector<MCell> r;
 				r.reserve(nx * ny);
 				const double z_min = 100.0;
@@ -412,8 +372,7 @@ namespace shyfttest
 			}
 		};
 
-		struct Parameter
-		{
+		struct Parameter {
 			double max_distance;
 			size_t max_members;
 
