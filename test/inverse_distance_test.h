@@ -2,8 +2,7 @@
 #include <cxxtest/TestSuite.h>
 
 
-class inverse_distance_test : public CxxTest::TestSuite
-{
+class inverse_distance_test : public CxxTest::TestSuite {
 public:
 	void test_temperature_model();
 	void test_temperature_model_default_gradient();

@@ -1,11 +1,9 @@
 #include "test_pch.h"
 #include "mocks.h"
 
-namespace shyfttest
-{
+namespace shyfttest {
 	void create_time_series(xpts_t& temp, xpts_t& prec, xpts_t& rel_hum, xpts_t& wind_speed, xpts_t& radiation,
-		utctime T0, utctimespan dt, size_t n_points)
-	{
+		utctime T0, utctimespan dt, size_t n_points) {
 		vector<double> temps;
 		temps.reserve(n_points);
 		vector<double> precs;
@@ -20,8 +18,7 @@ namespace shyfttest
 		tpoints.reserve(n_points + 1);
 
 		utctime T1 = T0 + n_points * dt;
-		for (size_t i = 0; i < n_points; ++i)
-		{
+		for (size_t i = 0; i < n_points; ++i) {
 			utctime t = T0 + i * dt;
 			temps.emplace_back(-5.0 + 10.0 * std::sin(double((t - T0) / (T1 - T0) * M_PI)));
 			precs.emplace_back(i % 3 ? 0.0 : 5.0); // 5mm rain every third time step

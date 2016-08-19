@@ -16,8 +16,7 @@ const double NAN = *(double*)nanx;
 using namespace shyft::core;
 using namespace shyfttest::idw;
 
-void inverse_distance_test::test_temperature_model()
-{
+void inverse_distance_test::test_temperature_model() {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -72,8 +71,7 @@ void inverse_distance_test::test_temperature_model()
 	TS_ASSERT_DELTA(transformedValue, sourceValue + scaleValue*(d1.point.z - s1.point.z), TEST_EPS);
 }
 
-void inverse_distance_test::test_temperature_model_default_gradient()
-{
+void inverse_distance_test::test_temperature_model_default_gradient() {
 	inverse_distance::temperature_parameter p;
 	p.default_temp_gradient = 1.0;
 	inverse_distance::temperature_default_gradient_scale_computer gsc(p);
@@ -81,8 +79,7 @@ void inverse_distance_test::test_temperature_model_default_gradient()
 	TS_ASSERT(inverse_distance::temperature_default_gradient_scale_computer::is_source_based() == false);
 }
 
-void inverse_distance_test::test_radiation_model()
-{
+void inverse_distance_test::test_radiation_model() {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -115,8 +112,7 @@ void inverse_distance_test::test_radiation_model()
 	TS_ASSERT_DELTA(transformedValue, sourceValue*d1.slope_factor(), TEST_EPS);
 }
 
-void inverse_distance_test::test_precipitation_model()
-{
+void inverse_distance_test::test_precipitation_model() {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -152,8 +148,7 @@ void inverse_distance_test::test_precipitation_model()
 	// TS_ASSERT_DELTA(0.0, TestPrecipitationModel::transform(0.0, scaleValue, s1, d0), TEST_EPS);
 }
 
-void inverse_distance_test::test_one_source_one_dest_calculation()
-{
+void inverse_distance_test::test_one_source_one_dest_calculation() {
 	//
 	// Arrange
 	//
@@ -184,8 +179,7 @@ void inverse_distance_test::test_one_source_one_dest_calculation()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_two_sources_one_dest_calculation()
-{
+void inverse_distance_test::test_two_sources_one_dest_calculation() {
 	//
 	// Arrange
 	//
@@ -224,8 +218,7 @@ void inverse_distance_test::test_two_sources_one_dest_calculation()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_using_finite_sources_only()
-{
+void inverse_distance_test::test_using_finite_sources_only() {
 	//
 	// Arrange
 	//
@@ -264,8 +257,7 @@ void inverse_distance_test::test_using_finite_sources_only()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_eliminate_far_away_sources()
-{
+void inverse_distance_test::test_eliminate_far_away_sources() {
 	//
 	// Arrange
 	//
@@ -303,8 +295,7 @@ void inverse_distance_test::test_eliminate_far_away_sources()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_using_up_to_max_sources()
-{
+void inverse_distance_test::test_using_up_to_max_sources() {
 	//
 	// Arrange
 	//
@@ -341,8 +332,7 @@ void inverse_distance_test::test_using_up_to_max_sources()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_handling_different_sources_pr_timesteps()
-{
+void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
 	//
 	// Arrange
 	//
@@ -385,8 +375,7 @@ void inverse_distance_test::test_handling_different_sources_pr_timesteps()
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_performance()
-{
+void inverse_distance_test::test_performance() {
 	//
 	// Arrange
 	//
@@ -426,13 +415,11 @@ void inverse_distance_test::test_performance()
 }
 
 static inline
-arma::vec3 p_vec(geo_point a, geo_point b)
-{
+arma::vec3 p_vec(geo_point a, geo_point b) {
 	return arma::vec3({ b.x - a.x, b.y - a.y, b.z - a.z });
 }
 
-void inverse_distance_test::test_temperature_gradient_model()
-{
+void inverse_distance_test::test_temperature_gradient_model() {
 	using namespace arma;
 	geo_point p0(0, 0, 10); // 10 deg
 	geo_point p1(1000, 0, 110); // 9.4 deg

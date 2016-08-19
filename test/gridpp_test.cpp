@@ -4,6 +4,6 @@
 
 
 void gridpp_test::test_true() {
-	
+
 	TS_ASSERT(true);
 }

@@ -137,8 +137,7 @@ namespace shyft {
 				typedef typename S::value_type const * source_pointer;
 				typedef typename S::value_type source_t;
 
-				struct source_weight
-				{
+				struct source_weight {
 					source_weight(source_pointer source = nullptr, double weight = 0) : source(source), weight(weight) {}
 					source_pointer source;
 					double weight;
@@ -166,13 +165,11 @@ namespace shyft {
 				source_weight_list swl;
 				swl.reserve(source_count);
 				size_t max_entries = parameter.max_members;
-				for (auto destination = destination_begin; destination != destination_end; ++destination)
-				{ // for each destination, create a unique SourceWeightList
+				for (auto destination = destination_begin; destination != destination_end; ++destination) { // for each destination, create a unique SourceWeightList
 					auto destination_point = destination->mid_point();
 					swl.clear();
 					// First, just create unsorted SourceWeightList
-					for_each(source_begin, source_end, [&](const typename S::value_type& source)
-					{
+					for_each(source_begin, source_end, [&](const typename S::value_type& source) {
 						double weight = std::min(max_weight, 1.0 / M::distance_measure(destination_point,
 							source.mid_point(), parameter.distance_measure_factor));
 						if (weight >= min_weight) // max distance value tranformed to minimum weight, so we only use those near enough
@@ -183,8 +180,7 @@ namespace shyft {
 					// TODO: fix rare issue that if we get NaNs, and there are more sources in range than max_entries
 					//      then this approach using partial sort + truncate at max_entries, will not promote those truncated
 					//      even if they are in range.
-					if (swl.size() > max_entries)
-					{   // drop sorting if less than needed elements.. (maybe thats already done in partial sort ?)
+					if (swl.size() > max_entries) {   // drop sorting if less than needed elements.. (maybe thats already done in partial sort ?)
 						partial_sort(begin(swl), begin(swl) + max_entries, end(swl),
 							[](const source_weight& a, const source_weight &b) { return a.weight > b.weight; });  // partial sort the list (later: only if max_entries>usable_sources.size..)
 						swl.resize(max_entries); // get rid of left-overs
@@ -289,8 +285,7 @@ namespace shyft {
 							vec temperature_gradient;
 							if (solve(temperature_gradient, p_mat(pt[0].point, pt[1].point, pt[2].point, pt[3].point), dt_vec(pt[0].temperature, pt[1].temperature, pt[2].temperature, pt[3].temperature), solve_opts::no_approx))
 								return as_scalar(temperature_gradient(2));
-						}
-						catch (...) { // singular matrix, fallback to use second strategy
+						} catch (...) { // singular matrix, fallback to use second strategy
 						}
 					}
 					if (pt.size() > 1) {
@@ -307,8 +302,7 @@ namespace shyft {
 							return (pt[mx_i].temperature - pt[mn_i].temperature) / (mi_mx_dz);
 						}
 						return default_gradient;
-					}
-					else {
+					} else {
 						return default_gradient;
 					}
 				}
@@ -322,15 +316,14 @@ namespace shyft {
 			/** \brief temperature_gradient_scale_computer that always returns default gradient
 			* based on a number of geo-located temperature-sources, compute the temperature gradient.
 			*/
-			struct temperature_default_gradient_scale_computer
-			{
+			struct temperature_default_gradient_scale_computer {
 				static bool is_source_based() { return false; }
 				template <typename P>
 				temperature_default_gradient_scale_computer(const P& p) : default_gradient(p.default_gradient()) { ; }
 				template<typename T, typename S>
 				void add(const S &s, T tx) {}
 				double compute() const { return default_gradient; }
-				void clear() { }
+				void clear() {}
 			private:
 				double default_gradient;
 			};
@@ -384,7 +377,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
-					void clear() { }
+					void clear() {}
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -413,7 +406,7 @@ namespace shyft {
 					scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
 					void add(const S &, utctime) {}
 					double compute() const { return precipitation_gradient; }
-					void clear() { }
+					void clear() {}
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -438,7 +431,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
-					void clear() { }
+					void clear() {}
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
@@ -461,7 +454,7 @@ namespace shyft {
 					scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
-					void clear() { }
+					void clear() {}
 				};
 #endif
 				static inline double distance_measure(const G &a, const G &b, double f) {
