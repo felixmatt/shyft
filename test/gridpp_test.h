@@ -4,5 +4,5 @@
 
 class gridpp_test : public CxxTest::TestSuite {
 public:
-	void test_true();
+	void test_interpolate_sources_should_populate_grids();
 };
