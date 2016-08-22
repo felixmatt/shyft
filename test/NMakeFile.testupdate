@@ -24,4 +24,6 @@ TestHeaders = $(CoreTests)
 
 TestGenerator = python $(SHYFT_DEPENDENCIES)/cxxtest/bin/cxxtestgen
 
-runner.cpp: $(TestHeaders) NMakeFile.testupdate; $(TestGenerator) -o runner.cpp --include=test_pch.h --have-std --have-eh --runner=StdioPrinter $(TestHeaders)
+# sih not needed since we have done the job defining the macros in vs-project defines: --have-std --have-eh
+
+runner.cpp: $(TestHeaders) NMakeFile.testupdate; $(TestGenerator) -o runner.cpp --include=test_pch.h  --runner=StdioPrinter $(TestHeaders)
