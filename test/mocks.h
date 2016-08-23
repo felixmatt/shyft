@@ -19,6 +19,8 @@ namespace shyfttest {
 	void create_time_series(xpts_t& temp, xpts_t& prec, xpts_t& rel_hum, xpts_t& wind_speed, xpts_t& radiation,
 		utctime T0, utctimespan dt, size_t n_points);
 
+	xpts_t create_time_serie(utctime t0, utctimespan dt, size_t nt);
+
 	template<typename TimeT = milliseconds>
 	struct measure {
 		template<typename F, typename ...Args>
@@ -341,6 +343,37 @@ namespace shyfttest {
 			}
 		};
 
+		struct PointTimeSerieSource {
+			typedef geo_point geo_point_t; // Why is it declared here?
+
+			geo_point point;
+			xpts_t ts;
+			
+			double value(utcperiod p) const { return ts(p.start); }
+			double value(utctime t) const { return ts(t); }
+			geo_point mid_point() const { return point; }
+
+			PointTimeSerieSource(geo_point p, const xpts_t& ts) : point(p), ts(ts) {}
+
+			static vector<PointTimeSerieSource> GenerateTestSources(const TimeAxis& ta, size_t nx, size_t ny, 
+				double x, double y, double d) {
+				vector<PointTimeSerieSource> v;
+				v.reserve(nx * ny);
+
+				auto ts1 = move(create_time_serie(ta.t, ta.dt, ta.n));
+				
+				double delta = 2.0 * M_PI / ta.n;
+				for (double angle = 0; angle < 2 * M_PI; angle += delta) {
+					double xa = x + d * sin(angle);
+					double ya = y + d * cos(angle);
+					double za = (xa + ya) / 1000.0;
+					v.emplace_back(geo_point(xa, ya, za), ts1);
+				}
+				return move(v);
+			}
+
+		};
+
 		struct MCell {
 			geo_point point;
 			double v;
@@ -386,6 +419,7 @@ namespace shyfttest {
 
 		using namespace shyft::core::inverse_distance;
 		typedef temperature_model<Source, MCell, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel;
+		typedef temperature_model<PointTimeSerieSource, MCell, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel_1;
 		typedef radiation_model<Source, MCell, Parameter, geo_point> TestRadiationModel;
 		typedef precipitation_model<Source, MCell, Parameter, geo_point> TestPrecipitationModel;
 
