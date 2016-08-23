@@ -38,7 +38,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  api_test test_geo_cell_data_io" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  gridpp_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
