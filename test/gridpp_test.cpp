@@ -8,6 +8,7 @@
 using namespace shyft::core;
 using namespace shyfttest;
 using namespace shyfttest::idw;
+
 namespace shyfttest {
     using namespace shyft::core;
     struct mock_cell {
@@ -20,6 +21,7 @@ namespace shyfttest {
         }
     };
 }
+
 void gridpp_test::test_sih_workbench() {
     // from region_model::run_interpolation, we copy some typedefs to setup
     // a realistic IDW run
@@ -140,6 +142,7 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	// The main workflow for offset-bias is
 	// T_forecast_1x1 = IDW(T_arome_2.5x2.5, 1x1, idw-parameters) + T_bias
 	// Do the same correction for scaled-bias variables
+	// Test with fixed_dt timeaxis in Source and compare performance
 
 	utctime t0 = calendar().time(YMDhms(2000, 1, 1));
 	utctimespan dt = 3600L;
@@ -153,24 +156,25 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	const double s0 = -500;
 	const double dss = 2500;
 	Parameter p(2 * dss, 4);
+	auto pts = move(create_time_serie(t0, dt, nt));
+	auto cts = move(create_const_time_serie(ta, 1));
 
-	//auto Tsour(move(Source::GenerateTestSourceGrid(ta, nsx, nsy, s0, s0, dss)));
-	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(ta, nsx, nsy, s0, s0, dss)));
-	auto Tdest(move(MCell::GenerateTestGrid(ngx, ngy)));
-	auto Tbias(move(MCell::GenerateTestGrid(ngx, ngy)));
+	// Tsour = vector<Source(geopoint)>(ts)
+	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(nsx, nsy, s0, s0, dss)));
+	for_each(Tsour.begin(), Tsour.end(), [&](auto& s) { s.SetTs(cts); });
+	
+	// Tdest = vector<Cell(grid)>() => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
+	auto Tdest(move(PointTimeSerieCell::GenerateTestGrids(ngx, ngy)));
+	run_interpolation<TestTemperatureModel_1>(Tsour.begin(), Tsour.end(), Tdest.begin(), Tdest.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
 
-	// Tdest = IDW(Tsour, Tdest) // TODO: test with fixed_dt
-	run_interpolation<TestTemperatureModel_1>(begin(Tsour), end(Tsour), begin(Tdest), end(Tdest), idw_timeaxis<TimeAxis>(ta),
-		p, [](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
+	// Tbias = vector<MCell(grid)>(bias, fixed_dt)
+	auto Tbias(move(PointTimeSerieCell::GenerateTestGrids(ngx, ngy)));
+	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(cts); });
 
-	//for_each(begin(Tdest), end(Tdest), [](auto d) { cout << '\n' << d.v; });
-	//cout << '\n';
-
-	// Tdest += Tbias
-	for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias) {
-		(*itdest).v += (*itbias).v;
-	}
-
-	//for_each(begin(Tdest), end(Tdest), [](auto d) { cout << '\n' << d.v; });
-	//cout << '\n';
+	// Tdest(ts) += Tbias(ts)
+	// for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
+	//	(*itdest).ts += (*itbias).ts;
+	
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& c) {return c.TsAvg() == 0; }), ngx * ngy);
 }
