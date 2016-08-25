@@ -348,25 +348,26 @@ namespace shyfttest {
 		{
 			// Interface needed for run_interpolation<>
 			typedef geo_point geo_point_t;
-			double value(utcperiod p) const { return pts(p.start); }
-			double value(utctime t) const { return pts(t); }
 			geo_point mid_point() const { return gp; }
+			double value(utcperiod p) const { return pts(p.start); }
+			double value(size_t i) const { return pts.value(i); }
 
 			geo_point gp;
 			point_ts<timeaxis> pts;
 
-			PointTimeSerieSource(geo_point gp) : gp(gp) {}
+			PointTimeSerieSource(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
-			static vector<PointTimeSerieSource> GenerateTestSources(size_t nx, size_t ny, double x, double y, double d) 
+			static vector<PointTimeSerieSource> GenerateTestSources(const timeaxis& ta, size_t nx, size_t ny, double x, double y, double d) 
 			{
 				vector<PointTimeSerieSource> v;
 				v.reserve(nx * ny);
+				auto pts = point_ts<timeaxis>(ta, 0);
 				double delta = 2.0 * M_PI / (nx * ny);
 				for (double angle = 0; angle < 2 * M_PI; angle += delta) {
 					double xa = x + d * sin(angle);
 					double ya = y + d * cos(angle);
 					double za = (xa + ya) / 1000.0;
-					v.emplace_back(geo_point(xa, ya, za));
+					v.emplace_back(geo_point(xa, ya, za), pts);
 				}
 				return move(v);
 			}
@@ -406,25 +407,25 @@ namespace shyfttest {
 		struct PointTimeSerieCell 
 		{
 			geo_point mid_point() const { return gp; }
-			double slope_factor() const { return 1.0; }
-			void set_value(size_t t, double v) {}
+			double value(size_t i) { return pts.value(i); }
+			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
 			point_ts<timeaxis> pts;
 
-			PointTimeSerieCell(geo_point gp) : gp(gp) {}
+			PointTimeSerieCell(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
-			double TsAvg() { return 0; }
 
-			static vector<PointTimeSerieCell> GenerateTestGrids(size_t nx, size_t ny) {
+			static vector<PointTimeSerieCell> GenerateTestGrids(const timeaxis& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieCell> v;
 				v.reserve(nx * ny);
+				auto pts = point_ts<timeaxis>(ta, 0);
 				const double z_min = 100.0;
 				const double z_max = 800.0;
 				const double dz = (z_max - z_min) / (nx + ny);
 				for (size_t x = 0; x < nx; ++x)
 					for (size_t y = 0; y < ny; ++y)
-						v.emplace_back(geo_point(500.0 + x * 1000, 500.0 + y * 1000, z_min + (x + y) * dz));
+						v.emplace_back(geo_point(500.0 + x * 1000, 500.0 + y * 1000, z_min + (x + y) * dz), pts);
 				return move(v);
 			}
 		};
@@ -433,7 +434,7 @@ namespace shyfttest {
 			double max_distance;
 			size_t max_members;
 
-			Parameter(double max_distance, size_t max_neigbours) : max_distance(max_distance), max_members(max_neigbours) {}
+			Parameter(double max_distance = 200000, size_t max_neigbours = 20) : max_distance(max_distance), max_members(max_neigbours) {}
 
 			bool gradient_by_equation = false; // just use min/max for existing tests (bw compatible)
 			double default_gradient() const { return -0.006; }  // C/m decrease 0.6 degC/100m
