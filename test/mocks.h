@@ -348,10 +348,9 @@ namespace shyfttest {
 		{
 			// Interface needed for run_interpolation<>
 			typedef geo_point geo_point_t;
-			double value(utcperiod p) const { return pts(p.start); }
-			double value(utctime t) const { return pts(t); }
-			double value(size_t i) { return pts.value(i); }
 			geo_point mid_point() const { return gp; }
+			double value(utcperiod p) const { return pts(p.start); }
+			double value(size_t i) const { return pts.value(i); }
 
 			geo_point gp;
 			point_ts<timeaxis> pts;
@@ -408,9 +407,8 @@ namespace shyfttest {
 		struct PointTimeSerieCell 
 		{
 			geo_point mid_point() const { return gp; }
-			double slope_factor() const { return 1.0; }
-			void set_value(size_t i, double v) { pts.set(i, v); }
 			double value(size_t i) { return pts.value(i); }
+			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
 			point_ts<timeaxis> pts;

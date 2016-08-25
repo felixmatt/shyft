@@ -171,15 +171,15 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
 	
 	// Expected IDW result
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) == 1; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) > 0; }), ngx * ngy);
 
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
 	auto Tbias(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
 	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(cts); });
 
 	// Tdest(ts) += Tbias(ts)
-	// for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
-	//	(*itdest).ts += (*itbias).ts;
+	for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
+		(*itdest).pts.add((*itbias).pts);
 	
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) == 2; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) > 1; }), ngx * ngy);
 }
