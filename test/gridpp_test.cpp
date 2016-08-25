@@ -53,15 +53,15 @@ void gridpp_test::test_sih_workbench() {
     for(size_t x=0;x<n2_5;++x) {
         for(size_t y=0;y<n2_5;++y) { // construct points in a grid, and corresponding ts., summer at sea-level, decreasing to 10.deg at 1000 masl
             arome_2_5km_grid.emplace_back(
-                geo_point(x*2500,y*2500,1000.0*(x+y)/(n2_5*n2_5)),// the arome grid midpoint location
-                ats_t(ta,20.0 - 10.0*(x+y)/(n2_5*n2_5)) // the fake ts-values at this location, just a constant(t)
+                geo_point(x*2500,y*2500,1000.0*(x+y)/(n2_5+n2_5)),// the arome grid midpoint location
+                ats_t(ta,20.0 - 10.0*(x+y)/(n2_5+n2_5)) // the fake ts-values at this location, just a constant(t)
             );
         }
     }
     vector<mock_cell> cell_1km_grid;// ref. algorithm email!
     for(size_t x=0;x<n1;++x)
         for(size_t y=0;y<n1;++y)
-            cell_1km_grid.emplace_back(geo_point(x*1000,y*1000,1000.0*(x+y)/(n1*n1)));
+            cell_1km_grid.emplace_back(geo_point(x*1000,y*1000,1000.0*(x+y)/(n1+n1)));
 
     //  generate this 1km grid nx1 x ny1
     for(auto &c:cell_1km_grid) /// prep. the cell for receiving interpolated ts.
@@ -89,7 +89,7 @@ void gridpp_test::test_sih_workbench() {
         for(size_t y=0;y<n1;++y) {
             geo_located_bias_ts gbts;
             gbts.ts=pts_t(ta,-31.0);// all bias -30.0, so after the end, all result should be less than -10
-            gbts.location= geo_point(x*1000,y*1000,1000.0*(x+y)/(n1*n1));
+            gbts.location= geo_point(x*1000,y*1000,1000.0*(x+y)/(n1+n1));
             bias_1km_grid.emplace_back(gbts);
         }
 
@@ -162,7 +162,7 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	// Tsour = vector<Source(geopoint)>(ts)
 	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(nsx, nsy, s0, s0, dss)));
 	for_each(Tsour.begin(), Tsour.end(), [&](auto& s) { s.SetTs(cts); });
-	
+
 	// Tdest = vector<Cell(grid)>() => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
 	auto Tdest(move(PointTimeSerieCell::GenerateTestGrids(ngx, ngy)));
 	run_interpolation<TestTemperatureModel_1>(Tsour.begin(), Tsour.end(), Tdest.begin(), Tdest.end(), idw_timeaxis<TimeAxis>(ta),
@@ -175,6 +175,6 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	// Tdest(ts) += Tbias(ts)
 	// for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
 	//	(*itdest).ts += (*itbias).ts;
-	
+
 	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& c) {return c.TsAvg() == 0; }), ngx * ngy);
 }
