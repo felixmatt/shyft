@@ -155,31 +155,33 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	const int ngy = 3 * ny;
 	const double s0 = -500;
 	const double dist = 2500;
-	Parameter p(2 * dist, 4);
-	auto cts = point_ts<timeaxis>(ta, 1);
+	const double temp = 15;
+	auto cts = point_ts<timeaxis>(ta, temp);
 
 	// Tsour = vector<Source(geopoint)>(ts<> = 1)
 	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(ta, nx, ny, s0, s0, dist)));
 	for_each(Tsour.begin(), Tsour.end(), [&](auto& a) { a.SetTs(cts); });
 	
 	// Sanity check
-	TS_ASSERT_EQUALS(count_if(Tsour.begin(), Tsour.end(), [](auto& a) {return a.value(0) == 1; }), nx * ny);
+	TS_ASSERT_EQUALS(count_if(Tsour.begin(), Tsour.end(), [=](auto& a) {return a.value(0) == temp; }), nx * ny);
 
 	// Tdest = vector<Cell(grid)>(ts<> = 0) => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
 	auto Tdest(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
+	Parameter p;
 	run_interpolation<TestTemperatureModel_1>(Tsour.begin(), Tsour.end(), Tdest.begin(), Tdest.end(), idw_timeaxis<TimeAxis>(ta),
 		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
 	
 	// Expected IDW result
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) > 0; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return a.value(0) > 0; }), ngx * ngy);
 
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
 	auto Tbias(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
-	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(cts); });
+	auto bias_ts = point_ts<timeaxis>(ta, 5);
+	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(bias_ts); });
 
 	// Tdest(ts) += Tbias(ts)
 	for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
 		(*itdest).pts.add((*itbias).pts);
 	
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [](auto& a) {return a.value(0) > 1; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return a.value(0) > temp; }), ngx * ngy);
 }

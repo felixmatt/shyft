@@ -434,7 +434,7 @@ namespace shyfttest {
 			double max_distance;
 			size_t max_members;
 
-			Parameter(double max_distance, size_t max_neigbours) : max_distance(max_distance), max_members(max_neigbours) {}
+			Parameter(double max_distance = 200000, size_t max_neigbours = 20) : max_distance(max_distance), max_members(max_neigbours) {}
 
 			bool gradient_by_equation = false; // just use min/max for existing tests (bw compatible)
 			double default_gradient() const { return -0.006; }  // C/m decrease 0.6 degC/100m
