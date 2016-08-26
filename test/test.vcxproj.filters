@@ -67,6 +67,9 @@
     <ClInclude Include="test_pch.h">
       <Filter>compiler_and_testsupport</Filter>
     </ClInclude>
+    <ClInclude Include="gridpp_test.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -137,6 +140,9 @@
     </ClCompile>
     <ClCompile Include="test_pch.cpp">
       <Filter>compiler_and_testsupport</Filter>
+    </ClCompile>
+    <ClCompile Include="gridpp_test.cpp">
+      <Filter>interpolation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

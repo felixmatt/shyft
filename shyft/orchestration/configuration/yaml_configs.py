@@ -323,24 +323,25 @@ class YAMLForecastConfig(object):
 
         self._config_section = config_section
 
-        self.sim_config = YAMLSimConfig(self._config_file, self._config_section)
-        if forecast_time is None:
-            self.forecast_time = self.sim_config.time_axis.total_period().end
-        else:
-            self.forecast_time = forecast_time
-            self.sim_config.start_time = self.forecast_time - self.sim_config.number_of_steps * self.sim_config.run_time_step
-            self.sim_config.time_axis = api.Timeaxis(self.sim_config.start_time,
-                                                     self.sim_config.run_time_step, self.sim_config.number_of_steps)
-
-        #self.region_config = self.sim_config.region_config
-
         self.forecast_names = forecast_names
 
         # Load main configuration file
         with open(self._config_file,encoding='utf8') as cfg:
-            configs = yaml.load(cfg)[self._config_section]['forecast_runs']
+            cfg_m = yaml.load(cfg)[self._config_section]
+        configs = cfg_m['forecast_runs']
         for name in self.forecast_names:
             assert name in configs
+
+
+        start, n, dt = utctime_from_datetime(cfg_m['start_datetime']), cfg_m['number_of_steps'], cfg_m['run_time_step']
+        if forecast_time is None:
+            self.forecast_time = start + n * dt
+        else:
+            self.forecast_time = forecast_time
+            t_override = {'start_datetime': datetime.utcfromtimestamp(self.forecast_time - n *dt)}
+
+        sim_config_overrides = {'config': t_override}
+        self.sim_config = YAMLSimConfig(self._config_file, self._config_section, overrides=sim_config_overrides)
 
         fc0 = self.forecast_names[0]
         configs[fc0].update({'start_datetime': datetime.utcfromtimestamp(self.forecast_time)})

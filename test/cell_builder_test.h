@@ -17,11 +17,10 @@
  */
 
 class cell_builder_test : public CxxTest::TestSuite {
-  public:
-    void test_read_geo_region_data_from_files(void);
-    void test_io_performance(void);
-    void test_read_geo_point_map(void);
-    void test_read_geo_located_ts(void);
-    void test_read_and_run_region_model(void);
-
+public:
+	void test_read_geo_region_data_from_files(void);
+	void test_io_performance(void);
+	void test_read_geo_point_map(void);
+	void test_read_geo_located_ts(void);
+	void test_read_and_run_region_model(void);
 };

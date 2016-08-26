@@ -89,6 +89,8 @@
 		<Unit filename="gamma_snow_test.h" />
 		<Unit filename="gaussian_random_field_test.cpp" />
 		<Unit filename="gaussian_random_field_test.h" />
+		<Unit filename="gridpp_test.cpp" />
+		<Unit filename="gridpp_test.h" />
 		<Unit filename="hbv_snow_test.cpp" />
 		<Unit filename="hbv_snow_test.h" />
 		<Unit filename="inverse_distance_test.cpp" />

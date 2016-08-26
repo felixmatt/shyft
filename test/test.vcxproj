@@ -42,13 +42,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(SHYFT_DEPENDENCIES)\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SHYFT_DEPENDENCIES)\blaslapack</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(SHYFT_DEPENDENCIES)\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SolutionDir)..\shyft-data\blaslapack</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SHYFT_DEPENDENCIES)\blaslapack</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
@@ -117,6 +117,7 @@
     <ClInclude Include="calibration_test.h" />
     <ClInclude Include="cell_builder_test.h" />
     <ClInclude Include="api_test.h" />
+    <ClInclude Include="gridpp_test.h" />
     <ClInclude Include="pt_ss_k_test.h" />
     <ClInclude Include="sceua_test.h" />
     <ClInclude Include="test_pch.h" />
@@ -150,6 +151,7 @@
     </ClCompile>
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
+    <ClCompile Include="gridpp_test.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
     <ClCompile Include="sceua_test.cpp" />
     <ClCompile Include="test_pch.cpp">

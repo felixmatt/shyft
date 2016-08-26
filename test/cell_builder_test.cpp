@@ -128,8 +128,7 @@ void cell_builder_test::test_read_geo_located_ts() {
 		auto p = tmp.ts.get(i);
 		if (t == no_utctime) {
 			t = p.t;
-		}
-		else {
+		} else {
 			TS_ASSERT(p.t > t);
 		}
 		TS_ASSERT(p.v< 40.0 && p.v > -40.0);
@@ -279,8 +278,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	for (size_t i = 0; i < n_params; ++i) {
 		if (calibrate_parameter[i]) { // put the parameter outside optimal value
 			x[i] = 0.9*(lower[i] + upper[i])*0.5;//lower[i]< upper[i] ? std::uniform_real_distribution<double>(lower[i], upper[i])(rnd) : std::uniform_real_distribution<double>(upper[i], lower[i])(rnd);
-		}
-		else {
+		} else {
 			x[i] = (lower[i] + upper[i])*0.5;
 		}
 	}

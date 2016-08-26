@@ -11,6 +11,8 @@ namespace shyft {
 			static boost::filesystem::path test_root_dir() {
 				auto cwd = boost::filesystem::current_path();
 				boost::filesystem::path test_path = cwd / ".." / ".." / ".." / "shyft-data"; // cwd has to be <shyftroot>/bin/Debug|Release
+				if (auto data_dir = getenv("SHYFTDATA"))
+					test_path = data_dir;
 				test_path.normalize();
 				return test_path;
 			}
