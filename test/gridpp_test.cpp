@@ -20,6 +20,9 @@ namespace shyfttest {
             ts=pts_t(ta,0.0);/// initialize and prepare cell before interpolation step, notice that the lambda to idw uses ts.set(ix,value)
         }
     };
+
+#define TS0V_PRINT(tsv) for_each(tsv.begin(), tsv.end(), [](auto& a) { cout << '\n' << a.value(0); })
+#define TS0_EQUAL(ts, v) fabs(ts.value(0) - (v)) < 1e-9
 }
 
 void gridpp_test::test_sih_workbench() {
@@ -31,8 +34,8 @@ void gridpp_test::test_sih_workbench() {
     using namespace std;
     namespace idw = shyft::core::inverse_distance;
 
-    using ats_t=shyft::api::apoint_ts; // potential break-point time-series, irregular intervals
-    using temperature_source= shyft::api::TemperatureSource;
+    using ats_t = shyft::api::apoint_ts; // potential break-point time-series, irregular intervals
+    using temperature_source = shyft::api::TemperatureSource;
     typedef shyft::timeseries::average_accessor<ats_t, timeaxis_t> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
     typedef idw_compliant_geo_point_ts< temperature_source, atsa_t, timeaxis_t> idw_compliant_gts_t;// gts =geo located ts , and idw_compliant to!
 	typedef idw::temperature_model<idw_compliant_gts_t, mock_cell , idw::temperature_parameter, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t; // how to compensate for the height at different locations using temp.gradient
@@ -154,13 +157,11 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	const int ny = 2;
 	const int ngx = 3 * nx;
 	const int ngy = 3 * ny;
-	const double s0 = -500;
-	const double dist = 2500;
 	const double temp = 15;
 	auto cts = point_ts<timeaxis>(ta, temp);
 
 	// Tsour = vector<Source(geopoint)>(ts<> = 1)
-	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(ta, nx, ny, s0, s0, dist)));
+	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(ta, nx, ny)));
 	for_each(Tsour.begin(), Tsour.end(), [&](auto& a) { a.SetTs(cts); });
 
 	// Sanity check
@@ -173,16 +174,17 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
 
 	// Expected IDW result
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return a.value(0) > 0; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return TS0_EQUAL(a, temp); }), ngx * ngy);
 
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
 	auto Tbias(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
-	auto bias_ts = point_ts<timeaxis>(ta, 5);
+	const double bias = 1;
+	auto bias_ts = point_ts<timeaxis>(ta, bias);
 	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(bias_ts); });
 
 	// Tdest(ts) += Tbias(ts)
 	for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
 		(*itdest).pts.add((*itbias).pts);
 
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return a.value(0) > temp; }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return TS0_EQUAL(a, temp + bias); }), ngx * ngy);
 }
