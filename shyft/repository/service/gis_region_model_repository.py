@@ -524,7 +524,8 @@ class RegionModelConfig(object):
     """
 
     def __init__(self, name, region_model_type, region_parameters, grid_specification,
-                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={}):
+                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={},
+                 server_name="oslwvagi001p", server_name_preprod="oslwvagi001q"):
         """
         Parameters
         ----------
@@ -554,6 +555,8 @@ class RegionModelConfig(object):
         self.grid_specification = grid_specification
         self.catchment_regulated_type = catchment_regulated_type
         self.service_id_field_name = service_id_field_name
+        self.server_name = server_name
+        self.server_name_preprod = server_name_preprod
         self.id_list = id_list
         self.catchment_parameters = catchment_parameters
 
@@ -659,6 +662,8 @@ class GisRegionModelRepository(RegionModelRepository):
     """
     cell_data_cache = CellDataCache(shyftdata_dir, 'pickle')
     #cache_file_type = 'pickle'
+    server_name = "oslwvagi001p"
+    server_name_preprod = "oslwvagi001q"
 
     def __init__(self, region_id_config, use_cache=False, cache_folder=None, cache_file_type=None):
         """
@@ -672,6 +677,10 @@ class GisRegionModelRepository(RegionModelRepository):
             self.cell_data_cache.folder = cache_folder
         if cache_file_type is not None:
             self.cell_data_cache.file_type = cache_file_type
+        if self._region_id_config.server_name is not None:
+            self.server_name = self._region_id_config.server_name
+        if self._region_id_config.server_name_preprod is not None:
+            self.server_name_preprod = self._region_id_config.server_name_preprod
 
     def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
@@ -683,7 +692,8 @@ class GisRegionModelRepository(RegionModelRepository):
     def get_cell_data_from_gis(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
         print('Fetching gis_data from online GIS database...')
         cell_info_service = CellDataFetcher(catchment_regulated_type, service_id_field_name,
-                                            grid_specification, id_list)
+                                            grid_specification, id_list, server_name= cls.server_name,
+                                            server_name_preprod = cls.server_name_preprod)
 
         result = cell_info_service.fetch()  # clumsy result, we can adjust this.. (I tried to adjust it below)
         cell_data = result['cell_data']  # this is the part we need here
@@ -796,8 +806,10 @@ class GisRegionModelRepository(RegionModelRepository):
         return region_model
 
 
-def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad):
-    catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id)
+def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad,
+                                  server_name="oslwvagi001p", server_name_preprod="oslwvagi001q"):
+    catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id,
+                                         server_name=server_name, server_name_preprod=server_name_preprod)
     catch = catchment_fetcher.fetch(id_list=catch_ids)
     box = np.array(MultiPolygon(polygons=list(catch.values())).bounds)  # [xmin, ymin, xmax, ymax]
     box_ = box / dxy
