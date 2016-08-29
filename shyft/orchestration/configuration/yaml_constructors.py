@@ -19,7 +19,8 @@ def geo_ts_repo_constructor(cls, params): # ,region_config):
         #epsg = region_config.domain()["EPSG"]
         epsg = params['epsg']
         met_stations = [MetStationConfig(**s) for s in params['stations_met']]
-        gis_location_repository=GisLocationService() # this provides the gis locations for my stations
+        gis_location_repository=GisLocationService(server_name=params.get('server_name', None),
+                              server_name_preprod=params.get('server_name_preprod', None)) # this provides the gis locations for my stations
         smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
         # return GeoTsRepository(epsg_id=epsg, geo_location_repository=gis_location_repository,
         #                        ts_repository=smg_ts_repository, met_station_list=met_stations,
@@ -104,7 +105,9 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         cfg_list=[
             RegionModelConfig(region_model_id, region_model_type, region_parameter, grid_specification,
                               repo_params['catchment_regulated_type'], repo_params['service_id_field_name'],
-                              region_config.catchments(), catchment_parameters=catchment_parameters),
+                              region_config.catchments(), catchment_parameters=catchment_parameters,
+                              server_name=repo_params.get('server_name', None),
+                              server_name_preprod=repo_params.get('server_name_preprod', None)),
         ]
         rm_cfg_dict = {x.name: x for x in cfg_list}
         # return GisRegionModelRepository(rm_cfg_dict)

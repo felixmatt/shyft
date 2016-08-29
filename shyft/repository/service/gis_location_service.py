@@ -15,10 +15,14 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name="oslwvagi001p", server_name_preprod = "oslwvagi001q", server_port="6080", service_index=5 ):
+    def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5 ):
         super(GeoLocationRepository, self).__init__()
-        self.server_name=server_name
-        self.server_name_preprod=server_name_preprod
+        self.server_name="oslwvagi001p"
+        self.server_name_preprod="oslwvagi001q"
+        if server_name is not None:
+            self.server_name = server_name
+        if server_name_preprod is not None:
+            self.server_name_preprod = server_name_preprod
         self.server_port=server_port
         self.service_index=service_index
 
