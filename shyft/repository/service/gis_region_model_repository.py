@@ -162,18 +162,22 @@ class BaseGisDataFetcher(object):
     def _get_response(self, url_, msg, **kwargs):
         response = requests.get(url_, **kwargs)
         if response.status_code != 200:
-            raise GisDataFetchError(msg)
+            raise GisDataFetchError('Could not fetch {} from gis server {]'.format(msg, self.server_name))
         data = response.json()
         if "features" not in data:
             raise GisDataFetchError(
-                "GeoJson data missing mandatory field, please check your gis service or your query.")
+                "GeoJson data for {} data fetching from server {} missing mandatory field, please check your gis service or your query.".format(
+                    msg, self.server_name)
+                )
         return data
 
     def get_response(self, msg, **kwargs):
         try:
             data = self._get_response(self.url, msg, **kwargs)
         except Exception as e:
-            print(str(e) + ' Switching to PREPROD server {}'.format(self.server_name_preprod))
+            print('Error in fetching GIS data: {}'.format(msg))
+            print('Error description: {}'.format(str(e)))
+            print('Switching from PROD server {} to PREPROD server {}'.format(self.server_name, self.server_name_preprod))
             url_ = self.url.replace(self.server_name, self.server_name_preprod)
             self.adj_proxy_setting(self.server_name_preprod)
             data = self._get_response(url_, msg, **kwargs)
@@ -235,7 +239,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
         # if response.status_code != 200:
         #     raise GisDataFetchError("Could not fetch land type data from gis server.")
         # data = response.json()
-        data = self.get_response("Could not fetch land type data from gis server.",params=q)
+        data = self.get_response("Land type",params=q)
         polygons = []
         if 'error' in data.keys():
             raise GisDataFetchError("Failed in GIS service:" + data['error']['message'])
@@ -276,7 +280,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
         # if "features" not in data:
         #     raise GisDataFetchError(
         #         "GeoJson data missing mandatory field, please check your gis service or your query.")
-        data = self.get_response("Could not fetch reservoir data from gis server.", params=q)
+        data = self.get_response("Reservoir", params=q)
         points = []
         for feature in data["features"]:
             x = feature["geometry"]["x"]
@@ -328,7 +332,7 @@ class CatchmentFetcher(BaseGisDataFetcher):
         # if response.status_code != 200:
         #     raise GisDataFetchError("Could not fetch catchment index data from gis server.")
         # data = response.json()
-        data = self.get_response("Could not fetch catchment index data from gis server.", params=q)
+        data = self.get_response("Catchment index", params=q)
         # from IPython.core.debugger import Tracer; Tracer()()
         polygons = {}
         for feature in data['features']:
@@ -499,7 +503,10 @@ class DTMFetcher(object):
     def fetch(self):
         try:
             data = self._fetch()
-        except:
+        except Exception as e:
+            print('Error in fetching GIS data: {}'.format('DTM'))
+            print('Error description: {}'.format(str(e)))
+            print('Switching from PROD server {} to PREPROD server {}'.format(self.server_name, self.server_name_preprod))
             url_ = self.url.replace(self.server_name, self.server_name_preprod)
             data = self._fetch(url_)
         return data
@@ -524,8 +531,7 @@ class RegionModelConfig(object):
     """
 
     def __init__(self, name, region_model_type, region_parameters, grid_specification,
-                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={},
-                 server_name="oslwvagi001p", server_name_preprod="oslwvagi001q"):
+                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={}):
         """
         Parameters
         ----------
@@ -555,8 +561,6 @@ class RegionModelConfig(object):
         self.grid_specification = grid_specification
         self.catchment_regulated_type = catchment_regulated_type
         self.service_id_field_name = service_id_field_name
-        self.server_name = server_name
-        self.server_name_preprod = server_name_preprod
         self.id_list = id_list
         self.catchment_parameters = catchment_parameters
 
@@ -677,10 +681,6 @@ class GisRegionModelRepository(RegionModelRepository):
             self.cell_data_cache.folder = cache_folder
         if cache_file_type is not None:
             self.cell_data_cache.file_type = cache_file_type
-        if self._region_id_config.server_name is not None:
-            self.server_name = self._region_id_config.server_name
-        if self._region_id_config.server_name_preprod is not None:
-            self.server_name_preprod = self._region_id_config.server_name_preprod
 
     def _get_cell_data_info(self, region_id, catchments):
         # alternative parse out from region_id, like
@@ -807,7 +807,11 @@ class GisRegionModelRepository(RegionModelRepository):
 
 
 def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad,
-                                  server_name="oslwvagi001p", server_name_preprod="oslwvagi001q"):
+                                  server_name=None, server_name_preprod=None):
+    if server_name is None:
+        server_name = "oslwvagi001p"
+    if server_name_preprod is None:
+        server_name_preprod = "oslwvagi001q"
     catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id,
                                          server_name=server_name, server_name_preprod=server_name_preprod)
     catch = catchment_fetcher.fetch(id_list=catch_ids)

@@ -67,7 +67,10 @@ class GisLocationService(GeoLocationRepository):
         station_info={}
         try:
             data = self._get_response(base_fetcher.url, params=q)
-        except:
+        except Exception as e:
+            print('Error in fetching GIS data: {}'.format('Station locations'))
+            print('Error description: {}'.format(str(e)))
+            print('Switching from PROD server {} to PREPROD server {}'.format(self.server_name, self.server_name_preprod))
             data = self._get_response(base_fetcher.url.replace(base_fetcher.server_name, base_fetcher.server_name_preprod), params=q)
         # if response.status_code == 200:
         for feature in data['features']:
