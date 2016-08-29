@@ -19,7 +19,8 @@ def geo_ts_repo_constructor(cls, params): # ,region_config):
         #epsg = region_config.domain()["EPSG"]
         epsg = params['epsg']
         met_stations = [MetStationConfig(**s) for s in params['stations_met']]
-        gis_location_repository=GisLocationService() # this provides the gis locations for my stations
+        gis_location_repository=GisLocationService(server_name=params.get('server_name', None),
+                              server_name_preprod=params.get('server_name_preprod', None)) # this provides the gis locations for my stations
         smg_ts_repository = SmGTsRepository(PROD,FC_PROD) # this provide the read function for my time-series
         # return GeoTsRepository(epsg_id=epsg, geo_location_repository=gis_location_repository,
         #                        ts_repository=smg_ts_repository, met_station_list=met_stations,
@@ -40,6 +41,8 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         from six import iteritems # This replaces dictionary.iteritems() on Python 2 and dictionary.items() on Python 3
 
         repo_params = region_config.repository()['params']
+        server_name = repo_params.get('server_name')
+        server_name_preprod = repo_params.get('server_name_preprod')
         use_cache = repo_params.get('use_cache', False)
         cache_folder = repo_params.get('cache_folder', None)
         cache_file_type = repo_params.get('cache_file_type', None)
@@ -56,7 +59,8 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
                                   "if 'use_cache' or 'get_bbox_from_catchment_boundary' is enabled".format(dx, dy))
         if get_bbox_from_catchment_boundary:
             grid_specification = get_grid_spec_from_catch_poly(c_ids, repo_params['catchment_regulated_type'],
-                                                               repo_params['service_id_field_name'], epsg_id, dx, pad)
+                                                               repo_params['service_id_field_name'], epsg_id, dx, pad,
+                                                               server_name=server_name, server_name_preprod=server_name_preprod)
         else:
             grid_specification = GridSpecification(epsg_id, d['lower_left_x'], d['lower_left_y'],
                                                    dx, dy, d['nx'], d['ny'])
@@ -104,10 +108,15 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         cfg_list=[
             RegionModelConfig(region_model_id, region_model_type, region_parameter, grid_specification,
                               repo_params['catchment_regulated_type'], repo_params['service_id_field_name'],
-                              region_config.catchments(), catchment_parameters=catchment_parameters),
+                              region_config.catchments(), catchment_parameters=catchment_parameters,
+                              ),
         ]
         rm_cfg_dict = {x.name: x for x in cfg_list}
         # return GisRegionModelRepository(rm_cfg_dict)
+        if server_name is not None:
+            cls.server_name = repo_params.get('server_name')
+        if server_name_preprod is not None:
+            cls.server_name_preprod = repo_params.get('server_name_preprod')
         return cls(rm_cfg_dict, use_cache=use_cache, cache_folder=cache_folder, cache_file_type=cache_file_type)
     else:
         return cls(region_config, model_config)
