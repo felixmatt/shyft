@@ -188,3 +188,18 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 
 	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return TS0_EQUAL(a, temp + bias); }), ngx * ngy);
 }
+
+void gridpp_test::test_calc_bias_should_match_observations() {
+	// Make a 10x10 observation set having only 3 valid sources
+	// IDW transform to 25x25 grid
+	// Call it forecast grid 
+	// Apply bias of -2 degC 
+	// Change Z +- 50 m at closest grid points from observations
+	// IDW transform to 10x10 forecast set
+	// Calculate bias set on valid observations
+	// IDW transform bias set to 25x25 grid
+	// Add bias grid to forecast grid
+	// IDW transform to 10x10 corrected set
+	// Compare to 10x10 observation set => differences should be null
+
+}
