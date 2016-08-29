@@ -21,6 +21,16 @@ class GisLocationService(GeoLocationRepository):
         self.server_port=server_port
         self.service_index=service_index
 
+    def _get_response(self, url, **kwargs):
+        response = requests.get(url, **kwargs)
+        if response.status_code != 200:
+            raise StationDataError("Could not get data from GIS service!")
+        data = response.json()
+        if "features" not in data:
+            raise StationDataError(
+                "GeoJson data missing mandatory field, please check your gis service or your query.")
+        return data
+
     def build_query(self,base_fetcher,station_ids,epsg_id):
         q = base_fetcher.get_query()
         if station_ids is None:
@@ -45,22 +55,26 @@ class GisLocationService(GeoLocationRepository):
         """
         base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=None, server_name=self.server_name, server_port=self.server_port, service_index=self.service_index)
         q = self.build_query(base_fetcher,location_id_list,epsg_id)
-        response = requests.get(base_fetcher.url, params=q)
+        # response = requests.get(base_fetcher.url, params=q)
         locations = {}
         station_info={}
-        if response.status_code == 200:
-            for feature in response.json()['features']:
-                index = feature["attributes"]["OBJECTID"]
-                x = feature["geometry"]["x"]
-                y = feature["geometry"]["y"]
-                z = feature["attributes"]["MOH"]
-                name = unicodedata.normalize('NFKC', feature["attributes"]["ST_NAVN"])
-                name = str(str(name).encode("ascii", errors="replace"))
+        try:
+            data = self._get_response(base_fetcher.url, params=q)
+        except:
+            data = self._get_response(base_fetcher.url.replace(self.server_name, base_fetcher.server_name_preprod), params=q)
+        # if response.status_code == 200:
+        for feature in data['features']:
+            index = feature["attributes"]["OBJECTID"]
+            x = feature["geometry"]["x"]
+            y = feature["geometry"]["y"]
+            z = feature["attributes"]["MOH"]
+            name = unicodedata.normalize('NFKC', feature["attributes"]["ST_NAVN"])
+            name = str(str(name).encode("ascii", errors="replace"))
 
-                locations[index] = (x,y,z)
-                station_info[index]= {"owner": feature["attributes"]["EIER"],"name": name}
-        else:
-            raise StationDataError("Could not get data from GIS service!")
+            locations[index] = (x,y,z)
+            station_info[index]= {"owner": feature["attributes"]["EIER"],"name": name}
+        # else:
+        #     raise StationDataError("Could not get data from GIS service!")
         return locations,station_info
 
 
