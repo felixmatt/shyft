@@ -116,10 +116,7 @@ class BaseGisDataFetcher(object):
         self.service_index = service_index
         self.geometry = geometry
         self.epsg_id = epsg_id
-        if server_name.endswith('p'):
-            self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
-        else:
-            self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
+        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
         self.adj_proxy_setting(self.server_name)
 
         self.query = dict(text="",
