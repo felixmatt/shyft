@@ -452,7 +452,7 @@ class DTMFetcher(object):
         self.server_name = server_name  # PROD
         self.server_name_preprod = server_name_preprod  # PREPROD
         self.server_port = "6080"
-        self.url_template = "http://{}:{}/arcgis/rest/services/Enki/Norway_DTM_1000m/ImageServer/exportImage"  # PROD
+        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/Norway_DTM_1000m/ImageServer/exportImage"  # PROD
 
         self.query = dict(
             bboxSR=self.grid_specification.epsg(),
