@@ -109,9 +109,10 @@ class BaseGisDataFetcher(object):
 
     """
 
-    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi001p", server_port="6080", service_index=None):
+    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi001p", server_name_preprod = "oslwvagi001q",
+                 server_port="6080", service_index=None):
         self.server_name = server_name
-        self.server_name_preprod = "oslwvagi001q"
+        self.server_name_preprod = server_name_preprod
         self.server_port = server_port
         self.service_index = service_index
         self.geometry = geometry
@@ -196,11 +197,14 @@ class BaseGisDataFetcher(object):
 
 
 class LandTypeFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None):
+    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
         super(LandTypeFetcher, self).__init__(geometry=geometry,
                                               #server_name="oslwvagi001p",
                                               #server_port="6080",
-                                              service_index=0, epsg_id=epsg_id)
+                                              service_index=0, epsg_id=epsg_id,
+                                              server_name=server_name,
+                                              server_name_preprod=server_name_preprod,
+                                              )
         self.name_to_layer_map = {"glacier": 0, "forest": 1, "lake": 2}
         self.query["outFields"] = "OBJECTID"
 
@@ -253,10 +257,12 @@ class LandTypeFetcher(BaseGisDataFetcher):
 
 
 class ReservoirFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None):
+    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
         super(ReservoirFetcher, self).__init__(geometry=geometry,
                                                #server_name="oslwvagi001p",
                                                #server_port="6080",
+                                               server_name=server_name,
+                                               server_name_preprod=server_name_preprod,
                                                service_index=6, epsg_id=epsg_id)
         self.query["where"] = "1 = 1"
         self.query["outFields"] = "OBJECTID"
@@ -280,7 +286,8 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 
 class CatchmentFetcher(BaseGisDataFetcher):
-    def __init__(self, catchment_type, identifier, epsg_id):
+    def __init__(self, catchment_type, identifier, epsg_id,
+                 server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
         if catchment_type == 'regulated':
             if identifier == 'SUBCATCH_ID':
                 service_index = 4
@@ -297,7 +304,8 @@ class CatchmentFetcher(BaseGisDataFetcher):
             raise GisDataFetchError(
                 "Undefined catchment type {}. Use one of these three: 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
         super(CatchmentFetcher, self).__init__(geometry=None,
-                                               #server_name="oslwvagi001p",
+                                               server_name=server_name,
+                                               server_name_preprod=server_name_preprod,
                                                #server_port="6080",
                                                service_index=service_index,
                                                epsg_id=epsg_id)
@@ -336,7 +344,10 @@ class CatchmentFetcher(BaseGisDataFetcher):
 
 
 class CellDataFetcher(object):
-    def __init__(self, catchment_type, identifier, grid_specification, id_list):
+    def __init__(self, catchment_type, identifier, grid_specification, id_list,
+                 server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+        self.server_name = server_name
+        self.server_name_preprod = server_name_preprod
         self.catchment_type = catchment_type
         self.identifier = identifier
         self.grid_specification = grid_specification
@@ -350,11 +361,13 @@ class CellDataFetcher(object):
 
     def fetch(self):
 
-        catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier, self.epsg_id)
+        catchment_fetcher = CatchmentFetcher(self.catchment_type, self.identifier, self.epsg_id,
+                                             server_name=self.server_name, server_name_preprod=self.server_name_preprod)
         catchments = catchment_fetcher.fetch(id_list=self.id_list)
 
         # Construct cells and populate with elevations from tdm
-        dtm_fetcher = DTMFetcher(self.grid_specification)
+        dtm_fetcher = DTMFetcher(self.grid_specification,
+                                 server_name=self.server_name, server_name_preprod=self.server_name_preprod)
         elevations = dtm_fetcher.fetch()
         cells = self.grid_specification.cells(elevations)
         catchment_land_types = {}
@@ -362,8 +375,10 @@ class CellDataFetcher(object):
 
         # Filter all data with each catchment
         epsg = self.grid_specification.epsg()
-        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry, epsg_id=epsg)
-        rf = ReservoirFetcher(epsg_id=epsg)
+        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry, epsg_id=epsg,
+                              server_name=self.server_name, server_name_preprod=self.server_name_preprod)
+        rf = ReservoirFetcher(epsg_id=epsg,
+                              server_name=self.server_name, server_name_preprod=self.server_name_preprod)
         all_reservoir_coords = rf.fetch(geometry=self.grid_specification.geometry)
         all_glaciers = ltf.fetch(name="glacier")
         prep_glaciers = prep(all_glaciers)
@@ -432,10 +447,10 @@ class CellDataFetcher(object):
 
 
 class DTMFetcher(object):
-    def __init__(self, grid_specification):
+    def __init__(self, grid_specification, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
         self.grid_specification = grid_specification
-        self.server_name = "oslwvagi001p"  # PROD
-        self.server_name_preprod = "oslwvagi001q"  # PREPROD
+        self.server_name = server_name  # PROD
+        self.server_name_preprod = server_name_preprod  # PREPROD
         self.server_port = "6080"
         self.url_template = "http://{}:{}/arcgis/rest/services/Enki/Norway_DTM_1000m/ImageServer/exportImage"  # PROD
 

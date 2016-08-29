@@ -15,9 +15,10 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name="oslwvagi001p", server_port="6080", service_index=5 ):
+    def __init__(self, server_name="oslwvagi001p", server_name_preprod = "oslwvagi001q", server_port="6080", service_index=5 ):
         super(GeoLocationRepository, self).__init__()
         self.server_name=server_name
+        self.server_name_preprod=server_name_preprod
         self.server_port=server_port
         self.service_index=service_index
 
@@ -53,7 +54,9 @@ class GisLocationService(GeoLocationRepository):
         tuple(location-dict(station:position),info-dict(station:info-dict))
 
         """
-        base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=None, server_name=self.server_name, server_port=self.server_port, service_index=self.service_index)
+        base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=None, server_name=self.server_name,
+                                         server_name_preprod=self.server_name_preprod,
+                                         server_port=self.server_port, service_index=self.service_index)
         q = self.build_query(base_fetcher,location_id_list,epsg_id)
         # response = requests.get(base_fetcher.url, params=q)
         locations = {}
@@ -61,7 +64,7 @@ class GisLocationService(GeoLocationRepository):
         try:
             data = self._get_response(base_fetcher.url, params=q)
         except:
-            data = self._get_response(base_fetcher.url.replace(self.server_name, base_fetcher.server_name_preprod), params=q)
+            data = self._get_response(base_fetcher.url.replace(base_fetcher.server_name, base_fetcher.server_name_preprod), params=q)
         # if response.status_code == 200:
         for feature in data['features']:
             index = feature["attributes"]["OBJECTID"]
