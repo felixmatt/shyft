@@ -239,7 +239,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
         # if response.status_code != 200:
         #     raise GisDataFetchError("Could not fetch land type data from gis server.")
         # data = response.json()
-        data = self.get_response("Land type",params=q)
+        data = self.get_response(name,params=q)
         polygons = []
         if 'error' in data.keys():
             raise GisDataFetchError("Failed in GIS service:" + data['error']['message'])
