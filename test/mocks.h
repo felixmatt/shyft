@@ -358,7 +358,7 @@ namespace shyfttest {
 			PointTimeSerieSource(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieSource> GenerateTestSources(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieSource> make_source_set(const timeaxis& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieSource> v;
 				v.reserve(nx * ny);
 				auto pts = point_ts<timeaxis>(ta, 0);
@@ -414,7 +414,7 @@ namespace shyfttest {
 			PointTimeSerieCell(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieCell> GenerateTestGrids(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieCell> make_cell_grid(const timeaxis& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieCell> v;
 				v.reserve(nx * ny);
 				auto pts = point_ts<timeaxis>(ta, 0);
