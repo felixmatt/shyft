@@ -350,6 +350,7 @@ namespace shyfttest {
 			geo_point mid_point() const { return gp; }
 			double value(utcperiod p) const { return pts(p.start); }
 			double value(size_t i) const { return pts.value(i); }
+			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
 			point_ts<timeaxis> pts;
@@ -357,7 +358,7 @@ namespace shyfttest {
 			PointTimeSerieSource(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieSource> GenerateTestSources(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieSource> make_source_set(const timeaxis& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieSource> v;
 				v.reserve(nx * ny);
 				auto pts = point_ts<timeaxis>(ta, 0);
@@ -400,8 +401,11 @@ namespace shyfttest {
 		};
 
 		struct PointTimeSerieCell {
+			// Interface needed for run_interpolation<>
+			typedef geo_point geo_point_t;
 			geo_point mid_point() const { return gp; }
-			double value(size_t i) { return pts.value(i); }
+			double value(utcperiod p) const { return pts(p.start); }
+			double value(size_t i) const { return pts.value(i); }
 			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
@@ -410,7 +414,7 @@ namespace shyfttest {
 			PointTimeSerieCell(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
 			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieCell> GenerateTestGrids(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieCell> make_cell_grid(const timeaxis& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieCell> v;
 				v.reserve(nx * ny);
 				auto pts = point_ts<timeaxis>(ta, 0);
@@ -436,6 +440,7 @@ namespace shyfttest {
 		using namespace shyft::core::inverse_distance;
 		typedef temperature_model<Source, MCell, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel;
 		typedef temperature_model<PointTimeSerieSource, PointTimeSerieCell, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel_1;
+		typedef temperature_model<PointTimeSerieCell, PointTimeSerieSource, Parameter, geo_point, temperature_gradient_scale_computer> TestTemperatureModel_2;
 		typedef radiation_model<Source, MCell, Parameter, geo_point> TestRadiationModel;
 		typedef precipitation_model<Source, MCell, Parameter, geo_point> TestPrecipitationModel;
 

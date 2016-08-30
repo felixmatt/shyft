@@ -21,7 +21,10 @@ namespace shyfttest {
         }
     };
 
-#define TS0V_PRINT(tsv) for_each(tsv.begin(), tsv.end(), [](auto& a) { cout << '\n' << a.value(0); })
+#define TS0V_PRINT(tsv) cout << "\n" #tsv "\n"; \
+	for_each(tsv.begin(), tsv.end(), [](auto& a) { cout << a.value(0) << ' '; }); \
+	cout << '\n';
+
 #define TS0_EQUAL(ts, v) fabs(ts.value(0) - (v)) < 1e-9
 }
 
@@ -158,48 +161,88 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	const int ngx = 3 * nx;
 	const int ngy = 3 * ny;
 	const double temp = 15;
-	auto cts = point_ts<timeaxis>(ta, temp);
+	auto const_ts = point_ts<timeaxis>(ta, temp);
 
 	// Tsour = vector<Source(geopoint)>(ts<> = 1)
-	auto Tsour(move(PointTimeSerieSource::GenerateTestSources(ta, nx, ny)));
-	for_each(Tsour.begin(), Tsour.end(), [&](auto& a) { a.SetTs(cts); });
+	auto temp_set(move(PointTimeSerieSource::make_source_set(ta, nx, ny)));
+	for_each(temp_set.begin(), temp_set.end(), [&](auto& a) { a.SetTs(const_ts); });
 
 	// Sanity check
-	TS_ASSERT_EQUALS(count_if(Tsour.begin(), Tsour.end(), [=](auto& a) {return a.value(0) == temp; }), nx * ny);
+	TS_ASSERT_EQUALS(count_if(temp_set.begin(), temp_set.end(), [=](auto& a) { return a.value(0) == temp; }), nx * ny);
 
 	// Tdest = vector<Cell(grid)>(ts<> = 0) => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
-	auto Tdest(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
+	auto temp_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
 	Parameter p;
-	run_interpolation<TestTemperatureModel_1>(Tsour.begin(), Tsour.end(), Tdest.begin(), Tdest.end(), idw_timeaxis<TimeAxis>(ta),
-		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
+	run_interpolation<TestTemperatureModel_1>(temp_set.begin(), temp_set.end(), temp_grid.begin(), temp_grid.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Expected IDW result
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return TS0_EQUAL(a, temp); }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(temp_grid.begin(), temp_grid.end(), [=](auto& a) {return TS0_EQUAL(a, temp); }), ngx * ngy);
 
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
-	auto Tbias(move(PointTimeSerieCell::GenerateTestGrids(ta, ngx, ngy)));
+	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
 	const double bias = 1;
 	auto bias_ts = point_ts<timeaxis>(ta, bias);
-	for_each(Tbias.begin(), Tbias.end(), [&](auto& b) { b.SetTs(bias_ts); });
+	for_each(bias_grid.begin(), bias_grid.end(), [&](auto& b) { b.SetTs(bias_ts); });
 
 	// Tdest(ts) += Tbias(ts)
-	for (auto itdest = Tdest.begin(), itbias = Tbias.begin(); itdest != Tdest.end() || itbias != Tbias.end(); ++itdest, ++itbias)
+	for (auto itdest = temp_grid.begin(), itbias = bias_grid.begin(); itdest != temp_grid.end() || itbias != bias_grid.end(); ++itdest, ++itbias)
 		(*itdest).pts.add((*itbias).pts);
 
-	TS_ASSERT_EQUALS(count_if(Tdest.begin(), Tdest.end(), [=](auto& a) {return TS0_EQUAL(a, temp + bias); }), ngx * ngy);
+	TS_ASSERT_EQUALS(count_if(temp_grid.begin(), temp_grid.end(), [=](auto& a) {return TS0_EQUAL(a, temp + bias); }), ngx * ngy);
 }
 
 void gridpp_test::test_calc_bias_should_match_observations() {
-	// Make a 10x10 observation set having only 3 valid sources
-	// IDW transform to 25x25 grid
-	// Call it forecast grid 
-	// Apply bias of -2 degC 
-	// Change Z +- 50 m at closest grid points from observations
-	// IDW transform to 10x10 forecast set
-	// Calculate bias set on valid observations
-	// IDW transform bias set to 25x25 grid
-	// Add bias grid to forecast grid
-	// IDW transform to 10x10 corrected set
-	// Compare to 10x10 observation set => differences should be null
+	// Timeaxis
+	calendar utc;
+	utctime t0 = utc.time(2000, 1, 1);
+	utctimespan dt = deltahours(1);
+	const int nt = 24*36;
+	TimeAxis ta(t0, dt, nt);
 
+	// Make observation set of 3 sources distributed in a 10 x 10 km grid
+	// Temperatures are calculated from regression test
+	vector<PointTimeSerieSource> obs_set;
+	obs_set.reserve(3);
+	obs_set.emplace_back(geo_point(100,  100, 1000), point_ts<timeaxis>(ta, 14.97));
+	obs_set.emplace_back(geo_point(5100, 100, 1150), point_ts<timeaxis>(ta, 13.12));
+	obs_set.emplace_back(geo_point(100, 5100,  850), point_ts<timeaxis>(ta, 14.92));
+	
+	// IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
+	const int ng = 10;
+	auto fc_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
+	Parameter p;
+	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
+
+	// Simulate forecast offset of -2 degC 
+	auto off_ts = point_ts<timeaxis>(ta, -2.0);
+	for_each(fc_grid.begin(), fc_grid.end(), [&](auto& a) { a.pts.add(off_ts); });
+
+	// IDW transform forecast from frid to set
+	vector<PointTimeSerieSource> fc_set = obs_set;
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
+
+	// Calculate bias set = observation set - forecast set
+	vector<PointTimeSerieSource> bias_set = obs_set;
+	for (auto it_bias = bias_set.begin(), it_fc = fc_set.begin(); it_bias != bias_set.end() || it_fc != fc_set.end(); ++it_bias, ++it_fc)
+		(*it_bias).pts.add_scale((*it_fc).pts, -1);
+
+	// IDW transform bias from set to grid
+	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
+	run_interpolation<TestTemperatureModel_1>(bias_set.begin(), bias_set.end(), bias_grid.begin(), bias_grid.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
+
+	// Add bias grid to forecast grid
+	for (auto it_fc = fc_grid.begin(), itbias = bias_grid.begin(); it_fc != fc_grid.end() || itbias != bias_grid.end(); ++it_fc, ++itbias)
+		(*it_fc).pts.add((*itbias).pts);
+
+	// IDW transform corrected forecast from grid to set
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
+
+	// Compare forecast to observation set => differences should be close to null
+	for (auto it_obs = obs_set.begin(), it_fc = fc_set.begin(); it_obs != obs_set.end() || it_fc != fc_set.end(); ++it_obs, ++it_fc)
+		TS_ASSERT_LESS_THAN(fabs((*it_obs).value(0) - (*it_fc).value(0)), 1e-2);
 }
