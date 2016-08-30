@@ -24,6 +24,7 @@ namespace shyfttest {
 #define TS0V_PRINT(tsv) cout << "\n" #tsv "\n"; \
 	for_each(tsv.begin(), tsv.end(), [](auto& a) { cout << a.value(0) << ' '; }); \
 	cout << '\n';
+
 #define TS0_EQUAL(ts, v) fabs(ts.value(0) - (v)) < 1e-9
 }
 
@@ -199,65 +200,49 @@ void gridpp_test::test_calc_bias_should_match_observations() {
 	const int nt = 24*36;
 	TimeAxis ta(t0, dt, nt);
 
-	// Make a 10x10 observation set having only 3 valid sources
-	const int ns = 4;
-	const double ds = 2500;
-	const double s0 = 100;
-	const double z0 = 1000;
-	const double temp = 15;
-	vector<PointTimeSerieSource> obSet;
-	obSet.reserve(ns*ns);
-	obSet.emplace_back(geo_point(s0, s0, z0), point_ts<timeaxis>(ta, temp));
-	obSet.emplace_back(geo_point(s0 + 5*ds, s0, 2*z0), point_ts<timeaxis>(ta, temp - 5));
-	obSet.emplace_back(geo_point(s0, s0 + 5*ds, 3*z0), point_ts<timeaxis>(ta, temp - 10));
+	// Make observation set of 3 sources distributed in a 10 x 10 km grid
+	// Temperatures are calculated from regression test
+	vector<PointTimeSerieSource> obs_set;
+	obs_set.reserve(3);
+	obs_set.emplace_back(geo_point(100,  100, 1000), point_ts<timeaxis>(ta, 14.97));
+	obs_set.emplace_back(geo_point(5100, 100, 1150), point_ts<timeaxis>(ta, 13.12));
+	obs_set.emplace_back(geo_point(100, 5100,  850), point_ts<timeaxis>(ta, 14.92));
 	
-	//TS0V_PRINT(obSet);
-
-	// IDW transform to 25x25 grid. Call it forecast grid.
+	// IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
 	const int ng = 10;
-	auto fcGrid(move(PointTimeSerieCell::GenerateTestGrids(ta, ng, ng)));
-	// TODO: Change Z +- 50 m at closest grid points from observations
+	auto fc_grid(move(PointTimeSerieCell::GenerateTestGrids(ta, ng, ng)));
 	Parameter p;
-	run_interpolation<TestTemperatureModel_1>(obSet.begin(), obSet.end(), fcGrid.begin(), fcGrid.end(), idw_timeaxis<TimeAxis>(ta),
-		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
-	
-	//TS0V_PRINT(fcGrid);
-	return;
-
-	// Apply bias of -2 degC 
-	auto bias_ts = point_ts<timeaxis>(ta, -2.0);
-	for_each(fcGrid.begin(), fcGrid.end(), [&](auto& a) { a.pts.add(bias_ts); });
-
-	// IDW transform to 10x10 forecast set
-	auto fcSet(move(PointTimeSerieSource::GenerateTestSources(ta, ns, ns)));
-	run_interpolation<TestTemperatureModel_2>(fcGrid.begin(), fcGrid.end(), fcSet.begin(), fcSet.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<TimeAxis>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
-	// Calculate bias set on valid observations
-	vector<PointTimeSerieSource> biasSet = obSet;
-	for (auto itBias = biasSet.begin(); itBias != biasSet.end(); ++itBias) {
-		// TODO: Find closest forecast source and substract from observation
-		auto fc_ts = point_ts<timeaxis>(ta, -1);
-		(*itBias).pts.add(fc_ts);
-	}
+	// Simulate forecast offset of -2 degC 
+	auto off_ts = point_ts<timeaxis>(ta, -2.0);
+	for_each(fc_grid.begin(), fc_grid.end(), [&](auto& a) { a.pts.add(off_ts); });
 
-	// IDW transform bias set to 25x25 grid
-	auto biasGrid(move(PointTimeSerieCell::GenerateTestGrids(ta, ng, ng)));
-	run_interpolation<TestTemperatureModel_1>(biasSet.begin(), biasSet.end(), biasGrid.begin(), biasGrid.end(), idw_timeaxis<TimeAxis>(ta),
-		p, [](auto& d, size_t ix, double v) {d.set_value(ix, v); });
+	// IDW transform forecast from frid to set
+	vector<PointTimeSerieSource> fc_set = obs_set;
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
+
+	// Calculate bias set = observation set - forecast set
+	vector<PointTimeSerieSource> bias_set = obs_set;
+	for (auto it_bias = bias_set.begin(), it_fc = fc_set.begin(); it_bias != bias_set.end() || it_fc != fc_set.end(); ++it_bias, ++it_fc)
+		(*it_bias).pts.add_scale((*it_fc).pts, -1);
+
+	// IDW transform bias from set to grid
+	auto bias_grid(move(PointTimeSerieCell::GenerateTestGrids(ta, ng, ng)));
+	run_interpolation<TestTemperatureModel_1>(bias_set.begin(), bias_set.end(), bias_grid.begin(), bias_grid.end(), idw_timeaxis<TimeAxis>(ta),
+		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Add bias grid to forecast grid
-	for (auto itfc = fcGrid.begin(), itbias = biasGrid.begin(); itfc != fcGrid.end() || itbias != biasGrid.end(); ++itfc, ++itbias)
-		(*itfc).pts.add((*itbias).pts);
+	for (auto it_fc = fc_grid.begin(), itbias = bias_grid.begin(); it_fc != fc_grid.end() || itbias != bias_grid.end(); ++it_fc, ++itbias)
+		(*it_fc).pts.add((*itbias).pts);
 
-	// IDW transform to 10x10 corrected set
-	run_interpolation<TestTemperatureModel_2>(fcGrid.begin(), fcGrid.end(), fcSet.begin(), fcSet.end(), idw_timeaxis<TimeAxis>(ta),
+	// IDW transform corrected forecast from grid to set
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
-	// Compare to 10x10 observation set => differences should be null
-	// TODO: Find closest forecast source and substract from observation
-	TS0V_PRINT(fcSet);
-	for (auto itobs = obSet.begin(); itobs != obSet.end(); ++itobs) {
-		// TODO: Find closest FC and compare to OBS
-	}
+	// Compare forecast to observation set => differences should be close to null
+	for (auto it_obs = obs_set.begin(), it_fc = fc_set.begin(); it_obs != obs_set.end() || it_fc != fc_set.end(); ++it_obs, ++it_fc)
+		TS_ASSERT_LESS_THAN(fabs((*it_obs).value(0) - (*it_fc).value(0)), 1e-2);
 }
