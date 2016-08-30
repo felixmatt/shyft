@@ -129,6 +129,7 @@ namespace shyfttest {
         double mean= 10.0;//deg C
         double w = 2*3.1415/(24.0*3600.0);
         double p = - 2*3.1415*8/24;// cross zero at 8, max at 14
+        double a = 2.0;// amplitude deg/C day/night
         utctime t0=0;// 1970.
         calendar utc;
 
@@ -145,7 +146,7 @@ namespace shyfttest {
         }
         ///< this is the observation
         double observation(utctime t) const {
-            return mean + sin( w *(t-t0)+ p);
+            return mean + a*sin( w *(t-t0)+ p);
         }
         double bias(utctime t) const {
             static std::default_random_engine generator;
