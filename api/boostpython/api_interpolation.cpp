@@ -1,11 +1,43 @@
 #include "boostpython_pch.h"
-
+#include "api/api.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
 #include "core/region_model.h"
 
 namespace expose {
     using namespace boost::python;
+    namespace sa=shyft::api;
+    namespace sc=shyft::core;
+    namespace btk=shyft::core::bayesian_kriging;
+
+    typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
+    typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
+
+    ///< a local wrapper with api-typical checks on the input to support use from python
+    static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,geo_temperature_vector_ dst,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
+        using namespace std;
+        typedef  shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
+        if(src==nullptr || dst==nullptr || src->size()==0 || dst->size()==0)
+            throw std::runtime_error("supplied src and dst should be non-null and have at least one time-series");
+        if(time_axis.size()==0 || time_axis.delta()==0)
+            throw std::runtime_error("the supplied destination time-axis should have more than 0 element, and a delta-t larger than 0");
+
+        if(src->size()>1) {
+            double null_value= std::numeric_limits<double>::quiet_NaN() ;
+            for(auto&d:*dst) // wipe out dst.
+                d.ts=sa::apoint_ts(time_axis,null_value);
+            btk::btk_interpolation<btk_tsa_t>(begin(*src), end(*src), begin(*dst), end(*dst),time_axis, btk_parameter);
+        } else {
+            // just one temperature ts. just a a clean copy to destinations
+            btk_tsa_t tsa((*src)[0].ts, time_axis);
+            sa::apoint_ts temp_ts(time_axis, 0.0);
+            for(size_t i=0;i<time_axis.size();++i) temp_ts.set(i, tsa.value(i));
+
+            for(auto& d:*dst) d.ts=temp_ts;
+
+        }
+        return dst;
+    }
 
     static void btk_interpolation() {
         typedef shyft::core::bayesian_kriging::parameter BTKParameter;
@@ -20,6 +52,27 @@ namespace expose {
             .def("range",&BTKParameter::range,"Point where semivariogram flattens out,default=200000.0")
             .def("zscale",&BTKParameter::zscale,"Height scale used during distance computations,default=20.0")
             ;
+        def("bayesian_kriging_temperature",bayesian_kriging_temperature,
+            "Runs kriging for temperature sources and project the temperatures out to the destination geo-timeseries\n"
+            "\n\n\tNotice that bayesian kriging is currently not very efficient for large grid inputs,\n"
+            "\tusing only one thread, and considering all source-timeseries (entire grid) for all destinations\n"
+            "\tFor few sources, spread out on a grid, it's quite efficient should work well\n"
+            "\n"
+            "parameters\n"
+            "----------\n"
+            "src : TemperatureSourceVector\n"
+            "\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
+            "dst : TemperatureSourceVector\n"
+            "\t input/output a geo-located list of the interpolated time-series. \n"
+            "\tNotice that the geo-point is the only utilized input\n"
+            "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+            "\tthey are transformed and interpolated into the destination-timeaxis\n"
+            "btk_parameter:BTKParameter\n"
+            "\t the parameters to be used during interpolation\n\n"
+            "returns\n"
+            "-------\n"
+            "TemperatureSourveVector, -with filled in temperatures according to their position, the btk_parameters and time_axis\n"
+            );
     }
 
     static void idw_interpolation() {

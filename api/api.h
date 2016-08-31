@@ -99,6 +99,7 @@ namespace shyft {
         TemperatureSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
         const apoint_ts& temperatures() const { return ts; }
+        void set_temperature(size_t ix, double v) {ts.set(ix,v);} //btk dst compliant signature, used during btk-interpolation in gridpp exposure
         bool operator==(const TemperatureSource& x) {return is_equal(x);}
     };
 

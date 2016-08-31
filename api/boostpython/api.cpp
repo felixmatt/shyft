@@ -1,8 +1,8 @@
 #include "boostpython_pch.h"
-
+#include <boost/python/docstring_options.hpp>
 
 char const* version() {
-   return "v1.0";
+   return "v1.1";
 }
 namespace expose {
     extern void api_geo_point();
@@ -48,5 +48,6 @@ BOOST_PYTHON_MODULE(_api)
 {
     boost::python::scope().attr("__doc__")="SHyFT python api providing basic types";
     boost::python::def("version", version);
+    boost::python::docstring_options doc_options(true,true,false);// all except c++ signatures
     expose::api();
 }
