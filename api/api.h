@@ -75,7 +75,7 @@ namespace shyft {
 
 
     /** \brief GeoPointSource contains common properties, functions
-     * for the point sources in Enki.
+     * for the geo-point located time-series.
      * Typically it contains a GeoPoint (3d position), plus a timeseries
      */
     class GeoPointSource {

@@ -13,29 +13,39 @@ namespace expose {
 
     typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
     typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
+    typedef std::vector<sc::geo_point> geo_point_vector;
 
-    ///< a local wrapper with api-typical checks on the input to support use from python
-    static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,geo_temperature_vector_ dst,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
-        using namespace std;
-        typedef shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
-        if(src==nullptr || dst==nullptr || src->size()==0 || dst->size()==0)
-            throw std::runtime_error("supplied src and dst should be non-null and have at least one time-series");
+    static geo_temperature_vector_ create_destination_geo_ts( const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
+        auto dst= std::make_shared<geo_temperature_vector>();
+        dst->reserve(dst_points.size());
+        double null_value= std::numeric_limits<double>::quiet_NaN();
+        for(const auto& gp:dst_points)
+            dst->emplace_back(gp,sa::apoint_ts(time_axis,null_value,shyft::timeseries::point_interpretation_policy::POINT_AVERAGE_VALUE));
+        return dst;
+    }
+    static void verify_interpolation_parameters(const geo_temperature_vector_& src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis) {
+        if(src==nullptr || src->size()==0 || dst_points.size()==0)
+            throw std::runtime_error("supplied src and dst_points should be non-null and have at least one time-series");
         if(time_axis.size()==0 || time_axis.delta()==0)
             throw std::runtime_error("the supplied destination time-axis should have more than 0 element, and a delta-t larger than 0");
+    }
 
+    ///< a local wrapper with api-typical checks on the input to support use from python
+    static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
+        using namespace std;
+        typedef shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
+        // 1. some minor checks to give the python user early warnings.
+        verify_interpolation_parameters(src,dst_points,time_axis);
+        auto dst=create_destination_geo_ts(dst_points,time_axis);
+        // 2. then run btk to fill inn the results
         if(src->size()>1) {
-            double null_value= std::numeric_limits<double>::quiet_NaN() ;
-            for(auto&d:*dst) // wipe out dst.
-                d.ts=sa::apoint_ts(time_axis,null_value);
             btk::btk_interpolation<btk_tsa_t>(begin(*src), end(*src), begin(*dst), end(*dst),time_axis, btk_parameter);
         } else {
             // just one temperature ts. just a a clean copy to destinations
             btk_tsa_t tsa((*src)[0].ts, time_axis);
             sa::apoint_ts temp_ts(time_axis, 0.0);
             for(size_t i=0;i<time_axis.size();++i) temp_ts.set(i, tsa.value(i));
-
             for(auto& d:*dst) d.ts=temp_ts;
-
         }
         return dst;
     }
@@ -63,28 +73,24 @@ namespace expose {
             "----------\n"
             "src : TemperatureSourceVector\n"
             "\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
-            "dst : TemperatureSourceVector\n"
-            "\t input/output a geo-located list of the interpolated time-series. \n"
-            "\tNotice that the geo-point is the only utilized input\n"
+            "dst : GeoPointVector\n"
+            "\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
             "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
-            "\tthey are transformed and interpolated into the destination-timeaxis\n"
+            "\tand they are transformed and interpolated into the destination-timeaxis\n"
             "btk_parameter:BTKParameter\n"
             "\t the parameters to be used during interpolation\n\n"
             "returns\n"
             "-------\n"
-            "TemperatureSourveVector, -with filled in temperatures according to their position, the btk_parameters and time_axis\n"
+            "TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
             );
     }
 
-	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, geo_temperature_vector_ dst, shyft::time_axis::fixed_dt ta, idw::temperature_parameter idw_temp_p)
-	{
+	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::temperature_parameter idw_temp_p) {
 		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-
-		for (auto& d : *dst)
-			d.ts = sa::apoint_ts(ta, 0);
-
+		verify_interpolation_parameters(src,dst_points,ta);
+        auto dst = create_destination_geo_ts(dst_points,ta);
 		idw::run_interpolation<idw_temperature_model_t, idw_gts_t>(ta, *src, idw_temp_p, *dst,
 			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
 
@@ -115,9 +121,8 @@ namespace expose {
 			"----------\n"
 			"src : TemperatureSourceVector\n"
 			"\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
-			"dst : TemperatureSourceVector\n"
-			"\t input/output a geo-located list of the interpolated time-series. \n"
-			"\tNotice that the geo-point is the only utilized input\n"
+			"dst : GeoPointVector\n"
+			"\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
 			"time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
 			"\tthey are transformed and interpolated into the destination-timeaxis\n"
 			"idw_para : IDWParameter\n"
@@ -149,7 +154,7 @@ namespace expose {
             .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor," ref. formula for adjusted_precipitation,  default=1.02")
         ;
     }
-    
+
 	static void interpolation_parameter() {
         typedef shyft::core::interpolation_parameter InterpolationParameter;
         namespace idw = shyft::core::inverse_distance;
@@ -170,7 +175,7 @@ namespace expose {
             .def_readwrite("rel_hum",&InterpolationParameter::rel_hum,"IDW parameters for relative humidity")
             ;
     }
-    
+
 	void interpolation() {
         idw_interpolation();
         btk_interpolation();

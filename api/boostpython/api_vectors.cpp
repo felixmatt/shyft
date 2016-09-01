@@ -4,6 +4,7 @@
 #include "numpy_boost_python.hpp"
 #include "py_convertible.h"
 #include "core/utctime_utilities.h"
+#include "core/geo_point.h"
 
 namespace expose {
     using namespace shyft::core;
@@ -50,6 +51,25 @@ namespace expose {
             .from_python<XVector>()
         ;
     }
+    typedef std::vector<shyft::core::geo_point> GeoPointVector;
+    static GeoPointVector create_from_x_y_z_vectors(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double> z) {
+        if(!(x.size()==y.size() && y.size()==z.size()))
+            throw std::runtime_error("x,y,z vectors need to have same number of elements");
+        GeoPointVector r(x.size());
+        for(size_t i=0;i<x.size();++i)
+            r.emplace_back(x[i],y[i],z[i]);
+        return std::move(r);
+    }
+
+    static void expose_geo_point_vector() {
+
+        class_<GeoPointVector>("GeoPointVector", "A vector, list, of GeoPoints")
+            .def(vector_indexing_suite<GeoPointVector>())
+            .def(init<const GeoPointVector&>(args("const_ref_v")))
+            .def("create_from_x_y_z",create_from_x_y_z_vectors,args("x","y","z"),"Create a GeoPointVector from x,y and z DoubleVectors of equal length")
+            .staticmethod("create_from_x_y_z")
+            ;
+    }
 
     void vectors() {
         np_import();
@@ -57,6 +77,7 @@ namespace expose {
         expose_vector<double>("DoubleVector");
         expose_vector<int>("IntVector");
         expose_vector<utctime>("UtcTimeVector");
+        expose_geo_point_vector();
     }
 }
 

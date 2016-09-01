@@ -60,6 +60,14 @@ class BayesianKriging(unittest.TestCase):
                 arome_grid.append(geo_ts)
         return arome_grid
 
+    def _create_geo_point_grid(self, nx, ny, dx):
+        gpv = api.GeoPointVector()
+        for i in range(nx):
+            for j in range(ny):
+                z = self.max_elevation * (i + j) / (nx + ny)
+                gpv.append(api.GeoPoint(i*dx, j*dx, z))
+        return gpv
+
     def test_can_run_bayesian_kriging_from_arome25_to_1km(self):
         """
         Verify that if we run btk interpolation, we do get updated time-series according to time-axis and range
@@ -70,7 +78,7 @@ class BayesianKriging(unittest.TestCase):
         btk_parameter = api.BTKParameter(temperature_gradient=-0.6, temperature_gradient_sd=0.25, sill=25.0, nugget=0.5, range=20000.0, zscale=20.0)
         fx = lambda z: api.DoubleVector.from_numpy((20.0 - 0.6 * z / 100) + 3.0 * np.sin(np.arange(start=0, stop=self.n, step=1) * 2 * np.pi / 24.0 - np.pi / 2.0))
         arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
-        destination_grid = self._create_geo_ts_grid(self.mnx, self.mny, self.dx_model, fx)
+        destination_grid = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
         ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
         # act, - run the bayesian_kriging_temperature algoritm.
         r = api.bayesian_kriging_temperature(arome_grid, destination_grid, ta, btk_parameter)
@@ -92,8 +100,8 @@ class BayesianKriging(unittest.TestCase):
         btk_parameter = api.BTKParameter(temperature_gradient=-0.6, temperature_gradient_sd=0.25, sill=25.0, nugget=0.5, range=20000.0, zscale=20.0)
         fx = lambda z: api.DoubleVector.from_numpy(np.zeros(self.n))
 
-        grid_1km_1ts = self._create_geo_ts_grid(self.mnx, self.mny, self.dx_model, fx)
-        grid_1km_3ts = self._create_geo_ts_grid(self.mnx, self.mny, self.dx_model, fx)
+        grid_1km_1 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        grid_1km_3 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
 
         observation_sites = api.TemperatureSourceVector()
         ta_obs = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
@@ -109,7 +117,7 @@ class BayesianKriging(unittest.TestCase):
         observation_sites.append(api.TemperatureSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
 
         # act 1: just one time-series put into the system, should give same ts (true-averaged) in all the grid-1km_ts (which can be improved using std.gradient..)
-        grid_1km_1ts = api.bayesian_kriging_temperature(observation_sites, grid_1km_1ts, ta_grid, btk_parameter)
+        grid_1km_1ts = api.bayesian_kriging_temperature(observation_sites, grid_1km_1, ta_grid, btk_parameter)
 
         # assert 1:
         self.assertEqual(len(grid_1km_1ts), self.mnx * self.mny)
@@ -122,7 +130,7 @@ class BayesianKriging(unittest.TestCase):
         observation_sites.append(api.TemperatureSource(api.GeoPoint(9000.0, 500.0, 500), ts_site_2))
         observation_sites.append(api.TemperatureSource(api.GeoPoint(9000.0, 12000.0, 1050.0), ts_site_3))
 
-        grid_1km_3ts = api.bayesian_kriging_temperature(observation_sites, grid_1km_3ts, ta_grid, btk_parameter)
+        grid_1km_3ts = api.bayesian_kriging_temperature(observation_sites, grid_1km_3, ta_grid, btk_parameter)
 
         self.assertEqual(len(grid_1km_3ts), self.mnx * self.mny)
 
@@ -140,9 +148,9 @@ class BayesianKriging(unittest.TestCase):
         self.assertEqual(idw_p.max_members, 20)
         fx = lambda z : [15 for x in range(self.n)]
         arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
-        dest_grid = self._create_geo_ts_grid(self.mnx, self.mny, self.dx_model, fx)
+        dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
         ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
-        dest_grid = api.idw_temperature(arome_grid, dest_grid, ta, idw_p)
+        dest_grid = api.idw_temperature(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
         self.assertEqual(len(dest_grid), self.mnx * self.mny)
 
