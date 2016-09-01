@@ -8,7 +8,8 @@ namespace expose {
     using namespace boost::python;
     namespace sa=shyft::api;
     namespace sc=shyft::core;
-    namespace btk=shyft::core::bayesian_kriging;
+	namespace btk=shyft::core::bayesian_kriging;
+	namespace idw=shyft::core::inverse_distance;
 
     typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
     typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
@@ -75,10 +76,13 @@ namespace expose {
             );
     }
 
+	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, geo_temperature_vector_ dst, shyft::time_axis::fixed_dt time_axis, idw::parameter idw_para) {
+	
+		return dst;
+	}
+
     static void idw_interpolation() {
         typedef shyft::core::inverse_distance::parameter IDWParameter;
-
-
 
         class_<IDWParameter>("IDWParameter",
                     "IDWParameter is a simple place-holder for IDW parameters\n"
@@ -88,12 +92,30 @@ namespace expose {
                     "Is used for interpolation.\n"
                     "Additionally it keep distance measure-factor,\n"
                     "so that the IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor)\n"
-            )
-            .def(init<int,optional<double,double>>(args("max_members","max_distance","distance_measure_factor"),"create IDW from supplied parameters"))
+			)
+			.def(init<int,optional<double,double>>(args("max_members","max_distance","distance_measure_factor"),"create IDW from supplied parameters"))
             .def_readwrite("max_members",&IDWParameter::max_members,"maximum members|neighbors used to interpolate into a point,default=10")
             .def_readwrite("max_distance",&IDWParameter::max_distance,"[meter] only neighbours within max distance is used for each destination-cell,default= 200000.0")
             .def_readwrite("distance_measure_factor",&IDWParameter::distance_measure_factor,"IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor), default=2.0")
             ;
+		def("idw_temperature", idw_temperature,
+			"Runs inverse distance interpolation to project temperature sources out to the destination geo-timeseries\n"
+			"\n"
+			"parameters\n"
+			"----------\n"
+			"src : TemperatureSourceVector\n"
+			"\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
+			"dst : TemperatureSourceVector\n"
+			"\t input/output a geo-located list of the interpolated time-series. \n"
+			"\tNotice that the geo-point is the only utilized input\n"
+			"time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+			"\tthey are transformed and interpolated into the destination-timeaxis\n"
+			"idw_para : IDWParameter\n"
+			"\t the parameters to be used during interpolation\n\n"
+			"returns\n"
+			"-------\n"
+			"TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
+		);
         typedef shyft::core::inverse_distance::temperature_parameter IDWTemperatureParameter;
         class_<IDWTemperatureParameter,bases<IDWParameter>> ("IDWTemperatureParameter",
                 "For temperature inverse distance, also provide default temperature gradient to be used\n"
@@ -117,7 +139,8 @@ namespace expose {
             .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor," ref. formula for adjusted_precipitation,  default=1.02")
         ;
     }
-    static void interpolation_parameter() {
+    
+	static void interpolation_parameter() {
         typedef shyft::core::interpolation_parameter InterpolationParameter;
         namespace idw = shyft::core::inverse_distance;
         namespace btk = shyft::core::bayesian_kriging;
@@ -137,7 +160,8 @@ namespace expose {
             .def_readwrite("rel_hum",&InterpolationParameter::rel_hum,"IDW parameters for relative humidity")
             ;
     }
-    void interpolation() {
+    
+	void interpolation() {
         idw_interpolation();
         btk_interpolation();
         interpolation_parameter();

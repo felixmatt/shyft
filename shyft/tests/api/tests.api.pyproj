@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3e3b8f45-003f-4f88-bf3f-400e7af8cb1f}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_grid_pp.py</StartupFile>
+    <StartupFile>test_interpolation.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -37,6 +37,7 @@
     <Compile Include="test_geo_cell_data.py" />
     <Compile Include="test_geo_point.py" />
     <Compile Include="test_grid_pp.py" />
+    <Compile Include="test_interpolation.py" />
     <Compile Include="test_region_model_stacks.py" />
     <Compile Include="test_time_axis.py" />
     <Compile Include="test_time_series.py" />
