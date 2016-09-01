@@ -132,19 +132,19 @@ class BayesianKriging(unittest.TestCase):
 
     def test_idw_temperature_transform_from_set_to_grid(self):
         """
-        Verify that if we run IDW interpolation, we do get updated time-series according to time-axis and range
-        specified.
+        Test IDW interpolation transforms temperature time-series according to time-axis and range.
 
         """
-        idw_para = api.IDWParameter()
-        self.assertEqual(idw_para.max_distance, 200000)
-        self.assertEqual(idw_para.max_members, 10)
+        idw_p = api.IDWTemperatureParameter()
+        self.assertEqual(idw_p.max_distance, 200000)
+        self.assertEqual(idw_p.max_members, 20)
         fx = lambda z : [15 for x in range(self.n)]
         arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
         dest_grid = self._create_geo_ts_grid(self.mnx, self.mny, self.dx_model, fx)
         ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
-        dest_grid = api.idw_temperature(arome_grid, dest_grid, ta, idw_para)
-
+        dest_grid = api.idw_temperature(arome_grid, dest_grid, ta, idw_p)
+        self.assertIsNotNone(dest_grid)
+        self.assertEqual(len(dest_grid), self.mnx * self.mny)
 
 if __name__ == "__main__":
     unittest.main()

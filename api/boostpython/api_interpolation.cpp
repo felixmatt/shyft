@@ -17,7 +17,7 @@ namespace expose {
     ///< a local wrapper with api-typical checks on the input to support use from python
     static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,geo_temperature_vector_ dst,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
         using namespace std;
-        typedef  shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
+        typedef shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
         if(src==nullptr || dst==nullptr || src->size()==0 || dst->size()==0)
             throw std::runtime_error("supplied src and dst should be non-null and have at least one time-series");
         if(time_axis.size()==0 || time_axis.delta()==0)
@@ -76,8 +76,18 @@ namespace expose {
             );
     }
 
-	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, geo_temperature_vector_ dst, shyft::time_axis::fixed_dt time_axis, idw::parameter idw_para) {
-	
+	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, geo_temperature_vector_ dst, shyft::time_axis::fixed_dt ta, idw::temperature_parameter idw_temp_p)
+	{
+		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
+		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+
+		for (auto& d : *dst)
+			d.ts = sa::apoint_ts(ta, 0);
+
+		idw::run_interpolation<idw_temperature_model_t, idw_gts_t>(ta, *src, idw_temp_p, *dst,
+			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
+
 		return dst;
 	}
 
