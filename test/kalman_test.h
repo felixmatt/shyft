@@ -4,5 +4,6 @@
 
 class kalman_test : public CxxTest::TestSuite {
 public:
-	void test_filter_workbench();
+	void test_filter();
+	void test_bias_predictor();
 };
