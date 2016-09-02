@@ -17,7 +17,7 @@ class GisLocationService(GeoLocationRepository):
 
     def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5 ):
         super(GeoLocationRepository, self).__init__()
-        self.server_name="oslwvagi001p"
+        self.server_name="oslwvagi002p"
         self.server_name_preprod="oslwvagi001q"
         if server_name is not None:
             self.server_name = server_name

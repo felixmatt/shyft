@@ -109,7 +109,7 @@ class BaseGisDataFetcher(object):
 
     """
 
-    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi001p", server_name_preprod = "oslwvagi001q",
+    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi002p", server_name_preprod = "oslwvagi001q",
                  server_port="6080", service_index=None):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
@@ -201,9 +201,9 @@ class BaseGisDataFetcher(object):
 
 
 class LandTypeFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
         super(LandTypeFetcher, self).__init__(geometry=geometry,
-                                              #server_name="oslwvagi001p",
+                                              #server_name="oslwvagi002p",
                                               #server_port="6080",
                                               service_index=0, epsg_id=epsg_id,
                                               server_name=server_name,
@@ -261,9 +261,9 @@ class LandTypeFetcher(BaseGisDataFetcher):
 
 
 class ReservoirFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
         super(ReservoirFetcher, self).__init__(geometry=geometry,
-                                               #server_name="oslwvagi001p",
+                                               #server_name="oslwvagi002p",
                                                #server_port="6080",
                                                server_name=server_name,
                                                server_name_preprod=server_name_preprod,
@@ -291,7 +291,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 class CatchmentFetcher(BaseGisDataFetcher):
     def __init__(self, catchment_type, identifier, epsg_id,
-                 server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
         if catchment_type == 'regulated':
             if identifier == 'SUBCATCH_ID':
                 service_index = 4
@@ -349,7 +349,7 @@ class CatchmentFetcher(BaseGisDataFetcher):
 
 class CellDataFetcher(object):
     def __init__(self, catchment_type, identifier, grid_specification, id_list,
-                 server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
         self.catchment_type = catchment_type
@@ -451,7 +451,7 @@ class CellDataFetcher(object):
 
 
 class DTMFetcher(object):
-    def __init__(self, grid_specification, server_name = "oslwvagi001p", server_name_preprod = "oslwvagi001q"):
+    def __init__(self, grid_specification, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
         self.grid_specification = grid_specification
         self.server_name = server_name  # PROD
         self.server_name_preprod = server_name_preprod  # PREPROD
@@ -666,7 +666,7 @@ class GisRegionModelRepository(RegionModelRepository):
     """
     cell_data_cache = CellDataCache(shyftdata_dir, 'pickle')
     #cache_file_type = 'pickle'
-    server_name = "oslwvagi001p"
+    server_name = "oslwvagi002p"
     server_name_preprod = "oslwvagi001q"
 
     def __init__(self, region_id_config, use_cache=False, cache_folder=None, cache_file_type=None):
@@ -790,7 +790,7 @@ class GisRegionModelRepository(RegionModelRepository):
                 catchment_parameter_map[catchment_id_map.index(cid)] = param
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
-        region_model.catchment_id_map = catchment_id_map  # needed to map from externa c_id to 0-based c_id used internally in
+        region_model.catchment_id_map = catchment_id_map.tolist()  # needed to map from externa c_id to 0-based c_id used internally in
         #region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
         region_model.gis_info = polygons # opt:needed for internal statkraft use/presentation
 
@@ -809,7 +809,7 @@ class GisRegionModelRepository(RegionModelRepository):
 def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad,
                                   server_name=None, server_name_preprod=None):
     if server_name is None:
-        server_name = "oslwvagi001p"
+        server_name = "oslwvagi002p"
     if server_name_preprod is None:
         server_name_preprod = "oslwvagi001q"
     catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id,
