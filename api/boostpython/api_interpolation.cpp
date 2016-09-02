@@ -6,10 +6,11 @@
 
 namespace expose {
     using namespace boost::python;
-    namespace sa=shyft::api;
-    namespace sc=shyft::core;
-	namespace btk=shyft::core::bayesian_kriging;
-	namespace idw=shyft::core::inverse_distance;
+    namespace sa = shyft::api;
+    namespace sc = shyft::core;
+	namespace sta = shyft::time_axis;
+	namespace btk = shyft::core::bayesian_kriging;
+	namespace idw = shyft::core::inverse_distance;
 
 	typedef std::vector<sc::geo_point> geo_point_vector;
 	typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
@@ -17,7 +18,17 @@ namespace expose {
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
 	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
 
-    static geo_temperature_vector_ create_destination_geo_ts( const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
+	template <typename VectorT>
+	static std::shared_ptr<VectorT> make_dest_geo_ts(const geo_point_vector& points, sta::fixed_dt time_axis) {
+		auto dst = std::make_shared<VectorT>();
+		dst->reserve(points.size());
+		double std_nan = std::numeric_limits<double>::quiet_NaN();
+		for (const auto& gp : points)
+			dst->emplace_back(gp, sa::apoint_ts(time_axis, std_nan, shyft::timeseries::point_interpretation_policy::POINT_AVERAGE_VALUE));
+		return dst;
+	}
+
+    static geo_temperature_vector_ create_destination_geo_ts(const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
         auto dst = std::make_shared<geo_temperature_vector>();
         dst->reserve(dst_points.size());
         double null_value= std::numeric_limits<double>::quiet_NaN();
@@ -92,7 +103,7 @@ namespace expose {
 		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
 		verify_interpolation_parameters(src,dst_points,ta);
-        auto dst = create_destination_geo_ts(dst_points,ta);
+        auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points,ta);
 		idw::run_interpolation<idw_temperature_model_t, idw_gts_t>(ta, *src, idw_temp_p, *dst,
 			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
 
@@ -105,9 +116,8 @@ namespace expose {
 		typedef idw::precipitation_model<idw_gts_t, sa::PrecipitationSource, idw::precipitation_parameter, sc::geo_point> idw_precipitation_model_t;
 		
 		//TODO: verify_interpolation_parameters(src, dst_points, ta);
-		//TODO: auto dst = create_destination_geo_ts(dst_points, ta);
-		auto dst = std::make_shared<geo_precipitation_vector>(geo_precipitation_vector(*src));
-
+		
+		auto dst = make_dest_geo_ts<geo_precipitation_vector>(dst_points, ta);
 		idw::run_interpolation<idw_precipitation_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
 			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
 

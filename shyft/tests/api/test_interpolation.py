@@ -177,7 +177,7 @@ class BayesianKriging(unittest.TestCase):
         ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
         dest_grid = api.idw_precipitation(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
-        self.assertEqual(len(dest_grid), self.nx * self.ny) # TODO: test mnx * mny
+        self.assertEqual(len(dest_grid), self.mnx * self.mny)
 
 if __name__ == "__main__":
     unittest.main()
