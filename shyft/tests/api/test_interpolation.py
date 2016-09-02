@@ -51,12 +51,21 @@ class BayesianKriging(unittest.TestCase):
 
         """
         arome_grid = api.TemperatureSourceVector()
-
         for i in range(nx):
             for j in range(ny):
                 z = self.max_elevation * (i + j) / (nx + ny)
                 ts = api.Timeseries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
                 geo_ts = api.TemperatureSource(api.GeoPoint(i * dx, j * dx, z), ts)
+                arome_grid.append(geo_ts)
+        return arome_grid
+
+    def _create_geo_precipitation_grid(self, nx, ny, dx, fx):
+        arome_grid = api.PrecipitationSourceVector()
+        for i in range(nx):
+            for j in range(ny):
+                z = self.max_elevation * (i + j) / (nx + ny)
+                ts = api.Timeseries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+                geo_ts = api.PrecipitationSource(api.GeoPoint(i * dx, j * dx, z), ts)
                 arome_grid.append(geo_ts)
         return arome_grid
 
@@ -153,6 +162,22 @@ class BayesianKriging(unittest.TestCase):
         dest_grid = api.idw_temperature(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
         self.assertEqual(len(dest_grid), self.mnx * self.mny)
+
+    def test_idw_precipitation_transform_from_set_to_grid(self):
+        """
+        Test IDW interpolation transforms precipitation time-series according to time-axis and range.
+
+        """
+        idw_p = api.IDWPrecipitationParameter()
+        self.assertEqual(idw_p.max_distance, 200000)
+        self.assertEqual(idw_p.max_members, 20)
+        fx = lambda z : [15 for x in range(self.n)]
+        arome_grid = self._create_geo_precipitation_grid(self.nx, self.ny, self.dx_arome, fx)
+        dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
+        dest_grid = api.idw_precipitation(arome_grid, dest_grid_points, ta, idw_p)
+        self.assertIsNotNone(dest_grid)
+        self.assertEqual(len(dest_grid), self.nx * self.ny) # TODO: test mnx * mny
 
 if __name__ == "__main__":
     unittest.main()

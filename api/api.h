@@ -108,7 +108,8 @@ namespace shyft {
         PrecipitationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
         const apoint_ts& precipitations() const { return ts; }
-        bool operator==(const PrecipitationSource& x) {return is_equal(x);}
+		void set_value(size_t ix, double v) { ts.set(ix, v); }
+		bool operator==(const PrecipitationSource& x) {return is_equal(x);}
     };
 
     struct WindSpeedSource : GeoPointSource {

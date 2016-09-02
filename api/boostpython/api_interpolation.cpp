@@ -11,12 +11,14 @@ namespace expose {
 	namespace btk=shyft::core::bayesian_kriging;
 	namespace idw=shyft::core::inverse_distance;
 
-    typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
-    typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
-    typedef std::vector<sc::geo_point> geo_point_vector;
+	typedef std::vector<sc::geo_point> geo_point_vector;
+	typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
+	typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
+	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
+	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
 
     static geo_temperature_vector_ create_destination_geo_ts( const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
-        auto dst= std::make_shared<geo_temperature_vector>();
+        auto dst = std::make_shared<geo_temperature_vector>();
         dst->reserve(dst_points.size());
         double null_value= std::numeric_limits<double>::quiet_NaN();
         for(const auto& gp:dst_points)
@@ -97,6 +99,21 @@ namespace expose {
 		return dst;
 	}
 
+	static geo_precipitation_vector_ idw_precipitation(geo_precipitation_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::precipitation_parameter idw_p) {
+		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+		typedef sc::idw_compliant_geo_point_ts<sa::PrecipitationSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
+		typedef idw::precipitation_model<idw_gts_t, sa::PrecipitationSource, idw::precipitation_parameter, sc::geo_point> idw_precipitation_model_t;
+		
+		//TODO: verify_interpolation_parameters(src, dst_points, ta);
+		//TODO: auto dst = create_destination_geo_ts(dst_points, ta);
+		auto dst = std::make_shared<geo_precipitation_vector>(geo_precipitation_vector(*src));
+
+		idw::run_interpolation<idw_precipitation_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
+			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
+
+		return dst;
+	}
+
     static void idw_interpolation() {
         typedef shyft::core::inverse_distance::parameter IDWParameter;
 
@@ -125,11 +142,28 @@ namespace expose {
 			"\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
 			"time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
 			"\tthey are transformed and interpolated into the destination-timeaxis\n"
-			"idw_para : IDWParameter\n"
+			"idw_para : IDWTemperatureParameter\n"
 			"\t the parameters to be used during interpolation\n\n"
 			"returns\n"
 			"-------\n"
 			"TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
+		);
+		def("idw_precipitation", idw_precipitation,
+			"Runs inverse distance interpolation to project precipitation sources out to the destination geo-timeseries\n"
+			"\n"
+			"parameters\n"
+			"----------\n"
+			"src : PrecipitationSourceVector\n"
+			"\t input a geo-located list of precipitation time-series with filled in values (some might be nan etc.)\n\n"
+			"dst : GeoPointVector\n"
+			"\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
+			"time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+			"\tthey are transformed and interpolated into the destination-timeaxis\n"
+			"idw_para : IDWPrecipitationParameter\n"
+			"\t the parameters to be used during interpolation\n\n"
+			"returns\n"
+			"-------\n"
+			"PrecipitationSourveVector, -with filled in precipitations according to their position, the idw_parameters and time_axis\n"
 		);
         typedef shyft::core::inverse_distance::temperature_parameter IDWTemperatureParameter;
         class_<IDWTemperatureParameter,bases<IDWParameter>> ("IDWTemperatureParameter",
