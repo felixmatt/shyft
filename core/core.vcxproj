@@ -112,6 +112,7 @@
     <ClInclude Include="core_pch.h" />
     <ClInclude Include="dream_optimizer.h" />
     <ClInclude Include="experimental.h" />
+    <ClInclude Include="kalman.h" />
     <ClInclude Include="model_calibration.h" />
     <ClInclude Include="gamma_snow.h" />
     <ClInclude Include="geo_cell_data.h" />

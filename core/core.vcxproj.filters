@@ -105,6 +105,9 @@
     <ClInclude Include="geo_point.h">
       <Filter>geo</Filter>
     </ClInclude>
+    <ClInclude Include="kalman.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
