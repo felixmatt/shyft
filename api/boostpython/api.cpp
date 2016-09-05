@@ -22,6 +22,7 @@ namespace expose {
     extern void cell_environment();
     extern void interpolation();
     extern void skaugen_snow();
+    extern void kalman();
 
     void api() {
         calendar_and_time();
@@ -41,6 +42,7 @@ namespace expose {
         kirchner();
         cell_environment();
         interpolation();
+        kalman();
     }
 }
 
