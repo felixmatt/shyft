@@ -33,9 +33,9 @@ namespace expose {
 	}
 	static std::vector<double> kalman_x(const shyft::core::kalman::state &s) {return arma::conv_to<std::vector<double>>::from(s.x);}
 	static std::vector<double> kalman_k(const shyft::core::kalman::state &s) { return arma::conv_to<std::vector<double>>::from(s.k); }
-	static std::vector<double> kalman_P(const shyft::core::kalman::state &s) { 
+	static std::vector<double> kalman_P(const shyft::core::kalman::state &s) {
 		std::vector<double> r;
-		for (size_t i = 0;i < s.size();++i) {
+		for (auto i = 0;i < s.size();++i) {
 			auto row = arma::conv_to<std::vector<double>>::from(s.P.row(i));
 			for (auto v : row)
 				r.push_back(v);
@@ -44,7 +44,7 @@ namespace expose {
 	}
 	static std::vector<double> kalman_W(const shyft::core::kalman::state &s) {
 		std::vector<double> r;
-		for (size_t i = 0;i < s.size();++i) {
+		for (auto i = 0;i < s.size();++i) {
 			auto row = arma::conv_to<std::vector<double>>::from(s.W.row(i));
 			for (auto v : row)
 				r.push_back(v);
@@ -53,7 +53,7 @@ namespace expose {
 	}
 	static void kalman_state() {
 	    typedef shyft::core::kalman::state KalmanState;
-		class_<KalmanState>("KalmanState", 
+		class_<KalmanState>("KalmanState",
 			"keeps the state of the specialized kalman-filter\n\t"
 			"x : vector[n=n_daily_observations] best estimate\n\t"
 			"k : vector[n], gain factors\n\t"
@@ -108,10 +108,10 @@ namespace expose {
 			;
 
 	}
-	
+
 	void update_with_forecast_geo_ts_and_obs(
-		shyft::core::kalman::bias_predictor& bp, 
-		geo_temperature_vector_ fc, 
+		shyft::core::kalman::bias_predictor& bp,
+		geo_temperature_vector_ fc,
 		const shyft::api::apoint_ts& obs,
 		const shyft::time_axis::generic_dt &ta) {
 		std::vector<shyft::api::apoint_ts> fc_ts_set;
@@ -122,7 +122,7 @@ namespace expose {
 
 	static void kalman_bias_predictor() {
 		typedef shyft::core::kalman::bias_predictor KalmanBiasPredictor;
-		
+
 		class_<KalmanBiasPredictor>(
 			"KalmanBiasPredictor",
 			"A bias predictor using a daily pattern KalmanFilter for temperature (etc.)\n"
