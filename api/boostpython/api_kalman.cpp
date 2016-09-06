@@ -53,7 +53,13 @@ namespace expose {
 	}
 	static void kalman_state() {
 	    typedef shyft::core::kalman::state KalmanState;
-		class_<KalmanState>("KalmanState", "keeps the state of the specialized kalman-filter")
+		class_<KalmanState>("KalmanState", 
+			"keeps the state of the specialized kalman-filter\n\t"
+			"x : vector[n=n_daily_observations] best estimate\n\t"
+			"k : vector[n], gain factors\n\t"
+			"P : matrix[nxn], covariance\n\t"
+			"W : noise[nxn]\n"
+			)
 			.def(init<int, double, double, double>(args("n_daily_observations", "covariance_init", "hourly_correlation", "process_noise_init"), "create a state based on supplied parameters"))
 			.def(init<const KalmanState&>(arg("clone"), "clone the supplied state"))
 			.def(init<>("construct a default state"))
