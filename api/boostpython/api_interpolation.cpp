@@ -28,6 +28,14 @@ namespace expose {
 		return dst;
 	}
 
+	template <typename VectorT>
+	static void validate_parameters(const VectorT& src, const geo_point_vector& dst_points, sta::fixed_dt time_axis) {
+		if (src==nullptr || src->size()==0 || dst_points.size()==0)
+			throw std::runtime_error("the supplied src and dst_points should be non-null and have at least one time-series");
+		if (time_axis.size()==0 || time_axis.delta()==0)
+			throw std::runtime_error("the supplied destination time-axis should have more than 0 element, and a delta-t larger than 0");
+	}
+
     static geo_temperature_vector_ create_destination_geo_ts(const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
         auto dst = std::make_shared<geo_temperature_vector>();
         dst->reserve(dst_points.size());
@@ -102,8 +110,9 @@ namespace expose {
 		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-		verify_interpolation_parameters(src,dst_points,ta);
-        auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points,ta);
+		
+		validate_parameters(src, dst_points, ta);
+        auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points, ta);
 		idw::run_interpolation<idw_temperature_model_t, idw_gts_t>(ta, *src, idw_temp_p, *dst,
 			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
 
@@ -115,8 +124,7 @@ namespace expose {
 		typedef sc::idw_compliant_geo_point_ts<sa::PrecipitationSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::precipitation_model<idw_gts_t, sa::PrecipitationSource, idw::precipitation_parameter, sc::geo_point> idw_precipitation_model_t;
 		
-		//TODO: verify_interpolation_parameters(src, dst_points, ta);
-		
+		validate_parameters(src, dst_points, ta);
 		auto dst = make_dest_geo_ts<geo_precipitation_vector>(dst_points, ta);
 		idw::run_interpolation<idw_precipitation_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
 			[](auto& d, size_t ix, double value) { d.set_value(ix, value); });
