@@ -281,7 +281,58 @@ namespace shyft{
             }
         };
 
+		/**\brief accumulate_ts, accumulate time-series
+		*
+		* Represents a ts that for
+		* the specified time-axis the accumulated sum 
+		* of the underlying specified TS ts.
+		* The i'th value in the time-axis is computed
+		* as the sum of the previous true-averages.
+		* The point_interpretation_policy is POINT_INSTANT_VALUE
+		* definition:
+		* The value of t0=time_axis(0) is zero.
+		* The value of t1= time_axis(1) is defined as
+		* integral_of f(t) dt from t0 to t1, skipping nan-areas.
+		*
+		*/
+		template<class TS, class TA>
+		struct accumulate_ts {
+			typedef TA ta_t;
+			TA ta;
+			TS ts;
+			point_interpretation_policy fx_policy;
+			const TA& time_axis() const { return ta; }
 
+			accumulate_ts(const TS&ts, const TA& ta)
+				:ta(ta), ts(ts)
+				, fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE) {
+			} // because accumulate represents the integral of the distance from t0 to t, valid at t
+			  
+			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
+			size_t size() const { return ta.size(); }
+			size_t index_of(utctime t) const { return ta.index_of(t); }
+			//--
+			double value(size_t i) const {
+				if (i >= ta.size())
+					return nan;
+				if (i == 0)
+					return 0.0;
+				size_t ix_hint = 0;// we have to start at the beginning
+				utcperiod accumulate_period(ta.time(0), ta.time(i));
+				utctimespan tsum;
+				return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+			}
+			double operator()(utctime t) const {
+				size_t i = ta.index_of(t);
+				if (i == string::npos)
+					return nan;
+				if (t == ta.time(0))
+					return 0.0; // by definition
+				utctimespan tsum;
+				size_t ix_hint = 0;
+				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+			}
+		};
 
 
         /** \brief Basic math operators
@@ -607,7 +658,90 @@ namespace shyft{
                 i =  source.index_of(p.start);
             return i;
         }
+		/** \brief accumulate_value provides a projection/interpretation
+		* of the values of a pointsource on to a time-axis as provided.
+		* This includes interpolation and true average, linear between points
+		* and nan-handling semantics.
+		* In addition the Accessor allows fast sequential access to these values
+		* using clever caching of the last position used in the underlying
+		* point source. The time axis and point source can be of any type
+		* as listed above as long as the basic type requirement as described below
+		* are satisfied.
+		* \tparam S point source, must provide:
+		*  -# .size() const               -> number of points in the source
+		*  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
+		*  -# .get(size_t i) const        -> return the i'th point  (t,v)
+		* \param source of type S
+		* \param p the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
+		* \param last_idx, in/out, position of the last time point used on the source, updated after each call.
+		* \param tsum out, the sum of time under non-nan areas of the curve
+		* \return double, the area under the non-nan areas of the curve, specified by tsum ref-parameter
+		*/
+		template <class S>
+		double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
+			const size_t n = source.size();
+			if (n == 0) // early exit if possible
+				return shyft::nan;
+			size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
+			if (i == std::string::npos) // this might be a case
+				return shyft::nan; // and is equivalent to no points, or all points after requested period.
+
+			point l;// Left point
+			bool l_finite = false;
+
+			double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
+			tsum = 0; // length of non-nan f(t) time-axis
+
+			while (true) { //there are two exit criteria: no more points, or we pass the period end.
+				if (!l_finite) {//search for 'point' anchor phase
+					l = source.get(i++);
+					l_finite = std::isfinite(l.v);
+					if (i == n) { // exit condition
+						if (l_finite && l.t < p.end) {//give contribution
+							utctimespan dt = p.end - l.t;
+							tsum += dt;
+							area += dt* l.v; // extrapolate value flat
+						}
+						break;//done
+					}
+					if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
+						break;//done
+					}
+				} else { // got point anchor l, search for right point/end
+					point r = source.get(i++);// r is guaranteed > p.start due to hint-based search
+					bool r_finite = std::isfinite(r.v);
+					utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
+					utctimespan dt = px.timespan();
+					tsum += dt;
+
+					// now add area contribution for l..r
+					if (linear && r_finite) {
+						double a = (r.v - l.v) / (r.t - l.t);
+						double b = r.v - a*r.t;
+						//area += dt* 0.5*( a*px.start+b + a*px.end+b);
+						area += dt * (0.5*a*(px.start + px.end) + b);
+					} else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
+						area += l.v*dt;
+					}
+					if (i == n) { // exit condition: final value in sequence, then we need to finish, but
+						if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
+							dt = p.end - r.t;
+							tsum += dt;
+							area += dt* r.v; // extrapolate value flat
+						}
+						break;//done
+					}
+					if (r.t >= p.end)
+						break;//also exit condition, done
+					l_finite = r_finite;
+					l = r;
+				}
+
+			}
+			last_idx = i - 1;
+			return tsum ? area : shyft::nan;
+		}
 
        /** \brief average_value provides a projection/interpretation
          * of the values of a pointsource on to a time-axis as provided.
@@ -625,72 +759,13 @@ namespace shyft{
          * \param source of type S
          * \param p the period [start,end) on time-axis
          * \param last_idx, in/out, position of the last time point used on the source, updated after each call.
-         * \return double, the value at the i'th interval of the supplied time-axis
+         * \return double, the value at the as true average of the specified period 
          */
         template <class S>
         double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
-            const size_t n=source.size();
-            if (n == 0) // early exit if possible
-                return shyft::nan;
-            size_t i=hint_based_search(source,p,last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
-
-            if(i==std::string::npos) // this might be a case
-                return shyft::nan; // and is equivalent to no points, or all points after requested period.
-
-            point l;// Left point
-            bool l_finite=false;
-
-            double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
-            utctimespan tsum=0; // length of non-nan f(t) time-axis
-
-            while(true) { //there are two exit criteria: no more points, or we pass the period end.
-                if(!l_finite) {//search for 'point' anchor phase
-                    l=source.get(i++);
-                    l_finite=std::isfinite(l.v);
-                    if(i==n) { // exit condition
-                        if(l_finite && l.t < p.end ) {//give contribution
-                            utctimespan dt= p.end-l.t;
-                            tsum += dt;
-                            area += dt* l.v; // extrapolate value flat
-                        }
-                        break;//done
-                    }
-					if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
-						break;//done
-					}
-                } else { // got point anchor l, search for right point/end
-                    point r=source.get(i++);// r is guaranteed > p.start due to hint-based search
-                    bool r_finite=std::isfinite(r.v);
-                    utcperiod px(std::max(l.t,p.start),std::min(r.t,p.end));
-                    utctimespan dt= px.timespan();
-                    tsum += dt;
-
-                    // now add area contribution for l..r
-                    if(linear && r_finite) {
-                        double a= (r.v-l.v)/(r.t-l.t);
-                        double b=  r.v - a*r.t;
-                        //area += dt* 0.5*( a*px.start+b + a*px.end+b);
-                        area += dt * ( 0.5*a*(px.start+px.end)+ b);
-                    } else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
-                        area += l.v*dt;
-                    }
-                    if(i==n) { // exit condition: final value in sequence, then we need to finish, but
-                        if(r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
-                            dt= p.end-r.t;
-                            tsum += dt;
-                            area += dt* r.v; // extrapolate value flat
-                        }
-                        break;//done
-                    }
-                    if(r.t >= p.end)
-                        break;//also exit condition, done
-                    l_finite=r_finite;
-                    l=r;
-                }
-
-            }
-            last_idx=i-1;
-            return tsum?area/tsum:shyft::nan;
+			utctimespan tsum = 0;
+			double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
+			return tsum>0?area/tsum:shyft::nan;
         }
 
 
@@ -783,6 +858,50 @@ namespace shyft{
 
             size_t size() const { return time_axis.size(); }
         };
+
+		/**\brief provides the accumulated value accessor over the supplied time-axis
+		 * 
+		 * Given sequential access, this accessor tries to be smart using previous
+		 * accumulated value plus the new delta to be efficient computing the
+		 * accumulated series from another kind of point source.
+		 */
+		template <class S, class TA>
+		class accumulate_accessor {
+		private:
+			static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
+			mutable size_t last_idx;
+			mutable size_t q_idx;// last queried index
+			mutable double q_value;// outcome of
+			const TA& time_axis;
+			const S& source;
+			std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
+		public:
+			accumulate_accessor(const S& source, const TA& time_axis)
+				: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
+			}
+			accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis)// also support shared ptr. access
+				: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
+			}
+
+			size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
+
+			double value(const size_t i) const {
+				if (i == 0)
+					return 0.0;// as defined by now, (but if ts is nan, then nan could be correct value!)
+				if (i == q_idx)
+					return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
+				utctimespan tsum = 0;
+				if (i > q_idx && q_idx != npos) { // utilize the fact that we already have computed the sum up to q_idx
+					q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+				} else { // just have to do the heavy work, calculate the entire sum again.
+					q_value = accumulate_value(source, utcperiod(time_axis.time(0), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+				}
+				q_idx = i;
+				return q_value;
+			}
+
+			size_t size() const { return time_axis.size(); }
+		};
 
         /** \brief The direct_accessor template is a fast accessor
          *

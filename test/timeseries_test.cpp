@@ -84,7 +84,7 @@ void timeseries_test::test_point_timeaxis() {
     TS_ASSERT(false);
     //TS_ASSERT_EQUALS(ts0.size(),0);
     //TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
-    } catch (const exception & ex) {
+    } catch (const exception & ) {
 
     }
     vector<utctime> t={3600*1,3600*2,3600*3};
@@ -868,4 +868,51 @@ void timeseries_test::test_periodic_pattern_ts() {
 
 	TS_ASSERT_DELTA(fun(0), 0, 1e-9);
 	TS_ASSERT_DELTA(fun(deltahours(24)), 0, 1e-9);
+}
+
+void timeseries_test::test_accumulate_value() {
+	calendar utc;
+	auto t = utc.time(2015, 5, 1, 0, 0, 0);
+	auto d = deltahours(1);
+	size_t n = 10;
+	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i!= 5?i*1.0:shyft::nan);//0, 1,2,4,nan,6..9
+	//Two equal timeaxis representations
+	timeaxis ta(t, d, n);
+	point_ts<timeaxis> a(ta, values,point_interpretation_policy::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); // while we have the test-setup, we test both the function, the accessor
+	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
+
+	utctimespan tsum;
+	size_t last_ix = 0;
+	auto y1 = accumulate_value(a, ta.period(0), last_ix, tsum, true);
+	TS_ASSERT_DELTA(0.5*deltahours(1), y1, 0.0001);
+	TS_ASSERT_EQUALS(tsum, deltahours(1));
+	auto y2 = accumulate_value(a, utcperiod(ta.time(0), ta.time(2)), last_ix, tsum, true);
+	TS_ASSERT_DELTA(1.0*deltahours(2), y2, 0.0001);
+	TS_ASSERT_EQUALS(tsum, deltahours(2));
+	auto y3 = accumulate_value(a, utcperiod(ta.time(0), ta.time(6)), last_ix, tsum, true);// last part of accumulation is nan, so 4 flattens out
+	TS_ASSERT_DELTA(2.0*deltahours(4)+4.0*deltahours(1), y3, 0.0001);
+	// besides, since average_value and friends uses accumulate_value, this function is pretty well tested from those tests.
+}
+
+void timeseries_test::test_accumulate_ts_and_accessor() {
+	calendar utc;
+	auto t = utc.time(2015, 5, 1, 0, 0, 0);
+	auto d = deltahours(1);
+	size_t n = 10;
+	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i != 5 ? i*1.0 : shyft::nan);//0, 1,2,4,nan,6..9
+																										//Two equal timeaxis representations
+	timeaxis ta(t, d, n);
+	point_ts<timeaxis> a(ta, values, point_interpretation_policy::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); //  the accessor
+	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
+	TS_ASSERT_DELTA(0.0, aa.value(0), 0.001);
+	TS_ASSERT_DELTA(0.0, ats.value(0), 0.001);
+	// simple test at ix=1:
+	TS_ASSERT_DELTA(0.5*deltahours(1), aa.value(1), 0.001);
+	TS_ASSERT_DELTA(0.5*deltahours(1), ats.value(1), 0.001);
+	// now the ats have some extra feature through it's f(t), operator()
+	TS_ASSERT_DELTA(0.25*deltaminutes(30), ats(t + deltaminutes(30)), 0.0001);
+	// the accessor should be smart, trying to re-use prior computation, I verify the result here, 
+	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
