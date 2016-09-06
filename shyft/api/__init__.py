@@ -1,5 +1,6 @@
 from ._api import *
-
+import numpy as np
+from math import sqrt
 # Fix up vector types
 
 DoubleVector.size = lambda self: len(self)
@@ -116,3 +117,25 @@ PrecipitationSource.vector_t = PrecipitationSourceVector
 RadiationSource.vector_t = RadiationSourceVector
 RelHumSource.vector_t = RelHumSourceVector
 WindSpeedSource.vector_t = WindSpeedSourceVector
+
+def np_array(dv):
+    """
+    convert flattened double-vector to numpy array
+    Parameters
+    ----------
+    dv
+
+    Returns
+    -------
+    numpy array.
+    """
+    f = dv.to_numpy()
+    n = int(sqrt(dv.size()))
+    m = f.reshape(n, n)
+    return m
+
+# fixup kalman state
+KalmanState.x = property(lambda self: KalmanState.get_x(self).to_numpy(),doc="represents the current bias estimate, kalman.state.x")
+KalmanState.k = property(lambda self: KalmanState.get_k(self).to_numpy(),doc="represents the current kalman gain factors, kalman.state.k")
+KalmanState.P = property(lambda self: np_array(KalmanState.get_P(self)),doc="returns numpy array of kalman.state.P, the nxn covariance matrix")
+KalmanState.W = property(lambda self: np_array(KalmanState.get_W(self)),doc="returns numpy array of kalman.state.W, the nxn noise matrix")

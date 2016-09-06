@@ -40,5 +40,25 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         s=api.KalmanState(n_daily_observations=8, covariance_init=0.5, hourly_correlation=0.93, process_noise_init=0.06)
         self.assertEqual(s.size(), 8)
 
+    def test_filter(self):
+        f = api.KalmanFilter()
+        self.assertEqual(f.parameter.n_daily_observations, 8)
+        s = f.create_initial_state()
+        self.assertEqual(s.size(),8)
+        utc=api.Calendar()
+        t0 = utc.time(2015,1,1)
+        dt = api.deltahours(3)
+        n = 8
+        ta = api.Timeaxis2(t0,dt,n)
+        for i in range(ta.size()):
+            f.update(2.0,ta.time(i),s)
+        x = s.x
+        self.assertEqual(len(x),8)
+        self.assertEqual(len(s.k),8)
+        self.assertEqual(s.P.shape[0], 8)
+        self.assertEqual(s.P.shape[1], 8)
+        self.assertEqual(s.W.shape[0], 8)
+        self.assertEqual(s.W.shape[1], 8)
+
 if __name__ == "__main__":
     unittest.main()

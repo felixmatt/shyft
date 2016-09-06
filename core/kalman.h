@@ -97,7 +97,7 @@ namespace shyft {
                 }
 
                 /** \brief update the kalman::filter p with the observed_bias for
-                 * a specific 'hour' (still clumsy,we need utctime here..)
+                 * a specific period starting with utctime t.
                  *
                  * \param observed_bias nan if no observation is available otherwise obs-fc
                  * \param t utctime of observation, this filter utilizes daily solar patterns, so time
