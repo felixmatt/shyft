@@ -100,6 +100,7 @@ void timeseries_test::test_point_timeaxis() {
 
 
 }
+
 void timeseries_test::test_timeaxis() {
     auto t0=calendar().time(YMDhms(2000,1,1,0,0,0));
     auto dt=deltahours(1);
@@ -159,6 +160,7 @@ void timeseries_test::test_point_source_with_timeaxis() {
     }
 
 }
+
 void timeseries_test::test_point_source_scale_by_value() {
     calendar utc;
     auto t=utc.time(YMDhms(2015,5,1,0,0,0));
@@ -174,6 +176,7 @@ void timeseries_test::test_point_source_scale_by_value() {
         TS_ASSERT_DELTA(1.0,b.value(i),shyfttest::EPS);
     }
 }
+
 namespace shyfttest {
     class ts_source {
             utctime start;
@@ -351,7 +354,6 @@ void timeseries_test::test_average_value_staircase() {
     TS_ASSERT_EQUALS(ps.index_of_count,0);
 }
 
-
 void timeseries_test::test_average_value_linear_between_points() {
 	auto t0 = calendar().time(YMDhms(2000, 1, 1, 0, 0, 0));
 	auto dt = deltahours(1);
@@ -444,8 +446,6 @@ void timeseries_test::test_average_value_linear_between_points() {
 }
 
 
-
-
 using namespace shyft::core;
 using namespace shyft::timeseries;
 /// average_value_staircase_fast:
@@ -525,8 +525,6 @@ public:
 	size_t size() const { return time_axis.size(); }
 };
 
-
-
 void timeseries_test::test_TxFxSource() {
     utctime t0 = calendar().time(YMDhms(1940, 1, 1, 0,0, 0));
     utctimespan dt = deltahours(1);
@@ -549,10 +547,9 @@ void timeseries_test::test_TxFxSource() {
 	double s1,s2;
 	auto msec1 = measure<>::execution(f1,s1);
 	auto msec2 = measure<>::execution(f2, s2);
-	cout<<"Timing results:"<<endl;
-	cout << "\tT generic :" << msec1 << "(" << s1 << ")" << endl;
-	cout << "\tT fast    :" << msec2 << "(" << s2 << ")" << endl;
-
+	cout << "\nTiming results:" << endl;
+	cout << "    T generic : " << msec1 << " (" << s1 << ")" << endl;
+	cout << "    T fast    : " << msec2 << " (" << s2 << ")" << endl;
 }
 
 void timeseries_test::test_point_timeseries_with_point_timeaxis() {
@@ -562,11 +559,8 @@ void timeseries_test::test_point_timeseries_with_point_timeaxis() {
     TS_ASSERT_EQUALS(ps.size(),3);
     for(size_t i=0;i<ps.size();++i) {
         TS_ASSERT_EQUALS(ps.get(i).v,points[i]);
-
     }
 }
-
-
 
 void timeseries_test::test_time_series_difference() {
     using namespace shyfttest::mock;
@@ -605,7 +599,6 @@ void timeseries_test::test_ts_weighted_average(void) {
 	}
 }
 
-
 void timeseries_test::test_sin_fx_ts() {
 	sin_fx fx(10.0, 0.0, 10.0, 10.0, 0, deltahours(24));
 	TS_ASSERT_DELTA(fx(0), 10.0, 0.000001);
@@ -620,9 +613,7 @@ void timeseries_test::test_sin_fx_ts() {
 	TS_ASSERT_DELTA(tsfx(0), 10.0, 0.0000001);
 	TS_ASSERT_DELTA(tsfx(deltahours(24)), 10.0, 0.0000001);
 	TS_ASSERT_DELTA(tsfx(deltahours(18)), 0.0, 0.000001);
-
 }
-
 
 template <class A,class B>
 static bool is_equal_ts(const A& a,const B& b) {
@@ -672,7 +663,6 @@ static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value
     TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
 
 }
-
 
 void timeseries_test::test_binary_operator() {
     /** Test strategy here is to ensure that
@@ -736,8 +726,8 @@ void timeseries_test::test_binary_operator() {
         ts_t b(ta,b_value); // test by-value as well as shared_ptr<TS>
         test_bin_op<ts_t>(a,b,ta,a_value,b_value);
     }
-
 }
+
 void timeseries_test::test_api_ts() {
     using namespace shyft::api;
     calendar utc;
@@ -773,7 +763,6 @@ void timeseries_test::test_api_ts() {
     TS_ASSERT_DELTA(d.value(0),a_value+b_value,0.00001);
     a.set(0,b_value);
     TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
-
 }
 
 typedef shyft::time_axis::fixed_dt tta_t;
@@ -812,6 +801,7 @@ void timeseries_test::test_ts_statistics_calculations() {
     TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
     //cout<<"Done statistics tests!"<<endl;
 }
+
 /** just verify that it calculate at full speed */
 void timeseries_test::test_ts_statistics_speed() {
     calendar utc;
@@ -823,20 +813,17 @@ void timeseries_test::test_ts_statistics_speed() {
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, deltahours(24), n_days);
     auto tsv1 = create_test_ts(n_ts, ta, fx_1);
-    cout<<"\nStart calc percentiles "<< n_days<<" days, x "<<n_ts<< " ts\n";
+    cout << "\nStart calc percentiles " << n_days << " days, x " << n_ts << " ts\n";
     //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
     vector<tts_t> r1;
-    auto f1 = [&tad,&tsv1,&r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
-    for(int sz=tad.size();sz>100;sz/=2) {
+    auto f1 = [&tad, &tsv1, &r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
+    for (int sz = tad.size(); sz > 100; sz /= 2) {
         auto msec1 = measure<>::execution(f1,sz);
-        cout<<"statistics speed tests,"<<tad.size()<<" steps, pr.thread="<<sz<<"steps :"<<msec1<<" ms"<<endl;
+        cout<<"statistics speed tests, "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
     }
     //auto msec2= measure<>::execution(f1,tad.size()/4);
     //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;
-
-
 }
-
 
 void timeseries_test::test_timeshift_ts() {
     using namespace shyft;
@@ -862,5 +849,23 @@ void timeseries_test::test_timeshift_ts() {
     }
 
     auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
+}
 
+void timeseries_test::test_periodic_pattern_ts() {
+
+	struct periodic_ts {
+		int ns;
+		utctimespan dt;
+		utctimespan period;
+		utctime t0;
+		double operator() (utctime t) const {
+			if (t == t0)
+				return 0;
+			return (t - t0 - period); 
+		}
+	} 
+	fun = { 8, deltahours(3), deltahours(24), 0 };
+
+	TS_ASSERT_DELTA(fun(0), 0, 1e-9);
+	TS_ASSERT_DELTA(fun(deltahours(24)), 0, 1e-9);
 }
