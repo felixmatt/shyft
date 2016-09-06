@@ -127,6 +127,10 @@ class RegionModel(unittest.TestCase):
         model_interpolation_parameter.temperature_idw.max_members = 6
         # 20 km is max distance
         model_interpolation_parameter.temperature_idw.max_distance = 20000
+        # zscale is used to discriminate neighbors at different elevation than target point
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 1.0)
+        model_interpolation_parameter.temperature_idw.zscale = 0.5
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 0.5)
         # Pure linear interpolation
         model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
         # This enables IDW with default temperature gradient.

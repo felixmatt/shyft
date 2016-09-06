@@ -143,11 +143,13 @@ namespace expose {
                     "Is used for interpolation.\n"
                     "Additionally it keep distance measure-factor,\n"
                     "so that the IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor)\n"
+					"zscale is used to discriminate neighbors that are at different elevation than target point.\n"
 			)
 			.def(init<int,optional<double,double>>(args("max_members","max_distance","distance_measure_factor"),"create IDW from supplied parameters"))
             .def_readwrite("max_members",&IDWParameter::max_members,"maximum members|neighbors used to interpolate into a point,default=10")
             .def_readwrite("max_distance",&IDWParameter::max_distance,"[meter] only neighbours within max distance is used for each destination-cell,default= 200000.0")
-            .def_readwrite("distance_measure_factor",&IDWParameter::distance_measure_factor,"IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor), default=2.0")
+			.def_readwrite("distance_measure_factor",&IDWParameter::distance_measure_factor,"IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor), default=2.0")
+			.def_readwrite("zscale",&IDWParameter::zscale,"Use to weight neighbors having same elevation, default=1.0")
             ;
 		def("idw_temperature", idw_temperature,
 			"Runs inverse distance interpolation to project temperature sources out to the destination geo-timeseries\n"

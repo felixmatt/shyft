@@ -30,10 +30,11 @@ namespace shyft {
 				size_t max_members;///< number of members that can participate in one destination-cell
 				double max_distance;///< [meter] only neighbours within max distance is used for each destination-cell
 				double distance_measure_factor;///< IDW distance is computed as 1 over pow(euclid distance,distance_measure_factor)
+				double zscale; ///< scale factor for z distance, used for weighting neighbors having same z elevation
 				parameter(size_t max_members = 10, double max_distance = 200000.0,
-					double distance_measure_factor = 2.0)
+					double distance_measure_factor = 2.0, double zscale = 1.0)
 					: max_members(max_members), max_distance(max_distance),
-					distance_measure_factor(distance_measure_factor) {}
+					distance_measure_factor(distance_measure_factor), zscale(zscale) {}
 			};
 
 			/** \brief For temperature inverse distance, also provide default temperature gradient to be used
@@ -105,6 +106,8 @@ namespace shyft {
 			* Parameters for the algorithm, that supplies :
 			*    -# P.max_distance const --> double, - locations outside this distance is not available
 			*    -# P.max_members const --> size_t, - max number of members to use in weight
+			*    -# P.distance_measure_factor --> double, - as in pow(x, distance_measure_factor)
+			*    -# P.zscale --> double, - scaling z for distance computing 
 			* \tparam T
 			* TimeAxis providing:
 			*  -#  T.size() const --> size_t, number of non-overlapping time intervals
@@ -149,7 +152,7 @@ namespace shyft {
 
 				const double min_weight = 1.0 / M::distance_measure(typename source_t::geo_point_t(0.0),
 					typename source_t::geo_point_t(parameter.max_distance),
-					parameter.distance_measure_factor);
+					parameter.distance_measure_factor, parameter.zscale);
 
 				const size_t source_count = distance(source_begin, source_end);
 				const size_t destination_count = distance(destination_begin, destination_end);
@@ -171,7 +174,7 @@ namespace shyft {
 					// First, just create unsorted SourceWeightList
 					for_each(source_begin, source_end, [&](const typename S::value_type& source) {
 						double weight = std::min(max_weight, 1.0 / M::distance_measure(destination_point,
-							source.mid_point(), parameter.distance_measure_factor));
+							source.mid_point(), parameter.distance_measure_factor, parameter.zscale));
 						if (weight >= min_weight) // max distance value tranformed to minimum weight, so we only use those near enough
 							swl.emplace_back(&source, weight);
 					});
@@ -348,15 +351,15 @@ namespace shyft {
 			 *
 			 *  Implemented IDW required members are:
 			 *   -# class scale_computer with .add(S,t) and .compute(), including default gradient if to few points
-			 *   -# static method .distance_measure(GeoPointType,GeoPointType, double)
+			 *   -# static method .distance_measure(GeoPointType, GeoPointType, double, double)
 			 *   -# static method .transform(double sourceValue,double scale,const S&source,const D& destination)
 			 *  \sa IDWTemperatureParameter for how to provide parameters to the IDW using this model
 			 */
 			template <class S, class D, class P, class G, class SC>
 			struct temperature_model {
 				typedef SC scale_computer;
-				static inline double distance_measure(const G &a, const G &b, double f) {
-					return G::distance_measure(a, b, f);
+				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
+					return G::distance_measure(a, b, f, zscale);
 				}
 				static inline double transform(double sourceValue, double gradient, const S& s, const D& d) {
 					return sourceValue + gradient*(d.mid_point().z - s.mid_point().z);
@@ -380,8 +383,8 @@ namespace shyft {
 					void clear() {}
 				};
 #endif
-				static inline double distance_measure(const G &a, const G &b, double f) {
-					return G::distance_measure(a, b, f);
+				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
+					return G::distance_measure(a, b, f, zscale);
 				}
 				static inline double transform(double sourceValue, double gradient, const S& s, const D& d) {
 					return sourceValue*d.slope_factor();
@@ -409,8 +412,8 @@ namespace shyft {
 					void clear() {}
 				};
 #endif
-				static inline double distance_measure(const G &a, const G &b, double f) {
-					return G::distance_measure(a, b, f);
+				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
+					return G::distance_measure(a, b, f, zscale);
 				}
 				static inline double transform(double precipitation, double scalefactor, const S& s, const D& d) {
 					//const double zero_precipitation = 1e-6;
@@ -434,8 +437,8 @@ namespace shyft {
 					void clear() {}
 				};
 #endif
-				static inline double distance_measure(const G &a, const G &b, double f) {
-					return G::distance_measure(a, b, f);
+				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
+					return G::distance_measure(a, b, f, zscale);
 				}
 				static inline double transform(double sourceValue, double gradient, const S& s, const D& d) {
 					return sourceValue;
@@ -457,8 +460,8 @@ namespace shyft {
 					void clear() {}
 				};
 #endif
-				static inline double distance_measure(const G &a, const G &b, double f) {
-					return G::distance_measure(a, b, f);
+				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
+					return G::distance_measure(a, b, f, zscale);
 				}
 				static inline double transform(double sourceValue, double gradient, const S& s, const D& d) {
 					return sourceValue;

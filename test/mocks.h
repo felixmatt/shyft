@@ -435,6 +435,7 @@ namespace shyfttest {
 			double default_gradient() const { return -0.006; }  // C/m decrease 0.6 degC/100m
 			double precipitation_scale_factor() const { return 1.0 + 2.0 / 100.0; } // 2 pct /100m
 			double distance_measure_factor = 2.0; // Square distance
+			double zscale = 1.0;
 		};
 
 		using namespace shyft::core::inverse_distance;
