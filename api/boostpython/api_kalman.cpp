@@ -131,13 +131,13 @@ namespace expose {
 			.def(init<>("Constructs a bias predictor with default filter, parameters and state"))
 			.def(init<const shyft::core::kalman::filter&>(args("filter"),"create a bias predictor with specified filter"))
 			.def(init<const shyft::core::kalman::filter&,const shyft::core::kalman::state&>(args("filter","state"), "create a bias predictor with specified filter and initial state"))
-			.def("udpate_with_geo_forecast", update_with_forecast_geo_ts_and_obs,args("bias_predictor","temperature_sources","observation_ts","time_axis"),
+			.def("update_with_geo_forecast", update_with_forecast_geo_ts_and_obs,args("bias_predictor","temperature_sources","observation_ts","time_axis"),
 				"update the bias-predictor with\n\t"
 				"a set of forecasts:TemperatureSourceVector\n\t"
 				"observation ts: Timeseries\n\t"
 				"time_axis covering the period/timesteps to be updated\n"
 				"After the update, the state is updated with new kalman estimates for the bias, .state.x\n"
-			).staticmethod("udpate_with_geo_forecast")
+			).staticmethod("update_with_geo_forecast")
 			.def_readonly("filter",&KalmanBiasPredictor::f,"the kalman filter with parameters")
 			.def_readwrite("state",&KalmanBiasPredictor::s,"current state of the predictor")
 			;
