@@ -108,7 +108,39 @@ namespace expose {
 			;
 
 	}
+	
+	void update_with_forecast_geo_ts_and_obs(
+		shyft::core::kalman::bias_predictor& bp, 
+		geo_temperature_vector_ fc, 
+		const shyft::api::apoint_ts& obs,
+		const shyft::time_axis::generic_dt &ta) {
+		std::vector<shyft::api::apoint_ts> fc_ts_set;
+		for (auto& geo_ts : *fc)
+			fc_ts_set.push_back(geo_ts.ts);
+		bp.update_with_forecast(fc_ts_set, obs, ta);
+	}
+
 	static void kalman_bias_predictor() {
+		typedef shyft::core::kalman::bias_predictor KalmanBiasPredictor;
+		
+		class_<KalmanBiasPredictor>(
+			"KalmanBiasPredictor",
+			"A bias predictor using a daily pattern KalmanFilter for temperature (etc.)\n"
+			"(tbd)"
+			)
+			.def(init<>("Constructs a bias predictor with default filter, parameters and state"))
+			.def(init<const shyft::core::kalman::filter&>(args("filter"),"create a bias predictor with specified filter"))
+			.def(init<const shyft::core::kalman::filter&,const shyft::core::kalman::state&>(args("filter","state"), "create a bias predictor with specified filter and initial state"))
+			.def("udpate_with_geo_forecast", update_with_forecast_geo_ts_and_obs,args("bias_predictor","temperature_sources","observation_ts","time_axis"),
+				"update the bias-predictor with\n\t"
+				"a set of forecasts:TemperatureSourceVector\n\t"
+				"observation ts: Timeseries\n\t"
+				"time_axis covering the period/timesteps to be updated\n"
+				"After the update, the state is updated with new kalman estimates for the bias, .state.x\n"
+			).staticmethod("udpate_with_geo_forecast")
+			.def_readonly("filter",&KalmanBiasPredictor::f,"the kalman filter with parameters")
+			.def_readwrite("state",&KalmanBiasPredictor::s,"current state of the predictor")
+			;
 	}
     void kalman() {
         kalman_parameter();

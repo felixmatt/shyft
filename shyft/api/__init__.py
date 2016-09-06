@@ -139,3 +139,22 @@ KalmanState.x = property(lambda self: KalmanState.get_x(self).to_numpy(),doc="re
 KalmanState.k = property(lambda self: KalmanState.get_k(self).to_numpy(),doc="represents the current kalman gain factors, kalman.state.k")
 KalmanState.P = property(lambda self: np_array(KalmanState.get_P(self)),doc="returns numpy array of kalman.state.P, the nxn covariance matrix")
 KalmanState.W = property(lambda self: np_array(KalmanState.get_W(self)),doc="returns numpy array of kalman.state.W, the nxn noise matrix")
+
+#fixup KalmanBiasPredictor
+def KalmanBiasPredictor_update_with_forecast(bp,fc_set,obs,time_axis):
+    """
+
+    Parameters
+    ----------
+    bp
+    fc_set
+    obs
+    time_axis
+
+    Returns
+    -------
+
+    """
+    return KalmanBiasPredictor.update_with_geo_forecast(bp,fc_set,obs,time_axis)
+
+KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast
