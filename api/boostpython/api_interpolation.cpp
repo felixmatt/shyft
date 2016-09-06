@@ -36,28 +36,13 @@ namespace expose {
 			throw std::runtime_error("the supplied destination time-axis should have more than 0 element, and a delta-t larger than 0");
 	}
 
-    static geo_temperature_vector_ create_destination_geo_ts(const geo_point_vector& dst_points, shyft::time_axis::fixed_dt time_axis) {
-        auto dst = std::make_shared<geo_temperature_vector>();
-        dst->reserve(dst_points.size());
-        double null_value= std::numeric_limits<double>::quiet_NaN();
-        for(const auto& gp:dst_points)
-            dst->emplace_back(gp,sa::apoint_ts(time_axis,null_value,shyft::timeseries::point_interpretation_policy::POINT_AVERAGE_VALUE));
-        return dst;
-    }
-    static void verify_interpolation_parameters(const geo_temperature_vector_& src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis) {
-        if(src==nullptr || src->size()==0 || dst_points.size()==0)
-            throw std::runtime_error("supplied src and dst_points should be non-null and have at least one time-series");
-        if(time_axis.size()==0 || time_axis.delta()==0)
-            throw std::runtime_error("the supplied destination time-axis should have more than 0 element, and a delta-t larger than 0");
-    }
-
     ///< a local wrapper with api-typical checks on the input to support use from python
     static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
         using namespace std;
         typedef shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
         // 1. some minor checks to give the python user early warnings.
-        verify_interpolation_parameters(src,dst_points,time_axis);
-        auto dst=create_destination_geo_ts(dst_points,time_axis);
+        validate_parameters(src, dst_points, time_axis);
+        auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points, time_axis);
         // 2. then run btk to fill inn the results
         if(src->size()>1) {
             btk::btk_interpolation<btk_tsa_t>(begin(*src), end(*src), begin(*dst), end(*dst),time_axis, btk_parameter);
