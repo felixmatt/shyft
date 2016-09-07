@@ -63,40 +63,41 @@ namespace expose {
         self_ts_t  max_ts_f =&pts_t::max;
 
 
-        class_<shyft::api::apoint_ts>("Timeseries","A timeseries providing mathematical and statistical operations and functionality")
-            .def(init<const time_axis::generic_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-            .def(init<const time_axis::generic_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+		class_<shyft::api::apoint_ts>("Timeseries", "A timeseries providing mathematical and statistical operations and functionality")
+			.def(init<const time_axis::generic_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-            .def(init<const time_axis::fixed_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-            .def(init<const time_axis::fixed_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-            .def(init<const time_axis::point_dt&,double,optional<timeseries::point_interpretation_policy> >(args("ta","fill_value","point_fx"),"construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-            .def(init<const time_axis::point_dt&,const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta","values","point_fx"),"construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-            .def(init<const shyft::api::apoint_ts&>(args("clone"),"creates a shallow copy of clone" ))
-            DEF_STD_TS_STUFF()
-            // expose time_axis sih: would liek to use property, but no return value policy, so we use get_ + fixup in init.py
-            .def("get_time_axis",&shyft::api::apoint_ts::time_axis,"returns the time-axis",return_internal_reference<>())
-            .add_property("values",&shyft::api::apoint_ts::values,"return the values (possibly calculated on the fly)")
-            // operators
-            .def(self * self)
-            .def(double() * self )
-            .def(self * double())
+			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
+			DEF_STD_TS_STUFF()
+			// expose time_axis sih: would liek to use property, but no return value policy, so we use get_ + fixup in init.py
+			.def("get_time_axis", &shyft::api::apoint_ts::time_axis, "returns the time-axis", return_internal_reference<>())
+			.add_property("values", &shyft::api::apoint_ts::values, "return the values (possibly calculated on the fly)")
+			// operators
+			.def(self * self)
+			.def(double() * self)
+			.def(self * double())
 
-            .def(self + self)
-            .def(double() + self)
-            .def(self + double())
+			.def(self + self)
+			.def(double() + self)
+			.def(self + double())
 
-            .def(self / self)
-            .def(double() / self)
-            .def(self / double())
+			.def(self / self)
+			.def(double() / self)
+			.def(self / double())
 
-            .def(self - self)
-            .def(double() - self)
-            .def(self - double())
+			.def(self - self)
+			.def(double() - self)
+			.def(self - double())
 
-            .def( - self)
-            .def("average",&shyft::api::apoint_ts::average,args("ta"),"create a new ts that is the true average of self over the specified time-axis ta")
+			.def(-self)
+			.def("average", &shyft::api::apoint_ts::average, args("ta"), "create a new ts that is the true average of self over the specified time-axis ta")
+			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis ta")
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
@@ -107,7 +108,9 @@ namespace expose {
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
         avg_func_t avg=shyft::api::average;
+		avg_func_t acc = shyft::api::accumulate;
         def("average",avg,args("ts","time_axis"),"creates a true average time-series of ts for intervals as specified by time_axis");
+		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",shyft::api::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
 
         typedef shyft::api::apoint_ts (*ts_op_ts_t)(const shyft::api::apoint_ts&a, const shyft::api::apoint_ts&b);

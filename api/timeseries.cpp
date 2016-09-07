@@ -13,6 +13,9 @@ namespace shyft{
         apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
         apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
 
+		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
+		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
+
 
         apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
         apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
@@ -95,6 +98,9 @@ namespace shyft{
         apoint_ts apoint_ts::average(const gta_t &ta) const {
             return shyft::api::average(*this,ta);
         }
+		apoint_ts apoint_ts::accumulate(const gta_t &ta) const {
+			return shyft::api::accumulate(*this, ta);
+		}
         void apoint_ts::set(size_t i, double x) {
             gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
             if(!gpts)

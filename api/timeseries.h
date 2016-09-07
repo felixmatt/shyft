@@ -105,6 +105,7 @@ namespace shyft {
 
             };
             struct average_ts;//fwd api
+			struct accumulate_ts;//fwd api
             struct time_shift_ts;// fwd api
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
@@ -122,6 +123,7 @@ namespace shyft {
                    typedef gta_t ta_t;///< this is the generic time-axis type for apoint_ts, needed by timeseries namespace templates
 				   friend struct average_ts;
 				   friend struct time_shift_ts;
+				   friend struct accumulate_ts;
                 // constructors that we want to expose
                 // like
 
@@ -175,6 +177,7 @@ namespace shyft {
 
                 //-- then some useful functions/properties
                 apoint_ts average(const gta_t &ta) const;
+				apoint_ts accumulate(const gta_t &ta) const;
                 apoint_ts max(double a) const;
                 apoint_ts min(double a) const;
                 apoint_ts max(const apoint_ts& other) const;
@@ -315,6 +318,95 @@ namespace shyft {
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
 
             };
+
+			/** \brief The accumulate_ts is used for providing accumulated(integrated) ts values over a time-axis
+			*
+			* Given a any ts, concrete, or an expression, provide the true accumulated values, 
+			* defined as area under non-nan values of the f(t) curve, 
+			* on the intervals points as provided by the specified time-axis.
+			*
+			* The value at the i'th point of the time-axis is given by:
+			*
+			*   integral of f(t) dt from t0 to ti , 
+			*
+			*   where t0 is time_axis.period(0).start, and ti=time_axis.period(i).start 
+			*
+			* using the f(t) interpretation of the supplied ts (linear or stair case).
+			*
+			* \note The value at t=t0 is 0.0 (by definition)
+			* \note The value of t outside ta.total_period() is nan
+			* 
+			* The \ref point_interpretation_policy is always POINT_INSTANT_VALUE for the result ts.
+			*
+			* \note if a nan-value intervals are excluded from the integral and time-computations.
+			*       E.g. let's say half the interval is nan, then the true average is computed for
+			*       the other half of the interval.
+			*
+			*/
+			struct accumulate_ts :ipoint_ts {
+				gta_t ta;
+				std::shared_ptr<ipoint_ts> ts;
+				// useful constructors
+				accumulate_ts(gta_t&& ta, const apoint_ts& ats) :ta(std::move(ta)), ts(ats.ts) {}
+				accumulate_ts(gta_t&& ta, apoint_ts&& ats) :ta(std::move(ta)), ts(std::move(ats.ts)) {}
+				accumulate_ts(const gta_t& ta, apoint_ts&& ats) :ta(ta), ts(std::move(ats.ts)) {}
+				accumulate_ts(const gta_t& ta, const apoint_ts& ats) :ta(ta), ts(ats.ts) {}
+				accumulate_ts(const gta_t& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(ta), ts(ts) {}
+				accumulate_ts(gta_t&& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(std::move(ta)), ts(ts) {}
+				// std copy ct and assign
+				accumulate_ts(const accumulate_ts &c) :ta(c.ta), ts(c.ts) {}
+				accumulate_ts(accumulate_ts&&c) :ta(std::move(ta)), ts(std::move(c.ts)) {}
+				accumulate_ts& operator=(const accumulate_ts&c) {
+					if (this != &c) {
+						ta = c.ta;
+						ts = c.ts;
+					}
+					return *this;
+				}
+				accumulate_ts& operator=(accumulate_ts&& c) {
+					ta = std::move(c.ta);
+					ts = std::move(c.ts);
+					return *this;
+				}
+				// implement ipoint_ts contract:
+				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_INSTANT_VALUE; }
+				virtual void set_point_interpretation(point_interpretation_policy point_interpretation) { ; }// we could throw here..
+				virtual const gta_t& time_axis() const { return ta; }
+				virtual utcperiod total_period() const { return ta.total_period(); }
+				virtual size_t index_of(utctime t) const { return ta.index_of(t); }
+				virtual size_t size() const { return ta.size(); }
+				virtual utctime time(size_t i) const { return ta.time(i); };
+				virtual double value(size_t i) const {
+					if (i>ta.size())
+						return nan;
+					if (i == 0)// by definition,0.0 at i=0
+						return 0.0;
+					size_t ix_hint = 0;// assume almost fixed delta-t.
+					utctimespan tsum;
+					return accumulate_value(*ts, utcperiod(ta.time(0), ta.time(i)), ix_hint, tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+				}
+				virtual double value_at(utctime t) const {
+					// return true accumulated value at t
+					if (!ta.total_period().contains(t))
+						return nan;
+					if (t == ta.time(0))
+						return 0.0; // by definition
+					utctimespan tsum;
+					size_t ix_hint = 0;
+					return accumulate_value(*this, utcperiod(ta.time(0), t), ix_hint, tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+				}
+				virtual std::vector<double> values() const {
+					std::vector<double> r;r.reserve(ta.size());
+					accumulate_accessor<ipoint_ts, gta_t> accumulate(*ts, ta);// use accessor, that 
+					for (size_t i = 0;i<ta.size();++i) {                      // given sequential access
+						r.push_back(accumulate.value(i));                     // reuses acc.computation
+					}
+					return std::move(r);
+				}
+				// to help the average function, return the i'th point of the underlying timeseries
+				//point get(size_t i) const {return point(ts->time(i),ts->value(i));}
+
+			};
 
 
             /** \brief time_shift ts do a time-shift dt on the supplied ts
@@ -592,6 +684,9 @@ namespace shyft {
             // add operators and functions to the apoint_ts class, of all variants that we want to expose
             apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */) ;
             apoint_ts average(apoint_ts&& ts,const gta_t& ta) ;
+
+			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
+			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
 
 
             apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) ;

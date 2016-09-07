@@ -62,7 +62,7 @@ class TimeSeries(unittest.TestCase):
         tsfixed = api.TsFixed(self.ta, v)
         self.assertEqual(tsfixed.size(), self.ta.size())
         self.assertAlmostEqual(tsfixed.get(0).v, v[0])
-        vv = tsfixed.values.to_numpy() #introduced .values for compatibility
+        vv = tsfixed.values.to_numpy()  # introduced .values for compatibility
         assert_array_almost_equal(dv, vv)
         tsfixed.values[0] = 10.0
         dv[0] = 10.0
@@ -84,7 +84,7 @@ class TimeSeries(unittest.TestCase):
         tspoint = api.TsPoint(ta, v)
         self.assertEqual(tspoint.size(), ta.size())
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
-        self.assertAlmostEqual(tspoint.values[0], v[0]) # just to verfy compat .values works
+        self.assertAlmostEqual(tspoint.values[0], v[0])  # just to verfy compat .values works
         self.assertEqual(tspoint.get(0).t, ta(0).start)
 
     def test_ts_factory(self):
@@ -198,7 +198,8 @@ class TimeSeries(unittest.TestCase):
 
         self.assertEqual(len(v), 2)
         self.assertAlmostEqual(v[0].value(0), 3.0, "expect first ts to be 3.0")
-        aa = api.Timeseries(ta=a.time_axis, values=a.values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
+        aa = api.Timeseries(ta=a.time_axis, values=a.values,
+                            point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
         a.fill(1.0)
         self.assertAlmostEqual(v[0].value(0), 1.0, "expect first ts to be 1.0, because the vector keeps a reference ")
         self.assertAlmostEqual(aa.value(0), 3.0)
@@ -212,7 +213,8 @@ class TimeSeries(unittest.TestCase):
         timeseries = api.TsVector()
 
         for i in range(10):
-            timeseries.append(api.Timeseries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+            timeseries.append(
+                api.Timeseries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
         wanted_percentiles = api.IntVector([0, 10, 50, -1, 70, 100])
         ta_day = api.Timeaxis(t0, dt * 24, n // 24)
@@ -238,14 +240,29 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.Timeaxis(t0, dt, n)
         ts0 = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        ts1 = api.time_shift(ts0, t1-t0)
-        ts2 = 2.0* ts1.time_shift(t0-t1)  # just to verify it still can take part in an expression
+        ts1 = api.time_shift(ts0, t1 - t0)
+        ts2 = 2.0 * ts1.time_shift(t0 - t1)  # just to verify it still can take part in an expression
 
         for i in range(ts0.size()):
-            self.assertAlmostEqual(ts0.value(i),ts1.value(i),3,"expect values to be equal")
-            self.assertAlmostEqual(ts0.value(i)*2.0, ts2.value(i),3,"expect values to be double value")
-            self.assertEqual(ts0.time(i)+ (t1-t0),ts1.time(i), "expect time to be offset delta_t different")
+            self.assertAlmostEqual(ts0.value(i), ts1.value(i), 3, "expect values to be equal")
+            self.assertAlmostEqual(ts0.value(i) * 2.0, ts2.value(i), 3, "expect values to be double value")
+            self.assertEqual(ts0.time(i) + (t1 - t0), ts1.time(i), "expect time to be offset delta_t different")
             self.assertEqual(ts0.time(i), ts2.time(i), "expect time to be equal")
+
+    def test_accumulate(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        ts0 = api.Timeseries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        ts1 = ts0.accumulate(ts0.get_timeaxis())  # ok, maybe we should make method that does time-axis implicit ?
+        ts1_values = ts1.values
+        for i in range(n):
+            expected_value = i * dt * 1.0
+            self.assertAlmostEqual(expected_value, ts1.value(i), 3, "expect integral f(t)*dt")
+            self.assertAlmostEqual(expected_value, ts1_values[i], 3, "expect value vector equal as well")
+
 
 if __name__ == "__main__":
     unittest.main()
