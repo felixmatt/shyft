@@ -852,22 +852,54 @@ void timeseries_test::test_timeshift_ts() {
 }
 
 void timeseries_test::test_periodic_pattern_ts() {
+	// Periodic profile having 8 samples spaced by 3 h
+	std::array<double, 8> profile = { 0, 2, 4, 4, 4, 4, 2, 0 };
+	const utctimespan dt = deltahours(3);
 
 	struct periodic_ts {
-		int ns;
+		int nt;
 		utctimespan dt;
 		utctimespan period;
 		utctime t0;
+		std::array<double, 8> profile;
+
+		int constrain_index(int i) const {
+			int ci = i;
+			if (i >= nt) ci = nt - 1;
+			if (i < 0) ci = 0;
+			return ci;
+		}
+
+		int map_index(utctime t) const {
+			if (t > (t0 + period)) {
+				int np = (t - t0) / period;
+				//double rem = fmod((t - t0), period);
+				t -= np * period;
+			}
+			int i = (t - t0) / dt;
+			return i;
+		}
+
 		double operator() (utctime t) const {
-			if (t == t0)
-				return 0;
-			return (t - t0 - period); 
+			int i = map_index(t);
+			return profile[constrain_index(i)];
 		}
 	} 
-	fun = { 8, deltahours(3), deltahours(24), 0 };
+	fun = { 8, dt, 8*dt, 0, profile };
 
-	TS_ASSERT_DELTA(fun(0), 0, 1e-9);
-	TS_ASSERT_DELTA(fun(deltahours(24)), 0, 1e-9);
+	// Test one period
+	for (int i=0; i<8; i++)
+		TS_ASSERT_DELTA(fun(i*dt), profile[i], 1e-9);
+
+	// Test foldering
+	for (int i=8; i<16; i++)
+		TS_ASSERT_DELTA(fun(i*dt), profile[i-8], 1e-9);
+	for (int i=16; i<24; i++)
+		TS_ASSERT_DELTA(fun(i*dt), profile[i-16], 1e-9);
+
+	// Test shifting
+	//for (int i=10; i<18; i++)
+	//	TS_ASSERT_DELTA(fun(i*dt), profile[i-10], 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {
