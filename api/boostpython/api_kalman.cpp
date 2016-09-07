@@ -8,14 +8,14 @@ namespace expose {
     namespace sa = shyft::api;
     namespace sc = shyft::core;
 	namespace sta = shyft::time_axis;
-	//namespace btk = shyft::core::bayesian_kriging;
-	//namespace idw = shyft::core::inverse_distance;
 
 	typedef std::vector<sc::geo_point> geo_point_vector;
 	typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
 	typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
 	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
+    typedef std::vector<sa::apoint_ts> apoint_ts_vector; // this type is already exposed in api, so we can use it directly
+
 
 	static void kalman_parameter() {
 	    typedef shyft::core::kalman::parameter KalmanParameter;
@@ -33,24 +33,18 @@ namespace expose {
 	}
 	static std::vector<double> kalman_x(const shyft::core::kalman::state &s) {return arma::conv_to<std::vector<double>>::from(s.x);}
 	static std::vector<double> kalman_k(const shyft::core::kalman::state &s) { return arma::conv_to<std::vector<double>>::from(s.k); }
-	static std::vector<double> kalman_P(const shyft::core::kalman::state &s) {
+	/** flattens supplied matrix into a vector row by col */
+	static std::vector<double> arma_flatten(const arma::mat&m) {
 		std::vector<double> r;
-		for (auto i = 0;i < s.size();++i) {
-			auto row = arma::conv_to<std::vector<double>>::from(s.P.row(i));
-			for (auto v : row)
-				r.push_back(v);
+		for (arma::uword i = 0;i < m.n_rows;++i) {
+			auto row = arma::conv_to<std::vector<double>>::from(m.row(i));
+			for (auto v : row) r.push_back(v);
 		}
-		return r;// return flat vector sizexsize
+		return r;// return flatten vector rows repeated n_cols
 	}
-	static std::vector<double> kalman_W(const shyft::core::kalman::state &s) {
-		std::vector<double> r;
-		for (auto i = 0;i < s.size();++i) {
-			auto row = arma::conv_to<std::vector<double>>::from(s.W.row(i));
-			for (auto v : row)
-				r.push_back(v);
-		}
-		return r;// return flat vector sizexsize
-	}
+	static std::vector<double> kalman_P(const shyft::core::kalman::state &s) { return arma_flatten(s.P);}
+	static std::vector<double> kalman_W(const shyft::core::kalman::state &s) { return arma_flatten(s.W);}
+
 	static void kalman_state() {
 	    typedef shyft::core::kalman::state KalmanState;
 		class_<KalmanState>("KalmanState",
@@ -68,7 +62,6 @@ namespace expose {
 			.def("get_k", kalman_k, args("state"), "returns a copy of current kalman gain k").staticmethod("get_k")
 			.def("get_P", kalman_P, args("state"), "returns a copy of current kalman covariance matrix P").staticmethod("get_P")
 			.def("get_W", kalman_W, args("state"), "returns a copy of current kalman noise matrix W").staticmethod("get_W")
-	    // todo: expose arma::vec and arma::mat
 	    ;
 	}
 	static void kalman_filter() {
@@ -108,8 +101,8 @@ namespace expose {
 			;
 
 	}
-
-	void update_with_forecast_geo_ts_and_obs(
+    ///thin wrappers to fwd the call from py to c++
+	static void update_with_forecast_geo_ts_and_obs(
 		shyft::core::kalman::bias_predictor& bp,
 		geo_temperature_vector_ fc,
 		const shyft::api::apoint_ts& obs,
@@ -118,6 +111,13 @@ namespace expose {
 		for (auto& geo_ts : *fc)
 			fc_ts_set.push_back(geo_ts.ts);
 		bp.update_with_forecast(fc_ts_set, obs, ta);
+	}
+	static void update_with_forecast_ts_and_obs(
+			shyft::core::kalman::bias_predictor& bp,
+		const apoint_ts_vector& fc_ts_set,
+		const shyft::api::apoint_ts& obs,
+		const shyft::time_axis::generic_dt &ta) {
+        bp.update_with_forecast(fc_ts_set, obs, ta);
 	}
 
 	static void kalman_bias_predictor() {
@@ -132,12 +132,38 @@ namespace expose {
 			.def(init<const shyft::core::kalman::filter&>(args("filter"),"create a bias predictor with specified filter"))
 			.def(init<const shyft::core::kalman::filter&,const shyft::core::kalman::state&>(args("filter","state"), "create a bias predictor with specified filter and initial state"))
 			.def("update_with_geo_forecast", update_with_forecast_geo_ts_and_obs,args("bias_predictor","temperature_sources","observation_ts","time_axis"),
-				"update the bias-predictor with\n\t"
-				"a set of forecasts:TemperatureSourceVector\n\t"
-				"observation ts: Timeseries\n\t"
-				"time_axis covering the period/timesteps to be updated\n"
-				"After the update, the state is updated with new kalman estimates for the bias, .state.x\n"
+               	"update the bias-predictor with forecasts and observation\n"
+               	"After the update, the state is updated with new kalman estimates for the bias, .state.x\n"
+				"Parameters\n"
+				"----------\n"
+				"bias_predictor : KalmanBiasPredictor\n"
+				"\tThe bias predictor object it self\n"
+				"temperature_sources : TemperatureSourceVector\n"
+				"\ta set of forecasts, in the order oldest to the newest.\n"
+				"\tnote that the geo part of source is not used in this context, only the ts\n"
+				"\twith periods covering parts of the observation_ts and time_axis supplied\n"
+				"observation ts: Timeseries\n"
+				"\tthe observation time-series\n"
+				"time_axis : Timeaxis\n"
+				"\tcovering the period/timesteps to be updated\n"
+				"\t e.g. yesterday, 3h resolution steps, according to the points in the filter\n"
 			).staticmethod("update_with_geo_forecast")
+			.def("update_with_forecast_vector",update_with_forecast_ts_and_obs,args("bias_predictor","temperature_sources","observation_ts","time_axis"),
+               	"update the bias-predictor with forecasts and observation\n"
+               	"After the update, the state is updated with new kalman estimates for the bias, .state.x\n"
+				"Parameters\n"
+				"----------\n"
+				"bias_predictor : KalmanBiasPredictor\n"
+				"\tThe bias predictor object it self\n"
+				"temperature_sources : TsVector\n"
+				"\ta set of forecasts, in the order oldest to the newest.\n"
+				"\twith periods covering parts of the observation_ts and time_axis supplied\n"
+				"observation ts: Timeseries\n"
+				"\tthe observation time-series\n"
+				"time_axis : Timeaxis\n"
+				"\tcovering the period/timesteps to be updated\n"
+				"\t e.g. yesterday, 3h resolution steps, according to the points in the filter\n"
+            ).staticmethod("update_with_forecast_vector")
 			.def_readonly("filter",&KalmanBiasPredictor::f,"the kalman filter with parameters")
 			.def_readwrite("state",&KalmanBiasPredictor::s,"current state of the predictor")
 			;

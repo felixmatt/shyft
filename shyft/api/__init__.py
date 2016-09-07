@@ -147,14 +147,17 @@ def KalmanBiasPredictor_update_with_forecast(bp,fc_set,obs,time_axis):
     Parameters
     ----------
     bp
-    fc_set
-    obs
-    time_axis
+    fc_set : TemperatureSourceVector or TsVector
+    obs : Timeseries
+    time_axis : Timeaxis
 
     Returns
     -------
-
+    nothing
     """
-    return KalmanBiasPredictor.update_with_geo_forecast(bp,fc_set,obs,time_axis)
+    if isinstance(fc_set, TemperatureSourceVector):
+        KalmanBiasPredictor.update_with_geo_forecast(bp,fc_set,obs,time_axis)
+    else:
+        KalmanBiasPredictor.update_with_forecast_vector(bp,fc_set,obs,time_axis)
 
 KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast

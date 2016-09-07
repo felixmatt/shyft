@@ -29,7 +29,7 @@ namespace expose {
 	}
 
 	template <typename VectorT>
-	static void validate_parameters(const VectorT& src, const geo_point_vector& dst_points, sta::fixed_dt time_axis) {
+	static void validate_parameters(const std::shared_ptr<VectorT> & src, const geo_point_vector& dst_points, sta::fixed_dt time_axis) {
 		if (src==nullptr || src->size()==0 || dst_points.size()==0)
 			throw std::runtime_error("the supplied src and dst_points should be non-null and have at least one time-series");
 		if (time_axis.size()==0 || time_axis.delta()==0)
@@ -75,7 +75,7 @@ namespace expose {
             "\tusing only one thread, and considering all source-timeseries (entire grid) for all destinations\n"
             "\tFor few sources, spread out on a grid, it's quite efficient should work well\n"
             "\n"
-            "parameters\n"
+            "Parameters\n"
             "----------\n"
             "src : TemperatureSourceVector\n"
             "\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
@@ -85,7 +85,7 @@ namespace expose {
             "\tand they are transformed and interpolated into the destination-timeaxis\n"
             "btk_parameter:BTKParameter\n"
             "\t the parameters to be used during interpolation\n\n"
-            "returns\n"
+            "Returns\n"
             "-------\n"
             "TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
             );
@@ -95,7 +95,7 @@ namespace expose {
 		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-		
+
 		validate_parameters(src, dst_points, ta);
         auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points, ta);
 		idw::run_interpolation<idw_temperature_model_t, idw_gts_t>(ta, *src, idw_temp_p, *dst,
@@ -108,7 +108,7 @@ namespace expose {
 		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::PrecipitationSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::precipitation_model<idw_gts_t, sa::PrecipitationSource, idw::precipitation_parameter, sc::geo_point> idw_precipitation_model_t;
-		
+
 		validate_parameters(src, dst_points, ta);
 		auto dst = make_dest_geo_ts<geo_precipitation_vector>(dst_points, ta);
 		idw::run_interpolation<idw_precipitation_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
@@ -139,7 +139,7 @@ namespace expose {
 		def("idw_temperature", idw_temperature,
 			"Runs inverse distance interpolation to project temperature sources out to the destination geo-timeseries\n"
 			"\n"
-			"parameters\n"
+			"Parameters\n"
 			"----------\n"
 			"src : TemperatureSourceVector\n"
 			"\t input a geo-located list of temperature time-series with filled in values (some might be nan etc.)\n\n"
@@ -149,14 +149,14 @@ namespace expose {
 			"\tthey are transformed and interpolated into the destination-timeaxis\n"
 			"idw_para : IDWTemperatureParameter\n"
 			"\t the parameters to be used during interpolation\n\n"
-			"returns\n"
+			"Returns\n"
 			"-------\n"
 			"TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
 		);
 		def("idw_precipitation", idw_precipitation,
 			"Runs inverse distance interpolation to project precipitation sources out to the destination geo-timeseries\n"
 			"\n"
-			"parameters\n"
+			"Parameters\n"
 			"----------\n"
 			"src : PrecipitationSourceVector\n"
 			"\t input a geo-located list of precipitation time-series with filled in values (some might be nan etc.)\n\n"
@@ -166,7 +166,7 @@ namespace expose {
 			"\tthey are transformed and interpolated into the destination-timeaxis\n"
 			"idw_para : IDWPrecipitationParameter\n"
 			"\t the parameters to be used during interpolation\n\n"
-			"returns\n"
+			"Returns\n"
 			"-------\n"
 			"PrecipitationSourveVector, -with filled in precipitations according to their position, the idw_parameters and time_axis\n"
 		);
