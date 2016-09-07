@@ -855,6 +855,8 @@ void timeseries_test::test_periodic_pattern_ts() {
 	// Periodic profile having 8 samples spaced by 3 h
 	std::array<double, 8> profile = { 0, 2, 4, 4, 4, 4, 2, 0 };
 	const utctimespan dt = deltahours(3);
+	calendar utc;
+	utctime t0 = utc.time(2016, 1, 1);
 
 	struct periodic_ts {
 		int nt;
@@ -864,42 +866,49 @@ void timeseries_test::test_periodic_pattern_ts() {
 		std::array<double, 8> profile;
 
 		int constrain_index(int i) const {
-			int ci = i;
-			if (i >= nt) ci = nt - 1;
-			if (i < 0) ci = 0;
-			return ci;
-		}
-
-		int map_index(utctime t) const {
-			if (t > (t0 + period)) {
-				int np = (t - t0) / period;
-				//double rem = fmod((t - t0), period);
-				t -= np * period;
-			}
-			int i = (t - t0) / dt;
+			if (i >= nt) i = nt - 1;
+			if (i < 0) i = 0;
 			return i;
 		}
 
+		int origin_shift(utctime t) const {
+			t -= t0;
+			if (t > period)
+				t = fmod(t, period) / dt;
+			return 0;
+		}
+
+		int map_index(utctime t) const {
+			t -= t0;
+			if (abs(t) > period)
+				if (t < 0)
+					t = period - fmod(abs(t), period);
+				else
+					t = fmod(t, period);
+			return t / dt;
+		}
+
 		double operator() (utctime t) const {
+			// int o = origin_shift(t);
 			int i = map_index(t);
 			return profile[constrain_index(i)];
 		}
 	} 
-	fun = { 8, dt, 8*dt, 0, profile };
+	fun = { 8, dt, 8*dt, t0, profile };
 
 	// Test one period
 	for (int i=0; i<8; i++)
-		TS_ASSERT_DELTA(fun(i*dt), profile[i], 1e-9);
+		TS_ASSERT_DELTA(fun(t0 + i*dt), profile[i], 1e-9);
 
-	// Test foldering
-	for (int i=8; i<16; i++)
-		TS_ASSERT_DELTA(fun(i*dt), profile[i-8], 1e-9);
-	for (int i=16; i<24; i++)
-		TS_ASSERT_DELTA(fun(i*dt), profile[i-16], 1e-9);
+	// Test folding forward and backward
+	for (int i=0; i<8; i++)
+		TS_ASSERT_DELTA(fun(t0 + 3*8*dt + i*dt), profile[i], 1e-9);
+	for (int i=0; i<8; i++)
+		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
 
 	// Test shifting
-	//for (int i=10; i<18; i++)
-	//	TS_ASSERT_DELTA(fun(i*dt), profile[i-10], 1e-9);
+	//for (int i=0; i<8; i++)
+	//	TS_ASSERT_DELTA(fun(t0 + (i + 1)*dt), profile[i], 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {
