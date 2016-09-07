@@ -256,7 +256,7 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.Timeaxis2(t0, dt, n)
         ts0 = api.Timeseries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        ts1 = ts0.accumulate(ts0.get_timeaxis())  # ok, maybe we should make method that does time-axis implicit ?
+        ts1 = ts0.accumulate(ts0.get_time_axis())  # ok, maybe we should make method that does time-axis implicit ?
         ts1_values = ts1.values
         for i in range(n):
             expected_value = i * dt * 1.0
