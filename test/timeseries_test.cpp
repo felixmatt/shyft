@@ -859,9 +859,6 @@ void timeseries_test::test_periodic_ts() {
 	utctime t0 = utc.time(2016, 1, 1);
 
 	struct periodic_ts {
-		// TA ta;
-		// profile_spec profile; // .size() v[i], .t0, .dt
-		// profile_source xx; .size()->virtual size .index_of(t)->virtual index, get(i)->double value
 		int nt;
 		utctimespan dt;
 		utctimespan period;
@@ -882,19 +879,92 @@ void timeseries_test::test_periodic_ts() {
 			if (i == nt) i = 0;
 			return profile[i];
 		}
-	} 
+	}
 	fun = { 8, dt, 8*dt, t0, profile };
 
-	// Test one period
-	for (int i=0; i<8; i++)
+	// Test folding forward and backward
+	for (int i = 0; i<8; i++) {
 		TS_ASSERT_DELTA(fun(t0 + i*dt), profile[i], 1e-9);
+		TS_ASSERT_DELTA(fun(t0 + 3*8*dt + i*dt), profile[i], 1e-9);
+		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
+	}
+
+	// Test stair and folding
+	TS_ASSERT_DELTA(fun(t0 - dt), profile[7], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 + dt/2 - 1), profile[0], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 + dt/2), profile[1], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 - dt/2 - 1), profile[7], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 - dt/2), profile[0], 1e-9);
+}
+
+void timeseries_test::test_periodic_virtual_ts() {
+	// Periodic profile having 8 samples spaced by 3 h
+	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	const utctimespan dt = deltahours(3);
+	calendar utc;
+	utctime t0 = utc.time(2016, 1, 1);
+	utctime ta_t0 = utc.time(2015, 1, 1);
+	const utctimespan ta_dt = deltahours(10);
+	const int ta_n = 1000;
+	timeaxis ta(ta_t0, ta_dt, ta_n);
+
+	struct periodic_ts {
+		int nt;
+		utctimespan dt;
+		utctimespan period;
+		utctime t0;
+		std::array<double, 8> profile;
+		timeaxis ta;
+
+		int map_index(utctime t) const {
+			t -= t0;
+			if (t < 0 || period < t) {
+				t = fmod(t, period);
+				if (t < 0) t += period;
+			}
+			return round(double(t) / double(dt));
+		}
+
+		double operator() (utctime t) const {
+			int i = map_index(t);
+			if (i == nt) i = 0;
+			return profile[i];
+		}
+
+		double operator() (utcperiod p) const {
+			return (*this)(p.start);
+			//size_t i = ta.index_of(p.start);
+			//return value(i);
+		}
+
+		double value(size_t i) const {
+			size_t ix = i * ta.size() / nt;
+			return average_value(*this, ta.period(i), ix);
+		}
+
+		size_t size() const { return nt * ta.size(); }
+		point get(size_t i) const { return point(ta.time(i), (*this)(ta.time(i))); }
+		size_t index_of(utctime t) const { return ta.index_of(t); }
+	} 
+	fun = { 8, dt, 8*dt, t0, profile, ta };
+
+	// Test operator(utcperiod)
+	TS_ASSERT_DELTA(fun(ta.period(0)), 1, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(1)), 4, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(2)), 8, 1e-9);
+
+	// Test value
+	TS_ASSERT_DELTA(fun.value(0), 2.5, 1e-9);
+	TS_ASSERT_DELTA(fun.value(1), 6.0, 1e-9);
+	TS_ASSERT_DELTA(fun.value(2), 5.5, 1e-9);
 
 	// Test folding forward and backward
 	TS_ASSERT_DELTA(fun(t0 - dt), profile[7], 1e-9);
-	for (int i=0; i<8; i++)
+	for (int i = 0; i<8; i++) {
+		TS_ASSERT_DELTA(fun(t0 + i*dt), profile[i], 1e-9);
 		TS_ASSERT_DELTA(fun(t0 + 3*8*dt + i*dt), profile[i], 1e-9);
-	for (int i=0; i<8; i++)
 		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
+	}
 
 	// Test stair and folding
 	TS_ASSERT_DELTA(fun(t0 + dt/2 - 1), profile[0], 1e-9);
