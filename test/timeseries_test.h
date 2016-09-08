@@ -24,7 +24,7 @@ public:
 	void test_ts_statistics_calculations();
 	void test_ts_statistics_speed();
 	void test_timeshift_ts();
-	void test_periodic_pattern_ts();
+	void test_periodic_ts();
 	void test_accumulate_value();
 	void test_accumulate_ts_and_accessor();
 };

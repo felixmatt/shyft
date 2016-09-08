@@ -851,7 +851,7 @@ void timeseries_test::test_timeshift_ts() {
     auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
 }
 
-void timeseries_test::test_periodic_pattern_ts() {
+void timeseries_test::test_periodic_ts() {
 	// Periodic profile having 8 samples spaced by 3 h
 	std::array<double, 8> profile = { 0, 2, 4, 4, 4, 4, 2, 0 };
 	const utctimespan dt = deltahours(3);
@@ -872,24 +872,22 @@ void timeseries_test::test_periodic_pattern_ts() {
 		}
 
 		int origin_shift(utctime t) const {
-			t -= t0;
-			if (t > period)
-				t = fmod(t, period) / dt;
+			// Not relevant
 			return 0;
 		}
 
 		int map_index(utctime t) const {
 			t -= t0;
-			if (abs(t) > period)
+			if (abs(t) > period) {
 				if (t < 0)
 					t = period - fmod(abs(t), period);
 				else
 					t = fmod(t, period);
-			return t / dt;
+			}
+			return round(double(t) / double(dt));
 		}
 
 		double operator() (utctime t) const {
-			// int o = origin_shift(t);
 			int i = map_index(t);
 			return profile[constrain_index(i)];
 		}
@@ -906,9 +904,9 @@ void timeseries_test::test_periodic_pattern_ts() {
 	for (int i=0; i<8; i++)
 		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
 
-	// Test shifting
-	//for (int i=0; i<8; i++)
-	//	TS_ASSERT_DELTA(fun(t0 + (i + 1)*dt), profile[i], 1e-9);
+	// Test stair function
+	TS_ASSERT_DELTA(fun(t0 + dt/2 - 1), profile[0], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 + dt/2), profile[1], 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {
