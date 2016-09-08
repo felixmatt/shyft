@@ -462,7 +462,8 @@ void inverse_distance_test::test_temperature_gradient_model() {
 void inverse_distance_test::test_zscale_distance() {
 	geo_point p0(0, 0, 0);
 	geo_point p1(1, 1, 1);
-	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), 12, 1e-9);
+	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), pow(1+1+10*10*1,0.5), 1e-9);
+	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 2.0, 1.0), pow(1 + 1 + 1, 2.0 / 2.0), 1e-9);
 }
 
 /* vim: set filetype=cpp: */
