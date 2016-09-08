@@ -853,43 +853,34 @@ void timeseries_test::test_timeshift_ts() {
 
 void timeseries_test::test_periodic_ts() {
 	// Periodic profile having 8 samples spaced by 3 h
-	std::array<double, 8> profile = { 0, 2, 4, 4, 4, 4, 2, 0 };
+	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
 	calendar utc;
 	utctime t0 = utc.time(2016, 1, 1);
 
 	struct periodic_ts {
+		// TA ta;
+		// profile_spec profile; // .size() v[i], .t0, .dt
+		// profile_source xx; .size()->virtual size .index_of(t)->virtual index, get(i)->double value
 		int nt;
 		utctimespan dt;
 		utctimespan period;
 		utctime t0;
 		std::array<double, 8> profile;
 
-		int constrain_index(int i) const {
-			if (i >= nt) i = nt - 1;
-			if (i < 0) i = 0;
-			return i;
-		}
-
-		int origin_shift(utctime t) const {
-			// Not relevant
-			return 0;
-		}
-
 		int map_index(utctime t) const {
 			t -= t0;
-			if (abs(t) > period) {
-				if (t < 0)
-					t = period - fmod(abs(t), period);
-				else
-					t = fmod(t, period);
+			if (t < 0 || period < t) {
+				t = fmod(t, period);
+				if (t < 0) t += period;
 			}
 			return round(double(t) / double(dt));
 		}
 
 		double operator() (utctime t) const {
 			int i = map_index(t);
-			return profile[constrain_index(i)];
+			if (i == nt) i = 0;
+			return profile[i];
 		}
 	} 
 	fun = { 8, dt, 8*dt, t0, profile };
@@ -899,14 +890,17 @@ void timeseries_test::test_periodic_ts() {
 		TS_ASSERT_DELTA(fun(t0 + i*dt), profile[i], 1e-9);
 
 	// Test folding forward and backward
+	TS_ASSERT_DELTA(fun(t0 - dt), profile[7], 1e-9);
 	for (int i=0; i<8; i++)
 		TS_ASSERT_DELTA(fun(t0 + 3*8*dt + i*dt), profile[i], 1e-9);
 	for (int i=0; i<8; i++)
 		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
 
-	// Test stair function
+	// Test stair and folding
 	TS_ASSERT_DELTA(fun(t0 + dt/2 - 1), profile[0], 1e-9);
 	TS_ASSERT_DELTA(fun(t0 + dt/2), profile[1], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 - dt/2 - 1), profile[7], 1e-9);
+	TS_ASSERT_DELTA(fun(t0 - dt/2), profile[0], 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {
