@@ -902,75 +902,102 @@ void timeseries_test::test_periodic_virtual_ts() {
 	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
 	calendar utc;
-	utctime t0 = utc.time(2016, 1, 1);
+	utctime t0 = utc.time(2015, 1, 1);
 	utctime ta_t0 = utc.time(2015, 1, 1);
 	const utctimespan ta_dt = deltahours(10);
 	const int ta_n = 1000;
 	timeaxis ta(ta_t0, ta_dt, ta_n);
-
+	// basic PD by points
+	// template<class VT>
+	struct profile_description {
+		utctimespan dt;
+		std::vector<double> profile; // VT profile
+		utctime t_start;
+		// size()
+		// vector<double> v[i]
+		// tstart
+	};
+	//struct sinus_profile_description {
+		// dt
+		// size()
+		// v[i] = sin(w * (t-tstart) + offset) 
+		// tstart
+	//};
+	// template<class PD, class TA>
 	struct periodic_ts {
 		int nt;
 		utctimespan dt;
 		utctimespan period;
 		utctime t0;
+		size_t i0;
 		std::array<double, 8> profile;
 		timeaxis ta;
-
-		int map_index(utctime t) const {
-			t -= t0;
-			if (t < 0 || period < t) {
-				t = fmod(t, period);
-				if (t < 0) t += period;
-			}
-			return round(double(t) / double(dt));
+		point_interpretation_policy fx_policy;
+		periodic_ts(utctime t_start, utctimespan dt, std::array<double, 8> profile, point_interpretation_policy fx_policy, timeaxis ta) :
+			dt(dt), profile(profile), ta(ta),fx_policy(fx_policy) {
+			nt = profile.size();
+			auto ta0 = ta.time(0);
+			period = nt*dt;
+			auto section_offset = (t_start - ta0) / period;
+			t0 = t_start - section_offset*period;
+			i0 = (ta0 - t0) / dt;
 		}
+
+		int map_index(utctime t) const {return ((t-t0)/dt) % nt;}
 
 		double operator() (utctime t) const {
 			int i = map_index(t);
-			if (i == nt) i = 0;
-			return profile[i];
+			if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
+				return profile[i];
+			//-- interpolate between time(i)    .. t  ... time(i+1)
+			//                       profile[i]           profile[(i+1)%nt]
+			double p1 = profile[i];
+			double p2 = profile[(i+1)%nt];
+			if (!isfinite(p1))
+				return shyft::nan;
+			if (!isfinite(p2))
+				return p1;// keep value until nan
+
+			int s = section_index(t);
+			auto ti = t0 + s*period + i * dt;
+			double w1 = (t-ti)/dt;
+			return p1*(1.0-w1) + p2*w1;
 		}
 
 		double operator() (utcperiod p) const {
-			return (*this)(p.start);
-			//size_t i = ta.index_of(p.start);
-			//return value(i);
+			size_t i = ta.index_of(p.start);
+			return value(i);
 		}
-
+		
 		double value(size_t i) const {
-			size_t ix = i * ta.size() / nt;
-			return average_value(*this, ta.period(i), ix);
+			auto p = ta.period(i);
+			size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
+			return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
 		}
 
-		size_t size() const { return nt * ta.size(); }
-		point get(size_t i) const { return point(ta.time(i), (*this)(ta.time(i))); }
-		size_t index_of(utctime t) const { return ta.index_of(t); }
-	} 
-	fun = { 8, dt, 8*dt, t0, profile, ta };
+		int section_index(utctime t) const {
+			return (t - ta.time(0)) / period;
+		}
 
-	// Test operator(utcperiod)
-	TS_ASSERT_DELTA(fun(ta.period(0)), 1, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(1)), 4, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(2)), 8, 1e-9);
+		size_t size() const { return nt * (1 + ta.total_period().timespan() / period); }
+		point get(size_t i) const { return point(t0 + i*dt, profile[ (i0+i) % nt]); }
+		size_t index_of(utctime t) const { return map_index(t) + nt * section_index(t); }
+	};
 
-	// Test value
-	TS_ASSERT_DELTA(fun.value(0), 2.5, 1e-9);
-	TS_ASSERT_DELTA(fun.value(1), 6.0, 1e-9);
-	TS_ASSERT_DELTA(fun.value(2), 5.5, 1e-9);
+	periodic_ts fun(t0, dt, profile, point_interpretation_policy::POINT_AVERAGE_VALUE, ta);
 
-	// Test folding forward and backward
-	TS_ASSERT_DELTA(fun(t0 - dt), profile[7], 1e-9);
-	for (int i = 0; i<8; i++) {
-		TS_ASSERT_DELTA(fun(t0 + i*dt), profile[i], 1e-9);
-		TS_ASSERT_DELTA(fun(t0 + 3*8*dt + i*dt), profile[i], 1e-9);
-		TS_ASSERT_DELTA(fun(t0 - 3*8*dt + i*dt), profile[i], 1e-9);
-	}
+	TS_ASSERT_EQUALS(fun.size(), 3336);
+	TS_ASSERT_EQUALS(fun.index_of(ta_t0), 0);
+	TS_ASSERT_EQUALS(fun.index_of(ta.time(1)), 3);
+	TS_ASSERT_EQUALS(fun.index_of(ta.time(3)), 10);
+	TS_ASSERT_EQUALS(fun.section_index(ta.time(0)), 0);
+	TS_ASSERT_EQUALS(fun.section_index(ta.time(3)), 1);
+	TS_ASSERT_EQUALS(fun.get(0), point(t0, profile[0]));
+	TS_ASSERT_EQUALS(fun.get(9), point(t0 + 9*dt, profile[1]));
 
-	// Test stair and folding
-	TS_ASSERT_DELTA(fun(t0 + dt/2 - 1), profile[0], 1e-9);
-	TS_ASSERT_DELTA(fun(t0 + dt/2), profile[1], 1e-9);
-	TS_ASSERT_DELTA(fun(t0 - dt/2 - 1), profile[7], 1e-9);
-	TS_ASSERT_DELTA(fun(t0 - dt/2), profile[0], 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(0)), 2.200, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(1)), 5.875, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(2)), double(11)/double(3), 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {
