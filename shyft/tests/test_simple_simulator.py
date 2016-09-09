@@ -249,7 +249,7 @@ class SimulationTestCase(unittest.TestCase):
         cid = 1
         simulator.region_model.set_state_collection(cid, True)
         simulator.run(time_axis, state_repos.get_state(0))
-        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0],0.0396387,5)  # just to verify pot.evap by regression, mm/h
+        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0], 0.039768354, 5) # just to verify pot.evap by regression, mm/h
 
         percentile_list = [10, 25, 50, 75, 90]
         # From here, things could be calculated without copies (except for 't')
