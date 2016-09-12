@@ -242,7 +242,6 @@ namespace shyft{
             double operator()(utctime t) const { return ts(t-dt);} ///< just here we needed the dt
         };
 
-
         /**\brief average_ts, average time-series
          *
          * Represents a ts that for
@@ -334,6 +333,89 @@ namespace shyft{
 			}
 		};
 
+		/** \brief A simple profile description defined by 
+		* utctime start,
+		* utctimespan sampling,
+		* vector<double> profile 
+		*/
+		struct profile_description {
+			profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
+				t0(t0), dt(dt), profile(profile) {}
+
+			size_t size() const { return profile.size(); }
+			utctimespan sampling() const { return dt; }
+			utctimespan duration() const { return dt * size(); }
+			utctime t_start() const { return t0; }
+			void reset_start(utctime ta0) {
+				auto offset = (t0 - ta0) / duration();
+				t0 -= offset * duration();
+			}
+			double operator()(size_t i) const {
+				if (i < profile.size())
+					return profile[i];
+				return nan;
+			}
+
+		private:
+			utctime t0;
+			utctimespan dt;
+			std::vector<double> profile;
+		};
+
+		/**\brief periodic_ts, periodic pattern time-series
+		*
+		* Represents a ts that for the specified time-axis returns:
+		* - either the instant value of a periodic profile
+		* - or the average interpolated between two values of the periodic profile
+		*
+		*/
+		template<class PD, class TA>
+		struct periodic_ts {
+			PD profile;
+			TA ta;
+			point_interpretation_policy fx_policy;
+			int i0;
+
+			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy) :
+				profile(pd), ta(ta), fx_policy(policy) {
+				profile.reset_start(ta.time(0));
+				i0 = (ta.time(0) - profile.t_start()) / profile.sampling();
+			}
+			int map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
+			double operator() (utctime t) const {
+				int i = map_index(t);
+				if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
+					return profile(i);
+				//-- interpolate between time(i)    .. t  .. time(i+1)
+				//                       profile(i)          profile((i+1) % nt)
+				double p1 = profile(i);
+				double p2 = profile((i+1) % nt);
+				if (!isfinite(p1))
+					return nan;
+				if (!isfinite(p2))
+					return p1; // keep value until nan
+
+				int s = section_index(t);
+				auto ti = profile.t_start() + s * profile.duration() + i * profile.sampling();
+				double w1 = (t-ti) / profile.sampling();
+				return p1*(1.0-w1) + p2*w1;
+			}
+			double operator() (utcperiod p) const {
+				size_t i = ta.index_of(p.start);
+				return value(i);
+			}
+			double value(size_t i) const {
+				auto p = ta.period(i);
+				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
+				return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
+			}
+			int section_index(utctime t) const {
+				return (t - ta.time(0)) / profile.duration();
+			}
+			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
+			point get(size_t i) const { return point(profile.t_start() + i * profile.sampling(), profile((i0+i) % profile.size())); }
+			size_t index_of(utctime t) const { return map_index(t) + profile.size() * section_index(t); }
+		};
 
         /** \brief Basic math operators
          *
