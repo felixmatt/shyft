@@ -897,6 +897,109 @@ void timeseries_test::test_periodic_ts() {
 	TS_ASSERT_DELTA(fun(t0 - dt/2), profile[0], 1e-9);
 }
 
+namespace shyft_test {
+	struct profile_description {
+		profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
+			t0(t0), dt(dt), profile(profile) {}
+
+		size_t size() const { return profile.size(); }
+		utctimespan sampling() const { return dt; }
+		utctimespan duration() const { return dt * size(); }
+		utctime t_start() const { return t0; }
+		void reset_start(utctime ta0) {
+			auto offset = (t0 - ta0) / duration();
+			t0 -= offset * duration();
+		}
+		double operator()(size_t i) const {
+			if (0 <= i && i < size())
+				return profile[i];
+			return shyft::nan;
+		}
+
+	private:
+		utctime t0;
+		utctimespan dt;
+		std::vector<double> profile;
+	};
+
+	template<class PD, class TA>
+	struct periodic_ts {
+		PD profile;
+		TA ta;
+		point_interpretation_policy fx_policy;
+		int i0;
+
+		periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy) :
+			profile(pd), ta(ta), fx_policy(policy) {
+			profile.reset_start(ta.time(0));
+			i0 = (ta.time(0) - profile.t_start()) / profile.sampling();
+		}
+		int map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
+		double operator() (utctime t) const {
+			int i = map_index(t);
+			if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
+				return profile(i);
+			//-- interpolate between time(i)    .. t  ... time(i+1)
+			//                       profile[i]           profile[(i+1)%nt]
+			double p1 = profile(i);
+			double p2 = profile((i+1) % nt);
+			if (!isfinite(p1))
+				return shyft::nan;
+			if (!isfinite(p2))
+				return p1;// keep value until nan
+
+			int s = section_index(t);
+			auto ti = profile.t_start() + s * profile.duration() + i * profile.sampling();
+			double w1 = (t-ti) / profile.sampling();
+			return p1*(1.0-w1) + p2*w1;
+		}
+		double operator() (utcperiod p) const {
+			size_t i = ta.index_of(p.start);
+			return value(i);
+		}
+		double value(size_t i) const {
+			auto p = ta.period(i);
+			size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
+			return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
+		}
+		int section_index(utctime t) const {
+			return (t - ta.time(0)) / profile.duration();
+		}
+		size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
+		point get(size_t i) const { return point(profile.t_start() + i * profile.sampling(), profile((i0+i) % profile.size())); }
+		size_t index_of(utctime t) const { return map_index(t) + profile.size() * section_index(t); }
+	};
+}
+
+void timeseries_test::test_periodic_template_ts() {
+	using namespace shyft_test;
+	std::vector<double> pv = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	const utctimespan dt = deltahours(3);
+	calendar utc;
+	utctime t0 = utc.time(2015, 1, 1);
+	timeaxis ta(t0, deltahours(10), 1000);
+	
+	profile_description pd(t0, dt, pv);
+
+	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
+	TS_ASSERT_DELTA(pd.size(), pv.size(), 1e-9);
+
+	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+
+	TS_ASSERT_EQUALS(fun.size(), 3336);
+	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
+	TS_ASSERT_EQUALS(fun.index_of(ta.time(1)), 3);
+	TS_ASSERT_EQUALS(fun.index_of(ta.time(3)), 10);
+	TS_ASSERT_EQUALS(fun.section_index(ta.time(0)), 0);
+	TS_ASSERT_EQUALS(fun.section_index(ta.time(3)), 1);
+	TS_ASSERT_EQUALS(fun.get(0), point(t0, pv[0]));
+	TS_ASSERT_EQUALS(fun.get(9), point(t0 + 9*dt, pv[1]));
+
+	TS_ASSERT_DELTA(fun(ta.period(0)), 2.200, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(1)), 5.875, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(2)), double(11)/double(3), 1e-9);
+}
+
 void timeseries_test::test_periodic_virtual_ts() {
 	// Periodic profile having 8 samples spaced by 3 h
 	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
