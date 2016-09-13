@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3e3b8f45-003f-4f88-bf3f-400e7af8cb1f}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_kalman.py</StartupFile>
+    <StartupFile>test_grid_pp.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
