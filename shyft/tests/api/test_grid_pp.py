@@ -35,18 +35,24 @@ class GridPP(unittest.TestCase):
     
     def _make_fc_from_obs(self, obs_set, bias):
         fc_set = api.TemperatureSourceVector()
+        bias_ts = api.Timeseries(self.ta, fill_value=bias)
         for obs in obs_set:
-            gp = obs.mid_point()
-            gts = api.TemperatureSource(gp, obs.ts)
-            fc_set.append(gts)
+            geo_ts = api.TemperatureSource(obs.mid_point(), obs.ts + bias_ts)
+            fc_set.append(geo_ts)
         return fc_set
 
     
     def _predict_bias(self, obs_set, fc_set):
-        bias_set = obs_set
-        f = api.KalmanFilter()
-        bp = api.KalmanBiasPredictor(f)
-        # bp.update_with_forecast(fc_set, obs_ts, kalman_ta) 
+        # Return a set of bias_ts per observation geo_point
+        bias_set = api.TemperatureSourceVector()
+        kf = api.KalmanFilter()
+        kbp = api.KalmanBiasPredictor(kf)
+        kta = api.Timeaxis2(self.t0, api.deltahours(3), 8)
+        for obs in obs_set:
+            kbp.update_with_forecast(fc_set, obs.ts, kta)
+            bias_pattern = kbp.state.x
+            bias_ts = obs.ts - api.Timeseries(self.ta, fill_value=13) # TODO: bias_pattern -> periodic_ts
+            bias_set.append(api.TemperatureSource(obs.mid_point(), bias_ts))
         return bias_set
 
 
@@ -66,8 +72,7 @@ class GridPP(unittest.TestCase):
         fc_set = self._make_fc_from_obs(obs_set, const_bias)
         bias_set = self._predict_bias(obs_set, fc_set)
         for bias in bias_set:
-            pass 
-            #self.assertLess(bias.ts.values[0] - const_bias, 0.1)
+            self.assertLess(bias.ts.values[0] - const_bias, 0.1)
 
 
 if __name__ == "__main__":
