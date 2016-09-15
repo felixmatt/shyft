@@ -283,7 +283,7 @@ namespace shyft{
 		/**\brief accumulate_ts, accumulate time-series
 		*
 		* Represents a ts that for
-		* the specified time-axis the accumulated sum 
+		* the specified time-axis the accumulated sum
 		* of the underlying specified TS ts.
 		* The i'th value in the time-axis is computed
 		* as the sum of the previous true-averages.
@@ -306,7 +306,7 @@ namespace shyft{
 				:ta(ta), ts(ts)
 				, fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE) {
 			} // because accumulate represents the integral of the distance from t0 to t, valid at t
-			  
+
 			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
 			size_t size() const { return ta.size(); }
 			size_t index_of(utctime t) const { return ta.index_of(t); }
@@ -333,10 +333,10 @@ namespace shyft{
 			}
 		};
 
-		/** \brief A simple profile description defined by 
+		/** \brief A simple profile description defined by
 		* utctime start,
 		* utctimespan sampling,
-		* vector<double> profile 
+		* vector<double> profile
 		*/
 		struct profile_description {
 			profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
@@ -377,7 +377,7 @@ namespace shyft{
 			point_interpretation_policy fx_policy;
 			utctimespan i0;
 
-			periodic_ts(const PD& pd, const TA& ta, 
+			periodic_ts(const PD& pd, const TA& ta,
 				point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
 				profile(pd), ta(ta), fx_policy(policy) {
 				profile.reset_start(ta.time(0));
@@ -394,7 +394,7 @@ namespace shyft{
 				//-- interpolate between time(i)    .. t  .. time(i+1)
 				//                       profile(i)          profile((i+1) % nt)
 				double p1 = profile(i);
-				double p2 = profile((i+1) % nt);
+				double p2 = profile((i+1) % profile.size());
 				if (!isfinite(p1))
 					return nan;
 				if (!isfinite(p2))
@@ -846,7 +846,7 @@ namespace shyft{
          * \param source of type S
          * \param p the period [start,end) on time-axis
          * \param last_idx, in/out, position of the last time point used on the source, updated after each call.
-         * \return double, the value at the as true average of the specified period 
+         * \return double, the value at the as true average of the specified period
          */
         template <class S>
         double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
@@ -947,7 +947,7 @@ namespace shyft{
         };
 
 		/**\brief provides the accumulated value accessor over the supplied time-axis
-		 * 
+		 *
 		 * Given sequential access, this accessor tries to be smart using previous
 		 * accumulated value plus the new delta to be efficient computing the
 		 * accumulated series from another kind of point source.
