@@ -16,7 +16,6 @@ namespace shyft{
 		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
 		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
 
-
         apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
         apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
         apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_add,rhs )); }
@@ -42,8 +41,6 @@ namespace shyft{
         apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
         apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
         apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
-
-
 
         double abin_op_ts::value_at(utctime t) const {
             if(!ta.total_period().contains(t))
@@ -86,6 +83,8 @@ namespace shyft{
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
 
+		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::fixed_dt& ta) :
+			apoint_ts(make_shared<periodic_ts>(pattern, dt, ta)) {}
 
 
         apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)

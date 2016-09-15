@@ -61,7 +61,7 @@ namespace shyft {
              *    that determines how the points should be projected to f(t)
              *
              */
-            struct  ipoint_ts {
+            struct ipoint_ts {
                 virtual ~ipoint_ts(){}
 
                 virtual point_interpretation_policy point_interpretation() const =0;
@@ -134,6 +134,8 @@ namespace shyft {
                 apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
 
+				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::fixed_dt& ta);
+
                 // these are the one we need.
                 apoint_ts(const gta_t& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const gta_t& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
@@ -192,8 +194,6 @@ namespace shyft {
                 void fill(double x) ;
                 void scale_by(double x) ;
             };
-
-
 
             /** \brief gpoint_ts a generic concrete point_ts, a terminal, not an expression
              *
@@ -408,7 +408,6 @@ namespace shyft {
 
 			};
 
-
             /** \brief time_shift ts do a time-shift dt on the supplied ts
              *
              * The values are exactly the same as the supplied ts argument to the constructor
@@ -470,7 +469,45 @@ namespace shyft {
 
             };
 
+			/** \brief periodic_ts is used for providing ts periodic values over a time-axis
+			*
+			*/
+			struct periodic_ts : ipoint_ts {
+				typedef shyft::timeseries::periodic_ts<profile_description, timeaxis> pts_t;
+				gta_t ta;
+				pts_t ts;
 
+				periodic_ts(const vector<double>& pattern, utctimespan dt, const timeaxis& ta) : ta(ta), ts(pattern, dt, ta) {}
+				periodic_ts(const periodic_ts& c) : ta(c.ta), ts(c.ts) {}
+				periodic_ts(periodic_ts&& c) : ta(move(c.ta)), ts(move(c.ts)) {}
+				periodic_ts& operator=(const periodic_ts& c) {
+					if (this != &c) {
+						ta = c.ta;
+						ts = c.ts;
+					}
+					return *this;
+				}
+				periodic_ts& operator=(periodic_ts&& c) {
+					ta = move(c.ta);
+					ts = move(c.ts);
+					return *this;
+				}
+
+				// implement ipoint_ts contract
+				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
+				virtual void set_point_interpretation(point_interpretation_policy) { ; }
+				virtual const gta_t& time_axis() const { return ta; }
+				virtual utcperiod total_period() const { return ta.total_period(); }
+				virtual size_t index_of(utctime t) const { return ts.index_of(t); }
+				virtual size_t size() const { return ts.size(); }
+				virtual utctime time(size_t i) const { return ta.time(i); }
+				virtual double value(size_t i) const { return ts.value(i); }
+				virtual double value_at(utctime t) const { return value(index_of(t)); }
+				virtual std::vector<double> values() const { // TODO: implement it
+					std::vector<double> r; r.reserve(ta.size());
+					return std::move(r);
+				}
+			};
 
 
             /** The iop_t represent the basic 'binary' operation,
