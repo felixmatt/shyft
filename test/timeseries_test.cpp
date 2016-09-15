@@ -851,7 +851,21 @@ void timeseries_test::test_timeshift_ts() {
     auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
 }
 
-void timeseries_test::test_periodic_ts() {
+void timeseries_test::test_periodic_ts_t() {
+	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	calendar utc;
+	utctime t0 = utc.time(2015, 1, 1);
+	timeaxis ta(t0, deltahours(10), 1000);
+
+	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	periodic_ts_t pts(v, deltahours(3), ta);
+	
+	TS_ASSERT_EQUALS(pts.size(), 3336);
+	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
+	TS_ASSERT_EQUALS(pts.get(0), point(t0, v[0]));
+}
+
+void timeseries_test::test_periodic_ts_concept() {
 	// Periodic profile having 8 samples spaced by 3 h
 	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);

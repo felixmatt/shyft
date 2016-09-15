@@ -182,5 +182,9 @@ namespace expose {
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis");
         TsFactory();
         expose_apoint_ts();
+		typedef timeseries::periodic_ts<profile_description, timeaxis> periodic_ts_t;
+		class_<periodic_ts_t>("TsPeriodic", "A time-series with a periodic pattern and a fixed delta time-axis")
+			.def(init<const vector<double>&, utctimespan, timeaxis>(args("pattern", "dt", "ta")))
+			;
     }
 }

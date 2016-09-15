@@ -15,6 +15,7 @@ class GridPP(unittest.TestCase):
         self.nt = 24*10
         self.t0 = self.cal.time(2016, 1, 1)
         self.ta = api.Timeaxis2(self.t0, self.dt, self.nt)
+        self.ta1 = api.Timeaxis(self.t0, self.dt, self.nt)
 
         self.geo_points = api.GeoPointVector()
         self.geo_points.append(api.GeoPoint( 100,  100, 1000))
@@ -50,9 +51,10 @@ class GridPP(unittest.TestCase):
         kta = api.Timeaxis2(self.t0, api.deltahours(3), 8)
         for obs in obs_set:
             kbp.update_with_forecast(fc_set, obs.ts, kta)
-            bias_pattern = kbp.state.x
-            bias_ts = obs.ts - api.Timeseries(self.ta, fill_value=13) # TODO: bias_pattern -> periodic_ts
-            bias_set.append(api.TemperatureSource(obs.mid_point(), bias_ts))
+            pattern = api.KalmanState.get_x(kbp.state)
+            p_ts = api.TsPeriodic(pattern, api.deltahours(3), self.ta1)
+            bias_ts = obs.ts - api.Timeseries(self.ta, fill_value=13)
+            bias_set.append(api.TemperatureSource(obs.mid_point(), bias_ts)) # TODO: derive p_ts from apoint_ts
         return bias_set
 
 

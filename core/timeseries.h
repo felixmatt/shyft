@@ -341,6 +341,7 @@ namespace shyft{
 		struct profile_description {
 			profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
 				t0(t0), dt(dt), profile(profile) {}
+			profile_description() {}
 
 			size_t size() const { return profile.size(); }
 			utctimespan sampling() const { return dt; }
@@ -376,11 +377,15 @@ namespace shyft{
 			point_interpretation_policy fx_policy;
 			int i0;
 
-			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy) :
+			periodic_ts(const PD& pd, const TA& ta, 
+				point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
 				profile(pd), ta(ta), fx_policy(policy) {
 				profile.reset_start(ta.time(0));
 				i0 = (ta.time(0) - profile.t_start()) / profile.sampling();
 			}
+			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
+				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
+			periodic_ts() {}
 			int map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
 			double operator() (utctime t) const {
 				int i = map_index(t);
