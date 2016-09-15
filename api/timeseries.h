@@ -178,6 +178,7 @@ namespace shyft {
                 //-- then some useful functions/properties
                 apoint_ts average(const gta_t &ta) const;
 				apoint_ts accumulate(const gta_t &ta) const;
+				apoint_ts time_shift(utctimespan dt) const;
                 apoint_ts max(double a) const;
                 apoint_ts min(double a) const;
                 apoint_ts max(const apoint_ts& other) const;

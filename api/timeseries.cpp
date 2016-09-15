@@ -101,6 +101,9 @@ namespace shyft{
 		apoint_ts apoint_ts::accumulate(const gta_t &ta) const {
 			return shyft::api::accumulate(*this, ta);
 		}
+		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
+			return shyft::api::time_shift(*this, dt);
+		}
         void apoint_ts::set(size_t i, double x) {
             gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
             if(!gpts)

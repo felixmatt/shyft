@@ -67,6 +67,9 @@ class TimeSeries(unittest.TestCase):
         tsfixed.values[0] = 10.0
         dv[0] = 10.0
         assert_array_almost_equal(dv, tsfixed.v.to_numpy())
+        ts_ta = tsfixed.time_axis  # a TsFixed do have .time_axis and .values
+        self.assertEqual(len(ts_ta), len(self.ta)) # should have same length etc.
+
         # self.assertAlmostEqual(v,vv)
         # some reference testing:
         ref_v = tsfixed.v
@@ -82,6 +85,9 @@ class TimeSeries(unittest.TestCase):
         t.push_back(self.ta(self.ta.size() - 1).end)
         ta = api.PointTimeaxis(t)
         tspoint = api.TsPoint(ta, v)
+        ts_ta = tspoint.time_axis  # a TsPoint do have .time_axis and .values
+        self.assertEqual(len(ts_ta), len(self.ta)) # should have same length etc.
+
         self.assertEqual(tspoint.size(), ta.size())
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
         self.assertAlmostEqual(tspoint.values[0], v[0])  # just to verfy compat .values works

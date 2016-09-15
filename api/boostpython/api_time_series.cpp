@@ -34,7 +34,8 @@ namespace expose {
             .def(init<const TA&,const vector<double>&,optional<timeseries::point_interpretation_policy>>(args("ta","v","policy"),"constructs a new timeseries from timeaxis and points"))
             .def(init<const TA&,double,optional<timeseries::point_interpretation_policy>>(args("ta","fill_value","policy"),"constructs a new timeseries from timeaxis and fill-value"))
             DEF_STD_TS_STUFF()
-            .def_readonly("v",&pts_t::v,"the point vector<double>")
+            .def_readonly("v",&pts_t::v,"the point vector<double>, same as .values, kept around for backward compatibility")
+			.def("get_time_axis", &pts_t::time_axis, "returns the time-axis", return_internal_reference<>()) // have to use func plus init.py fixup due to boost py policy
             ;
     }
 
@@ -96,8 +97,20 @@ namespace expose {
 			.def(self - double())
 
 			.def(-self)
-			.def("average", &shyft::api::apoint_ts::average, args("ta"), "create a new ts that is the true average of self over the specified time-axis ta")
-			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis ta")
+			.def("average", &shyft::api::apoint_ts::average, args("ta"), "create a new ts that is the true average of self\n over the specified time-axis ta")
+			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"), "create a new ts that is\n the integral f(t) *dt, t0..ti,\n the specified time-axis ta")
+			.def("time_shift", &shyft::api::apoint_ts::time_shift,args("delta_t"),
+				"create a new ts that is a the time-shift'ed  version of self\n"
+				"Parameters\n"
+				"----------\n"
+				"delta_t : number\n"
+				"\t number of seconds to time-shift\n"
+				"\t e.g. to move a time-series from 2015 to 2016,\n"
+				"\t dt should be number of seconds in 2015\n"
+				"Returns\n"
+				"-------\n"
+				"a new time-series, time-shifted version of self\n"
+			)
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")

@@ -80,10 +80,12 @@ Timeaxis2.__call__ = lambda self, i: self.period(i)
 Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 Timeseries.__len__ = lambda self: self.size()
-Timeseries.time_shift = lambda self,delta_t: time_shift(self,delta_t)
+
 
 TsFixed.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
+TsFixed.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 TsPoint.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
+TsPoint.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 def ta_iter(x):
     x.counter = 0
