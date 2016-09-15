@@ -375,7 +375,7 @@ namespace shyft{
 			PD profile;
 			TA ta;
 			point_interpretation_policy fx_policy;
-			int i0;
+			utctimespan i0;
 
 			periodic_ts(const PD& pd, const TA& ta, 
 				point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
@@ -386,7 +386,7 @@ namespace shyft{
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
 				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
 			periodic_ts() {}
-			int map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
+			utctimespan map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
 			double operator() (utctime t) const {
 				int i = map_index(t);
 				if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
@@ -414,7 +414,7 @@ namespace shyft{
 				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
 				return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
 			}
-			int section_index(utctime t) const {
+			utctimespan section_index(utctime t) const {
 				return (t - ta.time(0)) / profile.duration();
 			}
 			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
