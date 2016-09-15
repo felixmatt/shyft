@@ -175,6 +175,72 @@ namespace shyft {
         shared_ptr<vector<cell>> cells;
         basic_cell_statistics( shared_ptr<vector<cell>> cells):cells(cells) {}
 
+		double total_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area();
+		    } else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells) 
+						if (c.geo.catchment_id() == cid) sum += c.geo.area();
+			}
+			return sum;
+		}
+		double forest_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area()*c.geo.land_type_fractions_info().forest();
+			} else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells)
+						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().forest();
+			}
+			return sum;
+		}
+		double glacier_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area()*c.geo.land_type_fractions_info().glacier();
+			} else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells)
+						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().glacier();
+			}
+			return sum;
+		}
+		double lake_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area()*c.geo.land_type_fractions_info().lake();
+			} else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells)
+						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().lake();
+			}
+			return sum;
+		}
+		double reservoir_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area()*c.geo.land_type_fractions_info().reservoir();
+			} else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells)
+						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().reservoir();
+			}
+			return sum;
+		}
+		double unspecified_area(const vector<int>& catchment_indexes) const {
+			double sum = 0.0;
+			if (catchment_indexes.size() == 0) {
+				for (const auto &c : *cells) sum += c.geo.area()*c.geo.land_type_fractions_info().unspecified();
+			} else {
+				for (auto cid : catchment_indexes)
+					for (const auto&c : *cells)
+						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().unspecified();
+			}
+			return sum;
+		}
         result_ts_t_ discharge(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
                      sum_catchment_feature(*cells, catchment_indexes,
@@ -184,6 +250,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.avg_discharge; }, ith_timestep);
+		}
+		double discharge_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.avg_discharge; }, ith_timestep);
 		}
 
         result_ts_t_ temperature(const vector<int>& catchment_indexes) const {
@@ -196,6 +267,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.env_ts.temperature; }, ith_timestep);
 		}
+		double temperature_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.env_ts.temperature; }, ith_timestep);
+		}
+
         result_ts_t_ precipitation(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
                      average_catchment_feature(*cells, catchment_indexes,
@@ -206,6 +283,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.env_ts.precipitation; }, ith_timestep);
 		}
+		double precipitation_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.env_ts.precipitation; }, ith_timestep);
+		}
+
         result_ts_t_ radiation(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
                      average_catchment_feature(*cells, catchment_indexes,
@@ -215,6 +298,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.env_ts.radiation; }, ith_timestep);
+		}
+		double radiation_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.env_ts.radiation; }, ith_timestep);
 		}
 
         result_ts_t_ wind_speed(const vector<int>& catchment_indexes) const {
@@ -227,6 +315,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.env_ts.wind_speed; }, ith_timestep);
 		}
+		double wind_speed_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.env_ts.wind_speed; }, ith_timestep);
+		}
 
 		result_ts_t_ rel_hum(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -238,7 +331,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.env_ts.rel_hum; }, ith_timestep);
 		}
-    };
+		double rel_hum_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.env_ts.rel_hum; }, ith_timestep);
+		}
+	};
 
     template <typename cell>
     struct kirchner_cell_state_statistics {
@@ -255,7 +353,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.kirchner_discharge; }, ith_timestep);
 		}
-    };
+		double discharge_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.kirchner_discharge; }, ith_timestep);
+		}
+	};
 
     ///< cells with gamma_snow state collection gives access to time-series for state
     template <typename cell>
@@ -273,7 +376,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_albedo; }, ith_timestep);
 		}
-
+		double albedo_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_albedo; }, ith_timestep);
+		}
 
         result_ts_t_ lwc(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -284,6 +391,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_lwc; }, ith_timestep);
+		}
+		double lwc_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_lwc; }, ith_timestep);
 		}
 
 		result_ts_t_ surface_heat(const vector<int>& catchment_indexes) const {
@@ -296,6 +408,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_surface_heat; }, ith_timestep);
 		}
+		double surface_heat_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_surface_heat; }, ith_timestep);
+		}
 
         result_ts_t_ alpha(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -306,6 +423,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_alpha; }, ith_timestep);
+		}
+		double alpha_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_alpha; }, ith_timestep);
 		}
 
 		result_ts_t_ sdc_melt_mean(const vector<int>& catchment_indexes) const {
@@ -318,6 +440,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_sdc_melt_mean; }, ith_timestep);
 		}
+		double sdc_melt_mean_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_sdc_melt_mean; }, ith_timestep);
+		}
 
 		result_ts_t_ acc_melt(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -328,6 +455,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_acc_melt; }, ith_timestep);
+		}
+		double acc_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_acc_melt; }, ith_timestep);
 		}
 
 		result_ts_t_ iso_pot_energy(const vector<int>& catchment_indexes) const {
@@ -340,6 +472,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_iso_pot_energy; }, ith_timestep);
 		}
+		double iso_pot_energy_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_iso_pot_energy; }, ith_timestep);
+		}
 
 		result_ts_t_ temp_swe(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -350,6 +487,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.gs_temp_swe; }, ith_timestep);
+		}
+		double temp_swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.gs_temp_swe; }, ith_timestep);
 		}
 	};
 
@@ -369,6 +511,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_sca; }, ith_timestep);
 		}
+		double sca_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_sca; }, ith_timestep);
+		}
 
         result_ts_t_ swe(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -380,6 +527,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_swe; }, ith_timestep);
 		}
+		double swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_swe; }, ith_timestep);
+		}
+
 		result_ts_t_ outflow(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
                 sum_catchment_feature(*cells, catchment_indexes,
@@ -389,6 +542,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
+		}
+		double outflow_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
 		}
 	};
 
@@ -408,6 +566,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_alpha; }, ith_timestep);
 		}
+		double alpha_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_alpha; }, ith_timestep);
+		}
 
         result_ts_t_ nu(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -418,6 +581,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_nu; }, ith_timestep);
+		}
+		double nu_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_nu; }, ith_timestep);
 		}
 
         result_ts_t_ lwc(const vector<int>& catchment_indexes) const {
@@ -430,6 +598,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_lwc; }, ith_timestep);
 		}
+		double lwc_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_lwc; }, ith_timestep);
+		}
 
         result_ts_t_ residual(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -440,6 +613,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_residual; }, ith_timestep);
+		}
+		double residual_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_residual; }, ith_timestep);
 		}
 
         result_ts_t_ swe(const vector<int>& catchment_indexes) const {
@@ -452,6 +630,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_swe; }, ith_timestep);
 		}
+		double swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_swe; }, ith_timestep);
+		}
 
         result_ts_t_ sca(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -462,6 +645,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_sca; }, ith_timestep);
+		}
+		double sca_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_sca; }, ith_timestep);
 		}
 	};
 
@@ -481,6 +669,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
 		}
+		double outflow_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
+		}
 
         result_ts_t_ total_stored_water(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -491,6 +684,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_total_stored_water; }, ith_timestep);
+		}
+		double total_stored_water_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_total_stored_water; }, ith_timestep);
 		}
 	};
 
@@ -510,6 +708,11 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_swe; }, ith_timestep);
 		}
+		double swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_swe; }, ith_timestep);
+		}
 
         result_ts_t_ sca(const vector<int>& catchment_indexes) const {
             return shyft::core::cell_statistics::
@@ -521,7 +724,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.sc.snow_sca; }, ith_timestep);
 		}
-    };
+		double sca_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.snow_sca; }, ith_timestep);
+		}
+	};
 
     ///< access to hbv snow routine response statistics
     template <typename cell>
@@ -539,7 +747,12 @@ namespace shyft {
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
 		}
-    };
+		double outflow_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
+		}
+	};
 
     template <typename cell>
     struct priestley_taylor_cell_response_statistics {
@@ -555,6 +768,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.pe_output; }, ith_timestep);
+		}
+		double output_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.pe_output; }, ith_timestep);
 		}
 	};
 
@@ -572,6 +790,11 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
+		}
+		double output_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
 	};
 

@@ -101,6 +101,23 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
 
+    def test_model_area_functions(self):
+        num_cells = 20
+        model_type = pt_gs_k.PTGSKModel
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
+        # demo how to get area statistics.
+        cids = api.IntVector()
+        total_area = model.statistics.total_area(cids)
+        forest_area = model.statistics.forest_area(cids)
+        glacier_area = model.statistics.glacier_area(cids)
+        lake_area = model.statistics.lake_area(cids)
+        reservoir_area = model.statistics.reservoir_area(cids)
+        unspecified_area = model.statistics.unspecified_area(cids)
+        self.assertAlmostEqual(total_area,forest_area + glacier_area + lake_area + reservoir_area + unspecified_area)
+        cids.append(3)
+        total_area_no_match = model.statistics.total_area(cids)  # now, cids contains 3, that matches no cells
+        self.assertAlmostEqual(total_area_no_match,0.0)
+
     def test_model_initialize_and_run(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
@@ -150,7 +167,8 @@ class RegionModel(unittest.TestCase):
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
-
+        sum_discharge_value= model.statistics.discharge_value(cids, 0)  # at the first timestep
+        self.assertGreaterEqual(sum_discharge_value,160.0)
         self.assertIsNotNone(sum_discharge)
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)
@@ -158,6 +176,9 @@ class RegionModel(unittest.TestCase):
         for time_step in range(time_axis.size()):
             precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
             self.assertEqual(precip_raster.size(), num_cells)
+        # example single value spatial aggregation (area-weighted) over cids for a specific timestep
+        avg_gs_sc_value = model.gamma_snow_response.sca_value(cids, 1)
+        self.assertGreaterEqual(avg_gs_sc_value,0.0)
         avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
         self.assertIsNotNone(avg_gs_sca)
         # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw

@@ -19,6 +19,7 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Kirchner cell response statistics object"))
                 .def("discharge",discharge_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("discharge",discharge_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("discharge_value",&sc_stat::discharge_value, args("catchment_indexes", "i"), "returns sum discharge[m3/s]  for cells matching catchments_ids at the i'th timestep")
             ;
         }
 
@@ -33,6 +34,7 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct PriestleyTaylor cell response statistics object"))
                 .def("output",output_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("output",output_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("output_value", &rc_stat::output_value, args("catchment_indexes", "i"), "returns for cells matching catchments_ids at the i'th timestep")
             ;
         }
 
@@ -47,7 +49,8 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct ActualEvapotranspiration cell response statistics object"))
                 .def("output",output_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("output",output_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-            ;
+				.def("output_value", &rc_stat::output_value, args("catchment_indexes", "i"), "returns for cells matching catchments_ids at the i'th timestep")
+				;
         }
 
         template <class cell>
@@ -85,20 +88,28 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct GammaSnow cell state statistics object"))
                 .def("albedo",albedo_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("albedo",albedo_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("albedo_value", &sc_stat::albedo_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("lwc",lwc_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("lwc_value", &sc_stat::lwc_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("surface_heat",surface_heat_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("surface_heat",surface_heat_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("alpha",alpha_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("surface_heat_value", &sc_stat::surface_heat_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("alpha",alpha_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("alpha",alpha_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("sdc_melt_mean",sdc_melt_mean_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("alpha_value", &sc_stat::alpha_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sdc_melt_mean",sdc_melt_mean_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("sdc_melt_mean",sdc_melt_mean_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("acc_melt",acc_melt_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("sdc_melt_mean_value", &sc_stat::sdc_melt_mean_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("acc_melt",acc_melt_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("acc_melt",acc_melt_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("iso_pot_energy",iso_pot_energy_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("acc_melt_value", &sc_stat::acc_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("iso_pot_energy",iso_pot_energy_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("iso_pot_energy",iso_pot_energy_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("temp_swe",temp_swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("iso_pot_energy_value", &sc_stat::iso_pot_energy_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("temp_swe",temp_swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("temp_swe",temp_swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("temp_swe_value", &sc_stat::temp_swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
             ;
 
 
@@ -115,10 +126,13 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct GammaSnow cell response statistics object"))
                 .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("swe_value", &rc_stat::swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca_value", &rc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
 
                 ;
 
@@ -140,8 +154,10 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell state statistics object"))
                 .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("swe_value", &sc_stat::swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca_value", &sc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
             ;
 
 
@@ -152,6 +168,7 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell response statistics object"))
                 .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
             ;
         }
 
@@ -179,16 +196,22 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Skaugen snow cell state statistics object"))
                 .def("alpha",alpha_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("alpha",alpha_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("alpha_value", &sc_stat::alpha_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("nu",nu_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("nu",nu_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("nu_value",&sc_stat::nu_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("lwc",lwc_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("residual",residual_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("lwc_value", &sc_stat::lwc_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("residual",residual_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("residual",residual_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("residual_value", &sc_stat::residual_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+				.def("swe_value", &sc_stat::swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca_value", &sc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
             ;
 
 
@@ -201,8 +224,10 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Skaugen snow cell response statistics object"))
                 .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("total_stored_water",total_stored_water_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("total_stored_water",total_stored_water_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("total_stored_water_value", &rc_stat::total_stored_water_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
             ;
         }
 
@@ -235,17 +260,29 @@ namespace expose {
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct basic cell statistics object"))
                 .def("discharge",discharge_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("discharge",discharge_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("discharge_value", &bc_stat::discharge_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("temperature",temperature_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("temperature",temperature_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("temperature_value", &bc_stat::temperature_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("precipitation",precipitation_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("precipitation",precipitation_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("precipitation_value", &bc_stat::precipitation_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("radiation",radiation_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("radiation",radiation_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("radiation_value", &bc_stat::radiation_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("wind_speed",wind_speed_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("wind_speed",wind_speed_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("wind_speed_value", &bc_stat::wind_speed_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
                 .def("rel_hum",rel_hum_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("rel_hum",rel_hum_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
-                ;
+				.def("rel_hum_value", &bc_stat::rel_hum_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("total_area", &bc_stat::total_area, args("catchment_indexes"), "returns total area[m2] for cells matching catchments_ids")
+				.def("forest_area", &bc_stat::forest_area, args("catchment_indexes"), "returns forest area[m2] for cells matching catchments_ids")
+				.def("glacier_area", &bc_stat::forest_area, args("catchment_indexes"), "returns glacier area[m2] for cells matching catchments_ids")
+				.def("lake_area", &bc_stat::lake_area, args("catchment_indexes"), "returns lake area[m2] for cells matching catchments_ids")
+				.def("reservoir_area", &bc_stat::reservoir_area, args("catchment_indexes"), "returns reservoir area[m2] for cells matching catchments_ids")
+				.def("unspecified_area", &bc_stat::unspecified_area, args("catchment_indexes"), "returns reservoir area[m2] for cells matching catchments_ids")
+				;
         }
     }
 }
