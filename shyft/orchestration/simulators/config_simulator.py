@@ -33,8 +33,8 @@ class ConfigSimulator(simulator.DefaultSimulator):
             raise ConfigSimulatorError(
                 "Global catchment index {} not found.".format(
                     ','.join([str(val) for val in [i for i in c_id if i not in self.region_model.catchment_id_map]])))
-        c_indx = [i for i,j in enumerate(found_indx) if j]
-        methods = {'discharge': lambda m: tst.to_average(t_st, t_dt, t_n, m.statistics.discharge(c_indx))}
+        #c_indx = [i for i,j in enumerate(found_indx) if j] # since ID to Index conversion not necessary
+        methods = {'discharge': lambda m: tst.to_average(t_st, t_dt, t_n, m.statistics.discharge(c_id))}
         return methods[ts_info['type']]
 
     def save_result_timeseries(self):
@@ -113,12 +113,13 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         cid_map = self.region_model.catchment_id_map
         for ts_info in self._config.target_ts:
             cid = ts_info['catch_id']
-            mapped_indx = [cid_map.index(ID) for ID in cid if ID in cid_map]
-            if len(mapped_indx) != len(cid):
+            # mapped_indx = [cid_map.index(ID) for ID in cid if ID in cid_map] # since ID to Index conversion not necessary
+            found_indx = np.in1d(cid_map, cid)
+            if np.count_nonzero(found_indx) != len(cid):
                 raise ConfigSimulatorError(
                     "Catchment index {} for target series {} not found.".format(
                         ','.join([str(val) for val in [i for i in cid if i not in cid_map]]), ts_info['uid']))
-            catch_indx = api.IntVector(mapped_indx)
+            catch_indx = api.IntVector(cid)
             tsp = ts_info['ts']
             t = api.TargetSpecificationPts()
             t.catchment_indexes = catch_indx
