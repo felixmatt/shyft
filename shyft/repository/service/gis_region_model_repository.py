@@ -621,7 +621,7 @@ class CellDataCache(object):
         with open(file_path, 'rb') as pkl_file:
             cell_info = pickle.load(pkl_file)
         geo_data = cell_info['geo_data']
-        polygons = np.array(cell_info['polygons'])
+        polygons = cell_info['polygons']
         cids_ = np.sort(cids)
         cid_map = cids_
         cids_in_cache = geo_data[:, 4].astype(int)
@@ -636,10 +636,10 @@ class CellDataCache(object):
 
     def _dump_to_pkl(self, file_path, cell_data, is_existing_file):
         print('Saving to cache_file {}...'.format(file_path))
-        new_geo_data = cell_data['geo_data'].copy()
+        #new_geo_data = cell_data['geo_data'].copy()
         cid_map = cell_data['cid_map']
         #new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)] # since ID to Index conversion not necessary
-        cell_info = {'geo_data': new_geo_data, 'polygons': cell_data['polygons'].tolist()}
+        cell_info = {'geo_data': cell_data['geo_data'], 'polygons': cell_data['polygons']}
         if is_existing_file:
             with open(file_path, 'rb') as pkl_file_in:
                 old = pickle.load(pkl_file_in)
@@ -651,7 +651,7 @@ class CellDataCache(object):
             old_cid = old_geo_data[:, 4].astype(int)
             idx_keep = np.invert(np.in1d(old_cid, cid_map)).nonzero()[0]
             if len(idx_keep) > 0:
-                cell_info = {'geo_data': np.vstack((old_geo_data[idx_keep], new_geo_data)),
+                cell_info = {'geo_data': np.vstack((old_geo_data[idx_keep], cell_data['geo_data'])),
                              'polygons': np.concatenate((old['polygons'][idx_keep], cell_data['polygons']))
                              }
         with open(file_path, 'wb') as pkl_file_out:
