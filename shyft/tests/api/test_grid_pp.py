@@ -52,8 +52,8 @@ class GridPP(unittest.TestCase):
         for obs in obs_set:
             kbp.update_with_forecast(fc_set, obs.ts, kta)
             pattern = api.KalmanState.get_x(kbp.state)
-            a_ts = api.TsPeriodic(pattern, api.deltahours(3), self.ta1) # Should be removed from api?
-            b_ts = api.Timeseries(pattern, api.deltahours(3), self.ta1) # Should be explicit function?
+            #a_ts = api.TsPeriodic(pattern, api.deltahours(3), self.ta1) # Should be removed from api?
+            b_ts = api.Timeseries(pattern, api.deltahours(3), self.ta) # Should be explicit function?
             bias_set.append(api.TemperatureSource(obs.mid_point(), b_ts))
         return bias_set
 
@@ -75,7 +75,8 @@ class GridPP(unittest.TestCase):
         bias_set = self._predict_bias(obs_set, fc_set)
         self.assertEqual(len(bias_set), len(obs_set))
         for bias in bias_set:
-            self.assertLess(bias.ts.value(0) - const_bias, 0.2) # TODO: test all values
+            for i in range(len(bias.ts)):
+                self.assertLess(bias.ts.value(i) - const_bias, 0.2)
 
 
 if __name__ == "__main__":

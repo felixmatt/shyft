@@ -244,7 +244,7 @@ void timeseries_test::test_hint_based_bsearch() {
     ta.reset_call_count();
     TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+1*d,t+2*d),0),1);
     TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// great using linear approach to find near solution upward.
-    TS_ASSERT_EQUALS(ta.n_get_calls,3);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(ta.n_get_calls,2);// great using linear approach to find near solution upward.
 
     ta.reset_call_count();
 
@@ -860,9 +860,25 @@ void timeseries_test::test_periodic_ts_t() {
 	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 	
-	TS_ASSERT_EQUALS(pts.size(), 3336);
+	TS_ASSERT_EQUALS(pts.size(), 1000);
 	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
-	TS_ASSERT_EQUALS(pts.get(0), point(t0, v[0]));
+}
+
+void timeseries_test::test_periodic_ts_over_sampled() {
+	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	calendar utc;
+	utctime t0 = utc.time(2015, 1, 1);
+	timeaxis ta(t0, deltahours(1), 1000);
+
+	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	periodic_ts_t pts(v, deltahours(3), ta);
+
+	TS_ASSERT_EQUALS(pts.size(), 1000);
+	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
+	TS_ASSERT_EQUALS(pts.value(0), v[0]);
+	TS_ASSERT_EQUALS(pts.value(1), v[0]);
+	TS_ASSERT_EQUALS(pts.value(2), v[0]);
+	TS_ASSERT_EQUALS(pts.value(3), v[1]);
 }
 
 void timeseries_test::test_periodic_ts_concept() {
@@ -925,18 +941,11 @@ void timeseries_test::test_periodic_template_ts() {
 
 	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 
-	TS_ASSERT_EQUALS(fun.size(), 3336);
+	TS_ASSERT_EQUALS(fun.size(), 1000);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
-	TS_ASSERT_EQUALS(fun.index_of(ta.time(1)), 3);
-	TS_ASSERT_EQUALS(fun.index_of(ta.time(3)), 10);
-	TS_ASSERT_EQUALS(fun.section_index(ta.time(0)), 0);
-	TS_ASSERT_EQUALS(fun.section_index(ta.time(3)), 1);
-	TS_ASSERT_EQUALS(fun.get(0), point(t0, pv[0]));
-	TS_ASSERT_EQUALS(fun.get(9), point(t0 + 9*dt, pv[1]));
-
-	TS_ASSERT_DELTA(fun(ta.period(0)), 2.200, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(1)), 5.875, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(2)), double(11)/double(3), 1e-9);
+	TS_ASSERT_EQUALS(fun.value(0), 2.2);
+	TS_ASSERT_EQUALS(fun.value(1), 5.5);
+	TS_ASSERT_EQUALS(fun.value(2), 4.0);
 }
 
 void timeseries_test::test_periodic_virtual_ts() {
@@ -1037,9 +1046,9 @@ void timeseries_test::test_periodic_virtual_ts() {
 	TS_ASSERT_EQUALS(fun.get(0), point(t0, profile[0]));
 	TS_ASSERT_EQUALS(fun.get(9), point(t0 + 9*dt, profile[1]));
 
-	TS_ASSERT_DELTA(fun(ta.period(0)), 2.200, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(1)), 5.875, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(2)), double(11)/double(3), 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(0)), 2.2, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(1)), 5.5, 1e-9);
+	TS_ASSERT_DELTA(fun(ta.period(2)), 4.0, 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {

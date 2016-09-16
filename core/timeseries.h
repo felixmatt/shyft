@@ -334,19 +334,21 @@ namespace shyft{
 		};
 
 		/** \brief A simple profile description defined by
-		* utctime start,
-		* utctimespan sampling,
+		* utctime t0,
+		* utctimespan dt,
 		* vector<double> profile
 		*/
 		struct profile_description {
+			utctime t0;
+			utctimespan dt;
+			std::vector<double> profile;
+
 			profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
 				t0(t0), dt(dt), profile(profile) {}
 			profile_description() {}
 
 			size_t size() const { return profile.size(); }
-			utctimespan sampling() const { return dt; }
 			utctimespan duration() const { return dt * size(); }
-			utctime t_start() const { return t0; }
 			void reset_start(utctime ta0) {
 				auto offset = (t0 - ta0) / duration();
 				t0 -= offset * duration();
@@ -356,38 +358,25 @@ namespace shyft{
 					return profile[i];
 				return nan;
 			}
-
-		private:
-			utctime t0;
-			utctimespan dt;
-			std::vector<double> profile;
 		};
 
-		/**\brief periodic_ts, periodic pattern time-series
-		*
-		* Represents a ts that for the specified time-axis returns:
-		* - either the instant value of a periodic profile
-		* - or the average interpolated between two values of the periodic profile
-		*
+		/** \brief Profile accessor which handles virtual indexing for a profile defined by
+		* profile_description pd,
+		* time_axis ta
 		*/
-		template<class PD, class TA>
-		struct periodic_ts {
-			PD profile;
+		template<class TA>
+		struct profile_accessor {
 			TA ta;
-			point_interpretation_policy fx_policy;
+			profile_description profile;
 			utctimespan i0;
 
-			periodic_ts(const PD& pd, const TA& ta,
-				point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
-				profile(pd), ta(ta), fx_policy(policy) {
+			profile_accessor(const profile_description& pd, const TA& ta) : profile(pd), ta(ta) {
 				profile.reset_start(ta.time(0));
-				i0 = (ta.time(0) - profile.t_start()) / profile.sampling();
+				i0 = (ta.time(0) - profile.t0) / profile.dt;
 			}
-			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
-				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
-			periodic_ts() {}
-			utctimespan map_index(utctime t) const { return ((t - profile.t_start()) / profile.sampling()) % profile.size(); }
-			double operator() (utctime t) const {
+			profile_accessor() {}
+
+			double value(utctime t) const {
 				int i = map_index(t);
 				if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
 					return profile(i);
@@ -401,25 +390,43 @@ namespace shyft{
 					return p1; // keep value until nan
 
 				int s = section_index(t);
-				auto ti = profile.t_start() + s * profile.duration() + i * profile.sampling();
-				double w1 = (t-ti) / profile.sampling();
+				auto ti = profile.t0 + s * profile.duration() + i * profile.dt;
+				double w1 = (t - ti) / profile.dt;
 				return p1*(1.0-w1) + p2*w1;
 			}
-			double operator() (utcperiod p) const {
-				size_t i = ta.index_of(p.start);
-				return value(i);
-			}
+			utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
+			utctimespan section_index(utctime t) const { return (t - ta.time(0)) / profile.duration(); }
+			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
+			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile((i0 + i) % profile.size())); }
+			size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
+		};
+
+		/**\brief periodic_ts, periodic pattern time-series
+		*
+		* Represents a ts that for the specified time-axis returns:
+		* - either the instant value of a periodic profile
+		* - or the average interpolated between two values of the periodic profile
+		*
+		*/
+		template<class PD, class TA>
+		struct periodic_ts {
+			TA ta;
+			profile_accessor<TA> pa;
+			point_interpretation_policy fx_policy;
+
+			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
+				ta(ta), pa(pd, ta), fx_policy(policy) {}
+			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
+				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
+			periodic_ts() {}
+			double operator() (utctime t) const { return pa.value(t); }
+			size_t size() const { return ta.size(); }
+			size_t index_of(utctime t) const { return ta.index_of(t); }
 			double value(size_t i) const {
 				auto p = ta.period(i);
-				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-				return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
+				size_t ix = pa.index_of(p.start); // the perfect hint, matches exactly needed ix
+				return average_value(pa, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
 			}
-			utctimespan section_index(utctime t) const {
-				return (t - ta.time(0)) / profile.duration();
-			}
-			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
-			point get(size_t i) const { return point(profile.t_start() + i * profile.sampling(), profile((i0+i) % profile.size())); }
-			size_t index_of(utctime t) const { return map_index(t) + profile.size() * section_index(t); }
 		};
 
         /** \brief Basic math operators
@@ -715,34 +722,34 @@ namespace shyft{
          * \param i the start-of-search hint, could be -1, then ts.index_of(p.start) is used to figure out the ix.
          */
         template<class S>
-        size_t hint_based_search(const S& source,const utcperiod& p, size_t i) {
+        size_t hint_based_search(const S& source, const utcperiod& p, size_t i) {
             if (source.size() == 0)
                 return std::string::npos;
-            const size_t n=source.size();
-            if (i != std::string::npos && i <n ) { // hint-based search logic goes here:
-                const size_t max_directional_search=5;// +-5 just a guess for what is a reasonable try upward/downward
+            const size_t n = source.size();
+            if (i != std::string::npos && i<n) { // hint-based search logic goes here:
+                const size_t max_directional_search = 5; // +-5 just a guess for what is a reasonable try upward/downward
                 auto ti = source.get(i).t;
-                if (ti == p.start) {// direct hit and extreme luck ?
-                    ;// just use it !
-                } else if(ti < p.start) { // do a local search upward to see if we find the spot we search for
+                if (ti == p.start) { // direct hit and extreme luck ?
+                    ; // just use it !
+                } else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
                     size_t j=0;
-                    while(ti < p.start && ++j <max_directional_search && i<n) {
-                        ti=source.get(i++).t;
+                    while(ti < p.start && ++j <max_directional_search && i<n-1) {
+                        ti = source.get(++i).t;
                     }
-                    if(ti>=p.start || i==n ) // we startet below p.start, so we got one to far(or at end), so revert back one step
-                        --i;
-                    else //if( ti !=p.start) // bad luck, local bounded search fail,
-                        i=source.index_of(p.start);// cost passed to binary search
-                } else if(ti>p.start) { // do a local search downwards from last index, maybe we are lucky
+					if (ti > p.start) 
+						--i;// we startet below p.start, so we got one to far(or at end), so revert back one step
+					else if (ti < p.start && i != n-1) // bad luck, local bounded search fail,
+                        i = source.index_of(p.start); // cost passed to binary search
+                } else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
                     size_t j=0;
-                    while(ti>p.start && ++j <max_directional_search && i >0) {
-                        ti=source.get(--i).t;
+                    while(ti>p.start && ++j <max_directional_search && i>0) {
+                        ti = source.get(--i).t;
                     }
                     if(ti>p.start && i>0) // if we are still not before p.start, and i is >0, there is a hope to find better index, otherwise we are at/before start
-                        i=source.index_of(p.start); // bad luck searching downward, need to use binary search.
+                        i = source.index_of(p.start); // bad luck searching downward, need to use binary search.
                 }
             } else // no hint given, just use binary search to establish the start.
-                i =  source.index_of(p.start);
+                i = source.index_of(p.start);
             return i;
         }
 		/** \brief accumulate_value provides a projection/interpretation

@@ -77,7 +77,7 @@ namespace expose {
 
 			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
 
-			.def(init<const vector<double>&, utctimespan, const time_axis::fixed_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a pattern and a timeaxis ta"))
+			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
 
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py

@@ -25,6 +25,7 @@ public:
 	void test_ts_statistics_speed();
 	void test_timeshift_ts();
 	void test_periodic_ts_t();
+	void test_periodic_ts_over_sampled();
 	void test_periodic_ts_concept();
 	void test_periodic_template_ts();
 	void test_periodic_virtual_ts();

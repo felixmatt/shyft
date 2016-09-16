@@ -134,7 +134,7 @@ namespace shyft {
                 apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
 				apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
-				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::fixed_dt& ta);
+				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta);
 
                 // these are the one we need.
                 apoint_ts(const gta_t& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
@@ -178,15 +178,15 @@ namespace shyft {
                 std::vector<double> values() const {return ts->values();}
 
                 //-- then some useful functions/properties
-                apoint_ts average(const gta_t &ta) const;
-				apoint_ts accumulate(const gta_t &ta) const;
+                apoint_ts average(const gta_t& ta) const;
+				apoint_ts accumulate(const gta_t& ta) const;
 				apoint_ts time_shift(utctimespan dt) const;
-                apoint_ts max(double a) const;
+				apoint_ts max(double a) const;
                 apoint_ts min(double a) const;
                 apoint_ts max(const apoint_ts& other) const;
                 apoint_ts min(const apoint_ts& other) const;
-                static apoint_ts max(const apoint_ts &a, const apoint_ts&b);
-                static apoint_ts min(const apoint_ts &a, const apoint_ts&b);
+                static apoint_ts max(const apoint_ts& a, const apoint_ts& b);
+                static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
 
                 //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
                 //   we would like these to be working (exception if it's not possible,i.e. an expression)
@@ -474,22 +474,19 @@ namespace shyft {
 			*
 			*/
 			struct periodic_ts : ipoint_ts {
-				typedef shyft::timeseries::periodic_ts<profile_description, timeaxis> pts_t;
-				gta_t ta;
+				typedef shyft::timeseries::periodic_ts<profile_description, gta_t> pts_t;
 				pts_t ts;
 
-				periodic_ts(const vector<double>& pattern, utctimespan dt, const timeaxis& ta) : ta(ta), ts(pattern, dt, ta) {}
-				periodic_ts(const periodic_ts& c) : ta(c.ta), ts(c.ts) {}
-				periodic_ts(periodic_ts&& c) : ta(move(c.ta)), ts(move(c.ts)) {}
+				periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}
+				periodic_ts(const periodic_ts& c) : ts(c.ts) {}
+				periodic_ts(periodic_ts&& c) : ts(move(c.ts)) {}
 				periodic_ts& operator=(const periodic_ts& c) {
 					if (this != &c) {
-						ta = c.ta;
 						ts = c.ts;
 					}
 					return *this;
 				}
 				periodic_ts& operator=(periodic_ts&& c) {
-					ta = move(c.ta);
 					ts = move(c.ts);
 					return *this;
 				}
@@ -497,15 +494,15 @@ namespace shyft {
 				// implement ipoint_ts contract
 				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
 				virtual void set_point_interpretation(point_interpretation_policy) { ; }
-				virtual const gta_t& time_axis() const { return ta; }
-				virtual utcperiod total_period() const { return ta.total_period(); }
+				virtual const gta_t& time_axis() const { return ts.ta; }
+				virtual utcperiod total_period() const { return ts.ta.total_period(); }
 				virtual size_t index_of(utctime t) const { return ts.index_of(t); }
-				virtual size_t size() const { return ts.size(); }
-				virtual utctime time(size_t i) const { return ta.time(i); }
+				virtual size_t size() const { return ts.ta.size(); }
+				virtual utctime time(size_t i) const { return ts.ta.time(i); }
 				virtual double value(size_t i) const { return ts.value(i); }
 				virtual double value_at(utctime t) const { return value(index_of(t)); }
 				virtual std::vector<double> values() const { // TODO: implement it
-					std::vector<double> r; r.reserve(ta.size());
+					std::vector<double> r; r.reserve(ts.ta.size());
 					return std::move(r);
 				}
 			};
@@ -726,6 +723,7 @@ namespace shyft {
 			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
 
+			apoint_ts periodic(const vector<double>& pattern, utctimespan dt, const gta_t& ta);
 
             apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) ;
             apoint_ts operator+(const apoint_ts& lhs,double           rhs) ;
