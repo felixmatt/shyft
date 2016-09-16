@@ -621,7 +621,7 @@ class CellDataCache(object):
         with open(file_path, 'rb') as pkl_file:
             cell_info = pickle.load(pkl_file)
         geo_data = cell_info['geo_data']
-        polygons = np.array(cell_info['polygons'])
+        polygons = cell_info['polygons']
         cids_ = np.sort(cids)
         cid_map = cids_
         cids_in_cache = geo_data[:, 4].astype(int)
@@ -631,15 +631,15 @@ class CellDataCache(object):
             idx = np.in1d(cids_in_cache, cids).nonzero()[0]
             geo_data_ext = geo_data[idx]
             polygons_ext = polygons[idx]
-            geo_data_ext[:, 4] = np.searchsorted(cids_, geo_data_ext[:, 4])
+            #geo_data_ext[:, 4] = np.searchsorted(cids_, geo_data_ext[:, 4]) # since ID to Index conversion not necessary
         return {'cid_map': cid_map, 'geo_data': geo_data_ext, 'polygons': polygons_ext}
 
     def _dump_to_pkl(self, file_path, cell_data, is_existing_file):
         print('Saving to cache_file {}...'.format(file_path))
-        new_geo_data = cell_data['geo_data'].copy()
+        #new_geo_data = cell_data['geo_data'].copy()
         cid_map = cell_data['cid_map']
-        new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
-        cell_info = {'geo_data': new_geo_data, 'polygons': cell_data['polygons'].tolist()}
+        #new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)] # since ID to Index conversion not necessary
+        cell_info = {'geo_data': cell_data['geo_data'], 'polygons': cell_data['polygons']}
         if is_existing_file:
             with open(file_path, 'rb') as pkl_file_in:
                 old = pickle.load(pkl_file_in)
@@ -651,7 +651,7 @@ class CellDataCache(object):
             old_cid = old_geo_data[:, 4].astype(int)
             idx_keep = np.invert(np.in1d(old_cid, cid_map)).nonzero()[0]
             if len(idx_keep) > 0:
-                cell_info = {'geo_data': np.vstack((old_geo_data[idx_keep], new_geo_data)),
+                cell_info = {'geo_data': np.vstack((old_geo_data[idx_keep], cell_data['geo_data'])),
                              'polygons': np.concatenate((old['polygons'][idx_keep], cell_data['polygons']))
                              }
         with open(file_path, 'wb') as pkl_file_out:
@@ -701,10 +701,15 @@ class GisRegionModelRepository(RegionModelRepository):
         unknown_fraction = 0.0 # todo: should we just remove this
         print('Making cell_data from gis_data...')
         cids = np.sort(list(cell_data.keys()))
-        geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, idx,
-                               radiation_slope_factor,c.get('glacier', 0.0), c.get('lake', 0.0),c.get('reservoir', 0.0),
+        # geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, idx,
+        #                        radiation_slope_factor,c.get('glacier', 0.0), c.get('lake', 0.0),c.get('reservoir', 0.0),
+        #                        c.get('forest', 0.0), unknown_fraction] for c in cell_data[cid]]
+        #                      for idx, cid in enumerate(cids))
+        geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, cid,
+                               radiation_slope_factor, c.get('glacier', 0.0), c.get('lake', 0.0),
+                               c.get('reservoir', 0.0),
                                c.get('forest', 0.0), unknown_fraction] for c in cell_data[cid]]
-                             for idx, cid in enumerate(cids))
+                             for cid in cids)
         geo_data[:, -1] = 1 - geo_data[:, -5:-1].sum(axis=1) # calculating the unknown fraction
         polys = np.concatenate(tuple([c['cell'] for c in cell_data[cid]] for cid in cids))
         return {'cid_map': cids, 'geo_data': geo_data, 'polygons': polys}
@@ -787,7 +792,7 @@ class GisRegionModelRepository(RegionModelRepository):
         catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
         for cid, param in rm.catchment_parameters.items():
             if cid in catchment_id_map:
-                catchment_parameter_map[catchment_id_map.index(cid)] = param
+                catchment_parameter_map[cid] = param
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
         region_model.catchment_id_map = catchment_id_map.tolist()  # needed to map from externa c_id to 0-based c_id used internally in

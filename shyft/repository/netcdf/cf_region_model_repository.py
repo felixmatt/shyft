@@ -168,7 +168,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
 
             c_ids = Vars["catchment_id"][mask]
             c_ids_unique = list(np.unique(c_ids))
-            c_indx = np.array([c_ids_unique.index(cid) for cid in c_ids])
+            # c_indx = np.array([c_ids_unique.index(cid) for cid in c_ids]) # since ID to Index conversion not necessary
             
 
             ff = Vars["forest-fraction"][mask]
@@ -200,7 +200,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         unknown_fraction = 1.0 - gf - lf - rf - ff
 
         # Construct cells
-        cell_geo_data = np.column_stack([x[mask], y[mask], elevation, areas, c_indx.astype(int), np.full(len(c_indx),
+        cell_geo_data = np.column_stack([x[mask], y[mask], elevation, areas, c_ids.astype(int), np.full(len(c_ids),
                                    radiation_slope_factor), gf, lf, rf, ff, unknown_fraction])
         cell_vector = self._region_model.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
 
@@ -223,7 +223,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
                     else:
                         raise RegionConfigError("Unknown catchment parameter set '{}'".format(p_type_name))
 
-                catchment_parameters[c_ids_unique.index(cid)] = param
+                catchment_parameters[cid] = param
         region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
         region_model.bounding_region = bounding_region
         region_model.catchment_id_map = c_ids_unique
