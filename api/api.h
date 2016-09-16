@@ -181,8 +181,8 @@ namespace shyft {
 				for (const auto &c : *cells) sum += c.geo.area();
 		    } else {
 				for (auto cid : catchment_indexes)
-					for (const auto&c : *cells) 
-						if (c.geo.catchment_id() == cid) sum += c.geo.area();
+					for (const auto&c : *cells)
+						if ((int)c.geo.catchment_id() == cid) sum += c.geo.area();
 			}
 			return sum;
 		}
@@ -193,7 +193,7 @@ namespace shyft {
 			} else {
 				for (auto cid : catchment_indexes)
 					for (const auto&c : *cells)
-						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().forest();
+						if ( (int)c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().forest();
 			}
 			return sum;
 		}
@@ -204,7 +204,7 @@ namespace shyft {
 			} else {
 				for (auto cid : catchment_indexes)
 					for (const auto&c : *cells)
-						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().glacier();
+						if ((int)c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().glacier();
 			}
 			return sum;
 		}
@@ -215,7 +215,7 @@ namespace shyft {
 			} else {
 				for (auto cid : catchment_indexes)
 					for (const auto&c : *cells)
-						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().lake();
+						if ((int)c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().lake();
 			}
 			return sum;
 		}
@@ -226,7 +226,7 @@ namespace shyft {
 			} else {
 				for (auto cid : catchment_indexes)
 					for (const auto&c : *cells)
-						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().reservoir();
+						if ((int)c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().reservoir();
 			}
 			return sum;
 		}
@@ -237,7 +237,7 @@ namespace shyft {
 			} else {
 				for (auto cid : catchment_indexes)
 					for (const auto&c : *cells)
-						if (c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().unspecified();
+						if ((int)c.geo.catchment_id() == cid) sum += c.geo.area()*c.geo.land_type_fractions_info().unspecified();
 			}
 			return sum;
 		}
