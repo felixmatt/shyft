@@ -264,7 +264,7 @@ namespace shyft {
             generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
             generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
             // --
-            bool is_fixed_dt() const {return gt == POINT;}
+            bool is_fixed_dt() const {return gt != POINT;}
 
             size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}
             utcperiod total_period() const  {switch( gt ) {default: case FIXED: return f.total_period(); case CALENDAR: return c.total_period(); case POINT: return p.total_period();}}

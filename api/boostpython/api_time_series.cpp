@@ -73,13 +73,14 @@ namespace expose {
 
 			.def(init<const time_axis::point_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
 			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+            .def(init<const shyft::api::rts_t &>(args("core_result_ts"),"construct a timeseries from a shyft core time-series, to allow full ts-functionality in python"))
 
 			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::fixed_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a pattern and a timeaxis ta"))
 
 			DEF_STD_TS_STUFF()
-			// expose time_axis sih: would liek to use property, but no return value policy, so we use get_ + fixup in init.py
+			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 			.def("get_time_axis", &shyft::api::apoint_ts::time_axis, "returns the time-axis", return_internal_reference<>())
 			.add_property("values", &shyft::api::apoint_ts::values, "return the values (possibly calculated on the fly)")
 			// operators

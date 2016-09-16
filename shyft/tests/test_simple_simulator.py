@@ -154,8 +154,9 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
-        target_discharge = simulator.region_model.statistics.discharge([cid])
 
+        target_discharge_ts = simulator.region_model.statistics.discharge([cid])
+        target_discharge = api.TsTransform().to_average(time_axis.time(0), time_axis.time(1)-time_axis.time(0), time_axis.size(), target_discharge_ts)
         # Perturb parameters
         param = simulator.region_model.get_region_parameter()
         p_vec_orig = [param.get(i) for i in range(param.size())]
@@ -317,7 +318,7 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
-        target_discharge = simulator.region_model.statistics.discharge([cid])
+        target_discharge = api.TsTransform().to_average(t0,dt,n_steps,simulator.region_model.statistics.discharge([cid]))
 
         # Construct kirchner parameters
         param = simulator.region_model.parameter_t(simulator.region_model.get_region_parameter())
@@ -377,7 +378,7 @@ class SimulationTestCase(unittest.TestCase):
         simulator.run(time_axis, state_repos.get_state(0))
         found_discharge = simulator.region_model.statistics.discharge([cid])
 
-        t_vs = np.array(target_discharge.v)
+        t_vs = np.array(target_discharge.values)
         t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
         f_vs = np.array(found_discharge.v)
         f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])

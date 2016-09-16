@@ -80,7 +80,7 @@ Timeaxis2.__call__ = lambda self, i: self.period(i)
 Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 Timeseries.__len__ = lambda self: self.size()
-
+Timeseries.v = property(lambda self: self.values,doc="returns the point-values of timeseries, alias for .values")
 
 TsFixed.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
 TsFixed.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")

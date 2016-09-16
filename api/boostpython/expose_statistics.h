@@ -2,7 +2,7 @@
 
 namespace expose {
     namespace statistics {
-        typedef shyft::api::result_ts_t_ rts_;
+        typedef shyft::api::apoint_ts rts_;
         typedef std::vector<double> vd_;
         typedef const std::vector<int>& cids_;
         typedef size_t ix_;
@@ -235,7 +235,7 @@ namespace expose {
         static void basic_cell(const char *cell_name) {
             char base_name[200];sprintf(base_name,"%sStatistics",cell_name);
             typedef typename shyft::api::basic_cell_statistics<cell> bc_stat;
-
+			
             rts_ (bc_stat::*discharge_ts)(cids_) const = &bc_stat::discharge;
             vd_  (bc_stat::*discharge_vd)(cids_,ix_) const =&bc_stat::discharge;
 

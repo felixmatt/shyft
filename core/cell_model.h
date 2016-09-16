@@ -164,7 +164,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0,point_interpretation_policy::POINT_AVERAGE_VALUE);
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
@@ -240,7 +240,7 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
 				bool match_all = catchment_indexes.size() == 0;
 
 				for (const auto& c : cells) {

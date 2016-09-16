@@ -82,6 +82,9 @@ namespace shyft{
         apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
+		apoint_ts::apoint_ts(const rts_t &rts):
+			apoint_ts(time_axis::generic_dt(rts.ta),rts.v,rts.point_interpretation())
+		{}
 
 		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::fixed_dt& ta) :
 			apoint_ts(make_shared<periodic_ts>(pattern, dt, ta)) {}

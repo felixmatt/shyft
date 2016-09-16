@@ -45,7 +45,7 @@ namespace shyft {
              */
             typedef shyft::time_axis::generic_dt gta_t;
             typedef shyft::timeseries::point_ts<gta_t> gts_t;
-
+			typedef shyft::timeseries::point_ts<time_axis::fixed_dt> rts_t;
             /** \brief A virtual abstract interface (thus the prefix i) base for point_ts
              *
              * There are three defining properties of a time-series:
@@ -133,7 +133,7 @@ namespace shyft {
 
                 apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-
+				apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
 				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::fixed_dt& ta);
 
                 // these are the one we need.
