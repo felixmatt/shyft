@@ -368,9 +368,10 @@ namespace shyft{
 		struct profile_accessor {
 			TA ta;
 			profile_description profile;
+			point_interpretation_policy fx_policy;
 			utctimespan i0;
 
-			profile_accessor(const profile_description& pd, const TA& ta) : profile(pd), ta(ta) {
+			profile_accessor( const profile_description& pd, const TA& ta, point_interpretation_policy fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
 				profile.reset_start(ta.time(0));
 				i0 = (ta.time(0) - profile.t0) / profile.dt;
 			}
@@ -415,7 +416,7 @@ namespace shyft{
 			point_interpretation_policy fx_policy;
 
 			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
-				ta(ta), pa(pd, ta), fx_policy(policy) {}
+				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
 				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
 			periodic_ts() {}

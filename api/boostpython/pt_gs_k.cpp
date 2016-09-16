@@ -46,7 +46,7 @@ namespace expose {
                 ;
 
             typedef std::map<int,parameter> PTGSKParameterMap;
-            class_<PTGSKParameterMap>("PTGSKParameterMap","dict (int,parameter)  where the int is 0-based catchment_id")
+            class_<PTGSKParameterMap>("PTGSKParameterMap","dict (int,parameter)  where the int is the catchment_id")
                 .def(map_indexing_suite<PTGSKParameterMap>())
             ;
 
