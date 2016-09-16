@@ -223,7 +223,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
                     else:
                         raise RegionConfigError("Unknown catchment parameter set '{}'".format(p_type_name))
 
-                catchment_parameters[c_ids_unique.index(cid)] = param
+                catchment_parameters[cid] = param
         region_model = self._region_model(cell_vector, region_parameter, catchment_parameters)
         region_model.bounding_region = bounding_region
         region_model.catchment_id_map = c_ids_unique

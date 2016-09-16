@@ -792,7 +792,7 @@ class GisRegionModelRepository(RegionModelRepository):
         catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
         for cid, param in rm.catchment_parameters.items():
             if cid in catchment_id_map:
-                catchment_parameter_map[catchment_id_map.index(cid)] = param
+                catchment_parameter_map[cid] = param
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
         region_model.catchment_id_map = catchment_id_map.tolist()  # needed to map from externa c_id to 0-based c_id used internally in
