@@ -281,19 +281,19 @@ namespace shyft{
         };
 
 		/**\brief accumulate_ts, accumulate time-series
-		*
-		* Represents a ts that for
-		* the specified time-axis the accumulated sum
-		* of the underlying specified TS ts.
-		* The i'th value in the time-axis is computed
-		* as the sum of the previous true-averages.
-		* The point_interpretation_policy is POINT_INSTANT_VALUE
-		* definition:
-		* The value of t0=time_axis(0) is zero.
-		* The value of t1= time_axis(1) is defined as
-		* integral_of f(t) dt from t0 to t1, skipping nan-areas.
-		*
-		*/
+		 *
+		 * Represents a ts that for
+		 * the specified time-axis the accumulated sum
+		 * of the underlying specified TS ts.
+		 * The i'th value in the time-axis is computed
+		 * as the sum of the previous true-averages.
+		 * The point_interpretation_policy is POINT_INSTANT_VALUE
+		 * definition:
+		 * The value of t0=time_axis(0) is zero.
+		 * The value of t1= time_axis(1) is defined as
+		 * integral_of f(t) dt from t0 to t1, skipping nan-areas.
+		 *
+		 */
 		template<class TS, class TA>
 		struct accumulate_ts {
 			typedef TA ta_t;
@@ -333,11 +333,16 @@ namespace shyft{
 			}
 		};
 
-		/** \brief A simple profile description defined by
-		* utctime t0,
-		* utctimespan dt,
-		* vector<double> profile
-		*/
+		/**\brief A simple profile description defined by start-time and a equidistance by delta-t value-profile.
+		 *
+		 * The profile_description is used to define the profile by a vector of double-values.
+		 * It's first use is in conjunction with creating a time-series with repeated profile
+		 * that play a role when creating daily bias-profiles for forecast predictions.
+		 * The class provides t0,dt, ,size() and operator()(i) to access profile values.
+		 *  -thus we can use other forms of profile-descriptor, not tied to providing the points
+		 * \sa profile_accessor
+		 * \sa profile_ts
+		 */
 		struct profile_description {
 			utctime t0;
 			utctimespan dt;
@@ -360,23 +365,45 @@ namespace shyft{
 			}
 		};
 
-		/** \brief Profile accessor which handles virtual indexing for a profile defined by
-		* profile_description pd,
-		* time_axis ta
-		*/
+		/** \brief profile accessor that enables use of average_value etc.
+		 *
+		 * The profile accessor provide a 'point-source' compatible interface signatures
+		 * for use by the average_value-functions.
+		 * It does so by repeating the profile-description values over the complete specified time-axis.
+		 * Each time-point within that time-axis can be mapped to an interval/index of the original
+		 * profile so that it 'appears' as the profile is repeated the number of times needed to cover
+		 * the time-axis.
+		 *
+		 * Currently we also delegate the 'hard-work' of the op(t) and value(i'th period) here so
+		 * that the periodic_ts, -using profile_accessor is at a minimun.
+		 * 
+		 * \note that the profile can start anytime before or equal to the time-series time-axis.
+		 * \remark .. that we should add profile_description as template arg
+		 */
 		template<class TA>
 		struct profile_accessor {
-			TA ta;
-			profile_description profile;
+			TA ta; ///< The time-axis that we want to map/repeat the profile on to
+			profile_description profile;///<< the profile description, we use .t0, dt, duration(),.size(),op(). reset_start_time()
 			point_interpretation_policy fx_policy;
-			utctimespan i0;
 
 			profile_accessor( const profile_description& pd, const TA& ta, point_interpretation_policy fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
 				profile.reset_start(ta.time(0));
-				i0 = (ta.time(0) - profile.t0) / profile.dt;
 			}
 			profile_accessor() {}
+			/** map utctime t to the index of the profile value array/function */
+			utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
+			/** map utctime t to the profile pattern section, 
+			 *  the profile is repeated n-section times to cover the complete time-axis 
+			 */
+			utctimespan section_index(utctime t) const { return (t - profile.t0) / profile.duration(); }
 
+			/** returns the value at time t, taking the point_interpretation policy
+			 * into account and provide the linear interpolated value between two points
+			 * in the profile if so specified.
+			 * If linear between points, and last point is nan, first point in interval-value
+			 * is returned (flatten out f(t)).
+			 * If point to the left is nan, then nan is returned.
+			 */
 			double value(utctime t) const {
 				int i = map_index(t);
 				if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
@@ -395,20 +422,23 @@ namespace shyft{
 				double w1 = (t - ti) / profile.dt;
 				return p1*(1.0-w1) + p2*w1;
 			}
-			utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
-			utctimespan section_index(utctime t) const { return (t - ta.time(0)) / profile.duration(); }
+			double value(size_t i) const {
+				auto p = ta.period(i);
+				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
+				return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE == fx_policy);
+			}
+			// provided functions to the average_value<..> function
 			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
-			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile((i0 + i) % profile.size())); }
+			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
 			size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
 		};
 
 		/**\brief periodic_ts, periodic pattern time-series
-		*
-		* Represents a ts that for the specified time-axis returns:
-		* - either the instant value of a periodic profile
-		* - or the average interpolated between two values of the periodic profile
-		*
-		*/
+		 *
+		 * Represents a ts that for the specified time-axis returns:
+		 * - either the instant value of a periodic profile
+		 * - or the average interpolated between two values of the periodic profile
+		 */
 		template<class PD, class TA>
 		struct periodic_ts {
 			TA ta;
@@ -423,11 +453,7 @@ namespace shyft{
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }
 			size_t index_of(utctime t) const { return ta.index_of(t); }
-			double value(size_t i) const {
-				auto p = ta.period(i);
-				size_t ix = pa.index_of(p.start); // the perfect hint, matches exactly needed ix
-				return average_value(pa, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
-			}
+			double value(size_t i) const { return pa.value(i);	}
 		};
 
         /** \brief Basic math operators

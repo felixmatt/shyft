@@ -379,9 +379,14 @@ void inverse_distance_test::test_performance() {
 	//
 	// Arrange
 	//
-	utctime Tstart = calendar().time(YMDhms(2000, 1, 1));
+	utctime Tstart = calendar().time(2000, 1, 1);
 	utctimespan dt = 3600L;
+	#ifdef _DEBUG
+	int n = 4;// just speed up test.
+	#else
 	int n = 24 * 36; // number of timesteps
+	#endif
+
 	const int n_xy = 3; // number for xy-squares for sources
 	const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
 	const int ny = 3 * n_xy;

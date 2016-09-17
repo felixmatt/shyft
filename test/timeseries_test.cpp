@@ -808,8 +808,12 @@ void timeseries_test::test_ts_statistics_speed() {
     auto t0 = utc.time(2015, 1, 1);
 
     auto fx_1 = [t0](size_t i, utctime t)->double {return double( rand()/36000.0 );};// should generate 0..9 constant ts.
+#ifdef _DEBUG
     auto n_days=365*100;
-    auto n_ts=10;
+#else
+	auto n_days = 365 * 10;// fewer for debug
+#endif
+	auto n_ts=10;
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, deltahours(24), n_days);
     auto tsv1 = create_test_ts(n_ts, ta, fx_1);
@@ -940,115 +944,35 @@ void timeseries_test::test_periodic_template_ts() {
 	TS_ASSERT_DELTA(pd.size(), pv.size(), 1e-9);
 
 	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
-
+	// case 0: time-axis delta t covers several steps/values of the pattern
 	TS_ASSERT_EQUALS(fun.size(), 1000);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
 	TS_ASSERT_EQUALS(fun.value(0), 2.2);
 	TS_ASSERT_EQUALS(fun.value(1), 5.5);
 	TS_ASSERT_EQUALS(fun.value(2), 4.0);
-}
+	// case 1: as case 0, but 
+	// t0 of the profile do *not* match the time-axis tstart
+	// and time-of day is also different:
+	// 
+	profile_description pd1(utc.time(2000,1,1,2), dt, pv);
+	periodic_ts<profile_description, timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
+	TS_ASSERT_EQUALS(fx.value(0), 3.1);// verified using excel
+	TS_ASSERT_EQUALS(fx.value(1), 4.8);
+	TS_ASSERT_EQUALS(fx.value(2), 5.0);// overlaps next day as well
+	// case 2: now test another case where the time-axis is 1hour, and we have POINT_AVERAGE_VALUE(stair-case-type f(t))
+	// between points.
+	timeaxis ta_hour(t0, deltahours(1), 24);
+	periodic_ts<profile_description, timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
+	vector<double> expected_fs = { 8.0,8.0,1.0,1.0,1.0,2.0,2.0,2.0,3.0,3.0,3.0,4.0,4.0,4.0,5.0,5.0,5.0,6.0,6.0,6.0,7.0,7.0,7.0,8.0 };
+	for (size_t i = 0;i < expected_fs.size();++i)
+		TS_ASSERT_DELTA(expected_fs[i], fs.value(i), 0.00001);
+	// case 3: as case 2, but POINT_INSTANT_VALUE and linear-between points type of f(t)
+	//
+	periodic_ts<profile_description, timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
+	vector<double> expected_fl = { 4.500000,2.166667,1.166667,1.500000,1.833333,2.166667,2.500000,2.833333,3.166667,3.500000,3.833333,4.166667,4.500000,4.833333,5.166667,5.500000,5.833333,6.166667,6.500000,6.833333,	7.166667,7.500000,7.833333, 8.0 /*	ok, if we consider f(t) keep value at the end, otherwise it's 6.833333 */	};
+	for (size_t i = 0;i < expected_fl.size();++i)
+		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
 
-void timeseries_test::test_periodic_virtual_ts() {
-	// Periodic profile having 8 samples spaced by 3 h
-	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
-	const utctimespan dt = deltahours(3);
-	calendar utc;
-	utctime t0 = utc.time(2015, 1, 1);
-	utctime ta_t0 = utc.time(2015, 1, 1);
-	const utctimespan ta_dt = deltahours(10);
-	const int ta_n = 1000;
-	timeaxis ta(ta_t0, ta_dt, ta_n);
-	// basic PD by points
-	// template<class VT>
-	struct profile_description {
-		utctimespan dt;
-		std::vector<double> profile; // VT profile
-		utctime t_start;
-		// size()
-		// vector<double> v[i]
-		// tstart
-	};
-	//struct sinus_profile_description {
-		// dt
-		// size()
-		// v[i] = sin(w * (t-tstart) + offset) 
-		// tstart
-	//};
-	// template<class PD, class TA>
-	struct periodic_ts {
-		int nt;
-		utctimespan dt;
-		utctimespan period;
-		utctime t0;
-		size_t i0;
-		std::array<double, 8> profile;
-		timeaxis ta;
-		point_interpretation_policy fx_policy;
-		periodic_ts(utctime t_start, utctimespan dt, std::array<double, 8> profile, point_interpretation_policy fx_policy, timeaxis ta) :
-			dt(dt), profile(profile), ta(ta),fx_policy(fx_policy) {
-			nt = profile.size();
-			auto ta0 = ta.time(0);
-			period = nt*dt;
-			auto section_offset = (t_start - ta0) / period;
-			t0 = t_start - section_offset*period;
-			i0 = (ta0 - t0) / dt;
-		}
-
-		int map_index(utctime t) const {return ((t-t0)/dt) % nt;}
-
-		double operator() (utctime t) const {
-			int i = map_index(t);
-			if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
-				return profile[i];
-			//-- interpolate between time(i)    .. t  ... time(i+1)
-			//                       profile[i]           profile[(i+1)%nt]
-			double p1 = profile[i];
-			double p2 = profile[(i+1)%nt];
-			if (!isfinite(p1))
-				return shyft::nan;
-			if (!isfinite(p2))
-				return p1;// keep value until nan
-
-			int s = section_index(t);
-			auto ti = t0 + s*period + i * dt;
-			double w1 = (t-ti)/dt;
-			return p1*(1.0-w1) + p2*w1;
-		}
-
-		double operator() (utcperiod p) const {
-			size_t i = ta.index_of(p.start);
-			return value(i);
-		}
-		
-		double value(size_t i) const {
-			auto p = ta.period(i);
-			size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-			return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE==fx_policy);
-		}
-
-		int section_index(utctime t) const {
-			return (t - ta.time(0)) / period;
-		}
-
-		size_t size() const { return nt * (1 + ta.total_period().timespan() / period); }
-		point get(size_t i) const { return point(t0 + i*dt, profile[ (i0+i) % nt]); }
-		size_t index_of(utctime t) const { return map_index(t) + nt * section_index(t); }
-	};
-
-	periodic_ts fun(t0, dt, profile, point_interpretation_policy::POINT_AVERAGE_VALUE, ta);
-
-	TS_ASSERT_EQUALS(fun.size(), 3336);
-	TS_ASSERT_EQUALS(fun.index_of(ta_t0), 0);
-	TS_ASSERT_EQUALS(fun.index_of(ta.time(1)), 3);
-	TS_ASSERT_EQUALS(fun.index_of(ta.time(3)), 10);
-	TS_ASSERT_EQUALS(fun.section_index(ta.time(0)), 0);
-	TS_ASSERT_EQUALS(fun.section_index(ta.time(3)), 1);
-	TS_ASSERT_EQUALS(fun.get(0), point(t0, profile[0]));
-	TS_ASSERT_EQUALS(fun.get(9), point(t0 + 9*dt, profile[1]));
-
-	TS_ASSERT_DELTA(fun(ta.period(0)), 2.2, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(1)), 5.5, 1e-9);
-	TS_ASSERT_DELTA(fun(ta.period(2)), 4.0, 1e-9);
 }
 
 void timeseries_test::test_accumulate_value() {

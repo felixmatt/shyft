@@ -28,7 +28,6 @@ public:
 	void test_periodic_ts_over_sampled();
 	void test_periodic_ts_concept();
 	void test_periodic_template_ts();
-	void test_periodic_virtual_ts();
 	void test_accumulate_value();
 	void test_accumulate_ts_and_accessor();
 };
