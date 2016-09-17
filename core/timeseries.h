@@ -740,6 +740,7 @@ namespace shyft{
 
 
         /** \brief hint_based search to eliminate binary-search in irregular time-point series.
+		 *
          *  utilizing the fact that most access are periods, sequential, so the average_xxx functions
          *  can utilize this, and keep the returned index as a hint for the next request for average_xxx
          *  value.
@@ -747,37 +748,43 @@ namespace shyft{
          * \param source a point ts source as described above
          * \param p utcperiod for which we search a start point <= p.start
          * \param i the start-of-search hint, could be -1, then ts.index_of(p.start) is used to figure out the ix.
+		 * \return lowerbound index or npos if not found
+		 * \note We should specialize this for sources with computed time-axis to improve speed
          */
         template<class S>
         size_t hint_based_search(const S& source, const utcperiod& p, size_t i) {
-            if (source.size() == 0)
+			const size_t n = source.size();
+			if (n == 0)
                 return std::string::npos;
-            const size_t n = source.size();
             if (i != std::string::npos && i<n) { // hint-based search logic goes here:
                 const size_t max_directional_search = 5; // +-5 just a guess for what is a reasonable try upward/downward
                 auto ti = source.get(i).t;
                 if (ti == p.start) { // direct hit and extreme luck ?
-                    ; // just use it !
+                    return i; // just use it !
                 } else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
-                    size_t j=0;
-                    while(ti < p.start && ++j <max_directional_search && i<n-1) {
-                        ti = source.get(++i).t;
-                    }
-					if (ti > p.start) 
-						--i;// we startet below p.start, so we got one to far(or at end), so revert back one step
-					else if (ti < p.start && i != n-1) // bad luck, local bounded search fail,
-                        i = source.index_of(p.start); // cost passed to binary search
+					if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
+					size_t i_max = std::min(i + max_directional_search, n);
+					while (++i < i_max) {
+						ti = source.get(i).t;
+						if (ti < p.start )
+							continue;
+						return  ti > p.start? i - 1 : i;// we either got one to far, or direct-hit
+					}
+					return (i < n) ? source.index_of(p.start):n-1; // either local search failed->bsearch etc., or we are at the end -> n-1
                 } else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
-                    size_t j=0;
-                    while(ti>p.start && ++j <max_directional_search && i>0) {
-                        ti = source.get(--i).t;
-                    }
-                    if(ti>p.start && i>0) // if we are still not before p.start, and i is >0, there is a hope to find better index, otherwise we are at/before start
-                        i = source.index_of(p.start); // bad luck searching downward, need to use binary search.
+					if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
+						return 0;//std::string::npos;
+					size_t i_min =  (i - std::min(i, max_directional_search));
+					do {
+						ti = source.get(--i).t;//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
+						if ( ti > p.start)
+							continue;
+						return i; // we found the lower left bound (either exact, or less p.start)
+					} while (i > i_min);
+                    return i>0? source.index_of(p.start): std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
                 }
-            } else // no hint given, just use binary search to establish the start.
-                i = source.index_of(p.start);
-            return i;
+            } 
+            return source.index_of(p.start);// no hint given, just use binary search to establish the start.
         }
 		/** \brief accumulate_value provides a projection/interpretation
 		* of the values of a pointsource on to a time-axis as provided.
@@ -805,9 +812,10 @@ namespace shyft{
 				return shyft::nan;
 			size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
-			if (i == std::string::npos) // this might be a case
+			if (i == std::string::npos) { // this might be a case
+				last_idx = 0;// we update the hint to the left-most possible index
 				return shyft::nan; // and is equivalent to no points, or all points after requested period.
-
+			}
 			point l;// Left point
 			bool l_finite = false;
 

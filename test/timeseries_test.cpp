@@ -249,7 +249,7 @@ void timeseries_test::test_hint_based_bsearch() {
     ta.reset_call_count();
 
     TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t-1*d,t-0*d),5),string::npos);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,1);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// in this case, local search ends up with conclusive npos
 
     ta.reset_call_count();
 
