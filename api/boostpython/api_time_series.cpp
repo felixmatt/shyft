@@ -171,7 +171,7 @@ namespace expose {
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        
+
 		/* local scope */ {
 
 			typedef shyft::time_axis::fixed_dt ta_t;
@@ -185,7 +185,7 @@ namespace expose {
 		}
     }
 	static void expose_correlation_functions() {
-		const char * kg_doc = 
+		const char * kg_doc =
 			"Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis\n"
 			"Parameters\n"
 			"----------\n"
@@ -232,8 +232,7 @@ namespace expose {
 
 	}
 	static void expose_periodic_ts() {
-		typedef timeseries::periodic_ts<profile_description, timeaxis> periodic_ts_t;
-		const char *docstr = 
+		const char *docstr =
 			"Create a Timeseries by repeating the pattern-specification\n"
 			"Parameters\n"
 			"----------\n"
