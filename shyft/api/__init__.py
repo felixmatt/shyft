@@ -82,6 +82,48 @@ Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns 
 Timeseries.__len__ = lambda self: self.size()
 Timeseries.v = property(lambda self: self.values,doc="returns the point-values of timeseries, alias for .values")
 
+Timeseries.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self, other_ts, self.get_time_axis(), s_r, s_a, s_b)
+Timeseries.kling_gupta.__doc__ = \
+"""
+computes the kling_gupta correlation using self as observation, and self.time_axis as
+the comparison time-axis
+
+Parameters
+----------
+other_ts : Timeseries
+ the predicted/calculated time-series to correlate
+s_r : float
+ the kling gupta scale r factor(weight the correlation of goal function)
+s_a : float
+ the kling gupta scale a factor(weight the relative average of the goal function)
+s_b : float
+ the kling gupta scale b factor(weight the relative standard deviation of the goal function)
+
+Return
+------
+KGEs : float
+
+"""
+
+Timeseries.nash_sutcliffe = lambda self,other_ts: nash_sutcliffe(self, other_ts, self.get_time_axis())
+Timeseries.nash_sutcliffe.__doc__ = \
+"""
+Computes the Nash-Sutcliffe model effiency coefficient (n.s)
+for the two time-series over the specified time_axis
+Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient
+Parameters
+----------
+observed_ts : Timeseries
+ the observed time-series
+model_ts : Timeseries
+ the time-series that is the model simulated / calculated ts
+time_axis : Timeaxis2
+ the time-axis that is used for the computation
+Return
+------
+ float: The n.s performance, that have a maximum at 1.0
+"""
+
 TsFixed.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
 TsFixed.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 TsPoint.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")

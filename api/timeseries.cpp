@@ -1,5 +1,5 @@
 #include "timeseries.h"
-
+#include <dlib/statistics.h>
 namespace shyft{
     namespace api {
         static double iop_add(double a,double b) {return a + b;}
@@ -16,7 +16,7 @@ namespace shyft{
 		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
 		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
 
-		apoint_ts periodic(const vector<double>& pattern, utctimespan dt, const gta_t& ta) { return apoint_ts(make_shared<periodic_ts>(pattern, dt, ta)); }
+		apoint_ts create_periodic_pattern_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) { return apoint_ts(make_shared<periodic_ts>(pattern, dt, pattern_t0, ta)); }
 
         apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
         apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
@@ -90,7 +90,8 @@ namespace shyft{
 
 		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta) :
 			apoint_ts(make_shared<periodic_ts>(pattern, dt, ta)) {}
-
+		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta) :
+			apoint_ts(make_shared<periodic_ts>(pattern, dt,pattern_t0,ta)) {}
 
         apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values),point_fx)) {
@@ -188,6 +189,18 @@ namespace shyft{
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
             return apoint_ts( std::make_shared<shyft::api::time_shift_ts>(ts,dt));
         }
+
+		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {
+			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
+			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
+			return 1.0 - shyft::timeseries::nash_sutcliffe_goal_function(o, m);
+		}
+
+		double kling_gupta( const apoint_ts & observation_ts,  const apoint_ts &model_ts, const gta_t & ta, double s_r, double s_a, double s_b) {
+			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
+			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
+			return 1.0 - shyft::timeseries::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
+		}
 
     }
 }

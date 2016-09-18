@@ -449,6 +449,9 @@ namespace shyft{
 				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
 				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
+			periodic_ts(const vector<double>& pattern, utctimespan dt,utctime pattern_t0, const TA& ta) :
+				periodic_ts(profile_description(pattern_t0, dt, pattern), ta) {
+			}
 			periodic_ts() {}
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }

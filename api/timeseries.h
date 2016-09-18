@@ -135,7 +135,7 @@ namespace shyft {
                 apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
 				apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
 				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta);
-
+				apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta);
                 // these are the one we need.
                 apoint_ts(const gta_t& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const gta_t& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
@@ -478,6 +478,7 @@ namespace shyft {
 				pts_t ts;
 
 				periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}
+				periodic_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) : ts(pattern, dt,pattern_t0,ta) {}
 				periodic_ts(const periodic_ts& c) : ts(c.ts) {}
 				periodic_ts(periodic_ts&& c) : ts(move(c.ts)) {}
 				periodic_ts& operator=(const periodic_ts& c) {
@@ -722,8 +723,12 @@ namespace shyft {
 
 			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
+			
+			double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta);
 
-			apoint_ts periodic(const vector<double>& pattern, utctimespan dt, const gta_t& ta);
+			double kling_gupta(const apoint_ts& observation_ts, const apoint_ts&  model_ts, const gta_t& ta, double s_r, double s_a, double s_b);
+			
+			apoint_ts create_periodic_pattern_ts(const vector<double>& pattern, utctimespan dt,utctime t0, const gta_t& ta);
 
             apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) ;
             apoint_ts operator+(const apoint_ts& lhs,double           rhs) ;

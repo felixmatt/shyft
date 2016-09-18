@@ -78,7 +78,7 @@ namespace expose {
 			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
-
+			.def(init<const vector<double>&, utctimespan,utctime, const time_axis::generic_dt&>(args("pattern", "dt","t0", "ta"), "construct a timeseries given a equally spaced dt pattern, starting at t0, and a timeaxis ta"))
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 			.def("get_time_axis", &shyft::api::apoint_ts::time_axis, "returns the time-axis", return_internal_reference<>())
@@ -171,19 +171,86 @@ namespace expose {
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        /* local scope */ {
+        
+		/* local scope */ {
 
-        typedef shyft::time_axis::fixed_dt ta_t;
-        typedef shyft::timeseries::average_accessor<pts_t,ta_t> AverageAccessorTs;
-        class_<AverageAccessorTs>("AverageAccessorTs","Accessor to get out true average for the time-axis intervals for a point time-series",no_init)
-            .def(init<const pts_t&,const ta_t&>(args("ts","ta"),"construct accessor from ts and time-axis ta"))
-            .def(init<shared_ptr<pts_t>,const ta_t&>(args("ts","ta"),"constructor from ref ts and time-axis ta"))
-            .def("value",&AverageAccessorTs::value,args("i"),"returns the i'th true average value" )
-            .def("size", &AverageAccessorTs::size,"returns number of intervals in the time-axis for this accessor")
-            ;
-        }
+			typedef shyft::time_axis::fixed_dt ta_t;
+			typedef shyft::timeseries::average_accessor<pts_t, ta_t> AverageAccessorTs;
+			class_<AverageAccessorTs>("AverageAccessorTs", "Accessor to get out true average for the time-axis intervals for a point time-series", no_init)
+				.def(init<const pts_t&, const ta_t&>(args("ts", "ta"), "construct accessor from ts and time-axis ta"))
+				.def(init<shared_ptr<pts_t>, const ta_t&>(args("ts", "ta"), "constructor from ref ts and time-axis ta"))
+				.def("value", &AverageAccessorTs::value, args("i"), "returns the i'th true average value")
+				.def("size", &AverageAccessorTs::size, "returns number of intervals in the time-axis for this accessor")
+				;
+		}
     }
+	static void expose_correlation_functions() {
+		const char * kg_doc = 
+			"Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis\n"
+			"Parameters\n"
+			"----------\n"
+			"observed_ts : Timeseries\n"
+			"\tthe observed time-series\n"
+			"model_ts : Timeseries\n"
+			"\t the time-series that is the model simulated / calculated ts\n"
+			"time_axis : Timeaxis2\n"
+			"\tthe time-axis that is used for the computation\n"
+			"s_r : float\n"
+			"\tthe kling gupta scale r factor(weight the correlation of goal function)\n"
+			"s_a : float\n"
+			"\tthe kling gupta scale a factor(weight the relative average of the goal function)\n"
+			"s_b : float\n"
+			"\tthe kling gupta scale b factor(weight the relative standard deviation of the goal function)\n"
+			"Return\n"
+			"------\n"
+			" float: The  KGEs= 1-EDs that have a maximum at 1.0\n";
 
+		def("kling_gupta", shyft::api::kling_gupta, args("observation_ts", "model_ts", "time_axis", "s_r", "s_a", "s_b"),
+			kg_doc
+		);
+
+		const char *ns_doc = "Computes the Nash-Sutcliffe model effiency coefficient (n.s) \n"
+			" for the two time-series over the specified time_axis\n"
+			" Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient \n"
+
+			"Parameters\n"
+			"----------\n"
+			"observed_ts : Timeseries\n"
+			"\tthe observed time-series\n"
+			"model_ts : Timeseries\n"
+			"\t the time-series that is the model simulated / calculated ts\n"
+			"time_axis : Timeaxis2\n"
+			"\tthe time-axis that is used for the computation\n"
+			"Return\n"
+			"------\n"
+			" float: The  n.s performance, that have a maximum at 1.0\n";
+
+		def("nash_sutcliffe", shyft::api::nash_sutcliffe, args("observation_ts", "model_ts", "time_axis"),
+			ns_doc
+		);
+
+
+	}
+	static void expose_periodic_ts() {
+		typedef timeseries::periodic_ts<profile_description, timeaxis> periodic_ts_t;
+		const char *docstr = 
+			"Create a Timeseries by repeating the pattern-specification\n"
+			"Parameters\n"
+			"----------\n"
+			"pattern : DoubleVector\n"
+			"\tthe value-pattern as a sequence of values\n"
+			"dt : int\n"
+			"\tnumber of seconds between the pattern values, e.g. deltahours(3)\n"
+			"t0 : utctime\n"
+			"\tspecifies the starttime of the pattern\n"
+			"ta : Timeaxis\n"
+			"\tthe time-axis for which the pattern is repeated\n"
+			"\t e.g. your pattern might be 8 3h values,and you could supply\n"
+			"\ta time-axis 'ta' at hourly resolution\n"
+			;
+		def("create_periodic_pattern_ts", shyft::api::create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
+
+	}
     void timeseries() {
         enum_<timeseries::point_interpretation_policy>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",timeseries::POINT_INSTANT_VALUE)
@@ -199,9 +266,7 @@ namespace expose {
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis");
         TsFactory();
         expose_apoint_ts();
-		typedef timeseries::periodic_ts<profile_description, timeaxis> periodic_ts_t;
-		class_<periodic_ts_t>("TsPeriodic", "A time-series with a periodic pattern and a fixed delta time-axis")
-			.def(init<const vector<double>&, utctimespan, timeaxis>(args("pattern", "dt", "ta")))
-			;
+		expose_periodic_ts();
+		expose_correlation_functions();
     }
 }

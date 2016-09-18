@@ -53,7 +53,8 @@ class GridPP(unittest.TestCase):
             kbp.update_with_forecast(fc_set, obs.ts, kta)
             pattern = api.KalmanState.get_x(kbp.state)
             #a_ts = api.TsPeriodic(pattern, api.deltahours(3), self.ta1) # Should be removed from api?
-            b_ts = api.Timeseries(pattern, api.deltahours(3), self.ta) # Should be explicit function?
+            #b_ts = api.Timeseries(pattern, api.deltahours(3), self.ta)  # can do using ct of Timeseries, or:
+            b_ts = api.create_periodic_pattern_ts(pattern, api.deltahours(3), self.ta.time(0), self.ta)  # function
             bias_set.append(api.TemperatureSource(obs.mid_point(), b_ts))
         return bias_set
 

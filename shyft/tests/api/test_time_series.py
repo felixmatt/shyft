@@ -68,7 +68,7 @@ class TimeSeries(unittest.TestCase):
         dv[0] = 10.0
         assert_array_almost_equal(dv, tsfixed.v.to_numpy())
         ts_ta = tsfixed.time_axis  # a TsFixed do have .time_axis and .values
-        self.assertEqual(len(ts_ta), len(self.ta)) # should have same length etc.
+        self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
 
         # self.assertAlmostEqual(v,vv)
         # some reference testing:
@@ -86,7 +86,7 @@ class TimeSeries(unittest.TestCase):
         ta = api.PointTimeaxis(t)
         tspoint = api.TsPoint(ta, v)
         ts_ta = tspoint.time_axis  # a TsPoint do have .time_axis and .values
-        self.assertEqual(len(ts_ta), len(self.ta)) # should have same length etc.
+        self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
 
         self.assertEqual(tspoint.size(), ta.size())
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
@@ -111,7 +111,7 @@ class TimeSeries(unittest.TestCase):
     def test_average_accessor(self):
         dv = np.arange(self.ta.size())
         v = api.DoubleVector.from_numpy(dv)
-        t = api.UtcTimeVector();
+        t = api.UtcTimeVector()
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(
@@ -269,6 +269,56 @@ class TimeSeries(unittest.TestCase):
             self.assertAlmostEqual(expected_value, ts1.value(i), 3, "expect integral f(t)*dt")
             self.assertAlmostEqual(expected_value, ts1_values[i], 3, "expect value vector equal as well")
 
+    def test_kling_gupta_and_nash_sutcliffe(self):
+        """
+        Test/verify exposure of the kling_gupta and nash_sutcliffe correlation functions
+
+        """
+
+        def np_nash_sutcliffe(o, p):
+            return 1 - (np.sum((o - p) ** 2)) / (np.sum((o - np.mean(o)) ** 2))
+
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        from math import sin, pi
+        rad_max = 10 * 2 * pi
+        obs_values = api.DoubleVector.from_numpy(np.array([sin(i * rad_max / n) for i in range(n)]))
+        mod_values = api.DoubleVector.from_numpy(np.array([0.1 + sin(pi / 10.0 + i * rad_max / n) for i in range(n)]))
+        obs_ts = api.Timeseries(ta=ta, values=obs_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        mod_ts = api.Timeseries(ta=ta, values=mod_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        self.assertAlmostEqual(api.kling_gupta(obs_ts, obs_ts, ta, 1.0, 1.0, 1.0), 1.0, None, "1.0 for perfect match")
+        self.assertAlmostEqual(api.nash_sutcliffe(obs_ts, obs_ts, ta), 1.0, None, "1.0 for perfect match")
+        # verify some non trivial cases, and compare to numpy version of ns
+        mod_inv = obs_ts * -1.0
+        kge_inv = obs_ts.kling_gupta(mod_inv)  # also show how to use time-series.method itself to ease use
+        ns_inv = obs_ts.nash_sutcliffe(mod_inv)  # similar for nash_sutcliffe, you can reach it directly from a ts
+        ns_inv2 = np_nash_sutcliffe(obs_ts.values.to_numpy(), mod_inv.values.to_numpy())
+        self.assertLessEqual(kge_inv, 1.0, "should be less than 1")
+        self.assertLessEqual(ns_inv, 1.0, "should be less than 1")
+        self.assertAlmostEqual(ns_inv, ns_inv2, 4, "should equal numpy calculated value")
+        kge_obs_mod = api.kling_gupta(obs_ts, mod_ts, ta, 1.0, 1.0, 1.0)
+        self.assertLessEqual(kge_obs_mod, 1.0)
+        self.assertAlmostEqual(obs_ts.nash_sutcliffe( mod_ts), np_nash_sutcliffe(obs_ts.values.to_numpy(), mod_ts.values.to_numpy()))
+
+    def test_periodic_pattern_ts(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        pattern_values = api.DoubleVector.from_numpy(np.arange(8))
+        pattern_dt = api.deltahours(3)
+        pattern_t0 = c.time(2015,6,1)
+        pattern_ts = api.create_periodic_pattern_ts(pattern_values, pattern_dt, pattern_t0, ta)  # this is how to create a periodic pattern ts (used in gridpp/kalman bias handling)
+        self.assertAlmostEqual(pattern_ts.value(0), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(1), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(2), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(3), 1.0)  # next step in pattern starts here
+        self.assertAlmostEqual(pattern_ts.value(24), 0.0)  # next day repeats the pattern
 
 if __name__ == "__main__":
     unittest.main()
