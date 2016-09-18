@@ -1021,3 +1021,70 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	// the accessor should be smart, trying to re-use prior computation, I verify the result here, 
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
+
+
+void timeseries_test::test_partition_by() {
+	calendar utc;
+	auto t = utc.time(1930, 9, 1, 0, 0, 0);
+	auto d = deltahours(1);
+	size_t n = utc.diff_units(t, utc.time(2016, 10, 1), d);
+
+	shyft::api::gta_t ta(t, d, n);
+	size_t n_years = 80;
+	vector<double> values;values.reserve(n);
+	for (size_t i = 0;i < n;++i)
+		values.push_back(i);//0, 1,2,4,5,6..9
+	shyft::api::apoint_ts src_a(ta, values, point_interpretation_policy::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
+
+  // core version : auto mk_time_shift = [](const decltype(src_a)  &ts, utctimespan dt)-> time_shift_ts<decltype(src_a)> {return time_shift(ts,dt);};
+	// below is the raw- time-shift version 
+	auto mk_raw_time_shift = [](const decltype(src_a)& ts, utctimespan dt)->shyft::api::apoint_ts {
+		return shyft::api::apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
+	};
+	/** A class that makes an average partition over the supplied time-axis*/
+	struct mk_average_partition {
+		shyft::api::gta_t ta;///< the time-axis that is common for all generated partitions
+		mk_average_partition(const shyft::api::gta_t& ta) : ta(ta) {}
+		shyft::api::apoint_ts operator()(const shyft::api::apoint_ts& ts, utctimespan dt_shift) const {
+			shyft::api::apoint_ts r(std::make_shared<shyft::api::time_shift_ts>(ts, dt_shift));
+			return r.average(ta);
+		}
+	};
+	auto common_t0 = utc.time(2015, 9, 1);
+	shyft::api::gta_t ta_y2015(common_t0, deltahours(1), 365 * 24);
+	mk_average_partition mk_avg_time_shift(ta_y2015);// callable that make partitions one year long
+
+	// core version: auto  partitions=partition_by<time_shift_ts<decltype(src_a)>>(src_a,utc,t,calendar::YEAR,n_years,common_t0,mk_time_shift);
+	auto partitions_avg_year  = partition_by<shyft::api::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_avg_time_shift);
+	auto partitions_raw_shift = partition_by<shyft::api::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_raw_time_shift);
+	TS_ASSERT_EQUALS(n_years, partitions_avg_year.size());
+	TS_ASSERT_EQUALS(n_years, partitions_raw_shift.size());
+	utctime ty = t;
+	// verify the avg case, where all the partition time-axis are just one year (2015.09.01 + hourly 365*24 steps
+	for (const auto& ts : partitions_avg_year) {
+		// verify that the value at common_t0, equals value(t0)
+		auto src_ix = src_a.index_of(ty);
+		auto ts_ix = ts.index_of(common_t0);
+		auto v_common_t0 = ts.value(ts_ix);
+		auto v_year_start = src_a.value(src_ix);
+		TS_ASSERT_EQUALS(ts.size(), ta_y2015.size());
+		TS_ASSERT_EQUALS(ts_ix, 0);// because we make a separate one 365 day time-axis, so the first value should be at 0'th index
+		TS_ASSERT_DELTA(v_common_t0, v_year_start, 0.01);// verify from source exactly equal to the partition value
+		TS_ASSERT_DELTA(v_year_start, double(src_ix), 0.01); // verify we did get the right value
+		ty = utc.add(ty, calendar::YEAR, 1);
+	}
+	ty = t;
+	// verify the raw shift case, where the time-axis are just shifted to align same-value at common_t0 time 
+	for (const auto& ts : partitions_raw_shift) {
+		// verify that the value at common_t0, equals value(t0)
+		auto src_ix = src_a.index_of(ty);
+		auto ts_ix = ts.index_of(common_t0);
+		auto v_common_t0 = ts.value(ts_ix);
+		auto v_year_start = src_a.value(src_ix);
+		TS_ASSERT_EQUALS(ts.size(), src_a.size()); // because basically, it's the same time-shifted time-series
+		TS_ASSERT_DELTA(v_common_t0, v_year_start, 0.01);// verify from source exactly equal to the partition value
+		TS_ASSERT_DELTA(v_year_start, double(src_ix), 0.01); // verify we did get the right value
+		ty = utc.add(ty, calendar::YEAR, 1);
+	}
+
+}

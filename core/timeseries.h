@@ -1308,6 +1308,49 @@ namespace shyft{
 			return std::move(result);
 		}
 
-
+		/**\brief partition_by convert a time-series into a vector of time-shifted partitions of ts with a common time-reference
+		*
+		* The partitions are simply specified by calendar, delta_t (could be symbolic, like YEAR:MONTH:DAY) and n.
+		* To make yearly partitions, just pass calendar::YEAR as dt.
+		* The t-parameter set the start-time point in the source-time-series, like 1930.09.01
+		* The t0-parameter set the common start-time of the new partitions
+		*
+		* The typical usage will be to use this function to partition years into a vector with e.g.
+		* 80 years, where we can do statistics, percentiles to compare and see the different effects of 
+		* yearly season variations.
+		* Note that the function is more general, allowing any periodic partition, like daily, weekly, monthly etc.
+		* to study any pattern or statistics that might be periodic by the partition pattern.
+		*
+		* For exposure to python, additional preparation of the partitions could be useful
+		* like .average( timeaxis(t0,deltahours(1),365*24)) to make all with an equal-sized time-axis
+		*
+		* \tparam rts_t return type time-series, equal to the return-type of the time_shift_func()
+		* \tparam time_shift_func a callable type, that accepts ts_t and utctimespan as input and return rts_t
+		* \tparam ts_t time-series type that goes into the partition algorithm
+		* \param ts of type ts_t
+		* \param cal  specifies the calendar to be used for possible calendar and time-zone semantic operations
+		* \param t specifies the time-point to start, e.g. 1930.09.01
+		* \param dt specifies the calendar-semantic length of the partitions, e.g. calendar::YEAR|MONTH|DAY|WEEK
+		* \param n number of partitions, e.g. if you would have 80 yearly partitions, set n=80
+		* \param t0 the common time-reference for the partitions, e.g. 2016.09.01 for 80 yearly partitions 1930.09.01 to 2010.09.01
+		* \param make_time_shift_fx a callable that accepts const ts_t& and utctimespan and returns a time-shifted ts of type rts_t
+		*
+		* \return the partition vector, std::vector<rts_t> of size n, where each partition ts have its start-value at t0
+		*
+		* \note t0 must align with multiple delta-t from t, e.g. if t is 1930.09.1, then t0 must have a pattern like YYYY.09.01
+		* \throw runtime_error if t0 is not aligned with t, see note above.
+		*
+		*/
+		template <class rts_t, class time_shift_func, class ts_t >
+		std::vector<rts_t> partition_by(const ts_t& ts, const calendar&cal, utctime t, utctimespan dt, size_t n, utctime t0, time_shift_func && make_time_shift_fx) {
+			utctimespan rem;
+			cal.diff_units(t, t0, dt, rem);
+			if (rem != utctimespan(0))
+				throw std::runtime_error("t0 must align with a complete calendar multiple dt from t");
+			std::vector<rts_t> r;r.reserve(n);
+			for (size_t i = 0;i<n;++i)
+				r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
+			return std::move(r);
+		}
     } // timeseries
 } // shyft
