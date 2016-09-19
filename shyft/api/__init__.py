@@ -1,5 +1,6 @@
 from ._api import *
-
+import numpy as np
+from math import sqrt
 # Fix up vector types
 
 DoubleVector.size = lambda self: len(self)
@@ -79,10 +80,54 @@ Timeaxis2.__call__ = lambda self, i: self.period(i)
 Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 Timeseries.__len__ = lambda self: self.size()
-Timeseries.time_shift = lambda self,delta_t: time_shift(self,delta_t)
+Timeseries.v = property(lambda self: self.values,doc="returns the point-values of timeseries, alias for .values")
+
+Timeseries.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self, other_ts, self.get_time_axis(), s_r, s_a, s_b)
+Timeseries.kling_gupta.__doc__ = \
+"""
+computes the kling_gupta correlation using self as observation, and self.time_axis as
+the comparison time-axis
+
+Parameters
+----------
+other_ts : Timeseries
+ the predicted/calculated time-series to correlate
+s_r : float
+ the kling gupta scale r factor(weight the correlation of goal function)
+s_a : float
+ the kling gupta scale a factor(weight the relative average of the goal function)
+s_b : float
+ the kling gupta scale b factor(weight the relative standard deviation of the goal function)
+
+Return
+------
+KGEs : float
+
+"""
+
+Timeseries.nash_sutcliffe = lambda self,other_ts: nash_sutcliffe(self, other_ts, self.get_time_axis())
+Timeseries.nash_sutcliffe.__doc__ = \
+"""
+Computes the Nash-Sutcliffe model effiency coefficient (n.s)
+for the two time-series over the specified time_axis
+Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient
+Parameters
+----------
+observed_ts : Timeseries
+ the observed time-series
+model_ts : Timeseries
+ the time-series that is the model simulated / calculated ts
+time_axis : Timeaxis2
+ the time-axis that is used for the computation
+Return
+------
+ float: The n.s performance, that have a maximum at 1.0
+"""
 
 TsFixed.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
+TsFixed.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 TsPoint.values = property(lambda self:self.v,doc="returns the point values, .v of the timeseries")
+TsPoint.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 def ta_iter(x):
     x.counter = 0
@@ -116,3 +161,47 @@ PrecipitationSource.vector_t = PrecipitationSourceVector
 RadiationSource.vector_t = RadiationSourceVector
 RelHumSource.vector_t = RelHumSourceVector
 WindSpeedSource.vector_t = WindSpeedSourceVector
+
+def np_array(dv):
+    """
+    convert flattened double-vector to numpy array
+    Parameters
+    ----------
+    dv
+
+    Returns
+    -------
+    numpy array.
+    """
+    f = dv.to_numpy()
+    n = int(sqrt(dv.size()))
+    m = f.reshape(n, n)
+    return m
+
+# fixup kalman state
+KalmanState.x = property(lambda self: KalmanState.get_x(self).to_numpy(),doc="represents the current bias estimate, kalman.state.x")
+KalmanState.k = property(lambda self: KalmanState.get_k(self).to_numpy(),doc="represents the current kalman gain factors, kalman.state.k")
+KalmanState.P = property(lambda self: np_array(KalmanState.get_P(self)),doc="returns numpy array of kalman.state.P, the nxn covariance matrix")
+KalmanState.W = property(lambda self: np_array(KalmanState.get_W(self)),doc="returns numpy array of kalman.state.W, the nxn noise matrix")
+
+#fixup KalmanBiasPredictor
+def KalmanBiasPredictor_update_with_forecast(bp,fc_set,obs,time_axis):
+    """
+
+    Parameters
+    ----------
+    bp
+    fc_set : TemperatureSourceVector or TsVector
+    obs : Timeseries
+    time_axis : Timeaxis
+
+    Returns
+    -------
+    nothing
+    """
+    if isinstance(fc_set, TemperatureSourceVector):
+        KalmanBiasPredictor.update_with_geo_forecast(bp,fc_set,obs,time_axis)
+    else:
+        KalmanBiasPredictor.update_with_forecast_vector(bp,fc_set,obs,time_axis)
+
+KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast

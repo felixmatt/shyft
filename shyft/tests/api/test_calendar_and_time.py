@@ -24,8 +24,8 @@ class Calendar(unittest.TestCase):
     def test_create_calendar_from_region_id(self):
         osl = api.Calendar("Europe/Oslo")
         self.assertIsNotNone(osl)
-        self.assertEquals(osl.tz_info.name(), "Europe/Oslo")
-        self.assertEquals(osl.tz_info.base_offset(), 3600)
+        self.assertEqual(osl.tz_info.name(), "Europe/Oslo")
+        self.assertEqual(osl.tz_info.base_offset(), 3600)
         t = osl.time(2015, 6, 1)
         self.assertTrue(osl.tz_info.is_dst(t))
         self.assertTrue(osl.tz_info.utc_offset(t), 7200)
@@ -145,8 +145,8 @@ class Calendar(unittest.TestCase):
         # way through swig layer to python it goes via int32 and then to int64, proper signhandling
         #
         t_str = self.utc.to_string(t)  # this one just to show it's still working as it should internally
-        self.assertEquals(t_str, "1969-12-31T23:00:00Z")
-        self.assertEquals(t, api.deltahours(-1))
+        self.assertEqual(t_str, "1969-12-31T23:00:00Z")
+        self.assertEqual(t, api.deltahours(-1))
 
 
 if __name__ == "__main__":

@@ -31,12 +31,12 @@ namespace shyft {
                 return (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z);
             }
 
-            /** \brief Distance measure on the form sum(abs(x - y)^p)
+            /** \brief Distance measure on the form sum(abs(a.x - b.x)^p + abs(a.y - b.y)^p + (zscale * abs(a.z - b.z))^p) 
              *
-             * \return the 3D distance measure between supplied arguments a and b
+             * \return the 3D distance measure between supplied arguments a and b, by using an optional z scale factor
              */
-            static inline double distance_measure(const geo_point& a, const geo_point& b, double p) {
-                return pow(abs(a.x - b.x), p) + pow(abs(a.y - b.y), p) + pow(abs(a.z - b.z), p);
+            static inline double distance_measure(const geo_point& a, const geo_point& b, double p, double zscale) {
+                return pow((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale, p/2.0);
             }
 
             /** \brief Z scaled, non-eucledian distance between points a and b.

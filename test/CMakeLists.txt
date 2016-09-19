@@ -64,5 +64,7 @@ add_test(api_test ${target} api_test)
 add_test(cell_builder_test ${target} cell_builder_test) 
 add_test(skaugen_test ${target} skaugen_test)
 add_test(sceua_test ${target} sceua_test)
+add_test(gridpp_test ${target} gridpp_test)
+add_test(kalman_test ${target} kalman_test)
 
 

@@ -25,8 +25,10 @@ class RegionModel(unittest.TestCase):
         for i in range(model_size):
             loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
-            geo_cell_data = api.GeoCellData(gp, cell_area,
-                                            random.randint(0, num_catchments))
+            cid = 0
+            if num_catchments>1:
+                cid = random.randint(1,num_catchments)
+            geo_cell_data = api.GeoCellData(gp, cell_area,cid)
             geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.0, lake=0.0, reservoir=0.1, forest=0.1)
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
@@ -101,6 +103,23 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
 
+    def test_model_area_functions(self):
+        num_cells = 20
+        model_type = pt_gs_k.PTGSKModel
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
+        # demo how to get area statistics.
+        cids = api.IntVector()
+        total_area = model.statistics.total_area(cids)
+        forest_area = model.statistics.forest_area(cids)
+        glacier_area = model.statistics.glacier_area(cids)
+        lake_area = model.statistics.lake_area(cids)
+        reservoir_area = model.statistics.reservoir_area(cids)
+        unspecified_area = model.statistics.unspecified_area(cids)
+        self.assertAlmostEqual(total_area,forest_area + glacier_area + lake_area + reservoir_area + unspecified_area)
+        cids.append(3)
+        total_area_no_match = model.statistics.total_area(cids)  # now, cids contains 3, that matches no cells
+        self.assertAlmostEqual(total_area_no_match,0.0)
+
     def test_model_initialize_and_run(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
@@ -116,8 +135,7 @@ class RegionModel(unittest.TestCase):
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
-                                 api.deltahours(1), 240)
+        time_axis = api.Timeaxis(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         model_interpolation_parameter = api.InterpolationParameter()
         # degC/m, so -0.5 degC/100m
         model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
@@ -127,6 +145,10 @@ class RegionModel(unittest.TestCase):
         model_interpolation_parameter.temperature_idw.max_members = 6
         # 20 km is max distance
         model_interpolation_parameter.temperature_idw.max_distance = 20000
+        # zscale is used to discriminate neighbors at different elevation than target point
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 1.0)
+        model_interpolation_parameter.temperature_idw.zscale = 0.5
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 0.5)
         # Pure linear interpolation
         model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
         # This enables IDW with default temperature gradient.
@@ -146,14 +168,27 @@ class RegionModel(unittest.TestCase):
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
-
+        sum_discharge_value= model.statistics.discharge_value(cids, 0)  # at the first timestep
+        self.assertGreaterEqual(sum_discharge_value,160.0)
         self.assertIsNotNone(sum_discharge)
+        # Verify that if we pass in illegal cids, then it raises exception(with first failing
+        try:
+            illegal_cids = api.IntVector([0, 4, 5])
+            model.statistics.discharge(illegal_cids)
+            self.assertFalse(True,"Failed test, using illegal cids should raise exception")
+        except RuntimeError as rte:
+            pass
+
+
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)
         self.assertIsNotNone(avg_precipitation)
         for time_step in range(time_axis.size()):
             precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
             self.assertEqual(precip_raster.size(), num_cells)
+        # example single value spatial aggregation (area-weighted) over cids for a specific timestep
+        avg_gs_sc_value = model.gamma_snow_response.sca_value(cids, 1)
+        self.assertGreaterEqual(avg_gs_sc_value,0.0)
         avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
         self.assertIsNotNone(avg_gs_sca)
         # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw

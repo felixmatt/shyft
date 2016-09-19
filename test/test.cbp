@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="timeseries_test test_api_ts" />
+				<Option parameters="kalman_test" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  kalman_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -38,7 +38,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  api_test test_geo_cell_data_io" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  kalman_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -95,6 +95,8 @@
 		<Unit filename="hbv_snow_test.h" />
 		<Unit filename="inverse_distance_test.cpp" />
 		<Unit filename="inverse_distance_test.h" />
+		<Unit filename="kalman_test.cpp" />
+		<Unit filename="kalman_test.h" />
 		<Unit filename="kirchner_test.cpp" />
 		<Unit filename="kirchner_test.h" />
 		<Unit filename="mocks.cpp" />

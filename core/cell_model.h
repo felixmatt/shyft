@@ -148,6 +148,17 @@ namespace shyft {
          */
         struct cell_statistics {
 
+			/**throws runtime_error if catchment_indexes contains cid that's not part of cells */
+			template<typename cell>
+			static void verify_cids_exist(const vector<cell>& cells, const vector<int>& catchment_indexes) {
+				if (catchment_indexes.size() == 0) return;
+				map<int, bool> all_cids;
+				for (const auto&c : cells) all_cids[c.geo.catchment_id()] = true;
+				for(auto cid:catchment_indexes)
+					if (all_cids.count(cid) == 0)
+						throw runtime_error(string("one or more supplied catchment_indexes does not exist:") + to_string(cid));
+			}
+
             /** \brief average_catchment_feature returns the area-weighted average
              *
              * \tparam cell the cell type, assumed to have .geo.area(), and geo.catchment_id()
@@ -163,8 +174,8 @@ namespace shyft {
                                                                cell_feature_ts&& cell_ts) {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
-
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
+				verify_cids_exist(cells, catchment_indexes);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0,point_interpretation_policy::POINT_AVERAGE_VALUE);
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
@@ -184,6 +195,46 @@ namespace shyft {
 				r->scale_by(1/sum_area); // sih: if no match, then you will get nan here, and I think thats reasonable
 				return r;
 			}
+
+			/** \brief average_catchment_feature_value returns the area-weighted average for a timestep
+			*
+			* \tparam cell the cell type, assumed to have .geo.area(), and geo.catchment_id()
+			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
+			* \param cells that we want to perform calculation on
+			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are averaged
+			* \param cell_ts , a callable that fetches the cell feature we want to average
+			* \param i, the i'th time-step for which we compute the value
+			* \throw runtime_error if number of cells are zero
+			* \return area weighted feature sum, as a double value
+			*/
+			template<typename cell, typename cell_feature_ts>
+			static double average_catchment_feature_value(const vector<cell>& cells, const vector<int>& catchment_indexes,
+				cell_feature_ts&& cell_ts,size_t i) {
+				if (cells.size() == 0)
+					throw runtime_error("no cells to make statistics on");
+				verify_cids_exist(cells, catchment_indexes);
+				double r = 0.0;
+				double sum_area = 0.0;
+				bool match_all = catchment_indexes.size() == 0;
+				for (const auto& c : cells) {
+					if (match_all) {
+						r += cell_ts(c).value(i)*c.geo.area();  // c.env_ts.temperature, could be a feature(c) func return ref to ts
+						sum_area += c.geo.area();
+					} else {
+						for (auto cid : catchment_indexes) {
+							if (c.geo.catchment_id() == (size_t)cid) { // criteria
+								r += cell_ts(c).value(i)*c.geo.area();  // c.env_ts.temperature, could be a feature(c) func return ref to ts
+								sum_area += c.geo.area();
+								break;
+							}
+						}
+					}
+				}
+				r= r/ sum_area; // sih: if no match, then you will get nan here, and I think thats reasonable
+				return r;
+			}
+
+
            /** \brief sum_catchment_feature returns the sum of cell-features(discharge etc)
              *
              * \tparam cell the cell type, assumed to have geo.catchment_id()
@@ -194,14 +245,13 @@ namespace shyft {
              * \throw runtime_error if number of cells are zero
              * \return feature sum, as a ts, a  shared_ptr<pts_ts>
              */
-
 			template<typename cell, typename cell_feature_ts>
             static shared_ptr<pts_t> sum_catchment_feature(const vector<cell>& cells, const vector<int>& catchment_indexes,
                                                            cell_feature_ts && cell_ts) {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
-
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0);
+				verify_cids_exist(cells, catchment_indexes);
+				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
 				bool match_all = catchment_indexes.size() == 0;
 
 				for (const auto& c : cells) {
@@ -218,6 +268,40 @@ namespace shyft {
 				}
 				return r;
 			}
+			/** \brief sum_catchment_feature_value returns the sum of cell-features(discharge etc) value at the i'th timestep
+			*
+			* \tparam cell the cell type, assumed to have geo.catchment_id()
+			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
+			* \param cells that we want to perform calculation on
+			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
+			* \param cell_ts, a callable that fetches the cell feature we want to sum
+			* \throw runtime_error if number of cells are zero
+			* \return feature sum, as a ts, a  shared_ptr<pts_ts>
+			*/
+			template<typename cell, typename cell_feature_ts>
+			static double sum_catchment_feature_value(const vector<cell>& cells, const vector<int>& catchment_indexes,
+				cell_feature_ts && cell_ts, size_t i) {
+				if (cells.size() == 0)
+					throw runtime_error("no cells to make statistics on");
+				verify_cids_exist(cells, catchment_indexes);
+				double r = 0.0;
+				bool match_all = catchment_indexes.size() == 0;
+
+				for (const auto& c : cells) {
+					if (match_all) {
+						r += cell_ts(c).value(i);
+					} else {
+						for (auto cid : catchment_indexes) {
+							if (c.geo.catchment_id() == (size_t)cid) { //criteria
+								r+=cell_ts(c).value(i);  //c.env_ts.temperature, could be a feature(c) func return ref to ts
+								break;
+							}
+						}
+					}
+				}
+				return r;
+			}
+
 			/** \brief catchment_feature extracts cell-features(discharge etc) for specific i'th period of timeaxis
 			*
 			* \tparam cell the cell type, assumed to have geo.catchment_id()
@@ -234,7 +318,7 @@ namespace shyft {
 				cell_feature_ts && cell_ts,size_t i) {
 				if (cells.size() == 0)
 					throw runtime_error("no cells to make extract from");
-
+				verify_cids_exist(cells, catchment_indexes);
 				vector<double> r; r.reserve(cells.size());
 				bool match_all = catchment_indexes.size() == 0;
 

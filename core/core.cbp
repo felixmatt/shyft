@@ -76,6 +76,7 @@
 		<Unit filename="glacier_melt.h" />
 		<Unit filename="hbv_snow.h" />
 		<Unit filename="inverse_distance.h" />
+		<Unit filename="kalman.h" />
 		<Unit filename="kirchner.h" />
 		<Unit filename="model_calibration.h" />
 		<Unit filename="optimizer_utils.h" />

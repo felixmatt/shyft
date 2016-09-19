@@ -43,8 +43,9 @@ namespace expose {
             .export_values()
             ;
         typedef shyft::core::pts_t target_ts_t;
+		
         typedef  model_calibration::target_specification<target_ts_t> TargetSpecificationPts;
-
+		
         class_<TargetSpecificationPts>("TargetSpecificationPts",
             "To guide the model calibration, we have a goal-function that we try to minimize\n"
             "This class contains the needed specification of this goal-function so that we can\n"
@@ -56,9 +57,13 @@ namespace expose {
             )
             .def(init<const target_ts_t&,vector<int>,double,
                  optional<model_calibration::target_spec_calc_type,double,double,double,model_calibration::catchment_property_type>>(
-                 args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property"),"constructs a complete target specification")
+                 args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property"),"constructs a complete target specification using a TsFixed as target ts")
             )
-            .def_readwrite("scale_factor",&TargetSpecificationPts::scale_factor,"the scale factor to be used when considering multiple target_specifications")
+			/*Wanted! .def(init<shyft::api::apoint_ts, vector<int>, double,
+				optional<model_calibration::target_spec_calc_type, double, double, double, model_calibration::catchment_property_type>>(
+					args("ts", "cids", "scale_factor", "calc_mode", "s_r", "s_a", "s_b", "catchment_property"), "constructs a complete target specification, using a Timeseries as target ts")
+			)*/
+			.def_readwrite("scale_factor", &TargetSpecificationPts::scale_factor, "the scale factor to be used when considering multiple target_specifications")
             .def_readwrite("calc_mode",&TargetSpecificationPts::calc_mode,"*NASH_SUTCLIFFE, KLING_GUPTA")
             .def_readwrite("catchment_property",&TargetSpecificationPts::catchment_property,"*DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT")
             .def_readwrite("s_r",&TargetSpecificationPts::s_r,"KG-scalefactor for correlation")
@@ -84,7 +89,7 @@ namespace expose {
 
         class_<TsTransform>("TsTransform",
                 "transform the supplied time-series, f(t) interpreted according to its point_interpretation() policy\n"
-                " into a new time-series,\n"
+                " into a new shyft core TsFixed time-series,\n"
                 " that represents the true average for each of the n intervals of length dt, starting at start.\n"
                 " the result ts will have the policy is set to POINT_AVERAGE_VALUE\n"
                 " \note that the resulting ts is a fresh new ts, not connected to the source ts\n"

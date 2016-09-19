@@ -3,7 +3,6 @@ Tests for the simple simulator.
 """
 
 from os import path
-from os import environ
 
 import random
 import unittest
@@ -26,8 +25,6 @@ from shyft.repository.netcdf.yaml_config import RegionConfig
 from shyft.repository.netcdf.yaml_config import ModelConfig
 from shyft.repository.default_state_repository import DefaultStateRepository
 from shyft.orchestration.simulator import DefaultSimulator
-from shyft.orchestration.plotting import set_calendar_formatter, utc_to_greg
-from shyft.orchestration.plotting import plot_np_percentiles
 from shyft import orchestration
 
 
@@ -154,8 +151,9 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(cfg.model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
-        target_discharge = simulator.region_model.statistics.discharge([cid])
 
+        target_discharge_ts = simulator.region_model.statistics.discharge([cid])
+        target_discharge = api.TsTransform().to_average(time_axis.time(0), time_axis.time(1)-time_axis.time(0), time_axis.size(), target_discharge_ts)
         # Perturb parameters
         param = simulator.region_model.get_region_parameter()
         p_vec_orig = [param.get(i) for i in range(param.size())]
@@ -249,15 +247,15 @@ class SimulationTestCase(unittest.TestCase):
         cid = 1
         simulator.region_model.set_state_collection(cid, True)
         simulator.run(time_axis, state_repos.get_state(0))
-        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0],0.0396387,5)  # just to verify pot.evap by regression, mm/h
+        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0], 0.039768354, 5) # just to verify pot.evap by regression, mm/h
 
         percentile_list = [10, 25, 50, 75, 90]
         # From here, things could be calculated without copies (except for 't')
         # TODO: Graham optimize with numba :-)
-        cells = simulator.region_model.get_cells()
-        lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
-        t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
-        percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
+        #cells = simulator.region_model.get_cells()
+        #lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
+        #t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
+        #percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
         # The next should be moved into an example directory
         # if 'DISPLAY' in environ.keys():
         #     from matplotlib import pylab as plt
@@ -277,11 +275,10 @@ class SimulationTestCase(unittest.TestCase):
               from November to April.
         """
         # Simulation time axis
-        year, month, day, hour = 2010, 9, 1, 0
         dt = api.deltahours(24)
         n_steps = 400
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        t0 = utc.time(2010, 9, 1, 0)
         time_axis = api.Timeaxis(t0, dt, n_steps)
 
         # Some fake ids
@@ -317,7 +314,7 @@ class SimulationTestCase(unittest.TestCase):
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
-        target_discharge = simulator.region_model.statistics.discharge([cid])
+        target_discharge = api.TsTransform().to_average(t0,dt,n_steps,simulator.region_model.statistics.discharge([cid]))
 
         # Construct kirchner parameters
         param = simulator.region_model.parameter_t(simulator.region_model.get_region_parameter())
@@ -343,7 +340,7 @@ class SimulationTestCase(unittest.TestCase):
         gamma_snow_param_min.gs.max_water = 0.05  # Min 8% max water in snow in costal regions
         gamma_snow_param_max.gs.tx = 1.0
         gamma_snow_param_max.gs.max_water = 0.25  # Max 35% max water content, or we get too little melt
-        gs_t_start = utc.time(api.YMDhms(2010, 11, 1, 0))
+        gs_t_start = utc.time(2010, 11, 1, 0)
         gs_time_axis = api.Timeaxis(gs_t_start, dt, 250)
         # gs_time_axis = time_axis
 
@@ -377,10 +374,10 @@ class SimulationTestCase(unittest.TestCase):
         simulator.run(time_axis, state_repos.get_state(0))
         found_discharge = simulator.region_model.statistics.discharge([cid])
 
-        t_vs = np.array(target_discharge.v)
-        t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
-        f_vs = np.array(found_discharge.v)
-        f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
+        #t_vs = np.array(target_discharge.values)
+        #t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
+        #f_vs = np.array(found_discharge.v)
+        #f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         # The next should be moved into an example directory
         # Simple demo plotting that should be turned off during unit testing:
         # if 'DISPLAY' in environ.keys():
@@ -396,11 +393,10 @@ class SimulationTestCase(unittest.TestCase):
 
     def test_run_arome_ensemble(self):
         # Simulation time axis
-        year, month, day, hour = 2015, 7, 26, 0
+        utc = api.Calendar()  # No offset gives Utc
+        t0 = utc.time( 2015, 7, 26, 0)
         n_hours = 30
         dt = api.deltahours(1)
-        utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
         time_axis = api.Timeaxis(t0, dt, n_hours)
 
         # Some dummy ids not needed for the netcdf based repositories

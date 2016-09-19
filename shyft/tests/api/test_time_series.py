@@ -62,11 +62,14 @@ class TimeSeries(unittest.TestCase):
         tsfixed = api.TsFixed(self.ta, v)
         self.assertEqual(tsfixed.size(), self.ta.size())
         self.assertAlmostEqual(tsfixed.get(0).v, v[0])
-        vv = tsfixed.values.to_numpy() #introduced .values for compatibility
+        vv = tsfixed.values.to_numpy()  # introduced .values for compatibility
         assert_array_almost_equal(dv, vv)
         tsfixed.values[0] = 10.0
         dv[0] = 10.0
         assert_array_almost_equal(dv, tsfixed.v.to_numpy())
+        ts_ta = tsfixed.time_axis  # a TsFixed do have .time_axis and .values
+        self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
+
         # self.assertAlmostEqual(v,vv)
         # some reference testing:
         ref_v = tsfixed.v
@@ -82,9 +85,12 @@ class TimeSeries(unittest.TestCase):
         t.push_back(self.ta(self.ta.size() - 1).end)
         ta = api.PointTimeaxis(t)
         tspoint = api.TsPoint(ta, v)
+        ts_ta = tspoint.time_axis  # a TsPoint do have .time_axis and .values
+        self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
+
         self.assertEqual(tspoint.size(), ta.size())
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
-        self.assertAlmostEqual(tspoint.values[0], v[0]) # just to verfy compat .values works
+        self.assertAlmostEqual(tspoint.values[0], v[0])  # just to verfy compat .values works
         self.assertEqual(tspoint.get(0).t, ta(0).start)
 
     def test_ts_factory(self):
@@ -105,7 +111,7 @@ class TimeSeries(unittest.TestCase):
     def test_average_accessor(self):
         dv = np.arange(self.ta.size())
         v = api.DoubleVector.from_numpy(dv)
-        t = api.UtcTimeVector();
+        t = api.UtcTimeVector()
         for i in range(self.ta.size()):
             t.push_back(self.ta(i).start)
         t.push_back(
@@ -198,7 +204,8 @@ class TimeSeries(unittest.TestCase):
 
         self.assertEqual(len(v), 2)
         self.assertAlmostEqual(v[0].value(0), 3.0, "expect first ts to be 3.0")
-        aa = api.Timeseries(ta=a.time_axis, values=a.values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
+        aa = api.Timeseries(ta=a.time_axis, values=a.values,
+                            point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
         a.fill(1.0)
         self.assertAlmostEqual(v[0].value(0), 1.0, "expect first ts to be 1.0, because the vector keeps a reference ")
         self.assertAlmostEqual(aa.value(0), 3.0)
@@ -212,7 +219,8 @@ class TimeSeries(unittest.TestCase):
         timeseries = api.TsVector()
 
         for i in range(10):
-            timeseries.append(api.Timeseries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+            timeseries.append(
+                api.Timeseries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
         wanted_percentiles = api.IntVector([0, 10, 50, -1, 70, 100])
         ta_day = api.Timeaxis(t0, dt * 24, n // 24)
@@ -238,14 +246,117 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.Timeaxis(t0, dt, n)
         ts0 = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        ts1 = api.time_shift(ts0, t1-t0)
-        ts2 = 2.0* ts1.time_shift(t0-t1)  # just to verify it still can take part in an expression
+        ts1 = api.time_shift(ts0, t1 - t0)
+        ts2 = 2.0 * ts1.time_shift(t0 - t1)  # just to verify it still can take part in an expression
 
         for i in range(ts0.size()):
-            self.assertAlmostEqual(ts0.value(i),ts1.value(i),3,"expect values to be equal")
-            self.assertAlmostEqual(ts0.value(i)*2.0, ts2.value(i),3,"expect values to be double value")
-            self.assertEqual(ts0.time(i)+ (t1-t0),ts1.time(i), "expect time to be offset delta_t different")
+            self.assertAlmostEqual(ts0.value(i), ts1.value(i), 3, "expect values to be equal")
+            self.assertAlmostEqual(ts0.value(i) * 2.0, ts2.value(i), 3, "expect values to be double value")
+            self.assertEqual(ts0.time(i) + (t1 - t0), ts1.time(i), "expect time to be offset delta_t different")
             self.assertEqual(ts0.time(i), ts2.time(i), "expect time to be equal")
 
+    def test_accumulate(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        ts0 = api.Timeseries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        ts1 = ts0.accumulate(ts0.get_time_axis())  # ok, maybe we should make method that does time-axis implicit ?
+        ts1_values = ts1.values
+        for i in range(n):
+            expected_value = i * dt * 1.0
+            self.assertAlmostEqual(expected_value, ts1.value(i), 3, "expect integral f(t)*dt")
+            self.assertAlmostEqual(expected_value, ts1_values[i], 3, "expect value vector equal as well")
+
+    def test_kling_gupta_and_nash_sutcliffe(self):
+        """
+        Test/verify exposure of the kling_gupta and nash_sutcliffe correlation functions
+
+        """
+
+        def np_nash_sutcliffe(o, p):
+            return 1 - (np.sum((o - p) ** 2)) / (np.sum((o - np.mean(o)) ** 2))
+
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        from math import sin, pi
+        rad_max = 10 * 2 * pi
+        obs_values = api.DoubleVector.from_numpy(np.array([sin(i * rad_max / n) for i in range(n)]))
+        mod_values = api.DoubleVector.from_numpy(np.array([0.1 + sin(pi / 10.0 + i * rad_max / n) for i in range(n)]))
+        obs_ts = api.Timeseries(ta=ta, values=obs_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        mod_ts = api.Timeseries(ta=ta, values=mod_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        self.assertAlmostEqual(api.kling_gupta(obs_ts, obs_ts, ta, 1.0, 1.0, 1.0), 1.0, None, "1.0 for perfect match")
+        self.assertAlmostEqual(api.nash_sutcliffe(obs_ts, obs_ts, ta), 1.0, None, "1.0 for perfect match")
+        # verify some non trivial cases, and compare to numpy version of ns
+        mod_inv = obs_ts * -1.0
+        kge_inv = obs_ts.kling_gupta(mod_inv)  # also show how to use time-series.method itself to ease use
+        ns_inv = obs_ts.nash_sutcliffe(mod_inv)  # similar for nash_sutcliffe, you can reach it directly from a ts
+        ns_inv2 = np_nash_sutcliffe(obs_ts.values.to_numpy(), mod_inv.values.to_numpy())
+        self.assertLessEqual(kge_inv, 1.0, "should be less than 1")
+        self.assertLessEqual(ns_inv, 1.0, "should be less than 1")
+        self.assertAlmostEqual(ns_inv, ns_inv2, 4, "should equal numpy calculated value")
+        kge_obs_mod = api.kling_gupta(obs_ts, mod_ts, ta, 1.0, 1.0, 1.0)
+        self.assertLessEqual(kge_obs_mod, 1.0)
+        self.assertAlmostEqual(obs_ts.nash_sutcliffe( mod_ts), np_nash_sutcliffe(obs_ts.values.to_numpy(), mod_ts.values.to_numpy()))
+
+    def test_periodic_pattern_ts(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.Timeaxis2(t0, dt, n)
+        pattern_values = api.DoubleVector.from_numpy(np.arange(8))
+        pattern_dt = api.deltahours(3)
+        pattern_t0 = c.time(2015,6,1)
+        pattern_ts = api.create_periodic_pattern_ts(pattern_values, pattern_dt, pattern_t0, ta)  # this is how to create a periodic pattern ts (used in gridpp/kalman bias handling)
+        self.assertAlmostEqual(pattern_ts.value(0), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(1), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(2), 0.0)
+        self.assertAlmostEqual(pattern_ts.value(3), 1.0)  # next step in pattern starts here
+        self.assertAlmostEqual(pattern_ts.value(24), 0.0)  # next day repeats the pattern
+
+    def test_partition_by(self):
+        """
+        verify/demo exposure of the .partition_by function that can
+        be used to produce yearly percentiles statistics for long historical
+        time-series
+
+        """
+        c = api.Calendar()
+        t0 = c.time(1930, 9, 1)
+        dt = api.deltahours(1)
+        n = c.diff_units(t0, c.time(2016, 9, 1), dt)
+
+        ta = api.Timeaxis2(t0, dt, n)
+        pattern_values = api.DoubleVector.from_numpy(np.arange(len(ta))) # increasing values
+
+        src_ts = api.Timeseries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        partition_t0 = c.time(2016, 9, 1)
+        n_partitions = 80
+        partition_interval = api.Calendar.YEAR
+        # get back TsVector,
+        # where all TsVector[i].index_of(partition_t0)
+        # is equal to the index ix for which the TsVector[i].value(ix) correspond to start value of that particular partition.
+        ts_partitions = src_ts.partition_by(c, t0, partition_interval, n_partitions, partition_t0)
+        self.assertEqual(len(ts_partitions),n_partitions)
+        ty = t0
+        for ts in ts_partitions:
+            ix = ts.index_of(partition_t0)
+            vix = ts.value(ix)
+            expected_value = c.diff_units(t0, ty, dt)
+            self.assertEqual(vix, expected_value)
+            ty = c.add(ty, partition_interval, 1)
+
+        # Now finally, try percentiles on the partitions
+        wanted_percentiles = [0, 10, 25, -1, 50, 75, 90, 100]
+        ta_percentiles = api.Timeaxis2(partition_t0, api.deltahours(24), 365)
+        percentiles = api.percentiles(ts_partitions,ta_percentiles,wanted_percentiles)
+        self.assertEqual(len(percentiles), len(wanted_percentiles))
 if __name__ == "__main__":
     unittest.main()

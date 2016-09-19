@@ -145,6 +145,7 @@
     <ClCompile Include="..\boostpython\api_geo_point.cpp" />
     <ClCompile Include="..\boostpython\api_hbv_snow.cpp" />
     <ClCompile Include="..\boostpython\api_interpolation.cpp" />
+    <ClCompile Include="..\boostpython\api_kalman.cpp" />
     <ClCompile Include="..\boostpython\api_kirchner.cpp" />
     <ClCompile Include="..\boostpython\api_precipitation_correction.cpp" />
     <ClCompile Include="..\boostpython\api_priestley_taylor.cpp" />

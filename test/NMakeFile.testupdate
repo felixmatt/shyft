@@ -18,7 +18,8 @@ CoreTests = time_axis_test.h \
 	cell_builder_test.h \
 	pt_ss_k_test.h \
 	sceua_test.h \
-	gridpp_test.h
+	gridpp_test.h \
+	kalman_test.h
 
 TestHeaders = $(CoreTests)
 

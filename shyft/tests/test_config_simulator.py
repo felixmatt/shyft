@@ -27,9 +27,9 @@ class ConfigSimulationTestCase(unittest.TestCase):
         discharge = simulator.region_model.statistics.discharge(cids)
         #  regression test on discharge values
         self.assertAlmostEqual(discharge.values[0],0.1961,3)
-        self.assertAlmostEqual(discharge.values[3],2.6766,3)
-        self.assertAlmostEqual(discharge.values[6400],58.8887,3)
-        self.assertAlmostEqual(discharge.values[3578],5.3407,3)
+        self.assertAlmostEqual(discharge.values[3],2.7582,3)
+        self.assertAlmostEqual(discharge.values[6400],58.9381,3)
+        self.assertAlmostEqual(discharge.values[3578],5.5069,3)
         # regression test on geo fractions
         self.assertAlmostEqual(simulator.region_model.cells[0].geo.land_type_fractions_info().unspecified(),1.0,3)
         self.assertAlmostEqual(simulator.region_model.cells[2].geo.land_type_fractions_info().unspecified(),0.1433,3)

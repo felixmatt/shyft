@@ -16,6 +16,7 @@ public:
 	void test_handling_different_sources_pr_timesteps();
 	void test_performance();
 	void test_temperature_gradient_model();
+	void test_zscale_distance();
 };
 
 /* vim: set filetype=cpp: */

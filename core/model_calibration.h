@@ -206,7 +206,7 @@ namespace shyft{
 			bool operator==(const target_specification& x) const {
 			    return catchment_indexes == x.catchment_indexes && catchment_property==x.catchment_property;
 			}
-            /** \brief Constructs a target specification element for calibration, specifying all neede parameters
+            /** \brief Constructs a target specification element for calibration, specifying all needed parameters
              *
              * \param ts; the target time-series that contain the target/observed discharge values
              * \param cids;  a vector of the catchment ids in the model that together should add up to the target time-series
@@ -217,6 +217,7 @@ namespace shyft{
                                  double s_a=1.0, double s_b=1.0, catchment_property_type catchment_property_ = DISCHARGE)
               : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
                 calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b) {}
+			
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
 			double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.

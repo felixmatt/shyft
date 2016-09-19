@@ -166,6 +166,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_kalman.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_kirchner.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />

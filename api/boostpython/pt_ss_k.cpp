@@ -1,6 +1,6 @@
 
 #include "boostpython_pch.h"
-
+#include <boost/python/docstring_options.hpp>
 #include "core/utctime_utilities.h"
 #include "core/priestley_taylor.h"
 #include "core/actual_evapotranspiration.h"
@@ -152,6 +152,7 @@ BOOST_PYTHON_MODULE(_pt_ss_k)
 
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_ss_k model";
     boost::python::def("version", version);
+	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
     expose::pt_ss_k::state_io();
     expose::pt_ss_k::parameter_state_response();
     expose::pt_ss_k::cells();

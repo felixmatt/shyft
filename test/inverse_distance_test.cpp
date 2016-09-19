@@ -210,8 +210,8 @@ void inverse_distance_test::test_two_sources_one_dest_calculation() {
 	gc.add(s[0], Tstart);
 	gc.add(s[1], Tstart);
 	double comp_gradient = gc.compute();
-	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0);
-	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0);
+	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0, 1.0);
+	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0, 1.0);
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
@@ -249,8 +249,8 @@ void inverse_distance_test::test_using_finite_sources_only() {
 	TestTemperatureModel::scale_computer gc(p);
 	gc.add(s[0], Tstart); gc.add(s[1], Tstart);
 	double comp_gradient = gc.compute();
-	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0);
-	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0);
+	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0, 1.0);
+	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0, 1.0);
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
@@ -287,8 +287,8 @@ void inverse_distance_test::test_eliminate_far_away_sources() {
 	TestTemperatureModel::scale_computer gc(p);
 	gc.add(s[0], Tstart); gc.add(s[1], Tstart);
 	double comp_gradient = gc.compute();
-	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0);
-	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0);
+	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0, 1.0);
+	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0, 1.0);
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
@@ -324,8 +324,8 @@ void inverse_distance_test::test_using_up_to_max_sources() {
 	TestTemperatureModel::scale_computer gc(p);
 	gc.add(s[0], Tstart); gc.add(s[1], Tstart);
 	double comp_gradient = gc.compute();
-	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0);
-	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0);
+	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0, 1.0);
+	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0, 1.0);
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
@@ -367,8 +367,8 @@ void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
 	TestTemperatureModel::scale_computer gc(p);
 	gc.add(s[0], Tstart); gc.add(s[1], Tstart);
 	double comp_gradient = gc.compute();
-	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0);
-	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0);
+	double w1 = 1.0 / TestTemperatureModel::distance_measure(s[0].mid_point(), d[0].mid_point(), 2.0, 1.0);
+	double w2 = 1.0 / TestTemperatureModel::distance_measure(s[1].mid_point(), d[0].mid_point(), 2.0, 1.0);
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
@@ -379,9 +379,14 @@ void inverse_distance_test::test_performance() {
 	//
 	// Arrange
 	//
-	utctime Tstart = calendar().time(YMDhms(2000, 1, 1));
+	utctime Tstart = calendar().time(2000, 1, 1);
 	utctimespan dt = 3600L;
+	#ifdef _DEBUG
+	int n = 4;// just speed up test.
+	#else
 	int n = 24 * 36; // number of timesteps
+	#endif
+
 	const int n_xy = 3; // number for xy-squares for sources
 	const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
 	const int ny = 3 * n_xy;
@@ -457,6 +462,13 @@ void inverse_distance_test::test_temperature_gradient_model() {
 	for (size_t i = 0; i < s.size(); ++i)
 		sc.add(s[i], tx); // fill up with distinct points
 	TS_ASSERT_DELTA(sc.compute(), as_scalar(dTv(2)), 0.00001); // now we should get the correct linear vertical
+}
+
+void inverse_distance_test::test_zscale_distance() {
+	geo_point p0(0, 0, 0);
+	geo_point p1(1, 1, 1);
+	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), pow(1+1+10*10*1,0.5), 1e-9);
+	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 2.0, 1.0), pow(1 + 1 + 1, 2.0 / 2.0), 1e-9);
 }
 
 /* vim: set filetype=cpp: */

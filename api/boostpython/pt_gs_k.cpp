@@ -1,5 +1,5 @@
 #include "boostpython_pch.h"
-
+#include <boost/python/docstring_options.hpp>
 #include "core/utctime_utilities.h"
 #include "core/priestley_taylor.h"
 #include "core/actual_evapotranspiration.h"
@@ -46,7 +46,7 @@ namespace expose {
                 ;
 
             typedef std::map<int,parameter> PTGSKParameterMap;
-            class_<PTGSKParameterMap>("PTGSKParameterMap","dict (int,parameter)  where the int is 0-based catchment_id")
+            class_<PTGSKParameterMap>("PTGSKParameterMap","dict (int,parameter)  where the int is the catchment_id")
                 .def(map_indexing_suite<PTGSKParameterMap>())
             ;
 
@@ -154,6 +154,7 @@ BOOST_PYTHON_MODULE(_pt_gs_k)
 
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_gs_k model";
     boost::python::def("version", version);
+	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
     expose::pt_gs_k::state_io();
     expose::pt_gs_k::parameter_state_response();
     expose::pt_gs_k::cells();

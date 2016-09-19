@@ -1,5 +1,5 @@
 #include "timeseries.h"
-
+#include <dlib/statistics.h>
 namespace shyft{
     namespace api {
         static double iop_add(double a,double b) {return a + b;}
@@ -13,6 +13,10 @@ namespace shyft{
         apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
         apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
 
+		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
+		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
+
+		apoint_ts create_periodic_pattern_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) { return apoint_ts(make_shared<periodic_ts>(pattern, dt, pattern_t0, ta)); }
 
         apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
         apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
@@ -39,8 +43,6 @@ namespace shyft{
         apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
         apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
         apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
-
-
 
         double abin_op_ts::value_at(utctime t) const {
             if(!ta.total_period().contains(t))
@@ -82,8 +84,14 @@ namespace shyft{
         apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
+		apoint_ts::apoint_ts(const rts_t &rts):
+			apoint_ts(time_axis::generic_dt(rts.ta),rts.v,rts.point_interpretation())
+		{}
 
-
+		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta) :
+			apoint_ts(make_shared<periodic_ts>(pattern, dt, ta)) {}
+		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta) :
+			apoint_ts(make_shared<periodic_ts>(pattern, dt,pattern_t0,ta)) {}
 
         apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values),point_fx)) {
@@ -95,6 +103,25 @@ namespace shyft{
         apoint_ts apoint_ts::average(const gta_t &ta) const {
             return shyft::api::average(*this,ta);
         }
+		apoint_ts apoint_ts::accumulate(const gta_t &ta) const {
+			return shyft::api::accumulate(*this, ta);
+		}
+		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
+			return shyft::api::time_shift(*this, dt);
+		}
+		
+		std::vector<apoint_ts> apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
+			// some very rudimentary argument checks:
+			if (n_partitions < 1)
+				throw std::runtime_error("n_partitions should be > 0");
+			if (partition_interval <= 0)
+				throw std::runtime_error("partition_interval should be > 0, typically Calendar::YEAR|MONTH|WEEK|DAY");
+			auto mk_raw_time_shift = [](const apoint_ts& ts, utctimespan dt)->apoint_ts {
+				return apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
+			};
+			return shyft::timeseries::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+		}
+
         void apoint_ts::set(size_t i, double x) {
             gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
             if(!gpts)
@@ -175,6 +202,18 @@ namespace shyft{
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
             return apoint_ts( std::make_shared<shyft::api::time_shift_ts>(ts,dt));
         }
+
+		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {
+			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
+			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
+			return 1.0 - shyft::timeseries::nash_sutcliffe_goal_function(o, m);
+		}
+
+		double kling_gupta( const apoint_ts & observation_ts,  const apoint_ts &model_ts, const gta_t & ta, double s_r, double s_a, double s_b) {
+			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
+			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
+			return 1.0 - shyft::timeseries::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
+		}
 
     }
 }
