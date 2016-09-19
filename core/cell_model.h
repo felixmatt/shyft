@@ -148,6 +148,17 @@ namespace shyft {
          */
         struct cell_statistics {
 
+			/**throws runtime_error if catchment_indexes contains cid that's not part of cells */
+			template<typename cell>
+			static void verify_cids_exist(const vector<cell>& cells, const vector<int>& catchment_indexes) {
+				if (catchment_indexes.size() == 0) return;
+				map<int, bool> all_cids;
+				for (const auto&c : cells) all_cids[c.geo.catchment_id()] = true;
+				for(auto cid:catchment_indexes)
+					if (all_cids.count(cid) == 0)
+						throw runtime_error(string("one or more supplied catchment_indexes does not exist:") + to_string(cid));
+			}
+
             /** \brief average_catchment_feature returns the area-weighted average
              *
              * \tparam cell the cell type, assumed to have .geo.area(), and geo.catchment_id()
@@ -163,7 +174,7 @@ namespace shyft {
                                                                cell_feature_ts&& cell_ts) {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
-
+				verify_cids_exist(cells, catchment_indexes);
 				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0,point_interpretation_policy::POINT_AVERAGE_VALUE);
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
@@ -201,7 +212,7 @@ namespace shyft {
 				cell_feature_ts&& cell_ts,size_t i) {
 				if (cells.size() == 0)
 					throw runtime_error("no cells to make statistics on");
-
+				verify_cids_exist(cells, catchment_indexes);
 				double r = 0.0;
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
@@ -239,7 +250,7 @@ namespace shyft {
                                                            cell_feature_ts && cell_ts) {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
-
+				verify_cids_exist(cells, catchment_indexes);
 				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
 				bool match_all = catchment_indexes.size() == 0;
 
@@ -272,7 +283,7 @@ namespace shyft {
 				cell_feature_ts && cell_ts, size_t i) {
 				if (cells.size() == 0)
 					throw runtime_error("no cells to make statistics on");
-
+				verify_cids_exist(cells, catchment_indexes);
 				double r = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 
@@ -307,7 +318,7 @@ namespace shyft {
 				cell_feature_ts && cell_ts,size_t i) {
 				if (cells.size() == 0)
 					throw runtime_error("no cells to make extract from");
-
+				verify_cids_exist(cells, catchment_indexes);
 				vector<double> r; r.reserve(cells.size());
 				bool match_all = catchment_indexes.size() == 0;
 

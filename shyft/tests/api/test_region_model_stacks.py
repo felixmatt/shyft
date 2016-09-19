@@ -25,8 +25,10 @@ class RegionModel(unittest.TestCase):
         for i in range(model_size):
             loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
-            geo_cell_data = api.GeoCellData(gp, cell_area,
-                                            random.randint(0, num_catchments))
+            cid = 0
+            if num_catchments>1:
+                cid = random.randint(1,num_catchments)
+            geo_cell_data = api.GeoCellData(gp, cell_area,cid)
             geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.0, lake=0.0, reservoir=0.1, forest=0.1)
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
@@ -133,8 +135,7 @@ class RegionModel(unittest.TestCase):
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)),
-                                 api.deltahours(1), 240)
+        time_axis = api.Timeaxis(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         model_interpolation_parameter = api.InterpolationParameter()
         # degC/m, so -0.5 degC/100m
         model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
@@ -170,6 +171,15 @@ class RegionModel(unittest.TestCase):
         sum_discharge_value= model.statistics.discharge_value(cids, 0)  # at the first timestep
         self.assertGreaterEqual(sum_discharge_value,160.0)
         self.assertIsNotNone(sum_discharge)
+        # Verify that if we pass in illegal cids, then it raises exception(with first failing
+        try:
+            illegal_cids = api.IntVector([0, 4, 5])
+            model.statistics.discharge(illegal_cids)
+            self.assertFalse(True,"Failed test, using illegal cids should raise exception")
+        except RuntimeError as rte:
+            pass
+
+
         avg_temperature = model.statistics.temperature(cids)
         avg_precipitation = model.statistics.precipitation(cids)
         self.assertIsNotNone(avg_precipitation)
