@@ -456,7 +456,14 @@ namespace shyft{
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }
 			size_t index_of(utctime t) const { return ta.index_of(t); }
-			double value(size_t i) const { return pa.value(i);	}
+			double value(size_t i) const { return pa.value(i); }
+			std::vector<double> values() const {
+				std::vector<double> v; 
+				v.reserve(ta.size());
+				for (auto i=0; i<ta.size(); ++i)
+					v.emplace_back(value(i));
+				return std::move(v);
+			}
 		};
 
         /** \brief Basic math operators

@@ -972,7 +972,23 @@ void timeseries_test::test_periodic_template_ts() {
 	vector<double> expected_fl = { 4.500000,2.166667,1.166667,1.500000,1.833333,2.166667,2.500000,2.833333,3.166667,3.500000,3.833333,4.166667,4.500000,4.833333,5.166667,5.500000,5.833333,6.166667,6.500000,6.833333,	7.166667,7.500000,7.833333, 8.0 /*	ok, if we consider f(t) keep value at the end, otherwise it's 6.833333 */	};
 	for (size_t i = 0;i < expected_fl.size();++i)
 		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
+}
 
+void timeseries_test::test_periodic_ts_values() {
+	std::vector<double> pv = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	const utctimespan dt = deltahours(3);
+	calendar utc;
+	utctime t0 = utc.time(2015, 1, 1);
+	timeaxis ta(t0, deltahours(10), 1000);
+
+	profile_description pd(t0, dt, pv);
+	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+
+	auto v = fun.values();
+	TS_ASSERT_EQUALS(v.size(), ta.size());
+	TS_ASSERT_EQUALS(v[0], 2.2);
+	TS_ASSERT_EQUALS(v[1], 5.5);
+	TS_ASSERT_EQUALS(v[2], 4.0);
 }
 
 void timeseries_test::test_accumulate_value() {
@@ -1021,7 +1037,6 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	// the accessor should be smart, trying to re-use prior computation, I verify the result here, 
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
-
 
 void timeseries_test::test_partition_by() {
 	calendar utc;
