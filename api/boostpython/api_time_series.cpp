@@ -121,6 +121,25 @@ namespace expose {
             .def("max",max_ts_f,args("ts_other"),"create a new ts that contains the max of self and ts_other")
             .def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
             .def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
+			.def("partition_by",&shyft::api::apoint_ts::partition_by,args("calendar","t", "partition_interval", "n_partitions","common_t0"),
+				"convert ts to a list of n_partitions partition-ts\n"
+				"each partition covers partition_interval, starting from utctime t\n"
+				"Parameters\n"
+				"----------\n"
+				"cal : Calendar\n"
+				"\t The calendar to use, typically utc\n"
+				"t : utctime\n"
+				"\tspecifies where to pick the first partition\n"
+				"partition_interval : utctimespan\n"
+				"\tthe length of each partition, Calendar.YEAR,Calendar.DAY etc.\n"
+				"n_partitions : int\n"
+				"\tnumber of partitions\n"
+				"common_t0 : utctime\n"
+				"\tspecifies the time to correlate all the partitions\n"
+				"Returns\n"
+				"-------\n"
+				"TsVector with len n_partitions"
+				)
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);

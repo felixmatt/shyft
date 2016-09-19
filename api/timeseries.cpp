@@ -109,6 +109,19 @@ namespace shyft{
 		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
 			return shyft::api::time_shift(*this, dt);
 		}
+		
+		std::vector<apoint_ts> apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
+			// some very rudimentary argument checks:
+			if (n_partitions < 1)
+				throw std::runtime_error("n_partitions should be > 0");
+			if (partition_interval <= 0)
+				throw std::runtime_error("partition_interval should be > 0, typically Calendar::YEAR|MONTH|WEEK|DAY");
+			auto mk_raw_time_shift = [](const apoint_ts& ts, utctimespan dt)->apoint_ts {
+				return apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
+			};
+			return shyft::timeseries::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+		}
+
         void apoint_ts::set(size_t i, double x) {
             gpoint_ts *gpts=dynamic_cast<gpoint_ts*>(ts.get());
             if(!gpts)

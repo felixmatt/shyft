@@ -187,6 +187,7 @@ namespace shyft {
                 apoint_ts min(const apoint_ts& other) const;
                 static apoint_ts max(const apoint_ts& a, const apoint_ts& b);
                 static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
+				std::vector<apoint_ts> partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
 
                 //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
                 //   we would like these to be working (exception if it's not possible,i.e. an expression)

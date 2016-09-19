@@ -320,5 +320,43 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(pattern_ts.value(3), 1.0)  # next step in pattern starts here
         self.assertAlmostEqual(pattern_ts.value(24), 0.0)  # next day repeats the pattern
 
+    def test_partition_by(self):
+        """
+        verify/demo exposure of the .partition_by function that can
+        be used to produce yearly percentiles statistics for long historical
+        time-series
+
+        """
+        c = api.Calendar()
+        t0 = c.time(1930, 9, 1)
+        dt = api.deltahours(1)
+        n = c.diff_units(t0, c.time(2016, 9, 1), dt)
+
+        ta = api.Timeaxis2(t0, dt, n)
+        pattern_values = api.DoubleVector.from_numpy(np.arange(len(ta))) # increasing values
+
+        src_ts = api.Timeseries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        partition_t0 = c.time(2016, 9, 1)
+        n_partitions = 80
+        partition_interval = api.Calendar.YEAR
+        # get back TsVector,
+        # where all TsVector[i].index_of(partition_t0)
+        # is equal to the index ix for which the TsVector[i].value(ix) correspond to start value of that particular partition.
+        ts_partitions = src_ts.partition_by(c, t0, partition_interval, n_partitions, partition_t0)
+        self.assertEqual(len(ts_partitions),n_partitions)
+        ty = t0
+        for ts in ts_partitions:
+            ix = ts.index_of(partition_t0)
+            vix = ts.value(ix)
+            expected_value = c.diff_units(t0, ty, dt)
+            self.assertEqual(vix, expected_value)
+            ty = c.add(ty, partition_interval, 1)
+
+        # Now finally, try percentiles on the partitions
+        wanted_percentiles = [0, 10, 25, -1, 50, 75, 90, 100]
+        ta_percentiles = api.Timeaxis2(partition_t0, api.deltahours(24), 365)
+        percentiles = api.percentiles(ts_partitions,ta_percentiles,wanted_percentiles)
+        self.assertEqual(len(percentiles), len(wanted_percentiles))
 if __name__ == "__main__":
     unittest.main()
