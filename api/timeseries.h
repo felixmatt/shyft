@@ -503,10 +503,7 @@ namespace shyft {
 				virtual utctime time(size_t i) const { return ts.ta.time(i); }
 				virtual double value(size_t i) const { return ts.value(i); }
 				virtual double value_at(utctime t) const { return value(index_of(t)); }
-				virtual std::vector<double> values() const { // TODO: implement it
-					std::vector<double> r; r.reserve(ts.ta.size());
-					return std::move(r);
-				}
+				virtual vector<double> values() const { return ts.values(); }
 			};
 
 
