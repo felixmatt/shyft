@@ -376,7 +376,7 @@ namespace shyft{
 		 *
 		 * Currently we also delegate the 'hard-work' of the op(t) and value(i'th period) here so
 		 * that the periodic_ts, -using profile_accessor is at a minimun.
-		 * 
+		 *
 		 * \note that the profile can start anytime before or equal to the time-series time-axis.
 		 * \remark .. that we should add profile_description as template arg
 		 */
@@ -392,8 +392,8 @@ namespace shyft{
 			profile_accessor() {}
 			/** map utctime t to the index of the profile value array/function */
 			utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
-			/** map utctime t to the profile pattern section, 
-			 *  the profile is repeated n-section times to cover the complete time-axis 
+			/** map utctime t to the profile pattern section,
+			 *  the profile is repeated n-section times to cover the complete time-axis
 			 */
 			utctimespan section_index(utctime t) const { return (t - profile.t0) / profile.duration(); }
 
@@ -458,9 +458,9 @@ namespace shyft{
 			size_t index_of(utctime t) const { return ta.index_of(t); }
 			double value(size_t i) const { return pa.value(i); }
 			std::vector<double> values() const {
-				std::vector<double> v; 
+				std::vector<double> v;
 				v.reserve(ta.size());
-				for (auto i=0; i<ta.size(); ++i)
+				for (size_t i=0; i<ta.size(); ++i)
 					v.emplace_back(value(i));
 				return std::move(v);
 			}
@@ -793,7 +793,7 @@ namespace shyft{
 					} while (i > i_min);
                     return i>0? source.index_of(p.start): std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
                 }
-            } 
+            }
             return source.index_of(p.start);// no hint given, just use binary search to establish the start.
         }
 		/** \brief accumulate_value provides a projection/interpretation
@@ -1323,7 +1323,7 @@ namespace shyft{
 		* The t0-parameter set the common start-time of the new partitions
 		*
 		* The typical usage will be to use this function to partition years into a vector with e.g.
-		* 80 years, where we can do statistics, percentiles to compare and see the different effects of 
+		* 80 years, where we can do statistics, percentiles to compare and see the different effects of
 		* yearly season variations.
 		* Note that the function is more general, allowing any periodic partition, like daily, weekly, monthly etc.
 		* to study any pattern or statistics that might be periodic by the partition pattern.
