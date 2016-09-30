@@ -29,7 +29,7 @@ class RegionModel(unittest.TestCase):
             if num_catchments>1:
                 cid = random.randint(1,num_catchments)
             geo_cell_data = api.GeoCellData(gp, cell_area,cid)
-            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.0, lake=0.0, reservoir=0.1, forest=0.1)
+            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
             cells.append(cell)
