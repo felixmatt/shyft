@@ -73,6 +73,7 @@ class YamlStateRepository(StateRepository):
         file_pattern: string
             Glob pattern like '*.yaml'
         """
+        directory_path = directory_path.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
         if not os.path.exists(directory_path):
             os.makedirs(directory_path)
 
