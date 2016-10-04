@@ -122,6 +122,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
             catch_indx = api.IntVector(cid)
             tsp = ts_info['ts']
             t = api.TargetSpecificationPts()
+            t.uid = ts_info['uid']
             t.catchment_indexes = catch_indx
             t.scale_factor = ts_info['weight']
             t.calc_mode = self.obj_funcs[ts_info['obj_func']['name']]

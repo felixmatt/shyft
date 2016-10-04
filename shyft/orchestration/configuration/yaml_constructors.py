@@ -48,6 +48,7 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         cache_folder = repo_params.get('cache_folder', None)
         cache_folder = cache_folder.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
         cache_file_type = repo_params.get('cache_file_type', None)
+        calc_forest_frac = repo_params.get('calc_forest_frac', False)
 
         c_ids = region_config.catchments()
         d = region_config.domain()
@@ -111,7 +112,7 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
             RegionModelConfig(region_model_id, region_model_type, region_parameter, grid_specification,
                               repo_params['catchment_regulated_type'], repo_params['service_id_field_name'],
                               region_config.catchments(), catchment_parameters=catchment_parameters,
-                              ),
+                              calc_forest_frac=calc_forest_frac),
         ]
         rm_cfg_dict = {x.name: x for x in cfg_list}
         # return GisRegionModelRepository(rm_cfg_dict)

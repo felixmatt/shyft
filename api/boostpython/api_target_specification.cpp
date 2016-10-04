@@ -52,12 +52,13 @@ namespace expose {
             " 1. from simulations, collect time-series at catchment level for (DISCHARGE|SNOW_COVERED_AREA|SNOW_WATER_EQUIVALENT)\n"
             " 2. from observations, have a user-specified series the expression above should be equal to\n"
             " 3. use user specified kling-gupta factors to evaluate kind-of-difference between target and simulated\n"
-            " 4. scale-factor to put a weight on this specific target-specification compared to other(we can have multiple)"
+            " 4. scale-factor to put a weight on this specific target-specification compared to other(we can have multiple)\n"
+			" 5. a user specified id, uid, a string to identify the external source for calibration\n"
             "\n"
             )
             .def(init<const target_ts_t&,vector<int>,double,
-                 optional<model_calibration::target_spec_calc_type,double,double,double,model_calibration::catchment_property_type>>(
-                 args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property"),"constructs a complete target specification using a TsFixed as target ts")
+                 optional<model_calibration::target_spec_calc_type,double,double,double,model_calibration::catchment_property_type,std::string>>(
+                 args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),"constructs a complete target specification using a TsFixed as target ts")
             )
 			/*Wanted! .def(init<shyft::api::apoint_ts, vector<int>, double,
 				optional<model_calibration::target_spec_calc_type, double, double, double, model_calibration::catchment_property_type>>(
@@ -71,6 +72,7 @@ namespace expose {
             .def_readwrite("s_b",&TargetSpecificationPts::s_b,"KG-scalefactor for beta (bias)")
             .def_readwrite("ts", &TargetSpecificationPts::ts," target ts")
 			.def_readwrite("catchment_indexes",&TargetSpecificationPts::catchment_indexes,"catchment indexes, 'cids'")
+		    .def_readwrite("uid",&TargetSpecificationPts::uid,"user specifed identfier:string")
             ;
 
         //.i:   %template(TargetSpecificationVector) vector<shyft::core::model_calibration::target_specification<shyft::core::pts_t>>;
