@@ -3,6 +3,7 @@ from __future__ import print_function
 from six import iteritems
 from builtins import range
 
+import os
 import re
 from glob import glob
 from os import path
