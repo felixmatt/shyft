@@ -88,6 +88,7 @@ namespace shyft {
 
         geo_point mid_point_;
         apoint_ts ts;
+		string uid;///< user-defined id, for external mapping,
         // boost python fixes for attributes and shared_ptr
         apoint_ts get_ts()  {return ts;}
         void set_ts(apoint_ts x) {ts=x;}

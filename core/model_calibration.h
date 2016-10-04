@@ -178,12 +178,12 @@ namespace shyft{
               : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {}
 			target_specification(const target_specification& c)
               : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
-                calc_mode(c.calc_mode),catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+                calc_mode(c.calc_mode),catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b),uid(c.uid) {}
 			target_specification(target_specification&&c)
               : ts(std::move(c.ts)),
                 catchment_indexes(std::move(c.catchment_indexes)),
                 scale_factor(c.scale_factor), calc_mode(c.calc_mode),catchment_property(c.catchment_property),
-                s_r(c.s_r), s_a(c.s_a), s_b(c.s_b) {}
+                s_r(c.s_r), s_a(c.s_a), s_b(c.s_b),uid(c.uid) {}
 			target_specification& operator=(target_specification&& c) {
 				ts = std::move(c.ts);
 				catchment_indexes = move(c.catchment_indexes);
@@ -191,6 +191,7 @@ namespace shyft{
 				calc_mode = c.calc_mode;
 				catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
+				uid = c.uid;
 				return *this;
 			}
 			target_specification& operator=(const target_specification& c) {
@@ -201,6 +202,7 @@ namespace shyft{
                 calc_mode = c.calc_mode;
                 catchment_property=c.catchment_property;
 				s_r = c.s_r; s_a = c.s_a; s_b = c.s_b;
+				uid = c.uid;
                 return *this;
 			}
 			bool operator==(const target_specification& x) const {
@@ -214,9 +216,9 @@ namespace shyft{
              */
 			target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                                  target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r=1.0,
-                                 double s_a=1.0, double s_b=1.0, catchment_property_type catchment_property_ = DISCHARGE)
+                                 double s_a=1.0, double s_b=1.0, catchment_property_type catchment_property_ = DISCHARGE,std::string uid="")
               : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
-                calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b) {}
+                calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b),uid(uid) {}
 			
 			target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
 			std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
@@ -226,6 +228,7 @@ namespace shyft{
 			double s_r; ///< KG-scalefactor for correlation
 			double s_a; ///< KG-scalefactor for alpha (variance)
 			double s_b; ///< KG-scalefactor for beta (bias)
+			std::string uid;///< external user specified id associated with this target spec.
 		};
 
 

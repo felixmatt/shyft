@@ -172,6 +172,9 @@ class ShyftApi(unittest.TestCase):
         t.s_r = 1.0  # KGEs scale-factors
         t.s_a = 2.0
         t.s_b = 3.0
+        self.assertIsNotNone(t.uid)
+        t.uid = 'test'
+        self.assertEqual(t.uid,'test')
         self.assertAlmostEqual(t.scale_factor, 1.0)
         # create a ts with some points
         cal = api.Calendar()
@@ -197,7 +200,8 @@ class ShyftApi(unittest.TestCase):
         # stuff it into the target spec.
         # also show how to specify snow-calibration
         cids = api.IntVector([0, 2, 3])
-        t2 = api.TargetSpecificationPts(tsa, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA)
+        t2 = api.TargetSpecificationPts(tsa, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,'test_uid')
+        self.assertEqual(t2.uid,'test_uid')
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
         self.assertIsNotNone(t2.catchment_indexes)

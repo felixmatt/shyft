@@ -73,6 +73,15 @@ class RegionModel(unittest.TestCase):
         cts = api.TsFactory().create_time_point_ts(utc_period, tv, vv)
         return geo_ts_type(geo_point, cts)
 
+    def test_source_uid(self):
+        cal = api.Calendar()
+        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
+        mid_point = api.GeoPoint(1000, 1000, 100)
+        precip_source= self._create_constant_geo_ts(api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0)
+        self.assertIsNotNone(precip_source.uid)
+        precip_source.uid = 'abc'
+        self.assertEqual(precip_source.uid,'abc')
+
     def create_dummy_region_environment(self, time_axis, mid_point):
         re = api.ARegionEnvironment()
         re.precipitation.append(self._create_constant_geo_ts(api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0))

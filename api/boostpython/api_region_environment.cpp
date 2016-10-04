@@ -37,6 +37,7 @@ namespace expose {
             .def("mid_point",&sa::GeoPointSource::mid_point,"returns a copy of mid_point")
             // does not work  yet:.def_readwrite("ts",&sa::GeoPointSource::ts)
             .add_property("ts",&sa::GeoPointSource::get_ts,&sa::GeoPointSource::set_ts)
+			.def_readwrite("uid",&sa::GeoPointSource::uid,"user specified identifier, string")
             ;
         py::register_ptr_to_python<std::shared_ptr<sa::GeoPointSource>>();
         GeoPointSourceX<sa::TemperatureSource>("TemperatureSource","TemperatureSourceVector","geo located temperatures[deg Celcius]");
