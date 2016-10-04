@@ -45,6 +45,7 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         server_name_preprod = repo_params.get('server_name_preprod')
         use_cache = repo_params.get('use_cache', False)
         cache_folder = repo_params.get('cache_folder', None)
+        cache_folder = cache_folder.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
         cache_file_type = repo_params.get('cache_file_type', None)
 
         c_ids = region_config.catchments()
