@@ -94,6 +94,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             Allow extraction of a subset of the given source fields
             instead of raising exception.
         """
+        directory = directory.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
         self._filename = path.join(directory, filename)
         self.allow_subset = allow_subset
         if not path.isdir(directory):

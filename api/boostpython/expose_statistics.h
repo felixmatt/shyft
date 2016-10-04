@@ -235,7 +235,7 @@ namespace expose {
         static void basic_cell(const char *cell_name) {
             char base_name[200];sprintf(base_name,"%sStatistics",cell_name);
             typedef typename shyft::api::basic_cell_statistics<cell> bc_stat;
-			
+
             rts_ (bc_stat::*discharge_ts)(cids_) const = &bc_stat::discharge;
             vd_  (bc_stat::*discharge_vd)(cids_,ix_) const =&bc_stat::discharge;
 
@@ -278,7 +278,7 @@ namespace expose {
 				.def("rel_hum_value", &bc_stat::rel_hum_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
 				.def("total_area", &bc_stat::total_area, args("catchment_indexes"), "returns total area[m2] for cells matching catchments_ids")
 				.def("forest_area", &bc_stat::forest_area, args("catchment_indexes"), "returns forest area[m2] for cells matching catchments_ids")
-				.def("glacier_area", &bc_stat::forest_area, args("catchment_indexes"), "returns glacier area[m2] for cells matching catchments_ids")
+				.def("glacier_area", &bc_stat::glacier_area, args("catchment_indexes"), "returns glacier area[m2] for cells matching catchments_ids")
 				.def("lake_area", &bc_stat::lake_area, args("catchment_indexes"), "returns lake area[m2] for cells matching catchments_ids")
 				.def("reservoir_area", &bc_stat::reservoir_area, args("catchment_indexes"), "returns reservoir area[m2] for cells matching catchments_ids")
 				.def("unspecified_area", &bc_stat::unspecified_area, args("catchment_indexes"), "returns reservoir area[m2] for cells matching catchments_ids")

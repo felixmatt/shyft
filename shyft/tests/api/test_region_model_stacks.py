@@ -28,8 +28,8 @@ class RegionModel(unittest.TestCase):
             cid = 0
             if num_catchments>1:
                 cid = random.randint(1,num_catchments)
-            geo_cell_data = api.GeoCellData(gp, cell_area,cid)
-            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.0, lake=0.0, reservoir=0.1, forest=0.1)
+            geo_cell_data = api.GeoCellData(gp, cell_area,cid,0.9,api.LandTypeFractions(0.01, 0.05, 0.19, 0.3, 0.45))
+            # geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
             cell = model_t.cell_t()
             cell.geo = geo_cell_data
             cells.append(cell)
@@ -169,7 +169,7 @@ class RegionModel(unittest.TestCase):
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value= model.statistics.discharge_value(cids, 0)  # at the first timestep
-        self.assertGreaterEqual(sum_discharge_value,160.0)
+        self.assertGreaterEqual(sum_discharge_value,130.0)
         self.assertIsNotNone(sum_discharge)
         # Verify that if we pass in illegal cids, then it raises exception(with first failing
         try:
