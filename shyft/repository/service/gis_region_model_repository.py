@@ -349,7 +349,7 @@ class CatchmentFetcher(BaseGisDataFetcher):
 
 class CellDataFetcher(object):
     def __init__(self, catchment_type, identifier, grid_specification, id_list,
-                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
+                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q", calc_forest_frac = False):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
         self.catchment_type = catchment_type
@@ -388,8 +388,9 @@ class CellDataFetcher(object):
         prep_glaciers = prep(all_glaciers)
         all_lakes = ltf.fetch(name="lake")
         prep_lakes = prep(all_lakes)
-        all_forest = ltf.fetch(name="forest")
-        prep_forest = prep(all_forest)
+        if calc_forest_frac:
+            all_forest = ltf.fetch(name="forest")
+            prep_forest = prep(all_forest)
         print("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
         for catchment_id, catchment in catchments.items():
             if catchment_id not in catchment_land_types:  # SiH: default land-type, plus the special ones fetched below
@@ -418,11 +419,11 @@ class CellDataFetcher(object):
                 glacier_in_catchment = all_glaciers.intersection(catchment)
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
                     catchment_land_types[catchment_id]["glacier"] = glacier_in_catchment
-            if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
-                print('calc forest frac...')
-                forest_in_catchment= all_forest.intersection(catchment)
-                if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
-                    catchment_land_types[catchment_id]["forest"]=forest_in_catchment
+            if calc_forest_frac:
+                if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
+                    forest_in_catchment= all_forest.intersection(catchment)
+                    if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
+                        catchment_land_types[catchment_id]["forest"]=forest_in_catchment
 
 
             catchment_cells[catchment_id] = []
@@ -532,7 +533,8 @@ class RegionModelConfig(object):
     """
 
     def __init__(self, name, region_model_type, region_parameters, grid_specification,
-                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={}):
+                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={},
+                 calc_forest_frac=False):
         """
         Parameters
         ----------
@@ -564,6 +566,7 @@ class RegionModelConfig(object):
         self.service_id_field_name = service_id_field_name
         self.id_list = id_list
         self.catchment_parameters = catchment_parameters
+        self.calc_forest_frac = calc_forest_frac
 
     @property
     def epsg_id(self):
@@ -690,11 +693,13 @@ class GisRegionModelRepository(RegionModelRepository):
             region_id]  # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
 
     @classmethod
-    def get_cell_data_from_gis(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
+    def get_cell_data_from_gis(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list,
+                               calc_forest_frac = False):
         print('Fetching gis_data from online GIS database...')
         cell_info_service = CellDataFetcher(catchment_regulated_type, service_id_field_name,
                                             grid_specification, id_list, server_name= cls.server_name,
-                                            server_name_preprod = cls.server_name_preprod)
+                                            server_name_preprod = cls.server_name_preprod,
+                                            calc_forest_frac = calc_forest_frac)
 
         result = cell_info_service.fetch()  # clumsy result, we can adjust this.. (I tried to adjust it below)
         cell_data = result['cell_data']  # this is the part we need here
@@ -782,11 +787,13 @@ class GisRegionModelRepository(RegionModelRepository):
             if cell_info is None:
                 print('MESSAGE: Reverting to online GIS database and updating cache!')
                 cell_info = self.get_cell_data_from_gis(rm.catchment_regulated_type, rm.service_id_field_name,
-                                                        rm.grid_specification, rm.id_list)
+                                                        rm.grid_specification, rm.id_list,
+                                                        calc_forest_frac=rm.calc_forest_frac)
                 self.save_cell_data_to_cache(rm.service_id_field_name, rm.grid_specification, cell_info)
         else:
             cell_info = self.get_cell_data_from_gis(rm.catchment_regulated_type, rm.service_id_field_name,
-                                                    rm.grid_specification, rm.id_list)
+                                                    rm.grid_specification, rm.id_list,
+                                                    calc_forest_frac=rm.calc_forest_frac)
         catchment_id_map, cell_geo_data, polygons = [cell_info[k] for k in['cid_map', 'geo_data', 'polygons']]
         cell_vector = self.build_cell_vector(rm.region_model_type, cell_geo_data)
 
