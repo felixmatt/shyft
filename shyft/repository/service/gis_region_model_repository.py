@@ -358,6 +358,7 @@ class CellDataFetcher(object):
         self.id_list = id_list
         self.cell_data = {}
         self.catchment_land_types = {}
+        self.calc_forest_frac = calc_forest_frac
 
     @property
     def epsg_id(self):
@@ -388,7 +389,7 @@ class CellDataFetcher(object):
         prep_glaciers = prep(all_glaciers)
         all_lakes = ltf.fetch(name="lake")
         prep_lakes = prep(all_lakes)
-        if calc_forest_frac:
+        if self.calc_forest_frac:
             all_forest = ltf.fetch(name="forest")
             prep_forest = prep(all_forest)
         print("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
@@ -419,7 +420,7 @@ class CellDataFetcher(object):
                 glacier_in_catchment = all_glaciers.intersection(catchment)
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
                     catchment_land_types[catchment_id]["glacier"] = glacier_in_catchment
-            if calc_forest_frac:
+            if self.calc_forest_frac:
                 if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
                     forest_in_catchment= all_forest.intersection(catchment)
                     if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
