@@ -388,8 +388,8 @@ class CellDataFetcher(object):
         prep_glaciers = prep(all_glaciers)
         all_lakes = ltf.fetch(name="lake")
         prep_lakes = prep(all_lakes)
-        # all_forest  = ltf.fetch(name="forest")
-        # prep_forest = prep(all_forest)
+        all_forest = ltf.fetch(name="forest")
+        prep_forest = prep(all_forest)
         print("Doing catchment loop, n reservoirs", len(all_reservoir_coords))
         for catchment_id, catchment in catchments.items():
             if catchment_id not in catchment_land_types:  # SiH: default land-type, plus the special ones fetched below
@@ -418,10 +418,11 @@ class CellDataFetcher(object):
                 glacier_in_catchment = all_glaciers.intersection(catchment)
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
                     catchment_land_types[catchment_id]["glacier"] = glacier_in_catchment
-            # if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
-            #    forest_in_catchment= all_forest.intersection(catchment)
-            #    if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
-            #        catchment_land_types[catchment_id]["forest"]=forest_in_catchment
+            if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
+                print('calc forest frac...')
+                forest_in_catchment= all_forest.intersection(catchment)
+                if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
+                    catchment_land_types[catchment_id]["forest"]=forest_in_catchment
 
 
             catchment_cells[catchment_id] = []
