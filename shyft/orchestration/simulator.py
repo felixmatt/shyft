@@ -124,8 +124,6 @@ class DefaultSimulator(object):
             self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
             self.region_model.set_states(self.state)
             self.region_model.run_cells()
-            self.state = None
-            self.time_axis = None
         else:
             raise SimulatorError("Model not runnable.")
 
@@ -140,12 +138,15 @@ class DefaultSimulator(object):
         state: shyft.api state
         """
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-        period = time_axis.total_period()
+        if not time_axis is None:
+            self.time_axis = time_axis
+        if not state is None:
+            self.state = state
+
+        period = self.time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
                                                         geo_location_criteria=bbox)
         self.region_env = self._get_region_environment(sources)
-        self.state = state
-        self.time_axis = time_axis
         self.simulate()
 
     def run_forecast(self, time_axis, t_c, state):
