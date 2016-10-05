@@ -4,6 +4,7 @@ import unittest
 try:
     from os import path
     from shyft import api
+    from shyft import shyftdata_dir
     from shyft.api import Calendar, YMDhms, Timeaxis, deltahours
     from shyft.api import pt_gs_k
     from shyft.api import pt_ss_k
@@ -74,6 +75,7 @@ try:
                 }
             }
 
+    @unittest.skip('Only a demo')
     class StatkraftTistelTest(unittest.TestCase):
         """
         This is a test/demo class, showing how we could run catchment Tistel (vik in sogn)
@@ -160,7 +162,7 @@ try:
 
         @property
         def statkraft_data_dir(self):
-            return path.abspath(path.join("D:", path.join(path.sep, "statkraft_data")))
+            return shyftdata_dir
 
         @property
         def region_model_repository(self):
@@ -318,9 +320,6 @@ try:
         @property
         def interpolation_repository(self):
             return InterpolationParameterRepository(InterpolationConfig())
-
-
-
 
 
 except ImportError as ie:
