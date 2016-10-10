@@ -358,5 +358,6 @@ class TimeSeries(unittest.TestCase):
         ta_percentiles = api.Timeaxis2(partition_t0, api.deltahours(24), 365)
         percentiles = api.percentiles(ts_partitions,ta_percentiles,wanted_percentiles)
         self.assertEqual(len(percentiles), len(wanted_percentiles))
+
 if __name__ == "__main__":
     unittest.main()
