@@ -57,7 +57,7 @@ class ShyftApi(unittest.TestCase):
 
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 21
+        ptgsk_size = 24
         valid_names = [
         "kirchner.c1",
         "kirchner.c2",
@@ -79,7 +79,10 @@ class ShyftApi(unittest.TestCase):
         "gs.snow_cv_forest_factor",
         "gs.snow_cv_altitude_factor",
         "pt.albedo",
-        "pt.alpha"
+        "pt.alpha",
+        "gs.initial_bare_ground_fraction",
+        "gs.winter_end_day_of_year",
+        "gs.calculate_iso_pot_energy"
         ]
         self.verify_parameter_for_calibration(pt_gs_k.PTGSKParameter(), ptgsk_size,valid_names)
 
