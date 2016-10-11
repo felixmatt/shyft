@@ -84,7 +84,22 @@ class ShyftApi(unittest.TestCase):
         "gs.winter_end_day_of_year",
         "gs.calculate_iso_pot_energy"
         ]
-        self.verify_parameter_for_calibration(pt_gs_k.PTGSKParameter(), ptgsk_size,valid_names)
+        p=pt_gs_k.PTGSKParameter()
+        self.verify_parameter_for_calibration(p, ptgsk_size,valid_names)
+        #special verification of bool parameter
+        p.gs.calculate_iso_pot_energy = True
+        self.assertTrue(p.gs.calculate_iso_pot_energy)
+        self.assertAlmostEqual(p.get(23),1.0,0.00001)
+        p.gs.calculate_iso_pot_energy = False
+        self.assertFalse(p.gs.calculate_iso_pot_energy)
+        self.assertAlmostEqual(p.get(23), 0.0, 0.00001)
+        pv = api.DoubleVector.from_numpy([p.get(i) for i in range(p.size())])
+        pv[23]=1.0
+        p.set(  pv)
+        self.assertTrue(p.gs.calculate_iso_pot_energy)
+        pv[23]=0.0;
+        p.set(pv)
+        self.assertFalse(p.gs.calculate_iso_pot_energy)
 
     def test_pt_ss_k_param(self):
         ptssk_size = 15
