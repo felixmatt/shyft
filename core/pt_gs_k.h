@@ -47,7 +47,7 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 21; }
+            size_t size() const { return 24; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -74,6 +74,9 @@ namespace shyft {
                 gs.snow_cv_altitude_factor=p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
+				gs.initial_bare_ground_fraction = p[i++];
+				gs.winter_end_day_of_year = size_t(p[i++]);
+				gs.calculate_iso_pot_energy = p[i++] != 0.0 ? true : false;
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -100,6 +103,10 @@ namespace shyft {
                     case 18:return gs.snow_cv_altitude_factor;
 					case 19:return pt.albedo;
 					case 20:return pt.alpha;
+					case 21:return gs.initial_bare_ground_fraction;
+					case 22:return gs.winter_end_day_of_year;
+					case 23:return gs.calculate_iso_pot_energy ? 1.0 : 0.0;
+
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
                 }
@@ -129,7 +136,10 @@ namespace shyft {
                     "gs.snow_cv_forest_factor",
                     "gs.snow_cv_altitude_factor",
                     "pt.albedo",
-                    "pt.alpha"
+                    "pt.alpha",
+					"gs.initial_bare_ground_fraction",
+					"gs.winter_end_day_of_year",
+					"gs.calculate_iso_pot_energy"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");
