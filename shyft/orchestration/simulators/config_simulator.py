@@ -1,6 +1,7 @@
 import numpy as np
 import yaml
 import os
+import copy
 
 from .. import simulator
 from shyft import api
@@ -15,13 +16,18 @@ class ConfigSimulator(simulator.DefaultSimulator):
     def __init__(self, arg):
         if isinstance(arg, self.__class__):
             super().__init__(arg)
-            self.config = arg.config
+            config = arg.config
         else:
             super().__init__(arg.region_model_id,arg.interpolation_id,arg.region_model,
                              arg.geo_ts, arg.interp_repos)
-            self.config = arg
+            config = arg
 
-        self.time_axis = self.config.time_axis
+        self.region_model_id = config.region_model_id
+        self.time_axis = config.time_axis
+        self.dst_repo = config.dst_repo
+        self.initial_state_repo = config.initial_state_repo
+        self.end_state_repo = config.end_state_repo
+
         self.state = self.get_initial_state()
 
     def _extraction_method_1d(self,ts_info):
@@ -38,28 +44,28 @@ class ConfigSimulator(simulator.DefaultSimulator):
         return methods[ts_info['type']]
 
     def save_result_timeseries(self):
-        for repo in self.config.dst_repo:
+        for repo in self.dst_repo:
             save_list = [TsStoreItem(ts_info['uid'],self._extraction_method_1d(ts_info)) for ts_info in repo['1D_timeseries']]
             TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model)
 
     def get_initial_state(self):
         state_id = 0
-        if hasattr(self.config.initial_state_repo, 'n'): # No stored state, generated on-the-fly
-            self.config.initial_state_repo.n = self.region_model.size()
+        if hasattr(self.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+            self.initial_state_repo.n = self.region_model.size()
         else:
-            states = self.config.initial_state_repo.find_state(
-                region_model_id_criteria = self.config.region_model_id,
-                utc_timestamp_criteria = self.config.time_axis.start,tag_criteria=None)
+            states = self.initial_state_repo.find_state(
+                region_model_id_criteria=self.region_model_id,
+                utc_timestamp_criteria=self.time_axis.start, tag_criteria=None)
             if len(states) > 0:
                 state_id = states[0].state_id #most_recent_state i.e. <= start time
             else:
                 raise ConfigSimulatorError('No initial state matching criteria.')
-        return self.config.initial_state_repo.get_state(state_id)
+        return self.initial_state_repo.get_state(state_id)
 
     def save_end_state(self):
         endstate = self.region_model.state_t.vector_t()
         self.region_model.get_states(endstate)  # get the state at end of simulation
-        self.config.end_state_repo.put_state(self.config.region_model_id, self.region_model.time_axis.total_period().end,
+        self.end_state_repo.put_state(self.region_model_id, self.region_model.time_axis.total_period().end,
                                              endstate, tags=None)
 
     def update_state(self, var='discharge', catch_id=None):
@@ -76,87 +82,63 @@ class ConfigSimulator(simulator.DefaultSimulator):
 
 class ConfigCalibrator(simulator.DefaultSimulator):
     @property
-    def param_accessor(self):
-        return self.region_model.get_region_parameter()
+    def params_as_vct(self):
+        return {k: [v.get(i) for i in range(v.size())] for k, v in self.p_spec.items()}
 
     @property
-    def p_min(self):
-        return api.DoubleVector([self._config.calibration_parameters[name]['min']
-                                 for name in self.calib_param_names])
-
-    @property
-    def p_max(self):
-        return api.DoubleVector([self._config.calibration_parameters[name]['max']
-                                 for name in self.calib_param_names])
+    def calib_param_names(self):
+        p_reg = self.region_model.get_region_parameter()
+        return [p_reg.get_name(i) for i in range(p_reg.size())]
 
     def __init__(self, config):
         sim_config = config.sim_config
         super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.region_model,
                          sim_config.geo_ts, sim_config.interp_repos)
-        self._config = config
-        self._sim_config = sim_config
-        self.tv = None
         self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
         self.verbose_level = 1
-        self.time_axis = self._sim_config.time_axis
+        self.time_axis = sim_config.time_axis
+        self.initial_state_repo = sim_config.initial_state_repo
+        self.region_model_id = sim_config.region_model_id
+        self.model_config_file = sim_config.model_config_file
+        self.optim_method = config.optimization_method['name']
+        self.optim_method_params = config.optimization_method['params']
+        self.target_repo = copy.deepcopy(config.target_repo)
+        self.p_spec = self.get_params_from_dict(copy.deepcopy(config.calibration_parameters))
+        self.calibrated_model_file = None
+        if hasattr(config, 'calibrated_model_file'):
+            self.calibrated_model_file = config.calibrated_model_file
         self.state = self.get_initial_state()
         self.optimum_parameters = None
+        self.optimizer = None
+        self.tv = None
 
-    def init(self):
-        self.calib_param_names = [self.param_accessor.get_name(i) for i in range(self.param_accessor.size())]
-        if self.tv is None:
-            self._create_target_specvect()
-
-    def _create_target_specvect(self):
-        self.tv = api.TargetSpecificationVector()
-        tst = api.TsTransform()
-        cid_map = self.region_model.catchment_id_map
-        for ts_info in self._config.target_ts:
-            cid = ts_info['catch_id']
-            # mapped_indx = [cid_map.index(ID) for ID in cid if ID in cid_map] # since ID to Index conversion not necessary
-            found_indx = np.in1d(cid_map, cid)
-            if np.count_nonzero(found_indx) != len(cid):
-                raise ConfigSimulatorError(
-                    "Catchment index {} for target series {} not found.".format(
-                        ','.join([str(val) for val in [i for i in cid if i not in cid_map]]), ts_info['uid']))
-            catch_indx = api.IntVector(cid)
-            tsp = ts_info['ts']
-            t = api.TargetSpecificationPts()
-            t.uid = ts_info['uid']
-            t.catchment_indexes = catch_indx
-            t.scale_factor = ts_info['weight']
-            t.calc_mode = self.obj_funcs[ts_info['obj_func']['name']]
-            t.s_r = ts_info['obj_func']['scaling_factors']['s_corr']
-            t.s_a = ts_info['obj_func']['scaling_factors']['s_var']
-            t.s_b = ts_info['obj_func']['scaling_factors']['s_bias']
-            tsa = tst.to_average(ts_info['start_datetime'], ts_info['run_time_step'], ts_info['number_of_steps'], tsp)
-            t.ts = tsa
-            self.tv.append(t)
-            #print(ts_info['uid'], mapped_indx)
-
-    def calibrate(self, time_axis=None, state=None, optim_method=None, optim_method_params=None, p_vec=None):
+    def init(self, time_axis=None):
         if time_axis is not None:
             self.time_axis = time_axis
-        if state is not None:
-            self.state = state
-        if optim_method is None:
-            optim_method = self._config.optimization_method['name']
-        if optim_method_params is None:
-            optim_method_params = self._config.optimization_method['params']
-        if p_vec is None:
-            # p_vec = [(a + b) * 0.5 for a, b in zip(self.p_min, self.p_max)]
-            p_vec = [a + (b - a) * 0.5 for a, b in zip(self.p_min, self.p_max)]
-        if not hasattr(self.region_model, "optimizer_t"):
-            raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose "
-                                 "another!".format(self.region_model.__class__.__name__))
-        # if not all([isinstance(_, self.region_model.parameter_t) for _ in [p, p_min, p_max]]):
-        #     raise ConfigSimulatorError("p, p_min, and p_max must be of type {}"
-        #                          "".format(self.region_model.parameter_t.__name__))
+        if self.tv is None:
+            self._create_target_specvect()
+        self._fetch_source_run_interp()
 
-        #p_vec = [p.get(i) for i in range(p.size())]
-        p_vec_min = self.p_min # [p_min.get(i) for i in range(p_min.size())]
-        p_vec_max = self.p_max # [p_max.get(i) for i in range(p_max.size())]
+    def get_params_from_dict(self, params_as_dict):
+        p_spec = {k: self.region_model.parameter_t() for k in ['min','max','init']}
+        [p.update({'init': (p['min'] + p['max']) * 0.5}) for p in params_as_dict.values()]
+        self._validate_params_spec(params_as_dict)
+        [p_spec[k].set([params_as_dict[name][k] for name in self.calib_param_names]) for k in ['min','max','init']]
+        return p_spec
 
+    def _validate_params_spec(self, params_as_dict):
+        valid_param_name = [params_as_dict.get(name, False) for name in self.calib_param_names]
+        if not all(valid_param_name):
+            raise ConfigSimulatorError("The following parameters were not found: {}".format(
+                ','.join([name for i, name in enumerate(self.calib_param_names) if not valid_param_name[i]])))
+        valid_param_spec = [all([k in ['min','max','init'] for k in params_as_dict[name]])
+                            for name in self.calib_param_names]
+        if not all(valid_param_spec):
+            raise ConfigSimulatorError("Min, max or init spec for the following parameters are invalid: {}".format(
+                ','.join([name for i, name in enumerate(self.calib_param_names) if not valid_param_spec[i]])))
+
+    def _fetch_source_run_interp(self):
+        print("Fetching sources and running interpolation...")
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = self.time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
@@ -165,26 +147,67 @@ class ConfigCalibrator(simulator.DefaultSimulator):
 
         interp_params = self.ip_repos.get_parameters(self.interpolation_id)
         self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
+
+    def _create_target_specvect(self):
+        print("Creating TargetSpecificationVector...")
+        self.tv = api.TargetSpecificationVector()
+        tst = api.TsTransform()
+        cid_map = self.region_model.catchment_id_map
+        for repo in self.target_repo:
+            for ts_info in repo['1D_timeseries']:
+                if np.count_nonzero(np.in1d(cid_map, ts_info['catch_id'])) != len(ts_info['catch_id']):
+                    raise ConfigSimulatorError("Catchment ID {} for target series {} not found.".format(
+                            ','.join([str(val) for val in [i for i in ts_info['catch_id'] if i not in cid_map]]), ts_info['uid']))
+                period = api.UtcPeriod(ts_info['start_datetime'],
+                                       ts_info['start_datetime'] + ts_info['number_of_steps'] * ts_info['run_time_step'])
+                if not self.time_axis.total_period().contains(period):
+                    raise ConfigSimulatorError(
+                        "Period {} for target series {} is not within the calibration period {}.".format(
+                            period().to_string(), ts_info['uid'], self.time_axis.total_period().to_string()))
+                tsp = repo['repository'].read([ts_info['uid']], period)[ts_info['uid']]
+                t = api.TargetSpecificationPts()
+                t.uid = ts_info['uid']
+                t.catchment_indexes = api.IntVector(ts_info['catch_id'])
+                t.scale_factor = ts_info['weight']
+                t.calc_mode = self.obj_funcs[ts_info['obj_func']['name']]
+                [setattr(t, nm, ts_info['obj_func']['scaling_factors'][k]) for nm, k in zip(['s_r','s_a','s_b'], ['s_corr','s_var','s_bias'])]
+                t.ts = tst.to_average(ts_info['start_datetime'], ts_info['run_time_step'], ts_info['number_of_steps'], tsp)
+                self.tv.append(t)
+
+    def calibrate(self, state=None, optim_method=None, optim_method_params=None, p_min=None, p_max=None, p_init=None):
+        if state is not None:
+            self.state = state
+        if optim_method is not None:
+            self.optim_method = optim_method
+        if optim_method_params is not None:
+            self.optim_method_params = optim_method_params
+        [self.p_spec.update({k: p}) for k, p in zip(['min', 'max', 'init'], [p_min, p_max, p_init]) if p is not None]
+        if not hasattr(self.region_model, "optimizer_t"):
+            raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose another!".format(
+                self.region_model.__class__.__name__))
+        is_correct_p_type = [isinstance(self.p_spec[k], self.region_model.parameter_t) for k in ['min', 'max', 'init']]
+        if not all(is_correct_p_type):
+            raise ConfigSimulatorError("{} must be of type {}".format(
+                ','.join([name for i, name in enumerate(['min', 'max', 'init'])
+                          if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
         self.region_model.set_states(self.state)
         self.optimizer = self.region_model.optimizer_t(self.region_model,
                                                        self.tv,
-                                                       p_vec_min,
-                                                       p_vec_max)
+                                                       self.params_as_vct['min'],
+                                                       self.params_as_vct['max'])
         self.optimizer.set_verbose_level(self.verbose_level)
-        #p_vec_opt = self.optimizer.optimize(p_vec, max_n_evaluations=max_n_evaluations,
-        #                                    tr_start=tr_start, tr_stop=tr_stop)
         print("Calibrating...")
-        if optim_method == "min_bobyqa":
-            p_vec_opt = self.optimizer.optimize(p_vec, **optim_method_params)
-        elif optim_method == "dream":
-            p_vec_opt = self.optimizer.optimize_dream(p_vec, **optim_method_params)
-        elif optim_method == "sceua":
-            p_vec_opt = self.optimizer.optimize_sceua(p_vec, **optim_method_params)
+        if self.optim_method == "min_bobyqa":
+            p_vec_opt = self.optimizer.optimize(self.params_as_vct['init'], **self.optim_method_params)
+        elif self.optim_method == "dream":
+            p_vec_opt = self.optimizer.optimize_dream(self.params_as_vct['init'], **self.optim_method_params)
+        elif self.optim_method == "sceua":
+            p_vec_opt = self.optimizer.optimize_sceua(self.params_as_vct['init'], **self.optim_method_params)
         else:
-            raise ValueError("Unknown optimization method: %s" % optim_method)
+            raise ValueError("Unknown optimization method: %s" % self.optim_method)
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
-        if hasattr(self._config, 'calibrated_model_file'):
+        if self.calibrated_model_file is not None:
             self.save_calibrated_model(p_res)
         self.optimum_parameters = self.region_model.parameter_t() # To keep a copy
         self.optimum_parameters.set(p_vec_opt)
@@ -192,47 +215,43 @@ class ConfigCalibrator(simulator.DefaultSimulator):
 
     def save_calibrated_model(self, optim_param, outfile=None):
         """Save calibrated params in a model-like YAML file."""
-        name_map = {"pt": "priestley_taylor", "kirchner": "kirchner",
-                    "p_corr": "precipitation_correction", "ae": "actual_evapotranspiration",
-                    "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow"}
-        mapped_results = {optim_param.get_name(i): optim_param.get(i) for i in range(optim_param.size())}
+        name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
+                    "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
+                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
 
         # Existing model parameters structure
-        model_file = self._config.sim_config.model_config_file
+        model_file = self.model_config_file
         model_dict = yaml.load(open(model_file))
         model = model_dict['model_parameters']
         # Overwrite overlapping params
-        for k, v in mapped_results.items():
-            routine_name, param_name = k.split('.')
-            model[name_map[routine_name]][param_name] = v
+        [params.update({param_name: getattr(getattr(optim_param, name_map[routine_name]), param_name)}) for routine_name, params in model.items() for param_name in params]
 
         # Finally, save the update parameters on disk
-        if outfile is None:
-            outfile = self._config.calibrated_model_file
-        else:
-            if not os.path.isabs(outfile):
-                outfile = os.path.join(os.path.dirname(model_file), outfile)
-        print("Storing calibrated params in:", outfile)
+        if outfile is not None:
+            self.calibrated_model_file = outfile
+        if not os.path.isabs(self.calibrated_model_file):
+            self.calibrated_model_file = os.path.join(os.path.dirname(model_file), self.calibrated_model_file)
+        print("Storing calibrated params in:", self.calibrated_model_file)
         cls_rep_str = '!!python/name:'+model_dict['model_t'].__module__+'.'+model_dict['model_t'].__name__
         model_dict['model_t'] = cls_rep_str
-        with open(outfile, "w") as out:
+        with open(self.calibrated_model_file, "w") as out:
             out.write("# This file has been automatically generated after a calibration run\n")
             #yaml.dump(model_dict, out, default_flow_style=False)
             out.write(yaml.dump(model_dict, default_flow_style=False).replace("'"+cls_rep_str+"'",cls_rep_str))
 
     def get_initial_state(self):
         state_id = 0
-        if hasattr(self._sim_config.initial_state_repo, 'n'): # No stored state, generated on-the-fly
-            self._sim_config.initial_state_repo.n = self.region_model.size()
+        if hasattr(self.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+            self.initial_state_repo.n = self.region_model.size()
         else:
-            states = self._sim_config.initial_state_repo.find_state(
-                region_model_id_criteria=self._sim_config.region_model_id,
-                utc_timestamp_criteria=self._sim_config.time_axis.start,tag_criteria=None)
+            states = self.initial_state_repo.find_state(
+                region_model_id_criteria=self.region_model_id,
+                utc_timestamp_criteria=self.time_axis.start,tag_criteria=None)
             if len(states) > 0:
                 state_id = states[0].state_id #most_recent_state i.e. <= start time
             else:
                 raise ConfigSimulatorError('No initial state matching criteria.')
-        return self._sim_config.initial_state_repo.get_state(state_id)
+        return self.initial_state_repo.get_state(state_id)
 
     def run_calibrated_model(self):
         if self.optimum_parameters is None:

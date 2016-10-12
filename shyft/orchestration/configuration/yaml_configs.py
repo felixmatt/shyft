@@ -249,16 +249,14 @@ class YAMLSimConfig(object):
         srepr = srepr[:-2]
         return srepr + ")"
 
+
 class YAMLCalibConfig(object):
 
     def __init__(self, config_file, config_section):
         self._config_file = config_file
         config = yaml.load(open(config_file,encoding='utf8'))[config_section]
         self.__dict__.update(config)
-
         self.validate()
-
-
         # Get the location of the model_config_file relative to the calibration config file
         if not os.path.isabs(self.model_config_file):
             model_config_file = os.path.join(
@@ -271,10 +269,8 @@ class YAMLCalibConfig(object):
             if not os.path.isabs(self.calibrated_model_file):
                 self.calibrated_model_file = os.path.join(
                     os.path.dirname(os.path.abspath(config_file)), self.calibrated_model_file)
-
-        self.target_ts = []
-
-        self._fetch_target_timeseries()
+        self.target_repo = []
+        self.construct_target_repo()
 
     def validate(self):
         """Check for the existence of mandatory fields."""
@@ -283,15 +279,11 @@ class YAMLCalibConfig(object):
         assert hasattr(self, "calibration_parameters")
         assert hasattr(self, "target")
 
-    def _fetch_target_timeseries(self):
-        for repository in self.target:
-            ts_repository = target_repo_constructor(repository['repository'],repository['params'])
-            for target in repository['1D_timeseries']:
-                target['start_datetime'] = utctime_from_datetime(target['start_datetime'])
-                period = api.UtcPeriod(target['start_datetime'],
-                                       target['start_datetime'] + target['number_of_steps'] * target['run_time_step'])
-                target.update({'ts':ts_repository.read([target['uid']],period)[target['uid']]})
-                self.target_ts.append(target)
+    def construct_target_repo(self):
+        for repo in self.target:
+            repo['repository'] = target_repo_constructor(repo['repository'], repo['params'])
+            [target_ts.update({'start_datetime': utctime_from_datetime(target_ts['start_datetime'])}) for target_ts in repo['1D_timeseries']]
+            self.target_repo.append(repo)
 
 
 class YAMLForecastConfig(object):
