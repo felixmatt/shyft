@@ -19,7 +19,11 @@ CoreTests = time_axis_test.h \
 	pt_ss_k_test.h \
 	sceua_test.h \
 	gridpp_test.h \
-	kalman_test.h
+	kalman_test.h \
+	hbv_soil_test.h \
+	hbv_tank_test.h \
+	hbv_actual_evapotranspiration_test.h \
+	hbv_stack_test.h
 
 TestHeaders = $(CoreTests)
 

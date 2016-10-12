@@ -106,10 +106,35 @@
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="hbv_stack_Debug">
+				<Option output="../../shyft/api/hbv_stack/_hbv_stack" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
+			<Target title="hbv_stack_Release">
+				<Option output="../../shyft/api/hbv_stack/_hbv_stack" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
 		</Build>
 		<VirtualTargets>
-			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_hs_k_Debug;pt_ss_k_Debug;" />
-			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_hs_k_Release;pt_ss_k_Release;" />
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_hs_k_Debug;pt_ss_k_Debug;hbv_stack_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_hs_k_Release;pt_ss_k_Release;hbv_stack_Release;" />
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
@@ -158,7 +183,19 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_hbv_actual_evapotranspiration.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_hbv_snow.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_hbv_soil.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_hbv_tank.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
@@ -217,6 +254,10 @@
 		</Unit>
 		<Unit filename="expose.h" />
 		<Unit filename="expose_statistics.h" />
+		<Unit filename="hbv_stack.cpp">
+			<Option target="hbv_stack_Debug" />
+			<Option target="hbv_stack_Release" />
+		</Unit>
 		<Unit filename="numpy_boost.hpp" />
 		<Unit filename="numpy_boost_python.hpp" />
 		<Unit filename="pt_gs_k.cpp">

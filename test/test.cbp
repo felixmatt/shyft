@@ -91,8 +91,16 @@
 		<Unit filename="gaussian_random_field_test.h" />
 		<Unit filename="gridpp_test.cpp" />
 		<Unit filename="gridpp_test.h" />
+		<Unit filename="hbv_actual_evapotranspiration_test.cpp" />
+		<Unit filename="hbv_actual_evapotranspiration_test.h" />
 		<Unit filename="hbv_snow_test.cpp" />
 		<Unit filename="hbv_snow_test.h" />
+		<Unit filename="hbv_soil_test.cpp" />
+		<Unit filename="hbv_soil_test.h" />
+		<Unit filename="hbv_stack_test.cpp" />
+		<Unit filename="hbv_stack_test.h" />
+		<Unit filename="hbv_tank_test.cpp" />
+		<Unit filename="hbv_tank_test.h" />
 		<Unit filename="inverse_distance_test.cpp" />
 		<Unit filename="inverse_distance_test.h" />
 		<Unit filename="kalman_test.cpp" />
