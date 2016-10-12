@@ -24,7 +24,8 @@ import System.Collections.Generic
 from System import DateTime, TimeSpan
 from System.Collections.Generic import List,IList,Dictionary,IDictionary
 from Statkraft.XTimeSeries import MetaInfo, PointTimeStepConstraint, TsIdentity,ITimeSeries,TimeSeriesPointSegments,IPointSegment,PointSegment
-from Statkraft.ScriptApi import TsAsVector,TimeSystemReference,SsaTimeSeries
+from Statkraft.ScriptApi import TsAsVector,TimeSystemReference
+from Statkraft.ScriptApi import SsaTimeSeries # Only Available in statkraft-scriptapi=1.2.8
 from shyft import api
 from .ssa_geo_ts_repository import TsRepository
 import numpy as np
@@ -33,8 +34,6 @@ import abc
 
 class SmgDataError(Exception):
     pass
-
-
 
 class SmGTsRepository(TsRepository):
     def __init__(self, env,fc_env=None):
@@ -136,7 +135,7 @@ class SmGTsRepository(TsRepository):
 
     @staticmethod
     def _make_ssa_ts_from_shyft_ts(name,shyft_ts):
-        ''' Geturns a SSaTimeSeries from shyft_ts '''
+        ''' Returns a SsaTimeSeries from shyft_ts '''
         t=np.array([shyft_ts.time(i) for i in range(shyft_ts.size()) ])
         v=np.array([shyft_ts.value(i) for i in range(shyft_ts.size()) ])
         q = np.zeros_like(t, dtype=np.int)
@@ -147,6 +146,7 @@ class SmGTsRepository(TsRepository):
         tsv.SetVectors(p, t, v, q)
         tsv.Name = name
         return SsaTimeSeries(tsv)
+
     @staticmethod
     def _make_ssa_tsps_from_shyft_ts(ts_id,shyft_ts):
         ''' returns a TimeSeriesPointSegments from shyft_ts '''
@@ -166,8 +166,8 @@ class SmGTsRepository(TsRepository):
 
     @staticmethod
     def _make_shyft_ts_from_ssa_ts(ssa_ts):
-        if(not isinstance(ssa_ts,SsaTimeSeries)):
-            raise  SmgDataError("supplied ssa_ts should be of type SsaTimeSeries")
+        if not isinstance(ssa_ts, SsaTimeSeries):
+            raise SmgDataError("supplied ssa_ts should be of type SsaTimeSeries")
         tsv=ssa_ts.GetTsAsVector(TimeSystemReference.Unix1970Utc)
         tsfactory=api.TsFactory()
         #todo: this can be done much faster using clr direct accesss, https://mail.python.org/pipermail/pythondotnet/2014-May/001526.html
@@ -182,5 +182,3 @@ class SmGTsRepository(TsRepository):
         if not shyft_period.valid():
             raise SmgDataError("shyft_period must be of type api.UtcPeriod")
         return Period(UtcTime.CreateFromUnixTime(shyft_period.start),UtcTime.CreateFromUnixTime(shyft_period.end))
-
-
