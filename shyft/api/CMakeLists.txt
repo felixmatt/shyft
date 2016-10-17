@@ -87,7 +87,7 @@ foreach(python_api_extension  "api" )
 endforeach(python_api_extension)
 
 # then for each sub module
-foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k")
+foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k" "hbv_stack")
   add_library(${python_extension} SHARED ${CXX_FILES} ${CMAKE_SOURCE_DIR}/api/boostpython/${python_extension}.cpp)
   set_target_properties(${python_extension} PROPERTIES OUTPUT_NAME ${python_extension})
   # Python extensions do not use the 'lib' prefix
