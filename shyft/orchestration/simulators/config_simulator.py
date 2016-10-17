@@ -18,15 +18,15 @@ class ConfigSimulator(simulator.DefaultSimulator):
             super().__init__(arg)
             config = arg.config
         else:
-            super().__init__(arg.region_model_id,arg.interpolation_id,arg.region_model,
-                             arg.geo_ts, arg.interp_repos)
+            super().__init__(arg.region_model_id,arg.interpolation_id,arg.get_region_model_repo(),
+                             arg.get_geots_repo(), arg.interp_repo_repo())
             config = arg
 
         self.region_model_id = config.region_model_id
         self.time_axis = config.time_axis
-        self.dst_repo = config.dst_repo
-        self.initial_state_repo = config.initial_state_repo
-        self.end_state_repo = config.end_state_repo
+        self.dst_repo = config.get_destination_repo()
+        self.initial_state_repo = config.get_initial_state_repo()
+        self.end_state_repo = config.get_end_state_repo()
 
         self.state = self.get_initial_state()
 
@@ -92,17 +92,17 @@ class ConfigCalibrator(simulator.DefaultSimulator):
 
     def __init__(self, config):
         sim_config = config.sim_config
-        super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.region_model,
-                         sim_config.geo_ts, sim_config.interp_repos)
+        super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.get_region_model_repo(),
+                         sim_config.get_geots_repo(), sim_config.get_interp_repo())
         self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
         self.verbose_level = 1
         self.time_axis = sim_config.time_axis
-        self.initial_state_repo = sim_config.initial_state_repo
+        self.initial_state_repo = sim_config.get_initial_state_repo()
         self.region_model_id = sim_config.region_model_id
         self.model_config_file = sim_config.model_config_file
         self.optim_method = config.optimization_method['name']
         self.optim_method_params = config.optimization_method['params']
-        self.target_repo = copy.deepcopy(config.target_repo)
+        self.target_repo = config.get_target_repo() # copy.deepcopy(config.target_repo)
         self.p_spec = self.get_params_from_dict(copy.deepcopy(config.calibration_parameters))
         self.calibrated_model_file = None
         if hasattr(config, 'calibrated_model_file'):
@@ -164,7 +164,9 @@ class ConfigCalibrator(simulator.DefaultSimulator):
                     raise ConfigSimulatorError(
                         "Period {} for target series {} is not within the calibration period {}.".format(
                             period().to_string(), ts_info['uid'], self.time_axis.total_period().to_string()))
+                print('Start fetching...')
                 tsp = repo['repository'].read([ts_info['uid']], period)[ts_info['uid']]
+                print('Finished fetching...')
                 t = api.TargetSpecificationPts()
                 t.uid = ts_info['uid']
                 t.catchment_indexes = api.IntVector(ts_info['catch_id'])
@@ -215,16 +217,21 @@ class ConfigCalibrator(simulator.DefaultSimulator):
 
     def save_calibrated_model(self, optim_param, outfile=None):
         """Save calibrated params in a model-like YAML file."""
-        name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
-                    "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
-                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
+        name_map = {"pt": "priestley_taylor", "kirchner": "kirchner",
+                    "p_corr": "precipitation_correction", "ae": "actual_evapotranspiration",
+                    "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow"}
 
         # Existing model parameters structure
-        model_file = self.model_config_file
-        model_dict = yaml.load(open(model_file))
-        model = model_dict['model_parameters']
+        #model_file = self.model_config_file
+        #model_dict = yaml.load(open(model_file))
+        #model = model_dict['model_parameters']
+        model_dict = {'model_parameters': {}}
         # Overwrite overlapping params
-        [params.update({param_name: getattr(getattr(optim_param, name_map[routine_name]), param_name)}) for routine_name, params in model.items() for param_name in params]
+        #[params.update({param_name: getattr(getattr(optim_param, name_map[routine_name]), param_name)}) for routine_name, params in model.items() for param_name in params]
+        [model_dict['model_parameters'][name_map[r]].update({p: getattr(getattr(optim_param, r), p)})
+         if name_map[r] in model_dict['model_parameters'] else model_dict['model_parameters'].update(
+            {name_map[r]: {p: getattr(getattr(optim_param, r), p)}}) for r, p in [nm.split('.') for nm in self.calib_param_names]]
+
 
         # Finally, save the update parameters on disk
         if outfile is not None:
@@ -232,7 +239,9 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         if not os.path.isabs(self.calibrated_model_file):
             self.calibrated_model_file = os.path.join(os.path.dirname(model_file), self.calibrated_model_file)
         print("Storing calibrated params in:", self.calibrated_model_file)
-        cls_rep_str = '!!python/name:'+model_dict['model_t'].__module__+'.'+model_dict['model_t'].__name__
+        #cls_rep_str = '!!python/name:'+model_dict['model_t'].__module__+'.'+model_dict['model_t'].__name__
+        #model_dict['model_t'] = cls_rep_str
+        cls_rep_str = '!!python/name:'+self.region_model.__class__.__module__+'.'+self.region_model.__class__.__name__
         model_dict['model_t'] = cls_rep_str
         with open(self.calibrated_model_file, "w") as out:
             out.write("# This file has been automatically generated after a calibration run\n")
