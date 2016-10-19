@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 import yaml
-#import numpy as np
 from datetime import datetime
-import copy
+#import copy
 
 from shyft import api
-#from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
 from shyft.repository.interpolation_parameter_repository import (
     InterpolationParameterRepository)
 from shyft.repository import geo_ts_repository_collection
@@ -16,20 +14,6 @@ from . import config_interfaces
 def utctime_from_datetime(dt):
     utc_calendar = api.Calendar()
     return utc_calendar.time(api.YMDhms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second))
-
-def geots_repo_from_config(datasets_config_file, epsg=None):
-    datasets_config = YamlContent(datasets_config_file)
-    # Construct GeoTsRepository
-    geo_ts_repos = []
-    src_types_to_extract = []
-    for source in datasets_config.sources:
-        if epsg is not None:
-            source['params'].update({'epsg': epsg})
-        # geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params'], self.region_config))
-        geo_ts_repos.append(geo_ts_repo_constructor(source['repository'], source['params']))
-        src_types_to_extract.append(source['types'])
-    return geo_ts_repository_collection.GeoTsRepositoryCollection(geo_ts_repos,
-                                                                         src_types_per_repo=src_types_to_extract)
 
 
 class YamlContent(object):
@@ -89,8 +73,6 @@ class ModelConfig(config_interfaces.ModelConfig):
         return self._config.model_parameters
 
     def model_type(self):
-        #module, model_t = self._config.model_t.split(".")
-        #return getattr(globals()[module], model_t)
         return self._config.model_t
 
 
@@ -145,31 +127,19 @@ class YAMLSimConfig(object):
             config = yaml.load(cfg)[config_section]
         # Expose all keys in yaml file as attributes
         self.__dict__.update(config)
-        # Override the parameters with kwargs
-        #self.__dict__.update(kwargs)
+        # Override the parameters with kwarg overrides
         self.__dict__.update(overrides.get("config", {}))
 
         self.validate()
-
-        # Create a time axis
-        # It is assumed that the time specified in the config file is in UTC
-        #self.start_time = utctime_from_datetime(self.start_datetime)
-        #self.time_axis = api.Timeaxis(
-        #    self.start_time, self.run_time_step, self.number_of_steps)
 
         # If region and interpolation ids are not present, just use fake ones
         self.region_model_id = str(self.region_model_id)
         self.interpolation_id = 0 if not hasattr(self, "interpolation_id") \
                            else int(self.interpolation_id)
-        #self.initial_state_repo = None
-        #self.end_state_repo = None
-
         self.construct_configs(overrides)
 
     @staticmethod
     def construct_geots_repo(datasets_config, epsg=None):
-        #datasets_config = YamlContent(datasets_config_file)
-        # Construct GeoTsRepository
         geo_ts_repos = []
         src_types_to_extract = []
         for source in datasets_config.sources:
@@ -183,7 +153,6 @@ class YAMLSimConfig(object):
 
     @staticmethod
     def construct_region_model_repo(region_config, model_config, region_model_id):
-        #region_config = RegionConfig(self.region_config_file)
         return region_model_repo_constructor(region_config.repository()['class'],
             region_config, model_config, region_model_id)
 
@@ -239,7 +208,7 @@ class YAMLSimConfig(object):
             return self.end_state['repository']['class'](**self.end_state['repository']['params'])
 
     def construct_configs(self, overrides):
-        # Read region, model and datasets config files
+        # Read region, model, datasets and interpolation config files
         self.region_config_file = os.path.join(
             self.config_dir, self.region_config_file)
         self.region_config = RegionConfig(self.region_config_file)
@@ -254,46 +223,7 @@ class YAMLSimConfig(object):
 
         self.interpolation_config_file = os.path.join(
             self.config_dir, self.interpolation_config_file)
-        self.interpolation_config = InterpolationConfig(interpolation_config_file)
-
-        # Construct RegionModelRepository
-        #self.region_model_repo = region_model_repo_constructor(self.region_config.repository()['class'],
-        #    self.region_config, self.model_config, self.region_model_id)
-
-        # Construct InterpolationParameterRepository
-        #self.interp_repos = InterpolationParameterRepository(self.interpolation_config)
-
-        # Construct GeoTsRepository
-        #self.geo_ts = geots_repo_from_config(self.datasets_config_file, self.region_config.domain()["EPSG"])
-
-        # Construct destination repository
-        # self.dst_repo = []
-        # if hasattr(self.datasets_config, 'destinations'):
-        #     for repo in self.datasets_config.destinations:
-        #         repo['repository'] = target_repo_constructor(repo['repository'],repo['params'])
-        #         #[dst['time_axis'].update({'start_datetime': utctime_from_datetime(dst['time_axis']['start_datetime'])})
-        #         # for dst in repo['1D_timeseries'] if dst['time_axis'] is not None]
-        #         [dst.update({'time_axis':self.time_axis}) if dst['time_axis'] is None
-        #          else dst.update({'time_axis':api.Timeaxis(utctime_from_datetime(dst['time_axis']['start_datetime']),
-        #                                                    dst['time_axis']['time_step_length'],
-        #                                                    dst['time_axis']['number_of_steps'])}) for dst in repo['1D_timeseries']]
-        #         self.dst_repo.append(repo)
-
-        # Construct reference data repository
-        # self.ref_repo = []
-        # if hasattr(self, 'references'):
-        #     for repo in self.references:
-        #         repo_ = target_repo_constructor(repo['repository'],repo['params'])
-        #         [dst.update({'repo': repo_}) for dst in repo['1D_timeseries']]
-        #         self.ref_repo.extend(repo['1D_timeseries'])
-
-        # Construct StateRepository
-        # if hasattr(self, 'initial_state'):
-        #     self.initial_state_repo = self.initial_state['repository']['class'](
-        #         **self.initial_state['repository']['params'])
-        # if hasattr(self, 'end_state'):
-        #     self.end_state_repo = self.end_state['repository']['class'](
-        #         **self.end_state['repository']['params'])
+        self.interpolation_config = InterpolationConfig(self.interpolation_config_file)
 
     def __repr__(self):
         srepr = "%s::%s(" % (self.__class__.__name__, self._config_section)
@@ -322,8 +252,6 @@ class YAMLCalibConfig(object):
             if not os.path.isabs(self.calibrated_model_file):
                 self.calibrated_model_file = os.path.join(
                     os.path.dirname(os.path.abspath(config_file)), self.calibrated_model_file)
-        #self.target_repo = []
-        #self.construct_target_repo()
 
     def validate(self):
         """Check for the existence of mandatory fields."""
@@ -336,10 +264,6 @@ class YAMLCalibConfig(object):
         target_repo = [{'repository': target_repo_constructor(repo['repository'], repo['params']), '1D_timeseries': [target_ts for target_ts in repo['1D_timeseries']]} for repo in self.target]
         [target_ts.update({'start_datetime': utctime_from_datetime(target_ts['start_datetime'])}) for repo in target_repo for target_ts in repo['1D_timeseries']]
         return target_repo
-        # for repo in self.target:
-        #     repo['repository'] = target_repo_constructor(repo['repository'], repo['params'])
-        #     [target_ts.update({'start_datetime': utctime_from_datetime(target_ts['start_datetime'])}) for target_ts in repo['1D_timeseries']]
-        #     self.target_repo.append(repo)
 
 
 class YAMLForecastConfig(object):
@@ -366,11 +290,8 @@ class YAMLForecastConfig(object):
             self._config_file = config_file
             self.config_dir = os.path.dirname(config_file)
         else:
-            raise ConfigError(
-                "'config_file' must be an absolute path ")
-
+            raise ConfigError("'config_file' must be an absolute path ")
         self._config_section = config_section
-
         self.forecast_names = forecast_names
 
         # Load main configuration file
@@ -379,7 +300,6 @@ class YAMLForecastConfig(object):
         configs = cfg_m['forecast_runs']
         for name in self.forecast_names:
             assert name in configs
-
 
         start, n, dt = utctime_from_datetime(cfg_m['start_datetime']), cfg_m['number_of_steps'], cfg_m['run_time_step']
         if forecast_time is None:

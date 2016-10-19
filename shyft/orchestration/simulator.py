@@ -48,7 +48,7 @@ class DefaultSimulator(object):
             self._construct_from_repositories(*args, **kwargs)
 
     def _construct_from_repositories(self, region_id, interpolation_id, region_model_repository,
-                                     geo_ts_repository, interpolation_parameter_repository,
+                                     geo_ts_repository, interpolation_parameter_repository, initial_state_repository=None,
                                      catchments=None):
         """
         Create a simple simulator.
@@ -82,6 +82,7 @@ class DefaultSimulator(object):
         self.region_model = region_model_repository.get_region_model(region_id,
                                                                      catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
+        self.initial_state_repo = initial_state_repository
         self.state = None
         self.time_axis = None
         self.region_env = None
@@ -100,6 +101,7 @@ class DefaultSimulator(object):
             self.region_model = other.region_model.__class__(other.region_model)
         #  self.region_model = other.region_model.clone() # __class__(other.region_model)
         self.epsg = other.epsg
+        self.initial_state_repo = other.initial_state_repo
         self.state = other.state
         self.time_axis = other.time_axis
         self.region_env = other.region_env
@@ -116,13 +118,23 @@ class DefaultSimulator(object):
         region_env.rel_hum = sources["relative_humidity"]
         return region_env
 
+    def _fetch_source_run_interp(self, time_axis):
+        print("Fetching sources and running interpolation...")
+        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
+        period = time_axis.total_period()
+        sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
+                                                        geo_location_criteria=bbox)
+        self.region_env = self._get_region_environment(sources)
+
+        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
+        self.region_model.run_interpolation(interp_params, time_axis, self.region_env)
+
     def simulate(self):
         runnable = all((self.state is not None, self.time_axis is not None,
                         self.region_env is not None))
         if runnable:
-            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-            self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
             self.region_model.set_states(self.state)
+            print("Running simulation...")
             self.region_model.run_cells()
         else:
             raise SimulatorError("Model not runnable.")
@@ -137,16 +149,10 @@ class DefaultSimulator(object):
             Time axis defining the simulation period, and step sizes.
         state: shyft.api state
         """
-        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-        if not time_axis is None:
+        if time_axis is not None:
             self.time_axis = time_axis
-        if not state is None:
-            self.state = state
-
-        period = self.time_axis.total_period()
-        sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
-                                                        geo_location_criteria=bbox)
-        self.region_env = self._get_region_environment(sources)
+        self.state = self.get_initial_state() if state is None else state
+        self._fetch_source_run_interp(self.time_axis)
         self.simulate()
 
     def run_forecast(self, time_axis, t_c, state):
@@ -173,35 +179,36 @@ class DefaultSimulator(object):
             runnables.append(simulator)
         return runnables
 
-    def optimize(self, time_axis, state, target_specification, p, p_min, p_max,
-                 max_n_evaluations=1500, tr_start=0.3, tr_stop=0.01):
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
+                 optim_method_params = {'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
         if not hasattr(self.region_model, "optimizer_t"):
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
-        if not all([isinstance(_, self.region_model.parameter_t) for _ in [p, p_min, p_max]]):
-            raise SimulatorError("p, p_min, and p_max must be of type {}"
-                                 "".format(self.region_model.parameter_t.__name__))
-
-        p_vec = [p.get(i) for i in range(p.size())]
-        p_vec_min = [p_min.get(i) for i in range(p_min.size())]
-        p_vec_max = [p_max.get(i) for i in range(p_max.size())]
-
-        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-        period = time_axis.total_period()
-        sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
-                                                        geo_location_criteria=bbox)
-        self.region_env = self._get_region_environment(sources)
+        is_correct_p_type = [isinstance(_, self.region_model.parameter_t) for _ in [p, p_min, p_max]]
+        if not all(is_correct_p_type):
+            raise SimulatorError("{} must be of type {}".format(
+                ','.join([name for i, name in enumerate(['min', 'max', 'init'])
+                          if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
         self.state = state
         self.time_axis = time_axis
-        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-        self.region_model.run_interpolation(interp_params, self.time_axis, self.region_env)
+        if run_interp:
+            self._fetch_source_run_interp(self.time_axis)
         self.region_model.set_states(self.state)
         self.optimizer = self.region_model.optimizer_t(self.region_model,
                                                        target_specification,
-                                                       p_vec_min,
-                                                       p_vec_max)
-        p_vec_opt = self.optimizer.optimize(p_vec, max_n_evaluations=max_n_evaluations,
-                                            tr_start=tr_start, tr_stop=tr_stop)
+                                                       [p_min.get(i) for i in range(p_min.size())],
+                                                       [p_max.get(i) for i in range(p_max.size())])
+        self.optimizer.set_verbose_level(verbose_level)
+        p_vec = [p.get(i) for i in range(p.size())]
+        print("Calibrating...")
+        if optim_method == "min_bobyqa":
+            p_vec_opt = self.optimizer.optimize(p_vec, **optim_method_params)
+        elif optim_method == "dream":
+            p_vec_opt = self.optimizer.optimize_dream(p_vec, **optim_method_params)
+        elif optim_method == "sceua":
+            p_vec_opt = self.optimizer.optimize_sceua(p_vec, **optim_method_params)
+        else:
+            raise ValueError("Unknown optimization method: %s" % self.optim_method)
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
         return p_res
@@ -211,6 +218,20 @@ class DefaultSimulator(object):
         state = self.region_model.__class__.state_t.vector_t()
         self.region_model.get_states(state)
         return state
+
+    def get_initial_state(self):
+        state_id = 0
+        if hasattr(self.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+            self.initial_state_repo.n = self.region_model.size()
+        else:
+            states = self.initial_state_repo.find_state(
+                region_model_id_criteria=self.region_model_id,
+                utc_timestamp_criteria=self.time_axis.start, tag_criteria=None)
+            if len(states) > 0:
+                state_id = states[0].state_id #most_recent_state i.e. <= start time
+            else:
+                raise SimulatorError('No initial state matching criteria.')
+        return self.initial_state_repo.get_state(state_id)
 
     def discharge_adjusted_state(self, obs_discharge, state=None):
         """
