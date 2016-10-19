@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9d4b92c2-21e7-4de4-8295-fe87cb43cda3}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_arome_respository.py</StartupFile>
+    <StartupFile>test_ssa_smg_db.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -15,7 +15,7 @@
     <InterpreterId />
     <InterpreterVersion />
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>PYTHONPATH=$(PYTHONPATH);$(SolutionDir;</Environment>
+    <Environment>PYTHONPATH=$(SolutionDir);$(PYTHONPATH)</Environment>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
