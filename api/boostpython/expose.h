@@ -258,6 +258,21 @@ namespace expose {
             "to get back the optimized parameters for the supplied model and target-specification\n"
             )
         )
+        .def("set_target_specification",&Optimizer::set_target_specification,boost::python::args("target_specification","parameter_lower_bound","parameter_upper_bound"),
+            "Set the target specification, parameter lower and upper bound to be used during \n"
+            "subsequent call to the .optimize() methods.\n"
+            "Only parameters with lower_bound != upper_bound will be subject to optimization\n"
+            "The object properties target_specification,lower and upper bound are updated and\n"
+            "will reflect the current setting.\n"
+            "Parameters\n"
+            "----------\n"
+            "target_specification : TargetSpecificationVectorPts\n"
+            "\t the complete target specification composition\n"
+            "parameter_lower_bound : XXXXParameter\n"
+            "\t the lower bounds of the parameters\n"
+            "parameter_upper_bound: XXXXParameter\n"
+            "\t the upper bounds of the parameters\n"
+        )
         .def("establish_initial_state_from_model", &Optimizer::establish_initial_state_from_model,
             "copies the Optimizer referenced region-model current state\n"
             "to a private store in the Optimizer object.\n"

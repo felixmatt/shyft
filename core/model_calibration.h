@@ -401,8 +401,6 @@ namespace shyft {
                     targets = targetsA;
                     parameter_lower_bound = param_lower_bound;
                     parameter_upper_bound = param_upper_bound;
-                    p_min = p_vector(param_lower_bound);
-                    p_max = p_vector(param_max);
                 }
 
                 /** copy the model current state into internal store of the calibration class */
