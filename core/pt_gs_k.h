@@ -104,7 +104,7 @@ namespace shyft {
 					case 19:return pt.albedo;
 					case 20:return pt.alpha;
 					case 21:return gs.initial_bare_ground_fraction;
-					case 22:return gs.winter_end_day_of_year;
+					case 22:return (double)gs.winter_end_day_of_year;
 					case 23:return gs.calculate_iso_pot_energy ? 1.0 : 0.0;
 
                 default:

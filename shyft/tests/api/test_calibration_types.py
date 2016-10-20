@@ -2,6 +2,7 @@
 from shyft.api import pt_gs_k
 from shyft.api import pt_hs_k
 from shyft.api import pt_ss_k
+from shyft.api import hbv_stack
 import unittest
 import numpy as np
 
@@ -54,7 +55,30 @@ class ShyftApi(unittest.TestCase):
 				]
         self.verify_parameter_for_calibration(pthsk, pthsk_size,valid_names)
 
-
+    def test_hbv_stack_param(self):
+        hbv_size = 16
+        hbv = hbv_stack.HbvParameter()
+        self.assertIsNotNone(hbv)
+        self.assertEqual(hbv.size(), hbv_size)
+        valid_names = [
+        "soil.fc",
+        "soil.beta",
+        "ae.lp",
+        "tank.uz1",
+        "tank.kuz2",
+        "tank.kuz1",
+        "tank.perc",
+        "tank.klz",
+        "snow.lw",
+        "snow.tx",
+        "snow.cx",
+        "snow.ts",
+        "snow.cfr",
+        "p_corr.scale_factor",
+        "pt.albedo",
+        "pt.alpha"
+        ]
+        self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
         ptgsk_size = 24

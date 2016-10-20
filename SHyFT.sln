@@ -31,6 +31,8 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "tests.api", "shyft\tests\ap
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pt_hs_k.python", "api\python\pt_hs_k.python.vcxproj", "{ABCDA123-75D7-455C-AAE4-E89A4E43C062}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hbv_stack.python", "api\python\hbv_stack.python.vcxproj", "{3256A123-75D7-455C-AAE4-E89A4E43C062}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -155,6 +157,18 @@ Global
 		{ABCDA123-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.ActiveCfg = Release|x64
 		{ABCDA123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.ActiveCfg = Release|x64
 		{ABCDA123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.Build.0 = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|Win32.ActiveCfg = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.ActiveCfg = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Debug|x64.Build.0 = Debug|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|Any CPU.ActiveCfg = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|Mixed Platforms.Build.0 = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.ActiveCfg = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.ActiveCfg = Release|x64
+		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -169,6 +183,7 @@ Global
 		{5907ED02-15F7-409C-85F3-B5989175C56C} = {124B0C33-4C3A-4542-96FE-DBACECF30C26}
 		{3E3B8F45-003F-4F88-BF3F-400E7AF8CB1F} = {9FA22655-9861-427A-BE32-A0DADC95F52C}
 		{ABCDA123-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+		{3256A123-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
 	EndGlobalSection
 	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
 		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}

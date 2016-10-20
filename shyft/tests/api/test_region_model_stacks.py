@@ -8,6 +8,7 @@ from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
 from shyft.api import pt_hs_k
+from shyft.api import hbv_stack
 
 try:
     range
@@ -112,6 +113,12 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
 
+    def test_hbv_stack_model_init(self):
+        num_cells = 20
+        model_type = hbv_stack.HbvModel
+        model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+
     def test_model_area_functions(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
@@ -203,6 +210,88 @@ class RegionModel(unittest.TestCase):
         # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
         avg_gs_albedo = model.gamma_snow_state.albedo(cids)
         self.assertIsNotNone(avg_gs_albedo)
+        self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
+        copy_region_model = model.__class__(model)
+        self.assertIsNotNone(copy_region_model)
+        copy_region_model.run_cells()  # just to verify we can copy and run the new model
+
+
+
+    def test_hbv_model_initialize_and_run(self):
+        num_cells = 20
+        model_type = hbv_stack.HbvModel
+        model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        # now modify snow_cv forest_factor to 0.1
+        region_parameter = model.get_region_parameter()
+        #region_parameter.gs.snow_cv_forest_factor = 0.1
+        #region_parameter.gs.snow_cv_altitude_factor = 0.0001
+        #self.assertEqual(region_parameter.gs.snow_cv_forest_factor, 0.1)
+        #self.assertEqual(region_parameter.gs.snow_cv_altitude_factor, 0.0001)
+
+        #self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
+        #self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
+        cal = api.Calendar()
+        time_axis = api.Timeaxis(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
+        model_interpolation_parameter = api.InterpolationParameter()
+        # degC/m, so -0.5 degC/100m
+        model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
+        # if possible use closest neighbor points and solve gradient using equation,(otherwise default min/max height)
+        model_interpolation_parameter.temperature_idw.gradient_by_equation = True
+        # Max number of temperature sources used for one interpolation
+        model_interpolation_parameter.temperature_idw.max_members = 6
+        # 20 km is max distance
+        model_interpolation_parameter.temperature_idw.max_distance = 20000
+        # zscale is used to discriminate neighbors at different elevation than target point
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 1.0)
+        model_interpolation_parameter.temperature_idw.zscale = 0.5
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 0.5)
+        # Pure linear interpolation
+        model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
+        # This enables IDW with default temperature gradient.
+        model_interpolation_parameter.use_idw_for_temperature = True
+        self.assertAlmostEqual(model_interpolation_parameter.precipitation.scale_factor, 1.02)  # just verify this one is as before change to scale_factor
+        model.run_interpolation(
+            model_interpolation_parameter, time_axis,
+            self.create_dummy_region_environment(time_axis,
+                                                 model.get_cells()[int(num_cells / 2)].geo.mid_point()))
+        s0 = hbv_stack.HbvStateVector()
+        for i in range(num_cells):
+            si = hbv_stack.HbvState()
+            si.tank.uz = 40.0
+            si.tank.lz = 40.0
+            s0.append(si)
+        model.set_states(s0)
+        model.set_state_collection(-1, True)  # enable state collection for all cells
+        model.run_cells()
+        cids = api.IntVector()  # optional, we can add selective catchment_ids here
+        sum_discharge = model.statistics.discharge(cids)
+        sum_discharge_value= model.statistics.discharge_value(cids, 0)  # at the first timestep
+        self.assertGreaterEqual(sum_discharge_value,32.0)
+        self.assertIsNotNone(sum_discharge)
+        # Verify that if we pass in illegal cids, then it raises exception(with first failing
+        try:
+            illegal_cids = api.IntVector([0, 4, 5])
+            model.statistics.discharge(illegal_cids)
+            self.assertFalse(True,"Failed test, using illegal cids should raise exception")
+        except RuntimeError as rte:
+            pass
+
+
+        avg_temperature = model.statistics.temperature(cids)
+        avg_precipitation = model.statistics.precipitation(cids)
+        self.assertIsNotNone(avg_precipitation)
+        for time_step in range(time_axis.size()):
+            precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
+            self.assertEqual(precip_raster.size(), num_cells)
+        # example single value spatial aggregation (area-weighted) over cids for a specific timestep
+        #avg_gs_sc_value = model.gamma_snow_response.sca_value(cids, 1)
+        #self.assertGreaterEqual(avg_gs_sc_value,0.0)
+        #avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
+        #self.assertIsNotNone(avg_gs_sca)
+        # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+        #avg_gs_albedo = model.gamma_snow_state.albedo(cids)
+        #self.assertIsNotNone(avg_gs_albedo)
         self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
         copy_region_model = model.__class__(model)
         self.assertIsNotNone(copy_region_model)

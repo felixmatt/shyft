@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{ABCDA123-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>
+    <ProjectGuid>{3256A123-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>shyft</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
@@ -43,23 +43,23 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(PYTHONHOME)\Include;$(PYTHONHOME)\Lib\site-packages\numpy\core\include</IncludePath>
     <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(PYTHONHOME)\libs;$(SHYFT_DEPENDENCIES)\blaslapack</LibraryPath>
-    <TargetName>_pt_hs_k</TargetName>
+    <TargetName>_hbv_stack</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\api\pt_hs_k\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\pt_hs_k\</IntDir>
+    <OutDir>$(SolutionDir)\shyft\api\hbv_stack\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\hbv_stack\</IntDir>
     <PreBuildEventUseInBuild />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(PYTHONHOME)\libs;$(SHYFT_DEPENDENCIES)\blaslapack</LibraryPath>
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(PYTHONHOME)\Include;$(PYTHONHOME)\Lib\site-packages\numpy\core\include</IncludePath>
-    <TargetName>_pt_hs_k</TargetName>
+    <TargetName>_hbv_stack</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)\shyft\api\pt_hs_k\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\pt_hs_k\</IntDir>
+    <OutDir>$(SolutionDir)\shyft\api\hbv_stack\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\hbv_stack\</IntDir>
     <PreBuildEventUseInBuild />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -67,7 +67,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>ARMA_DONT_PRINT_CXX11_WARNING;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;WIN32;_DEBUG;_WINDOWS;_USRDLL;HAVE_LAPACK;CMINPACK_NO_DLL;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ARMA_DONT_PRINT_CXX11_WARNING;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;WIN32;_DEBUG;_WINDOWS;_USRDLL;HAVE_LAPACK;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..;../..</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -101,7 +101,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>ARMA_DONT_PRINT_CXX11_WARNING;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_PYTHON_INTERPRETER_NO_DEBUG;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ARMA_DONT_PRINT_CXX11_WARNING;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;SWIG_PYTHON_INTERPRETER_NO_DEBUG;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>boostpython_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..;../..</AdditionalIncludeDirectories>
       <ErrorReporting>Send</ErrorReporting>
@@ -140,7 +140,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\boostpython\pt_hs_k.cpp" />
+    <ClCompile Include="..\boostpython\hbv_stack.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\boostpython\boostpython_pch.h" />

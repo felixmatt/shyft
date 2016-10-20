@@ -36,6 +36,7 @@
 #include "core/pt_gs_k_cell_model.h"
 #include "core/pt_hs_k_cell_model.h"
 #include "core/pt_ss_k_cell_model.h"
+#include "core/hbv_stack_cell_model.h"
 
 #include "timeseries.h"
 
@@ -360,6 +361,51 @@ namespace shyft {
 					[](const cell& c) { return c.sc.kirchner_discharge; }, ith_timestep);
 		}
 	};
+
+	template <typename cell>
+	struct hbv_soil_cell_state_statistics {
+		shared_ptr<vector<cell>> cells;
+		hbv_soil_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts discharge(const vector<int>& catchment_indexes) const {
+			return apoint_ts(*shyft::core::cell_statistics::
+				sum_catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.soil_moisture; }));
+		}
+		vector<double> discharge(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.soil_moisture; }, ith_timestep);
+		}
+		double discharge_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.soil_moisture; }, ith_timestep);
+		}
+	};
+
+	template <typename cell>											//To be checked & controlled
+	struct hbv_tank_cell_state_statistics {
+		shared_ptr<vector<cell>> cells;
+		hbv_tank_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts discharge(const vector<int>& catchment_indexes) const {
+			return apoint_ts(*shyft::core::cell_statistics::
+				sum_catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.tank_uz; }));			//to be modified
+		}
+		vector<double> discharge(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.tank_uz; }, ith_timestep);		//to be modified
+		}
+		double discharge_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.tank_uz; }, ith_timestep);			//to be modified
+		}
+	};
+
 
     ///< cells with gamma_snow state collection gives access to time-series for state
     template <typename cell>
@@ -777,6 +823,27 @@ namespace shyft {
 		}
 	};
 
+	template <typename cell>
+	struct hbv_soil_cell_response_statistics {
+		shared_ptr<vector<cell>> cells;
+		hbv_soil_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts output(const vector<int>& catchment_indexes) const {
+			return apoint_ts(*shyft::core::cell_statistics::
+				average_catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.soil_outflow; }));
+		}
+		vector<double> output(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.soil_outflow; }, ith_timestep);
+		}
+		double output_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.soil_outflow; }, ith_timestep);
+		}
+	};
     template <typename cell>
     struct actual_evapotranspiration_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
@@ -791,6 +858,28 @@ namespace shyft {
 			return shyft::core::cell_statistics::
 				catchment_feature(*cells, catchment_indexes,
 				[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
+		}
+		double output_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
+		}
+	};
+
+	template <typename cell>
+	struct hbv_actual_evapotranspiration_cell_response_statistics {
+		shared_ptr<vector<cell>> cells;
+		hbv_actual_evapotranspiration_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts output(const vector<int>& catchment_indexes) const {
+			return apoint_ts(*shyft::core::cell_statistics::
+				average_catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.ae_output; }));
+		}
+		vector<double> output(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
 		double output_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
 			return shyft::core::cell_statistics::

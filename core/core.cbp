@@ -75,6 +75,10 @@
 		<Unit filename="geo_point.h" />
 		<Unit filename="glacier_melt.h" />
 		<Unit filename="hbv_snow.h" />
+		<Unit filename="hbv_soil.h" />
+		<Unit filename="hbv_stack.h" />
+		<Unit filename="hbv_stack_cell_model.h" />
+		<Unit filename="hbv_tank.h" />
 		<Unit filename="inverse_distance.h" />
 		<Unit filename="kalman.h" />
 		<Unit filename="kirchner.h" />

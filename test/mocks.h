@@ -32,6 +32,8 @@ namespace shyfttest {
 	};
 
 	namespace mock {
+
+
 		struct PTGSKResponseCollector {
 			std::vector<shyft::timeseries::point> evap;
 			std::vector<shyft::timeseries::point> snow_storage;
@@ -69,6 +71,7 @@ namespace shyfttest {
 
 			template<class S>
 			void collect(size_t idx, const S& state) {
+				// a lot of other states in hbv_
 				_inst_discharge.set(idx, state.kirchner.q);
 			}
 
