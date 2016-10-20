@@ -170,10 +170,14 @@ class RegionModel(unittest.TestCase):
         # This enables IDW with default temperature gradient.
         model_interpolation_parameter.use_idw_for_temperature = True
         self.assertAlmostEqual(model_interpolation_parameter.precipitation.scale_factor, 1.02)  # just verify this one is as before change to scale_factor
-        model.run_interpolation(
-            model_interpolation_parameter, time_axis,
+        model.initialize_cell_environment(time_axis)  # just show how we can split the run_interpolation into two calls(second one optional)
+        model.interpolate(
+            model_interpolation_parameter,
             self.create_dummy_region_environment(time_axis,
                                                  model.get_cells()[int(num_cells / 2)].geo.mid_point()))
+        m_ip_parameter = model.interpolation_parameter  # illustrate that we can get back the passed interpolation parameter as a property of the model
+        self.assertEqual(m_ip_parameter.use_idw_for_temperature,True)  # just to ensure we really did get back what we passed in
+        self.assertAlmostEqual(m_ip_parameter.temperature_idw.zscale, 0.5)
         s0 = pt_gs_k.PTGSKStateVector()
         for i in range(num_cells):
             si = pt_gs_k.PTGSKState()
