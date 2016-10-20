@@ -407,6 +407,7 @@ namespace shyft {
                 void establish_initial_state_from_model() {
                     // 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
                     auto cells = model.get_cells();
+                    initial_state.resize(0);
                     initial_state.reserve((*cells).size());
                     for (const auto& cell : *cells) initial_state.emplace_back(cell.state);
 
@@ -446,12 +447,19 @@ namespace shyft {
                     }
                     model.set_catchment_calculation_filter(catchment_indexes); //Only calculate the catchments that we optimize
                     // 4. detects if initial state is established, if not it automatically do a copy of the current state
-                    if (initial_state.size() != model.get_cells()->size())
+                    auto_initial_state_check();
+                }
+                void auto_initial_state_check() {
+                    if (initial_state.size() != model.get_cells()->size()) {
+                        if (print_progress_level > 0)
+                            std::cout << "auto-establishing initial state:" << initial_state.size() << "\n";
                         establish_initial_state_from_model();
+                    }
                 }
 
                 /** returns the initial state for the i'th cell */
                 state_t get_initial_state(size_t idx) {
+                    auto_initial_state_check();// in case it's not done, do it now
                     return initial_state[idx];
                 }
 
