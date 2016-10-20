@@ -12,9 +12,7 @@ void hbv_tank_test::test_regression() {
 	hbv_tank::response r;
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
-	auto previous_uz = s.uz;
-	auto previous_lz = s.lz;
-	
+
 	calc.step(s, r, t0, t0 + deltahours(1), 0);
 	TS_ASSERT_DELTA(r.outflow, 6.216, 0.0); //TODO: verify some more numbers
 	TS_ASSERT_DELTA(s.uz, 13.2, 0.0);
