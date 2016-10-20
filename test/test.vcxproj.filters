@@ -73,6 +73,10 @@
     <ClInclude Include="kalman_test.h">
       <Filter>interpolation</Filter>
     </ClInclude>
+    <ClInclude Include="hbv_actual_evapotranspiration_test.h" />
+    <ClInclude Include="hbv_soil_test.h" />
+    <ClInclude Include="hbv_stack_test.h" />
+    <ClInclude Include="hbv_tank_test.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -150,6 +154,10 @@
     <ClCompile Include="kalman_test.cpp">
       <Filter>interpolation</Filter>
     </ClCompile>
+    <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />
+    <ClCompile Include="hbv_soil_test.cpp" />
+    <ClCompile Include="hbv_stack_test.cpp" />
+    <ClCompile Include="hbv_tank_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
