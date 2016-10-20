@@ -161,6 +161,8 @@ class DefaultSimulator(object):
         sources = self.geo_ts_repository.get_forecast(self._geo_ts_names, period, t_c,
                                                       geo_location_criteria=bbox)
         self.region_env = self._get_region_environment(sources)
+        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
+        self.region_model.run_interpolation(interp_params, time_axis, self.region_env)
         self.state = state
         self.time_axis = time_axis
         self.simulate()
@@ -176,11 +178,13 @@ class DefaultSimulator(object):
             simulator.state = state
             simulator.time_axis = time_axis
             simulator.region_env = simulator._get_region_environment(source)
+            interp_params = simulator.ip_repos.get_parameters(simulator.interpolation_id)
+            simulator.region_model.run_interpolation(interp_params, time_axis, simulator.region_env)
             runnables.append(simulator)
         return runnables
 
     def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
-                 optim_method_params = {'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
+                 optim_method_params={'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
         if not hasattr(self.region_model, "optimizer_t"):
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))

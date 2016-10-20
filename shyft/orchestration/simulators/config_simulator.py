@@ -17,15 +17,17 @@ class ConfigSimulator(simulator.DefaultSimulator):
     def __init__(self, arg):
         if isinstance(arg, self.__class__):
             super().__init__(arg)
-            config = arg.config
+            self.region_model_id = arg.region_model_id
+            self.time_axis = arg.time_axis
+            self.dst_repo = arg.dst_repo
+            self.end_state_repo = arg.end_state_repo
         else:
             super().__init__(arg.region_model_id, arg.interpolation_id, arg.get_region_model_repo(),
                              arg.get_geots_repo(), arg.get_interp_repo(), initial_state_repository=arg.get_initial_state_repo())
-            config = arg
-        self.region_model_id = config.region_model_id
-        self.time_axis = config.time_axis
-        self.dst_repo = config.get_destination_repo()
-        self.end_state_repo = config.get_end_state_repo()
+            self.region_model_id = arg.region_model_id
+            self.time_axis = arg.time_axis
+            self.dst_repo = arg.get_destination_repo()
+            self.end_state_repo = arg.get_end_state_repo()
 
     def _extraction_method_1d(self,ts_info):
         c_id = ts_info['catchment_id']
@@ -183,17 +185,23 @@ class ConfigForecaster(object):
         # self.forecast_sim = {k: ConfigSimulator(v) for k, v in self.forecast_cfg}  # creating ConfigSimulator from config
         self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}  # making copy rather than creating ConfigSimulator from config to avoid get_region_model being called multiple times
         for k, v in self.forecast_sim.items():
-            v.geo_ts_repository = self.forecast_cfg[k].get_geots_repo() # self.forecast_cfg[k].geo_ts
-            v.ip_repos = self.forecast_cfg[k].get_interp_repo() # self.forecast_cfg[k].interp_repos
+            v.geo_ts_repository = self.forecast_cfg[k].get_geots_repo()
+            v.ip_repos = self.forecast_cfg[k].get_interp_repo()
             v.time_axis = self.forecast_cfg[k].time_axis
             v.config = self.forecast_cfg[k]
 
-    def run(self):
+    def run(self, save_end_state=True, save_result_timeseries=True):
         self.historical_sim.run()
         state = self.historical_sim.reg_model_state
+        if save_result_timeseries:
+            self.historical_sim.save_result_timeseries()
+        if save_end_state:
+            self.historical_sim.save_end_state()
         for k, v in self.forecast_sim.items():
             v.run_forecast(v.time_axis, v.time_axis.start, state)
             state = v.reg_model_state
+            if save_result_timeseries:
+                v.save_result_timeseries()
 
     def save_end_state(self):
         self.historical_sim.save_end_state()
