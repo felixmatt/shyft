@@ -34,9 +34,9 @@ namespace expose {
          ;
 
         class_<response>("SkaugenResponse")
-         .def_readwrite("sca",&response::sca,"from snow-routine in [m³/s]")
-         .def_readwrite("swe",&response::swe,"from snow-routine in [m³/s]")
-         .def_readwrite("outflow",&response::outflow,"from snow-routine in [m³/s]")
+         .def_readwrite("sca",&response::sca,"from snow-routine in [m3/s]")
+         .def_readwrite("swe",&response::swe,"from snow-routine in [m3/s]")
+         .def_readwrite("outflow",&response::outflow,"from snow-routine in [m3/s]")
          .def_readwrite("total_stored_water",&response::total_stored_water,"def. as sca*(swe+lwc)")
          ;
 

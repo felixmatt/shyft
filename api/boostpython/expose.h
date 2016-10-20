@@ -85,26 +85,68 @@ namespace expose {
             "The region model keeps a list of cells, of specified type \n"
                 ,model_name);
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
-        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment,shyft::core::interpolation_parameter>;
+        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment>;
+		auto interpolate_f = &M::template interpolate<shyft::api::a_region_environment>;
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
+		 .def_readonly("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
+		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
+			 "Initializes the cell enviroment (cell.env.ts* )\n" 
+			 "\n"
+			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
+			 "that is local to the cell.The initial values of these time - series is set to zero.\n"
+			 "The region-model time-axis is set to the supplied time-axis, so that\n"
+			 "the any calculation steps will use the supplied time-axis.\n"
+			 "This call is needed once prior to call to the .interpolate() or .run_cells() methods\n"
+			 "\n"
+			 "The call ensures that all cells.env ts are reset to zero, with a time-axis and\n"
+			 " value-vectors according to the supplied time-axis.\n"
+			 " Also note that the region-model.time_axis is set to the supplied time-axis.\n"
+			 "\n"
+			 "Parameters\n"
+			 "----------\n"
+			 " time_axis: Timeaxis\n"
+			 "    specifies the time-axis for the region-model, and thus the cells\n"
+			 "Returns\n"
+			 "-------\n"
+			 "Nothing\n"
+		 )
+		 .def("interpolate", interpolate_f, args("interpolation_parameter", "env"),
+				"do interpolation interpolates region_environment temp,precip,rad.. point sources\n"
+				"to a value representative for the cell.mid_point().\n"
+				"\n"
+				"note: initialize_cell_environment should be called once prior to this function\n"
+				"\n"
+				"Only supplied vectors of temp, precip etc. are interpolated, thus\n"
+				"the user of the class can choose to put in place distributed series in stead.\n"
+				"\n"
+				"Parameters\n"
+				"----------\n"
+				" interpolation_parameter : InterpolationParameter\n"
+				"     contains wanted parameters for the interpolation\n"
+				" env: RegionEnvironemnt\n"
+				"     contains the ref: region_environment type\n"
+		 )
          .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0),"run_cells calculations over specified time_axis, require that run_interpolation is done first")
          .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
                     "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
                     "to a value representative for the cell.mid_point().\n"
                     "\n"
-                    "note: Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().\n"
-                    "\n"
-                    "Only supplied vectors of temp, precip etc. are interpolated, thus\n"
-                    "the user of the class can choose to put in place distributed series in stead.\n"
-                    "\n"
-                    "param interpolation_parameter contains wanted parameters for the interpolation\n"
-                    "param time_axis should be equal to the ref: timeaxis the ref: region_model is prepared running for.\n"
-                    "param env contains the ref: region_environment type\n"
+                    "note: This function is equivalent to\n"
+					"    self.initialize_cell_environment(time_axis)\n"
+					"    self.interpolate(interpolation_parameter,env)\n"
+				    "Parameters\n"
+					"----------\n"
+					" interpolation_parameter: InterpolationParameter\n"
+					"   contains wanted parameters for the interpolation\n"
+					" time_axis : Timeaxis\n"
+					"    should be equal to the ref: timeaxis the ref: region_model is prepared running for.\n"
+					" env : RegionEnvironment\n"
+					"    contains the ref: region_environment type\n"
             )
          .def("set_region_parameter",&M::set_region_parameter,args("p"),
                     "set the region parameter, apply it to all cells \n"

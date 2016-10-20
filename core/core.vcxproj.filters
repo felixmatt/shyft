@@ -108,11 +108,21 @@
     <ClInclude Include="kalman.h">
       <Filter>interpolation</Filter>
     </ClInclude>
-    <ClInclude Include="hbv_actual_evapotranspiration.h" />
-    <ClInclude Include="hbv_soil.h" />
-    <ClInclude Include="hbv_stack.h" />
-    <ClInclude Include="hbv_stack_cell_model.h" />
-    <ClInclude Include="hbv_tank.h" />
+    <ClInclude Include="hbv_actual_evapotranspiration.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_soil.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_tank.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_stack.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_stack_cell_model.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
