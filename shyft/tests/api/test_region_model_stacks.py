@@ -242,9 +242,9 @@ class RegionModel(unittest.TestCase):
         #
         # create target specification
         #
-
+        model.set_states(s0)  # remember to set the s0 again, so we have the same initial condition for our game
         tsa = api.TsTransform().to_average(t0, dt, n, sum_discharge)
-        t_spec_1 = api.TargetSpecificationPts(tsa, cids, 0.7, api.NASH_SUTCLIFFE, 1.0, 1.0, 1.0, api.DISCHARGE, 'test_uid')
+        t_spec_1 = api.TargetSpecificationPts(tsa, cids, 1.0, api.KLING_GUPTA, 1.0, 0.0, 0.0, api.DISCHARGE, 'test_uid')
 
         target_spec = api.TargetSpecificationVector()
         target_spec.append(t_spec_1)
@@ -265,10 +265,14 @@ class RegionModel(unittest.TestCase):
         orig_c2 = p0.kirchner.c2
         # model.get_cells()[0].env_ts.precipitation.set(0, 5.1)
         # model.get_cells()[0].env_ts.precipitation.set(1, 4.9)
-        #p0.kirchner.c1 = -2.4
-        # p0.kirchner.c2 = 0.91
+        p0.kirchner.c1 = -2.4
+        p0.kirchner.c2 = 0.91
         opt_param = optimizer.optimize(p0, 1500, 0.1, 1e-5)
         goal_fx = optimizer.calculate_goal_function(opt_param)
+        p0.kirchner.c1 = -2.4
+        p0.kirchner.c2 = 0.91
+        #goal_fx1 = optimizer.calculate_goal_function(p0)
+
         self.assertLessEqual(goal_fx, 10.0)
         self.assertAlmostEqual(orig_c1, opt_param.kirchner.c1, 4)
         self.assertAlmostEqual(orig_c2, opt_param.kirchner.c2, 4)
