@@ -282,16 +282,20 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 			x[i] = (lower[i] + upper[i])*0.5;
 		}
 	}
-	optimizer<region_model_t, parameter_accessor_t, pts_t > rm_opt(rm, target_specs, lower, upper);
+    optimizer<region_model_t, parameter_accessor_t, pts_t > rm_opt(rm);
+    parameter_accessor_t lwr;lwr.set(lower);
+    parameter_accessor_t upr;upr.set(upper);
+    parameter_accessor_t px; px.set(x);
+    rm_opt.set_target_specification(target_specs, lwr, upr);
 	rm_opt.set_verbose_level(1);
 	auto tz = ec::utctime_now();
-	auto x_optimized = rm_opt.optimize(x, 2500, 0.2, 5e-4);
+	auto x_optimized = rm_opt.optimize(px, 2500, 0.2, 5e-4);
 	auto used = ec::utctime_now() - tz;
 	cout << "results: " << used << " seconds, nthreads = " << rm.ncore << endl;
 	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
-		cout << "'" << pa.get_name(i) << "' = " << x[i] << " -> " << x_optimized[i] << endl;
+		cout << "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) << endl;
 	}
 	cout << " done" << endl;
 }

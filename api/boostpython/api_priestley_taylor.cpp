@@ -30,7 +30,7 @@ namespace expose {
                 "Calculate PotentialEvapotranspiration, given specified parameters\n"
                 "\n"
                 "	 * param temperature in [degC]\n"
-                "	 * param global_radiation [W/m²]\n"
+                "	 * param global_radiation [W/m2]\n"
                 "	 * param rhumidity in interval [0,1]\n"
                 "	 * return PotentialEvapotranspiration in [mm/s] units\n"
                 "	 *\n"

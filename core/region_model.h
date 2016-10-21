@@ -112,7 +112,6 @@ namespace shyft {
         * \tparam TSA  time-series accessor to use for converting the ts to the execution time-axis.
         * \tparam TA   time-axis \ref shyft::timeseries::timeaxis that goes into the constructor of TSA object
         */
-        #ifndef SWIG
         template <class GPTS, class TSA, class TA>
         class idw_compliant_geo_point_ts {
             const GPTS& s; //< type geo_point_ts, and reference is ok because we use this almost internally... hm.. in run_idw_interpolation, (so we should define it there..)
@@ -124,7 +123,6 @@ namespace shyft {
             geo_point mid_point() const { return s.mid_point(); }
             double value(size_t i) const { return tsa.value(i); }
         };
-        #endif
 
         /** \brief region_environment contains the measured/forecasted sources of
         *  environmental properties, each that contains a geo_point and a time-series
@@ -247,6 +245,7 @@ namespace shyft {
                 time_axis = c.time_axis;
                 catchment_filter = c.catchment_filter;
                 n_catchments = c.n_catchments;
+				ip_parameter = c.ip_parameter;
                 catchment_parameters.clear();
                 // Then, clone from c
                 cix_to_cid=c.cix_to_cid;
@@ -288,137 +287,172 @@ namespace shyft {
             }
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
+			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const {
                 return cix_to_cid.size();
             }
-            /** \brief run_interpolation interpolates region_environment temp,precip,rad.. point sources
-            * to a value representative for the cell.mid_point().
-            *
-            * \note Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().
-            *
-            * Only supplied vectors of temp, precip etc. are interpolated, thus
-            * the user of the class can choose to put in place distributed series in stead.
-            *
-            * \tparam RE \ref region_environment type
-            * \tparam IP interpolation parameters
-            *
-            * \param interpolation_parameter contains wanted parameters for the interpolation
-            * \param time_axis should be equal to the \ref timeaxis the \ref region_model is prepared running for.
-            * \param env contains the \ref region_environment type
-            * \return void
-            *
-            */
-            template < class RE, class IP>
-            void run_interpolation(const IP& interpolation_parameter, const timeaxis_t& time_axis, const RE& env) {
-                for(auto&c:*cells){
-                    c.init_env_ts(time_axis);
-                }
-                n_catchments = number_of_catchments();// keep this/assume invariant..
-                this->time_axis = time_axis;
-                using namespace shyft::core;
-                using namespace std;
-                namespace idw = shyft::core::inverse_distance;
-                namespace btk = shyft::core::bayesian_kriging;
+			
+			/** \brief Initializes the cell enviroment (cell.env.ts* ) 
+			 * 
+			 * The initializes the cell environment, that keeps temperature, precipitation etc
+			 * that is local to the cell. The intial values of these time-series is set to zero.
+			 * The region-model time-axis is set to the supplied time-axis, so that 
+			 * the any calculation steps will use the supplied time-axis.
+			 * This call is needed prior to call to interpolate() or run_cells().
+			 * The call ensures that all cells.env ts are reset to zero, with a time-axis and
+			 * value-vectors according to the supplied time_axis.
+			 * Also note that the region_model.time_axis is set to the supplied time-axis.
+			 *
+			 * \param time_axis specifies the time-axis for the region-model, and thus the cells.
+			 * \return void
+			 */
+			void initialize_cell_environment(const timeaxis_t& time_axis) {
+				for (auto&c : *cells) {
+					c.init_env_ts(time_axis);
+				}
+				n_catchments = number_of_catchments();// keep this/assume invariant..
+				this->time_axis = time_axis;
+			}
+			
+			/** \brief interpolate the supplied region_environment to the cells
+			*
+			* \note initialize_cell_environment should be called prior to this
+			*
+			* Only supplied vectors of temp, precipitation etc. are interpolated, thus
+			* the user of the class can choose to put in place distributed series in stead.
+			*
+			* \tparam RE \ref region_environment type
+			*
+			* \param ip_parameter contains wanted parameters for the interpolation
+			* \param env contains the \ref region_environment type
+			* \return void
+			*
+			*/
+			template < class RE >
+			void interpolate(const interpolation_parameter& ip_parameter, const RE& env) {
+				using namespace shyft::core;
+				using namespace std;
+				namespace idw = shyft::core::inverse_distance;
+				namespace btk = shyft::core::bayesian_kriging;
 
 
-                typedef shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
-                typedef shyft::timeseries::average_accessor<typename RE::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
-                typedef shyft::timeseries::average_accessor<typename RE::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
-                typedef shyft::timeseries::average_accessor<typename RE::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
-                typedef shyft::timeseries::average_accessor<typename RE::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename RE::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename RE::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename RE::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename RE::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
 
 
-                typedef idw_compliant_geo_point_ts< typename RE::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
+				typedef idw_compliant_geo_point_ts< typename RE::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 
 				typedef idw_compliant_geo_point_ts< typename RE::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
 				typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename IP::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename IP::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
-				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_radiation_model_t;
-				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_windspeed_model_t;
-				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename IP::idw_parameter_t, geo_point> idw_relhum_model_t;
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
+				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_radiation_model_t;
+				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
+				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
 				typedef  shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
-
+				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
 				// Allocate memory for the source_destinations, put in the reference to the parameters:
 				// Run one thread for each optional interpolation
-				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fillvalue 0.0
+				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fill-value 0.0
 				//  the intention is that the orchestrator at the outside could provide it's own ready-made
 				//  interpolated/distributed signal, e.g. temperature input from arome-data
 
 				auto btkx = async(launch::async, [&]() {
 					if (env.temperature != nullptr) {
-                        if(env.temperature->size()>1) {
-                            if(interpolation_parameter.use_idw_for_temperature) {
-                                idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>(
-                                        time_axis, *env.temperature, interpolation_parameter.temperature_idw, *cells,
-                                        [](cell_t &d, size_t ix, double value) { d.env_ts.temperature.set(ix, value); }
-                                );
-                            } else {
-                                btk::btk_interpolation<btk_tsa_t>(
-                                    begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
-                                    time_axis, interpolation_parameter.temperature
-                                );
-                            }
-                        } else {
-                            // just one temperature ts. just a a clean copy to destinations
-                            btk_tsa_t tsa((*env.temperature)[0].ts, time_axis);
-                            typename cell_t::env_ts_t::temperature_ts_t temp_ts(time_axis, 0.0);
-                            for(size_t i=0;i<time_axis.size();++i) {
-                                temp_ts.set(i, tsa.value(i));
-                            }
-                            for(auto& c:*cells) {
-                                c.env_ts.temperature=temp_ts;
-                            }
-                        }
-                    }
-                });
+						if (env.temperature->size()>1) {
+							if (ip_parameter.use_idw_for_temperature) {
+								idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>(
+									time_axis, *env.temperature, ip_parameter.temperature_idw, *cells,
+									[](cell_t &d, size_t ix, double value) { d.env_ts.temperature.set(ix, value); }
+								);
+							} else {
+								btk::btk_interpolation<btk_tsa_t>(
+									begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
+									time_axis, ip_parameter.temperature
+									);
+							}
+						} else {
+							// just one temperature ts. just a a clean copy to destinations
+							btk_tsa_t tsa((*env.temperature)[0].ts, time_axis);
+							typename cell_t::env_ts_t::temperature_ts_t temp_ts(time_axis, 0.0);
+							for (size_t i = 0;i<time_axis.size();++i) {
+								temp_ts.set(i, tsa.value(i));
+							}
+							for (auto& c : *cells) {
+								c.env_ts.temperature = temp_ts;
+							}
+						}
+					}
+				});
 
-                auto idw_precip = async(launch::async, [&]() {
-                    if (env.precipitation != nullptr)
-                        idw::run_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t>(
-                        time_axis, *env.precipitation, interpolation_parameter.precipitation, *cells,
-                        [](cell_t &d, size_t ix, double value) { d.env_ts.precipitation.set(ix, value); }
-                    );
-                });
+				auto idw_precip = async(launch::async, [&]() {
+					if (env.precipitation != nullptr)
+						idw::run_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t>(
+							time_axis, *env.precipitation, ip_parameter.precipitation, *cells,
+							[](cell_t &d, size_t ix, double value) { d.env_ts.precipitation.set(ix, value); }
+					);
+				});
 
-                auto idw_radiation = async(launch::async, [&]() {
-                    if (env.radiation != nullptr)
-                        idw::run_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
-                        time_axis, *env.radiation, interpolation_parameter.radiation, *cells,
-                        [](cell_t &d, size_t ix, double value) { d.env_ts.radiation.set(ix, value); }
-                    );
-                });
+				auto idw_radiation = async(launch::async, [&]() {
+					if (env.radiation != nullptr)
+						idw::run_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
+							time_axis, *env.radiation, ip_parameter.radiation, *cells,
+							[](cell_t &d, size_t ix, double value) { d.env_ts.radiation.set(ix, value); }
+					);
+				});
 
-                auto idw_wind_speed = async(launch::async, [&]() {
-                    if (env.wind_speed != nullptr)
-                        idw::run_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
-                        time_axis, *env.wind_speed, interpolation_parameter.wind_speed, *cells,
-                        [](cell_t &d, size_t ix, double value) { d.env_ts.wind_speed.set(ix, value); }
-                    );
-                    //else
-                    //    for_each(begin(*cells), end(*cells), [this] (cell_t& d) { d.constant_wind_speed = region_ws; });
-                });
+				auto idw_wind_speed = async(launch::async, [&]() {
+					if (env.wind_speed != nullptr)
+						idw::run_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
+							time_axis, *env.wind_speed, ip_parameter.wind_speed, *cells,
+							[](cell_t &d, size_t ix, double value) { d.env_ts.wind_speed.set(ix, value); }
+					);
+				});
 
-                auto idw_rel_hum = async(launch::async, [&]() {
-                    if (env.rel_hum != nullptr)
-                        idw::run_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
-                        time_axis, *env.rel_hum, interpolation_parameter.rel_hum, *cells,
-                        [](cell_t &d, size_t ix, double value) { d.env_ts.rel_hum.set(ix, value); }
-                    );
-                    //else, set the constant ? as ts.
-                    //  for_each(begin(*cells), end(*cells), [this] (cell_t& d) { d.constant_rel_hum = region_rel_hum; });
-                });
+				auto idw_rel_hum = async(launch::async, [&]() {
+					if (env.rel_hum != nullptr)
+						idw::run_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
+							time_axis, *env.rel_hum, ip_parameter.rel_hum, *cells,
+							[](cell_t &d, size_t ix, double value) { d.env_ts.rel_hum.set(ix, value); }
+					);
+				});
 
-                btkx.get();
-                idw_precip.get();
-                idw_radiation.get();
-                idw_wind_speed.get();
-                idw_rel_hum.get();
+				btkx.get();
+				idw_precip.get();
+				idw_radiation.get();
+				idw_wind_speed.get();
+				idw_rel_hum.get();
+			}
+
+            /** \brief intitializes cell.env and project region env. timeseries to cells.
+            *
+            * \note Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().
+            *
+            * Only supplied vectors of temp, precip etc. are interpolated, thus
+            * the user of the class can choose to put in place distributed series in stead.
+			*
+			* This call simply calls initialize_cell_environment() followed by interpolate<..>(..)
+            *
+            * \tparam RE \ref region_environment type
+            *
+            * \param ip_parameter contains wanted parameters for the interpolation
+            * \param time_axis should be equal to the \ref timeaxis the \ref region_model is prepared running for.
+            * \param env contains the \ref region_environment type
+            * \return void
+            *
+            */
+            template < class RE >
+            void run_interpolation(const interpolation_parameter& ip_parameter, const timeaxis_t& time_axis, const RE& env) {
+				initialize_cell_environment(time_axis);
+				interpolate<RE>(ip_parameter, env);
             }
 
             /** \brief run_cells calculations over specified time_axis

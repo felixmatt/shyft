@@ -85,26 +85,68 @@ namespace expose {
             "The region model keeps a list of cells, of specified type \n"
                 ,model_name);
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
-        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment,shyft::core::interpolation_parameter>;
+        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment>;
+		auto interpolate_f = &M::template interpolate<shyft::api::a_region_environment>;
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
+		 .def_readonly("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
+		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
+			 "Initializes the cell enviroment (cell.env.ts* )\n" 
+			 "\n"
+			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
+			 "that is local to the cell.The initial values of these time - series is set to zero.\n"
+			 "The region-model time-axis is set to the supplied time-axis, so that\n"
+			 "the any calculation steps will use the supplied time-axis.\n"
+			 "This call is needed once prior to call to the .interpolate() or .run_cells() methods\n"
+			 "\n"
+			 "The call ensures that all cells.env ts are reset to zero, with a time-axis and\n"
+			 " value-vectors according to the supplied time-axis.\n"
+			 " Also note that the region-model.time_axis is set to the supplied time-axis.\n"
+			 "\n"
+			 "Parameters\n"
+			 "----------\n"
+			 " time_axis: Timeaxis\n"
+			 "    specifies the time-axis for the region-model, and thus the cells\n"
+			 "Returns\n"
+			 "-------\n"
+			 "Nothing\n"
+		 )
+		 .def("interpolate", interpolate_f, args("interpolation_parameter", "env"),
+				"do interpolation interpolates region_environment temp,precip,rad.. point sources\n"
+				"to a value representative for the cell.mid_point().\n"
+				"\n"
+				"note: initialize_cell_environment should be called once prior to this function\n"
+				"\n"
+				"Only supplied vectors of temp, precip etc. are interpolated, thus\n"
+				"the user of the class can choose to put in place distributed series in stead.\n"
+				"\n"
+				"Parameters\n"
+				"----------\n"
+				" interpolation_parameter : InterpolationParameter\n"
+				"     contains wanted parameters for the interpolation\n"
+				" env: RegionEnvironemnt\n"
+				"     contains the ref: region_environment type\n"
+		 )
          .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0),"run_cells calculations over specified time_axis, require that run_interpolation is done first")
          .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
                     "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
                     "to a value representative for the cell.mid_point().\n"
                     "\n"
-                    "note: Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().\n"
-                    "\n"
-                    "Only supplied vectors of temp, precip etc. are interpolated, thus\n"
-                    "the user of the class can choose to put in place distributed series in stead.\n"
-                    "\n"
-                    "param interpolation_parameter contains wanted parameters for the interpolation\n"
-                    "param time_axis should be equal to the ref: timeaxis the ref: region_model is prepared running for.\n"
-                    "param env contains the ref: region_environment type\n"
+                    "note: This function is equivalent to\n"
+					"    self.initialize_cell_environment(time_axis)\n"
+					"    self.interpolate(interpolation_parameter,env)\n"
+				    "Parameters\n"
+					"----------\n"
+					" interpolation_parameter: InterpolationParameter\n"
+					"   contains wanted parameters for the interpolation\n"
+					" time_axis : Timeaxis\n"
+					"    should be equal to the ref: timeaxis the ref: region_model is prepared running for.\n"
+					" env : RegionEnvironment\n"
+					"    contains the ref: region_environment type\n"
             )
          .def("set_region_parameter",&M::set_region_parameter,args("p"),
                     "set the region parameter, apply it to all cells \n"
@@ -167,6 +209,21 @@ namespace expose {
         typedef shyft::core::model_calibration::optimizer<RegionModel, parameter_t, pts_t> Optimizer;
         typedef typename Optimizer::target_specification_t target_specification_t;
 
+        // fix overloads mapping vs. vector& new parameter stuff
+        std::vector<double>(Optimizer::*optimize_v)(std::vector<double>, size_t, double, double ) = &Optimizer::optimize;
+        parameter_t(Optimizer::*optimize_p)(const parameter_t&, size_t, double, double) = &Optimizer::optimize;
+
+        std::vector<double>(Optimizer::*optimize_dream_v)(std::vector<double>, size_t) = &Optimizer::optimize_dream;
+        parameter_t(Optimizer::*optimize_dream_p)(const parameter_t&, size_t) = &Optimizer::optimize_dream;
+
+        std::vector<double> (Optimizer::*optimize_sceua_v)(std::vector<double>,size_t,double,double)=&Optimizer::optimize_sceua;
+        parameter_t(Optimizer::*optimize_sceua_p)(const parameter_t&, size_t, double, double) = &Optimizer::optimize_sceua;
+
+        double (Optimizer::*calculate_goal_function_v)(std::vector<double>) = &Optimizer::calculate_goal_function;
+        double (Optimizer::*calculate_goal_function_p)(const parameter_t&) = &Optimizer::calculate_goal_function;
+
+
+
         class_<Optimizer>(optimizer_name,
             "The optimizer for parameters in a ref: shyft::core::region_model\n"
             "It provides needed functionality to orchestrate a search for the optimal parameters so that the goal function\n"
@@ -194,9 +251,38 @@ namespace expose {
                     "param p_max maximum values for the parameters to be  optimized\n"
                   )
         )
+        .def(init<RegionModel&>(boost::python::args("model"), 
+            "Construct a parameter Optimizer for the supplied model\n"
+            "Use method .set_target_specification(...) to provide the target specification,\n"
+            "then invoke opt_param= o.optimize(p_starting_point..)\n"
+            "to get back the optimized parameters for the supplied model and target-specification\n"
+            )
+        )
+        .def("set_target_specification",&Optimizer::set_target_specification,boost::python::args("target_specification","parameter_lower_bound","parameter_upper_bound"),
+            "Set the target specification, parameter lower and upper bound to be used during \n"
+            "subsequent call to the .optimize() methods.\n"
+            "Only parameters with lower_bound != upper_bound will be subject to optimization\n"
+            "The object properties target_specification,lower and upper bound are updated and\n"
+            "will reflect the current setting.\n"
+            "Parameters\n"
+            "----------\n"
+            "target_specification : TargetSpecificationVectorPts\n"
+            "\t the complete target specification composition\n"
+            "parameter_lower_bound : XXXXParameter\n"
+            "\t the lower bounds of the parameters\n"
+            "parameter_upper_bound: XXXXParameter\n"
+            "\t the upper bounds of the parameters\n"
+        )
+        .def("establish_initial_state_from_model", &Optimizer::establish_initial_state_from_model,
+            "copies the Optimizer referenced region-model current state\n"
+            "to a private store in the Optimizer object.\n"
+            "This state is used to for restore prior to each run of the model during calibration\n"
+            "notice that if you forget to call this method, it will be called automatically once you\n"
+            "call one of the optimize methods.\n"
+        )
         .def("get_initial_state",&Optimizer::get_initial_state,args("i"),"get a copy of the i'th cells initial state")
-        .def("optimize",&Optimizer::optimize,args("p","max_n_evaluations","tr_start","tr_stop"),
-                "Call to optimize model, starting with p parameter set, using p_min..p_max as boundaries.\n"
+        .def("optimize",optimize_v,args("p","max_n_evaluations","tr_start","tr_stop"),
+                "(deprecated)Call to optimize model, starting with p parameter set, using p_min..p_max as boundaries.\n"
                 "where p is the full parameter vector.\n"
                 "the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer\n"
                 "down to a minimum number to facilitate fast run.\n"
@@ -206,7 +292,19 @@ namespace expose {
                 "param tr_stop is the trust region stop, default 1e-5, ref bobyqa\n"
                 "return the optimized parameter vector\n"
         )
-        .def("optimize_dream",&Optimizer::optimize_dream,args("p","max_n_evaluations"),
+        .def("optimize", optimize_p, args("p", "max_n_evaluations", "tr_start", "tr_stop"),
+            "Call to optimize model, starting with p parameters\n"
+            "as the start point\n"
+            "The current target specification, parameter lower and upper bound\n"
+            "is taken into account\n"
+            "param p contains the starting point for the parameters\n"
+            "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+            "param tr_start is the trust region start , default 0.1, ref bobyqa\n"
+            "param tr_stop is the trust region stop, default 1e-5, ref bobyqa\n"
+            "return the optimized parameters\n"
+        )
+
+        .def("optimize_dream",optimize_dream_v,args("p","max_n_evaluations"),
                 "Call to optimize model, using DREAM alg., find p, using p_min..p_max as boundaries.\n"
                 "where p is the full parameter vector.\n"
                 "the p_min,p_max specified in constructor is used to reduce the parameterspace for the optimizer\n"
@@ -215,7 +313,17 @@ namespace expose {
                 "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
                 "return the optimized parameter vector\n"
         )
-        .def("optimize_sceua",&Optimizer::optimize_sceua,args("p","max_n_evaluations","x_eps","y_eps"),
+        .def("optimize_dream", optimize_dream_p, args("p", "max_n_evaluations"),
+            "Call to optimize model with the DREAM algorithm.\n"
+            "Currently, the supplied p is ignored (DREAM selects starting point randomly)\n"
+            "The current target specification, parameter lower and upper bound\n"
+            "is taken into account\n"
+            "param p is used as start point (not really, DREAM use random, but we should be able to pass u and q....\n"
+            "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+            "return the optimized parameter vector\n"
+        )
+
+        .def("optimize_sceua",optimize_sceua_v,args("p","max_n_evaluations","x_eps","y_eps"),
                 "Call to optimize model, using SCE UA, using p as startpoint, find p, using p_min..p_max as boundaries.\n"
                 "where p is the full parameter vector.\n"
                 "the p_min,p_max specified in constructor is used to reduce the parameter-space for the optimizer\n"
@@ -226,18 +334,43 @@ namespace expose {
                 "param y_eps is stop condition, and search is stopped when goal function does not improve anymore within this range\n"
                 "return the optimized parameter vector\n"
         )
+        .def("optimize_sceua", optimize_sceua_p, args("p", "max_n_evaluations", "x_eps", "y_eps"),
+            "Call to optimize model using SCE UA algorithm, starting with p parameters\n"
+            "as the start point\n"
+            "The current target specification, parameter lower and upper bound\n"
+            "is taken into account\n"
+            "param p is used as start point and is updated with the found optimal points\n"
+            "param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.\n"
+            "param x_eps is stop condition when all changes in x's are within this range\n"
+            "param y_eps is stop condition, and search is stopped when goal function does not improve anymore within this range\n"
+            "return the optimized parameter vector\n"
+        )
+
         .def("reset_states",&Optimizer::reset_states,"reset the state of the model to the initial state before starting the run/optimize")
         .def("set_parameter_ranges",&Optimizer::set_parameter_ranges,args("p_min","p_max"),"set the parameter ranges, set min=max=wanted parameter value for those not subject to change during optimization")
         .def("set_verbose_level",&Optimizer::set_verbose_level,args("level"),"set verbose level on stdout during calibration,0 is silent,1 is more etc.")
-        .def("calculate_goal_function",&Optimizer::calculate_goal_function,args("full_vector_of_parameters"),
-                "calculate the goal_function as used by minbobyqa,etc.,\n"
+        .def("calculate_goal_function",calculate_goal_function_v,args("full_vector_of_parameters"),
+                "(deprecated)calculate the goal_function as used by minbobyqa,etc.,\n"
                 "using the full set of  parameters vectors (as passed to optimize())\n"
                 "and also ensures that the shyft state/cell/catchment result is consistent\n"
                 "with the passed parameters passed\n"
                 "param full_vector_of_parameters contains all parameters that will be applied to the run.\n"
                 "returns the goal-function, weigthed nash_sutcliffe|Kling-Gupta sum \n"
         )
-        ;
+        .def("calculate_goal_function", calculate_goal_function_p, args("parameters"),
+            "calculate the goal_function as used by minbobyqa,etc.,\n"
+            "using the supplied set of parameters\n"
+            "and also ensures that the shyft state/cell/catchment result is consistent\n"
+            "with the passed parameters passed\n"
+            "param parameters contains all parameters that will be applied to the run.\n"
+            "returns the goal-function, weigthed nash_sutcliffe|Kling-Gupta sum \n"
+        )
+        .def_readwrite("target_specification",&Optimizer::targets,
+            "The current target-specification used during optimization\n")
+        .def_readwrite("parameter_lower_bound",&Optimizer::parameter_lower_bound,"the lower bound parameters\n")
+        .def_readwrite("parameter_upper_bound",&Optimizer::parameter_upper_bound,"the upper bound parameters\n")
+        .def("parameter_active",&Optimizer::active_parameter,"returns true if the parameter is active, i.e. lower != upper bound\n")
+            ;
 
     }
 }
