@@ -240,7 +240,7 @@ namespace shyft {
                 // Then, clone from c
                 cix_to_cid=c.cix_to_cid;
                 cid_to_cix=c.cid_to_cix;
-                initial_states = c.initial_states;
+                initial_state = c.initial_state;
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
                 set_region_parameter(*(c.region_parameter));
                 for(const auto& pair:c.catchment_parameters)
@@ -281,7 +281,7 @@ namespace shyft {
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
 			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
             region_env_t region_env;///< the region environment (shallow-copy?) as passed to the interpolation/run_interpolation
-            std::vector<state_t> initial_states; ///< the initial state, set explicit, or by the first call to .set_states(..) or run_cells()
+            std::vector<state_t> initial_state; ///< the initial state, set explicit, or by the first call to .set_states(..) or run_cells()
 
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const { return cix_to_cid.size(); }
@@ -480,8 +480,8 @@ namespace shyft {
                     throw runtime_error("region_model::run n_steps must be range[0..time-axis-steps]");
                 if (size_t(start_step + n_steps) > time_axis.size())
                     throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
-                if (initial_states.size() != cells->size())
-                    get_states(initial_states); // snap the initial state here, unless it's already set by the user
+                if (initial_state.size() != cells->size())
+                    get_states(initial_state); // snap the initial state here, unless it's already set by the user
                 parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
             }
 
@@ -603,7 +603,7 @@ namespace shyft {
 
             /**\brief set current state for all the cells in the model.
              *
-             * If this is the first 'set_states()', initial_states is copied from the
+             * If this is the first 'set_states()', initial_state is copied from the
              * supplied vector. The purpose of this is to ease scripting so that one
              * always get back the initial state if needed.
              *
@@ -615,15 +615,15 @@ namespace shyft {
                     throw runtime_error("Length of the state vector must equal number of cells");
                 auto state_iter = begin(states);
                 for(auto& cell:*cells) cell.set_state(*(state_iter++));
-                if (initial_states.size() != states.size())
-                    initial_states = states;// if first time, or different copy the state
+                if (initial_state.size() != states.size())
+                    initial_state = states;// if first time, or different copy the state
             }
             /**\brief revert cell states to the initial state (if it exists)
             */
             void revert_to_initial_state() {
-                if (initial_states.size() == 0)
+                if (initial_state.size() == 0)
                     throw runtime_error("Initial state not yet established or set");
-                set_states(initial_states);
+                set_states(initial_state);
             }
             /** \brief enable state collection for specified or all cells
              * \note that this only works if the underlying cell is configured to

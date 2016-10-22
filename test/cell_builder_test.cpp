@@ -288,7 +288,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	if (getenv("SHYFT_IP_ONLY"))
 		return;
 	vector<shyft::core::pt_gs_k::state_t> s0;
-	// not needed, the rm will provide the initial_states for us.rm.get_states(s0);
+	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
 	auto t0 = ec::utctime_now();
 	vector<int> all_catchment_ids;// empty vector means no filtering
 	//rm.set_catchment_calculation_filter(catchment_ids);
