@@ -178,7 +178,7 @@ namespace shyft {
 			::run(const timeaxis_t& time_axis, int start_step, int n_steps) {
 			if (parameter.get() == nullptr)
 				throw std::runtime_error("pt_hs_k::run with null parameter attempted");
-			begin_run(time_axis);
+			begin_run(time_axis,start_step,n_steps);
 			hbv_stack::run_hbv_stack<direct_accessor, hbv_stack::response_t>(
 				geo,
 				*parameter,

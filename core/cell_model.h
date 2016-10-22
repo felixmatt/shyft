@@ -114,7 +114,7 @@ namespace shyft {
 			///< support to initialize env. input series, before interpolation step
 			void   init_env_ts(const typename E::timeaxis_t &ta) { env_ts.init(ta); }
 			///< common support during run, first step is to call begin_run, typically invoked from run() in templates, calls initialize on collectors
-			void begin_run(const timeaxis_t &ta, int start_step=0, int n_steps=0) {
+			void begin_run(const timeaxis_t &ta, int start_step, int n_steps) {
                 rc.initialize(ta,start_step,n_steps, geo.area());
                 sc.initialize(timeaxis_t(ta.start(),ta.delta(),ta.size()+1),start_step,n_steps>0?n_steps+1:0,geo.area());//state collection is both first and last state, so, time-axis +1 step
 			}

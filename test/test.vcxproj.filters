@@ -73,10 +73,18 @@
     <ClInclude Include="kalman_test.h">
       <Filter>interpolation</Filter>
     </ClInclude>
-    <ClInclude Include="hbv_actual_evapotranspiration_test.h" />
-    <ClInclude Include="hbv_soil_test.h" />
-    <ClInclude Include="hbv_stack_test.h" />
-    <ClInclude Include="hbv_tank_test.h" />
+    <ClInclude Include="hbv_actual_evapotranspiration_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_soil_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_stack_test.h">
+      <Filter>method-stacks</Filter>
+    </ClInclude>
+    <ClInclude Include="hbv_tank_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -154,10 +162,18 @@
     <ClCompile Include="kalman_test.cpp">
       <Filter>interpolation</Filter>
     </ClCompile>
-    <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />
-    <ClCompile Include="hbv_soil_test.cpp" />
-    <ClCompile Include="hbv_stack_test.cpp" />
-    <ClCompile Include="hbv_tank_test.cpp" />
+    <ClCompile Include="hbv_actual_evapotranspiration_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="hbv_soil_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="hbv_stack_test.cpp">
+      <Filter>method-stacks</Filter>
+    </ClCompile>
+    <ClCompile Include="hbv_tank_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

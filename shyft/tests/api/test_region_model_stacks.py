@@ -177,12 +177,23 @@ class RegionModel(unittest.TestCase):
             s0.append(si)
         model.set_states(s0)
         model.set_state_collection(-1, True)  # enable state collection for all cells
-        model.run_cells(thread_cell_count=0,start_step=0,n_steps=240)
+        model2 = model_type(model)  # make a copy, so that we in the stepwise run below get a clean copy with all values zero.
+        model.run_cells()  # the default arguments applies: thread_cell_count=0,start_step=0,n_steps=0)
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
         self.assertGreaterEqual(sum_discharge_value, 130.0)
         self.assertIsNotNone(sum_discharge)
+        # now, re-run the process in 24-hours steps x 10
+        model.set_states(s0)  # restore state s0
+        for section in range(10):
+            model2.run_cells(thread_cell_count=0, start_step=section*24, n_steps=24)
+            section_discharge = model2.statistics.discharge(cids)
+            self.assertEqual(section_discharge.size(),sum_discharge.size()) # notice here that the values after current step are 0.0
+        stepwise_sum_discharge = model2.statistics.discharge(cids)
+        # assert stepwise_sum_discharge == sum_discharge
+        diff_ts = sum_discharge.values.to_numpy()-stepwise_sum_discharge.values.to_numpy()
+        self.assertAlmostEqual((diff_ts*diff_ts).max(),0.0,4)
         # Verify that if we pass in illegal cids, then it raises exception(with first failing
         try:
             illegal_cids = api.IntVector([0, 4, 5])
