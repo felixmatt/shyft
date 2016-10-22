@@ -17,11 +17,11 @@ namespace shyft {
 				return test_path;
 			}
 			/**\brief given a relative path, compute the working (abs) path to the file, print out error if not exists */
-			string test_path(string rel_path) {
+			string test_path(string rel_path,bool report) {
 				auto pth = test_root_dir();
 				pth.append(rel_path);
 				pth.normalize();
-				if (!is_regular_file(pth)) {
+				if (!is_regular_file(pth) && report) {
 					cout << "Error: missing: " << pth << ", cwd is: " << test_root_dir() << endl;
 				}
 				string  r = pth.string();
@@ -57,12 +57,20 @@ namespace shyft {
 			shared_ptr<vector<geo_xts_t>>
 				load_from_directory(wkt_reader& wkt_io, function<ec::geo_point(int)> id_to_geo_point, const string& subdir, const string& suffix) {
 				auto filenames = find(subdir, suffix);
-				auto r = make_shared<vector<geo_xts_t>>();
+				
+                vector<future<geo_xts_t>> reads;
 				for (auto f : filenames) {
-					//cout<<"slurp:"<<f<<endl;
-					r->push_back(wkt_io.read_geo_xts_t(suffix + ":" + f, id_to_geo_point, slurp(test_path(subdir + "/" + f))));
+                    reads.emplace_back(
+                        async(launch::async, [&wkt_io,suffix, f, id_to_geo_point, subdir]() ->geo_xts_t {
+                            return wkt_io.read_geo_xts_t(suffix + ":" + f, id_to_geo_point, slurp(test_path(subdir + "/" + f)));
+                        }
+                        )
+                    );
 				}
-				return r;
+                auto r = make_shared<vector<geo_xts_t>>();
+                for (auto &f : reads)
+                    r->push_back(f.get());
+                return r;
 			}
 
 		}

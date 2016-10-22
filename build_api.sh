@@ -23,7 +23,7 @@ py_lib="${py_lib:--L/opt/anaconda/lib -lpython3.4m}"
 armadillo_libs="${armadillo_libs:--lblas -llapack}"
 armadillo_defs="${armadillo_defs:--DARMA_DONT_USE_WRAPPER -DARMA_DONT_PRINT_ERRORS -DARMA_NO_DEBUG}"
 
-boost_libs="${boost_libs:--lboost_python3}"
+boost_libs="${boost_libs:--lboost_python3 -lboost_serialization}"
 boost_include="${boost_include:-}"
 
 shyft_march="${shyft_march:--march=native}"

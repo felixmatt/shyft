@@ -158,11 +158,68 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/filesystem.hpp>
+namespace boost {
+    namespace serialization{
+        template <class Archive> 
+        void serialize(Archive & ar, shyft::core::geo_point &o, const unsigned int version) {
+            ar
+              &  make_nvp("x",o.x)
+              &  make_nvp("y",o.y)
+              &  make_nvp("z",o.z)
+                ;
+        }
+        template <class Archive>
+        void serialize(Archive & ar, shyft::core::land_type_fractions &o, const unsigned int version) {
+            double glacier = o.glacier(), lake = o.lake(), reservoir = o.reservoir(), forest = o.forest();
+            ar
+              &  BOOST_SERIALIZATION_NVP(glacier)
+              &  BOOST_SERIALIZATION_NVP(lake)
+              &  BOOST_SERIALIZATION_NVP(reservoir)
+              &  BOOST_SERIALIZATION_NVP(forest);
+            //auto x = Archive::is_loading();
+            if (Archive::is_loading()) {
+                o.set_fractions(glacier, lake, reservoir, forest);
+            }
+        }
+
+        template <class Archive>
+        void serialize(Archive & ar, shyft::core::geo_cell_data &o, const unsigned int version) {
+            shyft::core::geo_point mid_point=o.mid_point();
+            shyft::core::land_type_fractions ltf=o.land_type_fractions_info();
+            double area_m2=o.area();
+            size_t cid=o.catchment_id();
+            size_t cix=o.catchment_ix;
+            double radiation_factor=o.radiation_slope_factor();
+            ar
+                & BOOST_SERIALIZATION_NVP(mid_point)
+                & BOOST_SERIALIZATION_NVP(ltf)
+                & BOOST_SERIALIZATION_NVP(area_m2)
+                & BOOST_SERIALIZATION_NVP(cid)
+                & BOOST_SERIALIZATION_NVP(cix)
+                & BOOST_SERIALIZATION_NVP(radiation_factor)
+                ;
+            if (Archive::is_loading()) {
+                o = shyft::core::geo_cell_data(mid_point, area_m2, cid, radiation_factor, ltf);
+                o.catchment_ix = cix;
+            } 
+        }
+    } 
+}
+
 void cell_builder_test::test_read_and_run_region_model(void) {
-	//if (!getenv("SHYFT_FULL_TEST")) {
-	//	TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable real run of nea-nidelv in this test");
-	//	return;
-	//}
+	if (!getenv("SHYFT_FULL_TEST")) {
+		TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable real run of nea-nidelv in this test");
+		return;
+	}
 	//
 	// Arrange
 	//
@@ -174,19 +231,44 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	// and a region model for that cell-type
 	typedef ec::region_model<cell_t> region_model_t;
 	// Step 1: read cells from cell_file_repository
-	cout << endl << "1. Reading cells from files (could take some time)" << endl;
-	cell_file_repository<cell_t> cfr(test_path, 557600.0, 6960000.0, 122, 75, 1000.0, 1000.0);
-	auto cells = make_shared<vector<cell_t>>();
-	vector<int> internal_to_catchment_id;
-	TS_ASSERT(cfr.read(cells, internal_to_catchment_id));
-	// Step 2: read geo located ts
+	cout << endl << "1. Reading cells from files" << endl;
+    auto cells = make_shared<vector<cell_t>>();
+    auto global_parameter = make_shared<cell_t::parameter_t>();
+    std::string geo_xml_fname = shyft::experimental::io::test_path("neanidelv/geo_cell_data.xml", false);
+    if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
+        cout << "-> xml file missing,   regenerating xml file (could take some time)" << endl;
+        cell_file_repository<cell_t> cfr(test_path, 557600.0, 6960000.0, 122, 75, 1000.0, 1000.0);
+        TS_ASSERT(cfr.read(cells));
+        //-- stream cell.geo to a store
+        std::vector<shyft::core::geo_cell_data> gcd;
+        gcd.reserve(cells->size());
+        for (const auto&c : *cells) gcd.push_back(c.geo);
+        std::ofstream geo_cell_xml_file(geo_xml_fname);
+        boost::archive::xml_oarchive oa(geo_cell_xml_file);
+        oa << BOOST_SERIALIZATION_NVP(gcd);
+    } 
+    
+    {
+        std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
+        std::ifstream geo_cell_xml_file(geo_xml_fname);
+        boost::archive::xml_iarchive ia(geo_cell_xml_file);
+        ia >> BOOST_SERIALIZATION_NVP(gcd);
+        cells->reserve(gcd.size());
+        cell_t::state_t s0;
+        s0.kirchner.q = 100.0;
+        for (const auto& g : gcd) {
+            cells->push_back(cell_t{ g, global_parameter, s0 });
+        }
+    }
+    
+    // Step 2: read geo located ts
 	cout << "2. Reading geo-located time-series from file (could take a short time)" << endl;
 	geo_located_ts_file_repository geo_f_ts(test_path);
 	region_environment_t re;
 	TS_ASSERT(geo_f_ts.read(re));
+    //return;
 	// Step 3: make a region model
 	cout << "3. creating a region model and run it for a short period" << endl;
-	auto global_parameter = make_shared<shyft::core::pt_gs_k::parameter_t>();
 	region_model_t rm(cells, *global_parameter);
 	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "32");
 	cout << " - ncore set to " << rm.ncore << endl;
@@ -199,7 +281,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	ec::interpolation_parameter ip;
 	ip.use_idw_for_temperature = true;
 	auto ti1 = ec::utctime_now();
-	rm.run_interpolation(ip, ta, re);
+    rm.initialize_cell_environment(ta);
+	rm.interpolate(ip, re);
 	auto ipt = ec::utctime_now() - ti1;
 	cout << "3. a Done with interpolation step used = " << ipt << "[s]" << endl;
 	if (getenv("SHYFT_IP_ONLY"))
@@ -207,7 +290,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	vector<shyft::core::pt_gs_k::state_t> s0;
 	rm.get_states(s0);
 	auto t0 = ec::utctime_now();
-	vector<int> all_catchment_ids;
+	vector<int> all_catchment_ids;// empty vector means no filtering
 	//rm.set_catchment_calculation_filter(catchment_ids);
 	rm.set_snow_sca_swe_collection(-1, true);
 	rm.run_cells();
@@ -226,7 +309,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << "snow_swe :" << endl; print(cout, *snow_swe, i0, n_steps);
 
 	cout << endl << "5. now a run with just two catchments" << endl;
-	vector<int> catchment_ids{ 0, 2 };
+	vector<int> catchment_ids{ 38, 87 };
 	rm.set_catchment_calculation_filter(catchment_ids);
 
 	cout << "5. b Done, now compute new sum" << endl;
@@ -237,7 +320,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	auto snow_sca2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
 	auto snow_swe2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
 
-	cout << "7. Sum discharge for " << internal_to_catchment_id[catchment_ids[0]] << " and " << internal_to_catchment_id[catchment_ids[1]] << " is:" << endl;
+	cout << "7. Sum discharge for " << catchment_ids[0] << " and " << catchment_ids[1] << " is:" << endl;
 
 	cout << "discharge:" << endl; print(cout, *sum_discharge2, i0, n_steps);
 	cout << "snow_sca :" << endl; print(cout, *snow_sca2, i0, n_steps);
@@ -295,7 +378,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
-		cout << "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) << endl;
+		if(rm_opt.active_parameter(i) )
+            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) << endl;
 	}
 	cout << " done" << endl;
 }

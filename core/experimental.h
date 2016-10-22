@@ -491,7 +491,7 @@ namespace shyft {
         /**\brief io utilities for the experimental stuff to support testing and experiments in c++ mode of work*/
         namespace io {
 
-            string test_path(string rel_path);
+            string test_path(string rel_path,bool report = true);
             ///< 'slurp' a file into a  memory string string
             std::string slurp (const std::string& path) ;
             /** \brief  given a subdir, search for all files with matching suffix in that directory, return back list of paths */
@@ -546,7 +546,7 @@ namespace shyft {
 
                 /** \brief read() does all needed stuff to get back a cell vector that can be used for region_model
                  */
-                bool read(shared_ptr<vector<cell_t>> cells,vector<int>& internal_to_catchment_id) {
+                bool read(shared_ptr<vector<cell_t>> cells) {
 
                     // Step 1: get the files into maps/multi_polygons so that we can compute the cells.
                     wkt_reader wkt_io;
@@ -587,12 +587,11 @@ namespace shyft {
                     geo_cell_data_computer region;
                     typedef vector<ec::geo_cell_data> geo_cell_data_vector;
                     typedef map<int,geo_cell_data_vector> catchment_gcd_map;
-                    internal_to_catchment_id.clear();
                     catchment_gcd_map  gcd_map;// a map between an internal catchment_id and the geo_cell_data_vector (by value could cost..)
                     const double default_radiation_factor=0.9;
                     for(const auto&kv:catchment_map) {
-                        internal_to_catchment_id.push_back(kv.first);// we create internal_to_catchment_id map, and  keep core internal id 0-based compact.
-                        size_t internal_id=internal_to_catchment_id.size()-1;
+                        //internal_to_catchment_id.push_back(kv.first);// we create internal_to_catchment_id map, and  keep core internal id 0-based compact.
+                        size_t internal_id = kv.first;//internal_to_catchment_id.size() - 1;
                         gcd_map.insert(
                             make_pair(kv.first,
                                 region.catchment_geo_cell_data( // returns a vector<geo_cell_data>
