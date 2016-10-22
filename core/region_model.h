@@ -162,7 +162,8 @@ namespace shyft {
             shared_ptr<rel_hum_vec_t>       rel_hum;
 
         };
-
+        ///< needs definition of the core time-series
+        typedef shyft::timeseries::point_ts<shyft::time_axis::fixed_dt> pts_t;
         /** \brief region_model is the calculation model for a region, where we can have
         * one or more catchments.
         * The role of the region_model is to describe region, so that we can run the
@@ -196,7 +197,7 @@ namespace shyft {
             typedef std::shared_ptr<cell_vec_t > cell_vec_t_;
             typedef std::shared_ptr<parameter_t> parameter_t_;
             typedef typename cell_vec_t::iterator cell_iterator;
-            typedef typename RE region_env_t;
+            typedef RE region_env_t;
         protected:
 
             cell_vec_t_ cells;///< a region consists of cells that orchestrate the distributed correlation
@@ -321,7 +322,7 @@ namespace shyft {
 			* \return void
 			*
 			*/
-			
+
 			void interpolate(const interpolation_parameter& ip_parameter, const region_env_t& env) {
 				using namespace shyft::core;
 				using namespace std;
@@ -329,19 +330,19 @@ namespace shyft {
 				namespace btk = shyft::core::bayesian_kriging;
 
 
-				typedef shyft::timeseries::average_accessor<region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
-				typedef shyft::timeseries::average_accessor<region_env_t::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
-				typedef shyft::timeseries::average_accessor<region_env_t::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
-				typedef shyft::timeseries::average_accessor<region_env_t::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
-				typedef shyft::timeseries::average_accessor<region_env_t::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
 
 
-				typedef idw_compliant_geo_point_ts< region_env_t::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 
-				typedef idw_compliant_geo_point_ts< region_env_t::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
-				typedef idw_compliant_geo_point_ts< region_env_t::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
-				typedef idw_compliant_geo_point_ts< region_env_t::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
-				typedef idw_compliant_geo_point_ts< region_env_t::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
 				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
 				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
@@ -349,7 +350,7 @@ namespace shyft {
 				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
 				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
-				typedef  shyft::timeseries::average_accessor<region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
+				typedef  shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
                 this->region_env = env;// this could be a shallow copy
 				// Allocate memory for the source_destinations, put in the reference to the parameters:
@@ -605,7 +606,7 @@ namespace shyft {
              * If this is the first 'set_states()', initial_states is copied from the
              * supplied vector. The purpose of this is to ease scripting so that one
              * always get back the initial state if needed.
-             * 
+             *
              * \param states is a vector<state_t> of all states, must match size/order of cells.
              * \note throws runtime-error if states.size is different from cells.size
              */
