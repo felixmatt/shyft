@@ -159,10 +159,10 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 }
 
 void cell_builder_test::test_read_and_run_region_model(void) {
-	if (!getenv("SHYFT_FULL_TEST")) {
-		TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable real run of nea-nidelv in this test");
-		return;
-	}
+	//if (!getenv("SHYFT_FULL_TEST")) {
+	//	TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable real run of nea-nidelv in this test");
+	//	return;
+	//}
 	//
 	// Arrange
 	//

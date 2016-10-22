@@ -87,7 +87,10 @@ class DefaultSimulator(object):
         #self.time_axis = None
         self.region_env = None
         #self.optimizer = None
-        self.optimizer = self.region_model.optimizer_t(self.region_model)
+        if hasattr(self.region_model,"optimizer_t"):
+            self.optimizer = self.region_model.optimizer_t(self.region_model)
+        else:
+            self.optimizer = None
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository

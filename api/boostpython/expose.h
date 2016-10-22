@@ -44,6 +44,7 @@ namespace expose {
         .def_readwrite("geo",&T::geo,"geo_cell_data information for the cell")
         .add_property("parameter",&T::get_parameter,&T::set_parameter,"reference to parameter for this cell, typically shared for a catchment")
         .def_readwrite("env_ts",&T::env_ts,"environment time-series as projected to the cell")
+        .def_readwrite("state",&T::state,"Current state of the cell")
         .def_readonly("sc",&T::sc,"state collector for the cell")
         .def_readonly("rc",&T::rc,"response collector for the cell")
         .def("set_parameter",&T::set_parameter,args("parameter"),"set the cell method stack parameters, typical operations at region_level, executed after the interpolation, before the run")
@@ -131,7 +132,20 @@ namespace expose {
 				" env: RegionEnvironemnt\n"
 				"     contains the ref: region_environment type\n"
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0),"run_cells calculations over specified time_axis, require that run_interpolation is done first")
+         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+             "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
+             "require that initialize(time_axis) or run_interpolation is done first\n"
+             "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
+             "notice that in any case, the current model state is used as a starting point\n"
+             "Parameters\n"
+             "----------\n"
+             "thread_cell_count : int\n"
+             "\t number of cells pr.worker thread, if 0 is passed, the the core-count is used to determine the count\n"
+             "start_step : int\n"
+             "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
+             "n_steps :int\n"
+             "\t number of steps to run in a partial run, default=0 indicating the complete time-axis is covered\n"
+         )
          .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
                     "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
                     "to a value representative for the cell.mid_point().\n"

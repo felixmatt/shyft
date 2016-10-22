@@ -177,7 +177,7 @@ class RegionModel(unittest.TestCase):
             s0.append(si)
         model.set_states(s0)
         model.set_state_collection(-1, True)  # enable state collection for all cells
-        model.run_cells()
+        model.run_cells(thread_cell_count=0,start_step=0,n_steps=240)
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep

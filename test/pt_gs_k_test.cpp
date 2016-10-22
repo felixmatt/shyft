@@ -77,7 +77,7 @@ void pt_gs_k_test::test_call_stack()
     parameter parameter{pt_param, gs_param, ae_param, k_param,  p_corr_param};
     geo_cell_data geo_cell;
     pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,
-                         response>(geo_cell, parameter, time_axis, temp, prec, wind_speed,
+                         response>(geo_cell, parameter, time_axis,0,0, temp, prec, wind_speed,
                                      rel_hum, radiation, state, state_collector, response_collector);
     for(size_t i=0;i<n_ts_points+1;++i) { // state have one extra point
         TS_ASSERT(state_collector._inst_discharge.value(i)>0.0001);// verify there are different from 0.0 filled in for all time-steps
@@ -148,7 +148,7 @@ void pt_gs_k_test::test_raster_call_stack()
         shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);
         //PTGSKResponseCollector rc(time_axis.size());
 
-        pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,
+        pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
               d.temperature(),
               d.precipitation(),
               d.wind_speed(),
@@ -202,17 +202,17 @@ void pt_gs_k_test::test_mass_balance() {
     pt_gs_k::all_response_collector rc;
     const double cell_area=1000*1000;
     sc.collect_state=true;
-    sc.initialize(tax_state,cell_area);
-    rc.initialize(tax,cell_area);
+    sc.initialize(tax_state,0,0,cell_area);
+    rc.initialize(tax,0,0,cell_area);
     geo_cell_data gcd(geo_point(1000,1000,100));
-    pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+    pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
 
     // test strategy:
     // let it rain constantly, let's say 3 mm/h,
     //   when t goes to +oo the kirchner output should be 3 mm/h - act. evapotrans..
     //   so precipitation goes in to the system, and out goes actual evapotranspiration and kirchner response q.
     for(size_t i=0;i<10000;i++) {
-        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
     }
     TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
 

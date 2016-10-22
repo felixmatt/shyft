@@ -475,14 +475,20 @@ namespace shyft {
             * \return void
             *
             */
-            void run_cells(size_t thread_cell_count=0) {
+            void run_cells(size_t thread_cell_count=0, int start_step=0, int  n_steps=0) {
                 if(thread_cell_count==0) {
                     if(ncore==0) ncore=4;// a reasonable minimum..
                     thread_cell_count = size() <= ncore ? 1 : size()/ncore;
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
-                parallel_run(time_axis, begin(*cells), end(*cells), thread_cell_count);
+                if(start_step<0 || start_step+1>time_axis.size())
+                    throw runtime_error("region_model::run start_step must in range[0..n_steps-1>");
+                if(n_steps<0)
+                    throw runtime_error("region_model::run n_steps must be range[0..time-axis-steps]");
+                if (start_step + n_steps > time_axis.size())
+                    throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
+                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
             }
 
             /** \brief set the region parameter, apply it to all cells
@@ -665,10 +671,10 @@ namespace shyft {
              * \param beg iterator to first cell in range
              * \param endc iterator to end cell in range (one past last element)
              */
-            void single_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc) {
+            void single_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc) {
                 for(auto& cell:boost::make_iterator_range(beg,endc)) {
                      if (is_calculated_by_catchment_ix(cell.geo.catchment_ix))
-                        cell.run(time_axis);
+                        cell.run(time_axis,start_step,n_steps);
                 }
             }
             /** \brief uses async to execute the single_run, partitioning the cell range into thread-cell count
@@ -680,7 +686,7 @@ namespace shyft {
              * \param end end of cell range
              * \param thread_cell_count number of cells given to each async thread
              */
-            void parallel_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
+            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
                 size_t len = distance(beg, endc);
                 if(len == 0)
                     return;
@@ -692,8 +698,8 @@ namespace shyft {
                     if (i + n > len)
                         n = len - i;
                     calcs.emplace_back(
-                        async(launch::async, [this, &time_axis, beg, n]() {
-                            this->single_run(time_axis, beg, beg + n); }
+                        async(launch::async, [this, &time_axis, beg, n,start_step,n_steps]() {
+                            this->single_run(time_axis, start_step,n_steps, beg, beg + n); }
                         )
                     );
                     beg = beg + n;
