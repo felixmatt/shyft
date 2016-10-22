@@ -45,6 +45,9 @@ echo "  Compile&Link _pt_ss_k.so started"
 g++ $gcc_opt -o api/pt_ss_k/_pt_ss_k.so    ../api/boostpython/pt_ss_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
 echo "  Compile&Link _pt_hs_k.so started"
 g++ $gcc_opt -o api/pt_hs_k/_pt_hs_k.so    ../api/boostpython/pt_hs_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
+echo "  Compile&Link _hbv_stack.so started"
+g++ $gcc_opt -o api/hbv_stack/_hbv_stack.so    ../api/boostpython/hbv_stack.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib &
+
 echo -n "Waiting for the background compilations to complete..(could take some minutes)"
 wait
 echo "."
