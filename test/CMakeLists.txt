@@ -66,5 +66,7 @@ add_test(skaugen_test ${target} skaugen_test)
 add_test(sceua_test ${target} sceua_test)
 add_test(gridpp_test ${target} gridpp_test)
 add_test(kalman_test ${target} kalman_test)
-
+add_test(hbv_tank_test ${target} hbv_tank_test)
+add_test(hbv_soil_test ${target} hbv_soil_test)
+add_test(hbv_actual_evapotranspiration_test ${target} hbv_actual_evapotranspiration_test)
 
