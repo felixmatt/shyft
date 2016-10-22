@@ -129,7 +129,7 @@ void region_model_test::test_build(void) {
     testenv.precipitation->push_back(gtemp);
     testenv.precipitation->push_back(gtemp2);
 
-    typedef em::region_model<pt_gs_k::cell_complete_response_t> ptgsk_region_model_t;
+    typedef em::region_model<pt_gs_k::cell_complete_response_t, test_env_t> ptgsk_region_model_t;
     auto ptgsk_cells = make_shared<std::vector<pt_gs_k::cell_complete_response_t>> ();//ptgsk_cells;
     auto c1b = c1;
     c1b.geo.set_catchment_id(1);

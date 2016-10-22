@@ -86,14 +86,16 @@ namespace expose {
             "The region model keeps a list of cells, of specified type \n"
                 ,model_name);
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
-        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment>;
-		auto interpolate_f = &M::template interpolate<shyft::api::a_region_environment>;
+        auto run_interpolation_f= &M::run_interpolation;
+		auto interpolate_f = &M::interpolate;
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
 		 .def_readonly("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
+         .def_readwrite("initial_states",&M::initial_states,"empty or the the initial state as established on the first invokation of .set_states() or .run_cells()")
+         .def_readonly("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
 		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
 			 "Initializes the cell enviroment (cell.env.ts* )\n" 
@@ -192,6 +194,7 @@ namespace expose {
                     "note that catchment filter can influence which states are calculated/updated.\n"
                     "param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.\n"
         )
+        
         .def("set_states",&M::set_states,args("states"),
                     "set current state for all the cells in the model.\n"
                     "states is a vector<state_t> of all states, must match size/order of cells.\n"

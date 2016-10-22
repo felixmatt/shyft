@@ -229,7 +229,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	// define a cell type
 	typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
 	// and a region model for that cell-type
-	typedef ec::region_model<cell_t> region_model_t;
+	typedef ec::region_model<cell_t, region_environment_t> region_model_t;
 	// Step 1: read cells from cell_file_repository
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
