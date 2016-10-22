@@ -292,12 +292,12 @@ namespace shyft {
             size_t number_of_catchments() const {
                 return cix_to_cid.size();
             }
-			
-			/** \brief Initializes the cell enviroment (cell.env.ts* ) 
-			 * 
+
+			/** \brief Initializes the cell enviroment (cell.env.ts* )
+			 *
 			 * The initializes the cell environment, that keeps temperature, precipitation etc
 			 * that is local to the cell. The intial values of these time-series is set to zero.
-			 * The region-model time-axis is set to the supplied time-axis, so that 
+			 * The region-model time-axis is set to the supplied time-axis, so that
 			 * the any calculation steps will use the supplied time-axis.
 			 * This call is needed prior to call to interpolate() or run_cells().
 			 * The call ensures that all cells.env ts are reset to zero, with a time-axis and
@@ -314,7 +314,7 @@ namespace shyft {
 				n_catchments = number_of_catchments();// keep this/assume invariant..
 				this->time_axis = time_axis;
 			}
-			
+
 			/** \brief interpolate the supplied region_environment to the cells
 			*
 			* \note initialize_cell_environment should be called prior to this
@@ -482,11 +482,11 @@ namespace shyft {
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
-                if(start_step<0 || start_step+1>time_axis.size())
+                if(start_step<0 || size_t(start_step+1)>time_axis.size())
                     throw runtime_error("region_model::run start_step must in range[0..n_steps-1>");
                 if(n_steps<0)
                     throw runtime_error("region_model::run n_steps must be range[0..time-axis-steps]");
-                if (start_step + n_steps > time_axis.size())
+                if (size_t(start_step + n_steps) > time_axis.size())
                     throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
                 parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
             }
