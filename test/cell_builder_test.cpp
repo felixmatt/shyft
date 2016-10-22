@@ -288,7 +288,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	if (getenv("SHYFT_IP_ONLY"))
 		return;
 	vector<shyft::core::pt_gs_k::state_t> s0;
-	rm.get_states(s0);
+	// not needed, the rm will provide the initial_states for us.rm.get_states(s0);
 	auto t0 = ec::utctime_now();
 	vector<int> all_catchment_ids;// empty vector means no filtering
 	//rm.set_catchment_calculation_filter(catchment_ids);
@@ -313,7 +313,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	rm.set_catchment_calculation_filter(catchment_ids);
 
 	cout << "5. b Done, now compute new sum" << endl;
-	rm.set_states(s0);// so that we start at same state.
+	rm.revert_to_initial_state();
+	rm.get_states(s0);// so that we start at same state.
 	rm.run_cells();// this time only two catchments
 	cout << "6. Done, now compute new sum" << endl;
 	auto sum_discharge2 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
@@ -327,7 +328,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << "snow_swe :" << endl; print(cout, *snow_swe2, i0, n_steps);
 
 	cout << endl << "Done test read and run region-model" << endl;
-	rm.set_states(s0);// get back initial state
+	rm.revert_to_initial_state();//set_states(s0);// get back initial state
 	cout << "Calibration/parameter optimization" << endl;
 	using namespace shyft::core::model_calibration;
 	typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;

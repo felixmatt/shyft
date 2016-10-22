@@ -241,7 +241,7 @@ class RegionModel(unittest.TestCase):
             si = pt_gs_k.PTGSKState()
             si.kirchner.q = 40.0
             s0.append(si)
-        model.set_states(s0)
+        model.set_states(s0)  # at this point the intial state of model is established as well
         model.run_cells()
         cids = api.IntVector.from_numpy([0])  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
@@ -253,7 +253,7 @@ class RegionModel(unittest.TestCase):
         #
         # create target specification
         #
-        model.set_states(s0)  # remember to set the s0 again, so we have the same initial condition for our game
+        model.revert_to_initial_state()  # set_states(s0)  # remember to set the s0 again, so we have the same initial condition for our game
         tsa = api.TsTransform().to_average(t0, dt, n, sum_discharge)
         t_spec_1 = api.TargetSpecificationPts(tsa, cids, 1.0, api.KLING_GUPTA, 1.0, 0.0, 0.0, api.DISCHARGE, 'test_uid')
 

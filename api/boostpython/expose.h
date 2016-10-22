@@ -98,7 +98,7 @@ namespace expose {
          .def_readonly("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
 		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
-			 "Initializes the cell enviroment (cell.env.ts* )\n" 
+			 "Initializes the cell enviroment (cell.env.ts* )\n"
 			 "\n"
 			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
 			 "that is local to the cell.The initial values of these time - series is set to zero.\n"
@@ -194,12 +194,18 @@ namespace expose {
                     "note that catchment filter can influence which states are calculated/updated.\n"
                     "param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.\n"
         )
-        
+
         .def("set_states",&M::set_states,args("states"),
                     "set current state for all the cells in the model.\n"
                     "states is a vector<state_t> of all states, must match size/order of cells.\n"
                     "note throws runtime-error if states.size is different from cells.size\n"
         )
+        .def("revert_to_initial_state",&M::revert_to_initial_state,
+             "Given that the cell initial_states are established, these are \n"
+             "copied back into the cells\n"
+             "Note that the cell initial_states vector is established at the first call to \n"
+             ".set_states() or run_cells()\n"
+             )
         .def("set_state_collection",&M::set_state_collection,args("catchment_id","on_or_off"),
                     "enable state collection for specified or all cells\n"
                     "note that this only works if the underlying cell is configured to\n"
@@ -268,7 +274,7 @@ namespace expose {
                     "param p_max maximum values for the parameters to be  optimized\n"
                   )
         )
-        .def(init<RegionModel&>(boost::python::args("model"), 
+        .def(init<RegionModel&>(boost::python::args("model"),
             "Construct a parameter Optimizer for the supplied model\n"
             "Use method .set_target_specification(...) to provide the target specification,\n"
             "then invoke opt_param= o.optimize(p_starting_point..)\n"
