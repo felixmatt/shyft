@@ -169,7 +169,7 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 #include <boost/filesystem.hpp>
 namespace boost {
     namespace serialization{
-        template <class Archive> 
+        template <class Archive>
         void serialize(Archive & ar, shyft::core::geo_point &o, const unsigned int version) {
             ar
               &  make_nvp("x",o.x)
@@ -186,7 +186,7 @@ namespace boost {
               &  BOOST_SERIALIZATION_NVP(reservoir)
               &  BOOST_SERIALIZATION_NVP(forest);
             //auto x = Archive::is_loading();
-            if (Archive::is_loading()) {
+            if (typename Archive::is_loading()) {
                 o.set_fractions(glacier, lake, reservoir, forest);
             }
         }
@@ -207,12 +207,12 @@ namespace boost {
                 & BOOST_SERIALIZATION_NVP(cix)
                 & BOOST_SERIALIZATION_NVP(radiation_factor)
                 ;
-            if (Archive::is_loading()) {
+            if (typename Archive::is_loading()) {
                 o = shyft::core::geo_cell_data(mid_point, area_m2, cid, radiation_factor, ltf);
                 o.catchment_ix = cix;
-            } 
+            }
         }
-    } 
+    }
 }
 
 void cell_builder_test::test_read_and_run_region_model(void) {
@@ -246,8 +246,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
         std::ofstream geo_cell_xml_file(geo_xml_fname);
         boost::archive::xml_oarchive oa(geo_cell_xml_file);
         oa << BOOST_SERIALIZATION_NVP(gcd);
-    } 
-    
+    }
+
     {
         std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
         std::ifstream geo_cell_xml_file(geo_xml_fname);
@@ -260,7 +260,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
             cells->push_back(cell_t{ g, global_parameter, s0 });
         }
     }
-    
+
     // Step 2: read geo located ts
 	cout << "2. Reading geo-located time-series from file (could take a short time)" << endl;
 	geo_located_ts_file_repository geo_f_ts(test_path);
