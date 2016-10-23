@@ -60,6 +60,9 @@ namespace shyft {
                    throw std::invalid_argument("LandTypeFractions:: must be >=0.0 and sum <= 1.0");
                 glacier_ = glacier; lake_ = lake; reservoir_ = reservoir; forest_ = forest;
             }
+            bool operator==(const land_type_fractions&o) const {
+                return fabs(glacier_ - o.glacier_) + fabs(lake_ - o.glacier_) + fabs(reservoir_ - o.reservoir_) + fabs(forest_-o.forest_)< 0.001;
+            }
           private:
 			double glacier_;
 			double lake_;   // not regulated, assume time-delay until discharge
@@ -96,7 +99,10 @@ namespace shyft {
 			void set_land_type_fractions(const land_type_fractions& ltf) { fractions = ltf; }
 			double area() const { return area_m2; }
 			size_t catchment_ix; // internally generated zero-based catchment index, used to correlate to calc-filter, ref. region_model
-		  private:
+            bool operator==(const geo_cell_data &o) const {
+                return o.catchment_id_ == catchment_id_ && mid_point_ == o.mid_point_ && fabs(area_m2-o.area_m2)<0.1 && fractions==o.fractions;
+            }
+        private:
 
 			geo_point mid_point_; // midpoint
 			double area_m2; //m2

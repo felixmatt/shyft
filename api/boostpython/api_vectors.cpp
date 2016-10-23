@@ -5,6 +5,7 @@
 #include "py_convertible.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_point.h"
+#include "core/geo_cell_data.h"
 
 namespace expose {
     using namespace shyft::core;
@@ -70,6 +71,13 @@ namespace expose {
             .staticmethod("create_from_x_y_z")
             ;
     }
+    static void expose_geo_cell_data_vector() {
+        typedef std::vector<shyft::core::geo_cell_data> GeoCellDataVector;
+        class_<GeoCellDataVector>("GeoCellDataVector", "A vector, list, of GeoCellData")
+            .def(vector_indexing_suite<GeoCellDataVector>())
+            .def(init<const GeoCellDataVector&>(args("const_ref_v")))
+            ;
+    }
 
     void vectors() {
         np_import();
@@ -78,6 +86,7 @@ namespace expose {
         expose_vector<int>("IntVector");
         expose_vector<utctime>("UtcTimeVector");
         expose_geo_point_vector();
+        expose_geo_cell_data_vector();
     }
 }
 

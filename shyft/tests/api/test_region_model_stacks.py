@@ -11,10 +11,9 @@ from shyft.api import hbv_stack
 class RegionModel(unittest.TestCase):
     @staticmethod
     def build_model(model_t, parameter_t, model_size, num_catchments=1):
-
-        cells = model_t.cell_t.vector_t()
         cell_area = 1000 * 1000
         region_parameter = parameter_t()
+        gcds = api.GeoCellDataVector()  # creating models from geo_cell-data is easier and more flexible
         for i in range(model_size):
             loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
@@ -22,12 +21,10 @@ class RegionModel(unittest.TestCase):
             if num_catchments > 1:
                 cid = random.randint(1, num_catchments)
             geo_cell_data = api.GeoCellData(gp, cell_area, cid, 0.9, api.LandTypeFractions(0.01, 0.05, 0.19, 0.3, 0.45))
-            # geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
-            cell = model_t.cell_t()
-            cell.geo = geo_cell_data
-            cells.append(cell)
+            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
+            gcds.append(geo_cell_data)
 
-        return model_t(cells, region_parameter)
+        return model_t(gcds, region_parameter)
 
     @staticmethod
     def build_mock_state_dict(**kwargs):
@@ -110,6 +107,14 @@ class RegionModel(unittest.TestCase):
         model_type = hbv_stack.HbvModel
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+
+    def test_extract_geo_cell_data_vector(self):
+        num_cells = 20
+        model_type = hbv_stack.HbvModel
+        model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        gcdv = model.extract_geo_cell_data()
+        self.assertEqual(len(gcdv),num_cells)
 
     def test_model_area_functions(self):
         num_cells = 20

@@ -260,6 +260,15 @@ namespace shyft {
                 ncore = thread::hardware_concurrency()*4;
                 update_ix_to_id_mapping();
             }
+            region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param) {
+                cells = std::make_shared<std::vector<C>>();
+                state_t s0;
+                auto global_parameter = make_shared<cell_t::parameter_t>();
+                for (const auto&gcd : geov)  cells->push_back(cell_t{ gcd, global_parameter, s0 });
+                set_region_parameter(region_param);// ensure we have a correct region_param for all cells
+                ncore = thread::hardware_concurrency() * 4;
+                update_ix_to_id_mapping();
+            }
             region_model(std::shared_ptr<std::vector<C> >& cells,
                          const parameter_t &region_param,
                          const std::map<int, parameter_t>& catchment_parameters)
@@ -286,6 +295,12 @@ namespace shyft {
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const { return cix_to_cid.size(); }
 
+            /**\brief extracts the geo-cell data part out from the cells */
+            std::vector<geo_cell_data> extract_geo_cell_data() const {
+                std::vector<geo_cell_data> r; r.reserve(cells->size());
+                for (const auto&c : *cells) r.push_back(c.geo);
+                return r;
+            }
 			/** \brief Initializes the cell enviroment (cell.env.ts* )
 			 *
 			 * The initializes the cell environment, that keeps temperature, precipitation etc
