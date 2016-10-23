@@ -30,27 +30,17 @@ if "Windows" in platform.platform():
         print('\nMSBuild FAILED.')
         exit()
     
-elif not glob.glob("shyft/api/___init__*"):
+elif "Linux" in platform.platform():
     try:
-        if "Linux" in platform.platform():
-            # For Linux, use the cmake approach for compiling the extensions
-            print(subprocess.check_output(
-                "sh build_api_cmake.sh", shell=True))
-        else:
-            print(subprocess.check_output(
-                "sh build_api.sh", shell=True))
+    # For Linux, use the cmake approach for compiling the extensions
+        print(subprocess.check_output("sh build_api_cmake.sh", shell=True))
     except:
         print("Problems compiling shyft, try building with the build_api.sh "
               "or build_api_cmake.sh (Linux only) script manually...")
-              
-    finally:
-        if glob.glob("shyft/api/___init__*"):
-            print("### SUCCESS BUILDING SHyFT ### \n\n"
-                "Looks like shyft has been built correctly.\n ")
-        else:
-            print("### ERRORS ### \n\n"
-                "Check build messages for errors. Seems that\n "
-                "extensions do not appear in its directory.")
+        exit()
+else:
+    print("Only windows and Linux supported")
+    exit()
 
 VERSION = open('VERSION').read().strip()
 # Create the version.py file
@@ -65,7 +55,7 @@ setup(
     description='An OpenSource hydrological toolbox',
     license='LGPL v3',
     packages=find_packages(),
-    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'tests/netcdf/*']},
+    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 'tests/netcdf/*']},
     entry_points={
         
     },
