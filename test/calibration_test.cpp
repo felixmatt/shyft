@@ -224,7 +224,7 @@ namespace shyfttest {
                 pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,pt_gs_k::response_t>(
                       d.geo_cell_info(),
                       param,
-                      time_axis,
+                      time_axis,0,0,
                       d.temperature(),
                       d.precipitation(),
                       d.wind_speed(),

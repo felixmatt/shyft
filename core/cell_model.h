@@ -46,11 +46,19 @@ namespace shyft {
 
 			//< reset/initializes all series with 0.0 and reserves size to ta. size.
 			void init(const timeaxis& ta) {
-				temperature = temperature_ts(ta, 0.0);
-				precipitation = precipitation_ts(ta, 0.0);
-				rel_hum = relhum_ts(ta, 0.0);
-				radiation = radiation_ts(ta, 0.0);
-				wind_speed = windspeed_ts(ta, 0.0);
+                if (ta.size() != temperature.size()) {
+                    temperature = temperature_ts(ta, 0.0);
+                    precipitation = precipitation_ts(ta, 0.0);
+                    rel_hum = relhum_ts(ta, 0.0);
+                    radiation = radiation_ts(ta, 0.0);
+                    wind_speed = windspeed_ts(ta, 0.0);
+                } else {
+                    temperature.fill(0.0);
+                    precipitation.fill(0.0);
+                    rel_hum.fill( 0.0);
+                    radiation.fill(0.0);
+                    wind_speed.fill(0.0);
+                }
 			}
 		};
 
@@ -106,9 +114,9 @@ namespace shyft {
 			///< support to initialize env. input series, before interpolation step
 			void   init_env_ts(const typename E::timeaxis_t &ta) { env_ts.init(ta); }
 			///< common support during run, first step is to call begin_run, typically invoked from run() in templates, calls initialize on collectors
-			void begin_run(const timeaxis_t &ta) {
-                rc.initialize(ta,geo.area());
-                sc.initialize(timeaxis_t(ta.start(),ta.delta(),ta.size()+1),geo.area());//state collection is both first and last state, so, time-axis +1 step
+			void begin_run(const timeaxis_t &ta, int start_step, int n_steps) {
+                rc.initialize(ta,start_step,n_steps, geo.area());
+                sc.initialize(timeaxis_t(ta.start(),ta.delta(),ta.size()+1),start_step,n_steps>0?n_steps+1:0,geo.area());//state collection is both first and last state, so, time-axis +1 step
 			}
 			///< support for the interpolation phase, executes before the cell-run
 			void   set_temperature(size_t ix, double temperature_value) { env_ts.temperature.set(ix, temperature_value); }
@@ -126,12 +134,21 @@ namespace shyft {
 			///< collecting the snow sca and swe on for calibration scenarios, default throws
 			void set_snow_sca_swe_collection(bool on) {/*default simply ignore*/}
 			/// run the cell method stack for  a specified time-axis, to be specialized by cell type
-			void run(const timeaxis_t& t) {}
+			void run(const timeaxis_t& t, int start_step, int n_steps) {}
 			///< operator equal if same midpoint and catchment-id
 			bool operator==(const cell&x) const {
 			    return geo.mid_point()==x.geo.mid_point()&& geo.catchment_id()==x.geo.catchment_id();
 			}
 		};
+        /**Utility function used to  initialize a pts_t in the core, typically making space, zero fill a ts
+        *  prior to a run to ensure values are zero */
+        inline void ts_init(pts_t&ts, const timeaxis&ta, int start_step, int n_steps, fx_policy_t fx_policy) {
+            if (ts.size() != ta.size()) {
+                ts = pts_t(ta, 0.0, fx_policy);
+            } else {
+                ts.fill_range(0.0, start_step, n_steps);
+            }
+        }
 
         using namespace std;
         /** \brief cell statistics provides ts feature summation over cells

@@ -40,7 +40,7 @@ add_definitions("-D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_ST
 
 add_executable(${target} ${sources})
 # Additional libraries
-target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system)
+target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system boost_serialization)
 
 # This can be made more specific, but we would need the list of tests.
 #add_test(${target} ${target})
@@ -66,5 +66,7 @@ add_test(skaugen_test ${target} skaugen_test)
 add_test(sceua_test ${target} sceua_test)
 add_test(gridpp_test ${target} gridpp_test)
 add_test(kalman_test ${target} kalman_test)
-
+add_test(hbv_tank_test ${target} hbv_tank_test)
+add_test(hbv_soil_test ${target} hbv_soil_test)
+add_test(hbv_actual_evapotranspiration_test ${target} hbv_actual_evapotranspiration_test)
 

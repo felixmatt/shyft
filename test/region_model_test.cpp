@@ -93,7 +93,7 @@ void region_model_test::test_build(void) {
     c1.env_ts.temperature = temp;
     c1.env_ts.rel_hum = rhum;
     c1.set_state(state);
-    c1.run(ta);
+    c1.run(ta,0,0);
 
     c2.geo = gc2;
     c2.env_ts = env;
@@ -104,7 +104,7 @@ void region_model_test::test_build(void) {
     c2.env_ts.temperature.fill(3.0);
     c2.env_ts.rel_hum = rhum;
     c2.set_state(state);
-    c2.run(ta);
+    c2.run(ta, 0, 0);
 
     TS_ASSERT_EQUALS(c1.rc.snow_swe.size(), ta.size());
 
@@ -129,7 +129,7 @@ void region_model_test::test_build(void) {
     testenv.precipitation->push_back(gtemp);
     testenv.precipitation->push_back(gtemp2);
 
-    typedef em::region_model<pt_gs_k::cell_complete_response_t> ptgsk_region_model_t;
+    typedef em::region_model<pt_gs_k::cell_complete_response_t, test_env_t> ptgsk_region_model_t;
     auto ptgsk_cells = make_shared<std::vector<pt_gs_k::cell_complete_response_t>> ();//ptgsk_cells;
     auto c1b = c1;
     c1b.geo.set_catchment_id(1);

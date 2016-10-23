@@ -331,7 +331,6 @@ namespace shyft {
                 vector<double> p_expanded;
                 vector<double> p_min; // min==max, no- optimization..
                 vector<double> p_max;
-                vector<state_t> initial_state;
                 int print_progress_level;
                 size_t n_catchments;///< optimized counted number of model.catchments available
                 //Need to handle expanded/reduced parameter vector based on min..max range to optimize speed for bobyqa
@@ -405,12 +404,9 @@ namespace shyft {
 
                 /** copy the model current state into internal store of the calibration class */
                 void establish_initial_state_from_model() {
-                    // 2. fetch the initial state (s0) from the supplied model, and store it so that we start each run with same state s0
-                    auto cells = model.get_cells();
-                    initial_state.resize(0);
-                    initial_state.reserve((*cells).size());
-                    for (const auto& cell : *cells) initial_state.emplace_back(cell.state);
-
+                    // semantically its taking the current state -> model.initial_state
+                    // but it is not needed any more
+                    model.get_states(model.initial_state);
                 }
 
                 /** prepare the optimization process by looking at the current state of the supplied 
@@ -450,9 +446,9 @@ namespace shyft {
                     auto_initial_state_check();
                 }
                 void auto_initial_state_check() {
-                    if (initial_state.size() != model.get_cells()->size()) {
+                    if (model.initial_state.size() != model.get_cells()->size()) {
                         if (print_progress_level > 0)
-                            std::cout << "auto-establishing initial state:" << initial_state.size() << "\n";
+                            std::cout << "auto-establishing initial state from current model.cell.state" << "\n";
                         establish_initial_state_from_model();
                     }
                 }
@@ -460,7 +456,7 @@ namespace shyft {
                 /** returns the initial state for the i'th cell */
                 state_t get_initial_state(size_t idx) {
                     auto_initial_state_check();// in case it's not done, do it now
-                    return initial_state[idx];
+                    return model.initial_state[idx];
                 }
 
                 /**\brief Call to optimize model, starting with p parameter set, using p_min..p_max as boundaries.
@@ -544,9 +540,7 @@ namespace shyft {
 
                 /**\brief reset the state of the model to the initial state before starting the run/optimize*/
                 void reset_states() {
-                    auto cells = model.get_cells();
-                    for (size_t i = 0;i < cells->size();++i)
-                        (*cells)[i].set_state(initial_state[i]);
+                    model.revert_to_initial_state();
                 }
                 /**\brief set the parameter ranges, set min=max=wanted parameter value for those not subject to change during optimization */
                 void set_parameter_ranges(const vector<double>& p_min, const vector<double>& p_max) {

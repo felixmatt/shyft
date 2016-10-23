@@ -162,7 +162,8 @@ namespace shyft {
             shared_ptr<rel_hum_vec_t>       rel_hum;
 
         };
-
+        ///< needs definition of the core time-series
+        typedef shyft::timeseries::point_ts<shyft::time_axis::fixed_dt> pts_t;
         /** \brief region_model is the calculation model for a region, where we can have
         * one or more catchments.
         * The role of the region_model is to describe region, so that we can run the
@@ -173,6 +174,7 @@ namespace shyft {
         *
         *
         * \tparam C \see cell type parameter, describes the distributed cell calculation stack.
+        * \tparam RE region environment class
         *  The cell-type must provide the following types:
         *  -# parameter_t parameter type for the cell calculation stack
         *  -# state_t     state type for the cell
@@ -184,7 +186,7 @@ namespace shyft {
         *
         */
 
-        template<class C>
+        template<class C, class RE = region_environment<pts_t,pts_t,pts_t,pts_t,pts_t>>
         class region_model {
         public:
             typedef C cell_t;
@@ -195,23 +197,10 @@ namespace shyft {
             typedef std::shared_ptr<cell_vec_t > cell_vec_t_;
             typedef std::shared_ptr<parameter_t> parameter_t_;
             typedef typename cell_vec_t::iterator cell_iterator;
+            typedef RE region_env_t;
         protected:
 
             cell_vec_t_ cells;///< a region consists of cells that orchestrate the distributed correlation
-            // TODO:
-            // catchment_vec_t_ catchments;//< catchment level, after cell.run is done
-            // we could have kirchner for each catchments (cell-routing-delay before and or routing after kirchner)
-            //
-            // so the catchment concept should be modeled and handled:
-            //   a catchment
-            //      id
-            //       a geo-shape, (we keep catch_id for each ..)
-            //      catchment level model-parameters (kirchner etc.)
-            //      obs. discharge
-            //      obs. snow  (swe,sca ?)
-            //     after run's of the model
-            //     we can extract cell-level into into the catchments
-
             parameter_t_ region_parameter;///< applies to all cells, except those with catchment override
             std::map<int, parameter_t_> catchment_parameters;///<  for each catchment (with cid) parameter is possible
 
@@ -246,10 +235,12 @@ namespace shyft {
                 catchment_filter = c.catchment_filter;
                 n_catchments = c.n_catchments;
 				ip_parameter = c.ip_parameter;
+                region_env = c.region_env;// todo: verify it is deep or shallow copy
                 catchment_parameters.clear();
                 // Then, clone from c
                 cix_to_cid=c.cix_to_cid;
                 cid_to_cix=c.cid_to_cix;
+                initial_state = c.initial_state;
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
                 set_region_parameter(*(c.region_parameter));
                 for(const auto& pair:c.catchment_parameters)
@@ -285,19 +276,21 @@ namespace shyft {
                     clone(c);
                 return *this;
             }
+            ///-- \section properties accessible to user
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
 			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
+            region_env_t region_env;///< the region environment (shallow-copy?) as passed to the interpolation/run_interpolation
+            std::vector<state_t> initial_state; ///< the initial state, set explicit, or by the first call to .set_states(..) or run_cells()
+
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
-            size_t number_of_catchments() const {
-                return cix_to_cid.size();
-            }
-			
-			/** \brief Initializes the cell enviroment (cell.env.ts* ) 
-			 * 
+            size_t number_of_catchments() const { return cix_to_cid.size(); }
+
+			/** \brief Initializes the cell enviroment (cell.env.ts* )
+			 *
 			 * The initializes the cell environment, that keeps temperature, precipitation etc
 			 * that is local to the cell. The intial values of these time-series is set to zero.
-			 * The region-model time-axis is set to the supplied time-axis, so that 
+			 * The region-model time-axis is set to the supplied time-axis, so that
 			 * the any calculation steps will use the supplied time-axis.
 			 * This call is needed prior to call to interpolate() or run_cells().
 			 * The call ensures that all cells.env ts are reset to zero, with a time-axis and
@@ -314,7 +307,7 @@ namespace shyft {
 				n_catchments = number_of_catchments();// keep this/assume invariant..
 				this->time_axis = time_axis;
 			}
-			
+
 			/** \brief interpolate the supplied region_environment to the cells
 			*
 			* \note initialize_cell_environment should be called prior to this
@@ -329,27 +322,27 @@ namespace shyft {
 			* \return void
 			*
 			*/
-			template < class RE >
-			void interpolate(const interpolation_parameter& ip_parameter, const RE& env) {
+
+			void interpolate(const interpolation_parameter& ip_parameter, const region_env_t& env) {
 				using namespace shyft::core;
 				using namespace std;
 				namespace idw = shyft::core::inverse_distance;
 				namespace btk = shyft::core::bayesian_kriging;
 
 
-				typedef shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename RE::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename RE::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename RE::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename RE::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
+				typedef shyft::timeseries::average_accessor<typename region_env_t::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
 
 
-				typedef idw_compliant_geo_point_ts< typename RE::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 
-				typedef idw_compliant_geo_point_ts< typename RE::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
-				typedef idw_compliant_geo_point_ts< typename RE::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
-				typedef idw_compliant_geo_point_ts< typename RE::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
-				typedef idw_compliant_geo_point_ts< typename RE::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::precipitation_t, precipitation_tsa_t, timeaxis_t> idw_compliant_precipitation_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::radiation_t, radiation_tsa_t, timeaxis_t> idw_compliant_radiation_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
+				typedef idw_compliant_geo_point_ts<typename region_env_t::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
 				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
 				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
@@ -357,8 +350,9 @@ namespace shyft {
 				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
 				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
-				typedef  shyft::timeseries::average_accessor<typename RE::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
+				typedef  shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
+                this->region_env = env;// this could be a shallow copy
 				// Allocate memory for the source_destinations, put in the reference to the parameters:
 				// Run one thread for each optional interpolation
 				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fill-value 0.0
@@ -432,7 +426,7 @@ namespace shyft {
 				idw_rel_hum.get();
 			}
 
-            /** \brief intitializes cell.env and project region env. timeseries to cells.
+            /** \brief initializes cell.env and project region env. timeseries to cells.
             *
             * \note Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().
             *
@@ -441,7 +435,6 @@ namespace shyft {
 			*
 			* This call simply calls initialize_cell_environment() followed by interpolate<..>(..)
             *
-            * \tparam RE \ref region_environment type
             *
             * \param ip_parameter contains wanted parameters for the interpolation
             * \param time_axis should be equal to the \ref timeaxis the \ref region_model is prepared running for.
@@ -449,10 +442,9 @@ namespace shyft {
             * \return void
             *
             */
-            template < class RE >
-            void run_interpolation(const interpolation_parameter& ip_parameter, const timeaxis_t& time_axis, const RE& env) {
+            void run_interpolation(const interpolation_parameter& ip_parameter, const timeaxis_t& time_axis, const region_env_t& env) {
 				initialize_cell_environment(time_axis);
-				interpolate<RE>(ip_parameter, env);
+				interpolate(ip_parameter, env);
             }
 
             /** \brief run_cells calculations over specified time_axis
@@ -475,14 +467,22 @@ namespace shyft {
             * \return void
             *
             */
-            void run_cells(size_t thread_cell_count=0) {
+            void run_cells(size_t thread_cell_count=0, int start_step=0, int  n_steps=0) {
                 if(thread_cell_count==0) {
                     if(ncore==0) ncore=4;// a reasonable minimum..
                     thread_cell_count = size() <= ncore ? 1 : size()/ncore;
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
-                parallel_run(time_axis, begin(*cells), end(*cells), thread_cell_count);
+                if(start_step<0 || size_t(start_step+1)>time_axis.size())
+                    throw runtime_error("region_model::run start_step must in range[0..n_steps-1>");
+                if(n_steps<0)
+                    throw runtime_error("region_model::run n_steps must be range[0..time-axis-steps]");
+                if (size_t(start_step + n_steps) > time_axis.size())
+                    throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
+                if (initial_state.size() != cells->size())
+                    get_states(initial_state); // snap the initial state here, unless it's already set by the user
+                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
             }
 
             /** \brief set the region parameter, apply it to all cells
@@ -602,6 +602,11 @@ namespace shyft {
             }
 
             /**\brief set current state for all the cells in the model.
+             *
+             * If this is the first 'set_states()', initial_state is copied from the
+             * supplied vector. The purpose of this is to ease scripting so that one
+             * always get back the initial state if needed.
+             *
              * \param states is a vector<state_t> of all states, must match size/order of cells.
              * \note throws runtime-error if states.size is different from cells.size
              */
@@ -610,8 +615,16 @@ namespace shyft {
                     throw runtime_error("Length of the state vector must equal number of cells");
                 auto state_iter = begin(states);
                 for(auto& cell:*cells) cell.set_state(*(state_iter++));
+                if (initial_state.size() != states.size())
+                    initial_state = states;// if first time, or different copy the state
             }
-
+            /**\brief revert cell states to the initial state (if it exists)
+            */
+            void revert_to_initial_state() {
+                if (initial_state.size() == 0)
+                    throw runtime_error("Initial state not yet established or set");
+                set_states(initial_state);
+            }
             /** \brief enable state collection for specified or all cells
              * \note that this only works if the underlying cell is configured to
              *       do state collection. THis is typically not the  case for
@@ -665,10 +678,10 @@ namespace shyft {
              * \param beg iterator to first cell in range
              * \param endc iterator to end cell in range (one past last element)
              */
-            void single_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc) {
+            void single_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc) {
                 for(auto& cell:boost::make_iterator_range(beg,endc)) {
                      if (is_calculated_by_catchment_ix(cell.geo.catchment_ix))
-                        cell.run(time_axis);
+                        cell.run(time_axis,start_step,n_steps);
                 }
             }
             /** \brief uses async to execute the single_run, partitioning the cell range into thread-cell count
@@ -680,7 +693,7 @@ namespace shyft {
              * \param end end of cell range
              * \param thread_cell_count number of cells given to each async thread
              */
-            void parallel_run(const timeaxis_t& time_axis, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
+            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
                 size_t len = distance(beg, endc);
                 if(len == 0)
                     return;
@@ -692,8 +705,8 @@ namespace shyft {
                     if (i + n > len)
                         n = len - i;
                     calcs.emplace_back(
-                        async(launch::async, [this, &time_axis, beg, n]() {
-                            this->single_run(time_axis, beg, beg + n); }
+                        async(launch::async, [this, &time_axis, beg, n,start_step,n_steps]() {
+                            this->single_run(time_axis, start_step,n_steps, beg, beg + n); }
                         )
                     );
                     beg = beg + n;

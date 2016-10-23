@@ -42,15 +42,15 @@ namespace shyft {
 						soil_outflow(time_axis, 0.0), avg_discharge(time_axis, 0.0) {}
 
 				/**\brief called before run to allocate space for results */
-				void initialize(const timeaxis_t& time_axis, double area) {
+				void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
 					destination_area = area;
-					pe_output = pts_t(time_axis, 0.0);
-					snow_outflow = pts_t(time_axis, 0.0);
-					snow_sca=pts_t(time_axis,0.0);
-					snow_swe=pts_t(time_axis,0.0);
-					ae_output = pts_t(time_axis, 0.0);
-					soil_outflow = pts_t(time_axis, 0.0);
-					avg_discharge = pts_t(time_axis, 0.0);
+                    ts_init(pe_output, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(snow_outflow, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(snow_sca, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(snow_swe, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(ae_output, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(soil_outflow, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(avg_discharge, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
 				}
 
 				/**\brief Call for each time step, to collect needed information from R
@@ -90,12 +90,12 @@ namespace shyft {
 					snow_sca(timeaxis_t(time_axis.start(), time_axis.delta(), 0), 0.0),
 					snow_swe(timeaxis_t(time_axis.start(), time_axis.delta(), 0), 0.0) {}
 
-				void initialize(const timeaxis_t& time_axis, double area) {
+				void initialize(const timeaxis_t& time_axis, int start_step, int n_steps, double area) {
 					destination_area = area;
-					avg_discharge = pts_t(time_axis, 0.0);
+                    ts_init(avg_discharge, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
 					auto ta = collect_snow ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
-					snow_sca = pts_t(ta, 0.0);
-					snow_swe = pts_t(ta, 0.0);
+                    ts_init(snow_swe, ta, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(snow_sca, ta, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
 				}
 
 
@@ -116,7 +116,7 @@ namespace shyft {
 			* and we need all the RAM for useful purposes.
 			*/
 			struct null_collector {
-				void initialize(const timeaxis_t& time_axis, double area = 0.0) {}
+				void initialize(const timeaxis_t& time_axis,int start_step=0,int n_steps=0, double area = 0.0) {}
 				void collect(size_t i, const state_t& response) {}
 			};
 
@@ -144,14 +144,14 @@ namespace shyft {
 				*
 				* \note if collect_state is false, a zero length time-axis is used to ensure data is wiped/out.
 				*/
-				void initialize(const timeaxis_t& time_axis, double area) {
+				void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
 					destination_area = area;
 					timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
-					snow_sca = pts_t(ta, 0.0);
-					snow_swe = pts_t(ta, 0.0);
-					soil_moisture = pts_t(ta, 0.0);
-					tank_uz = pts_t(ta, 0.0);
-					tank_lz = pts_t(ta, 0.0);
+                    ts_init(snow_sca, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
+                    ts_init(snow_swe, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
+                    ts_init(soil_moisture, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
+                    ts_init(tank_uz, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
+                    ts_init(tank_lz, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
 				}
 				/** called by the cell.run for each new state*/
 				void collect(size_t idx, const state_t& state) {
@@ -175,14 +175,14 @@ namespace shyft {
 		template<>
 		inline void cell<hbv_stack::parameter_t, environment_t, hbv_stack::state_t,
 			hbv_stack::state_collector, hbv_stack::all_response_collector>
-			::run(const timeaxis_t& time_axis) {
+			::run(const timeaxis_t& time_axis, int start_step, int n_steps) {
 			if (parameter.get() == nullptr)
 				throw std::runtime_error("pt_hs_k::run with null parameter attempted");
-			begin_run(time_axis);
+			begin_run(time_axis,start_step,n_steps);
 			hbv_stack::run_hbv_stack<direct_accessor, hbv_stack::response_t>(
 				geo,
 				*parameter,
-				time_axis,
+				time_axis, start_step, n_steps,
 				env_ts.temperature,
 				env_ts.precipitation,
 				env_ts.wind_speed,
@@ -204,14 +204,14 @@ namespace shyft {
 		template<>
 		inline void cell<hbv_stack::parameter_t, environment_t, hbv_stack::state_t,
 			hbv_stack::null_collector, hbv_stack::discharge_collector>
-			::run(const timeaxis_t& time_axis) {
+			::run(const timeaxis_t& time_axis, int start_step, int n_steps) {
 			if (parameter.get() == nullptr)
 				throw std::runtime_error("pt_hs_k::run with null parameter attempted");
-			begin_run(time_axis);
+			begin_run(time_axis, start_step, n_steps);
 			hbv_stack::run_hbv_stack<direct_accessor, hbv_stack::response_t>(
 				geo,
 				*parameter,
-				time_axis,
+				time_axis, start_step, n_steps,
 				env_ts.temperature,
 				env_ts.precipitation,
 				env_ts.wind_speed,

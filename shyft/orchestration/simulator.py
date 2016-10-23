@@ -85,7 +85,11 @@ class DefaultSimulator(object):
         self.initial_state_repo = initial_state_repository
         self.state = None
         self.region_env = None
-        self.optimizer = None
+        #self.optimizer = None
+        if hasattr(self.region_model,"optimizer_t"):
+            self.optimizer = self.region_model.optimizer_t(self.region_model)
+        else:
+            self.optimizer = None
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository

@@ -98,7 +98,7 @@ void pt_ss_k_test::test_call_stack() {
     state_t state {snow_state, kirchner_state};
     parameter_t parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
     geo_cell_data geo_cell_data;
-    pt_ss_k::run<direct_accessor, response_t>(geo_cell_data, parameter, time_axis, temp, prec,
+    pt_ss_k::run<direct_accessor, response_t>(geo_cell_data, parameter, time_axis,0,0, temp, prec,
                                               wind_speed, rel_hum, radiation, state, state_collector,
                                               response_collector);
 
