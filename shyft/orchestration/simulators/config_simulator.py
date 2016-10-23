@@ -68,21 +68,17 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.get_region_model_repo(),
                          sim_config.get_geots_repo(), sim_config.get_interp_repo(), initial_state_repository=sim_config.get_initial_state_repo())
         self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
-        #self.verbose_level = 1
-        self.region_model.initialize_cell_environment(sim_config.time_axis) #self.time_axis = sim_config.time_axis
+        self.region_model.initialize_cell_environment(sim_config.time_axis)
         self.region_model_id = sim_config.region_model_id
         self.model_config_file = sim_config.model_config_file
         self.optim_method = config.optimization_method['name']
         self.optim_method_params = config.optimization_method['params']
         self.target_repo = config.get_target_repo() # copy.deepcopy(config.target_repo)
-        #self.p_min, self.p_max, self.p_init = self._get_params_from_dict(copy.deepcopy(config.calibration_parameters))
         p_min, p_max, self.p_init = self._get_params_from_dict(copy.deepcopy(config.calibration_parameters))
         self.calibrated_model_file = None
         if hasattr(config, 'calibrated_model_file'):
             self.calibrated_model_file = config.calibrated_model_file
         self.optimum_parameters = None
-        #self.optimizer = None
-        #self.tv = None
         if not hasattr(self.region_model, "optimizer_t"):
             raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
@@ -144,12 +140,11 @@ class ConfigCalibrator(simulator.DefaultSimulator):
     def calibrate(self, time_axis=None, state=None, optim_method=None, optim_method_params=None, p_min=None, p_max=None,
                   p_init=None, tv=None, run_interp=True, verbose_level=1):
         if time_axis is not None:
-            self.region_model.initialize_cell_environment(time_axis) # self.time_axis = time_axis
+            self.region_model.initialize_cell_environment(time_axis)
             run_interp = True
-        self.state = self.get_initial_state() if state is None else state
+        self.state = self.get_initial_state_from_repo() if state is None else state
         self.optim_method = optim_method if optim_method is not None else self.optim_method
         self.optim_method_params = optim_method_params if optim_method_params is not None else self.optim_method_params
-        #self.tv = self._create_target_specvect() if tv is None else tv
         if tv is not None:
             self.optimizer.set_target_specification(tv)
         if p_min is None:
@@ -164,32 +159,10 @@ class ConfigCalibrator(simulator.DefaultSimulator):
                 ','.join([name for i, name in enumerate(['p_min', 'p_max', 'p_init'])
                           if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
         self.optimizer.set_parameter_ranges([p_min.get(i) for i in range(p_min.size())], [p_max.get(i) for i in range(p_max.size())])
-        #[setattr(self, nm, p) for nm, p in zip(['p_min', 'p_max', 'p_init'], [p_min, p_max, p_init]) if p is not None]
-        if run_interp:
-            bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-            period = self.time_axis.total_period()
-            sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
-                                                            geo_location_criteria=bbox)
-            self.region_env = self._get_region_environment(sources)
-            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-            self.region_model.interpolate(interp_params, self.region_env)
-
         self.region_model.set_states(self.state)
         self.optimizer.set_verbose_level(verbose_level)
-        p_vec = [self.p_init.get(i) for i in range(self.p_init.size())]
-        print("Calibrating...")
-        if self.optim_method == "min_bobyqa":
-            p_vec_opt = self.optimizer.optimize(p_vec, **self.optim_method_params)
-        elif self.optim_method == "dream":
-            p_vec_opt = self.optimizer.optimize_dream(p_vec, **self.optim_method_params)
-        elif self.optim_method == "sceua":
-            p_vec_opt = self.optimizer.optimize_sceua(p_vec, **self.optim_method_params)
-        else:
-            raise ValueError("Unknown optimization method: %s" % self.optim_method)
-        p_res = self.region_model.parameter_t()
-        p_res.set(p_vec_opt)
-        #p_res = self.optimize(self.time_axis, self.state, self.tv, self.p_init, self.p_min, self.p_max, optim_method = self.optim_method,
-        #         optim_method_params = self.optim_method_params, verbose_level=self.verbose_level, run_interp=run_interp)
+        p_res = self._optimize(self.p_init, self.optim_method, self.optim_method_params, run_interp=run_interp)
+
         if self.calibrated_model_file is not None:
             self.save_calibrated_model(p_res)
         self.optimum_parameters = self.region_model.parameter_t(p_res) # To keep a copy
@@ -199,16 +172,14 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         """Save calibrated params in a model-like YAML file."""
         name_map = {"pt": "priestley_taylor", "kirchner": "kirchner", "p_corr": "precipitation_correction",
                     "ae": "actual_evapotranspiration", "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow"}
-        # Existing model parameters structure
         model_file = self.model_config_file
         model_dict = yaml.load(open(model_file))
         model_params = {}
-        # Overwrite overlapping params
         [model_params[name_map[r]].update({p: getattr(getattr(optim_param, r), p)})
          if name_map[r] in model_params else model_params.update(
             {name_map[r]: {p: getattr(getattr(optim_param, r), p)}}) for r, p in [nm.split('.') for nm in self.calib_param_names]]
         model_dict.update({'model_parameters': model_params})
-        # Finally, save the update parameters on disk
+        # Save the update parameters on disk
         if outfile is not None:
             self.calibrated_model_file = outfile
         if not os.path.isabs(self.calibrated_model_file):

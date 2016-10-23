@@ -84,10 +84,8 @@ class DefaultSimulator(object):
         self.epsg = self.region_model.bounding_region.epsg()
         self.initial_state_repo = initial_state_repository
         self.state = None
-        #self.time_axis = None
         self.region_env = None
-        #self.optimizer = None
-        self.optimizer = self.region_model.optimizer_t(self.region_model)
+        self.optimizer = None
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository
@@ -104,7 +102,6 @@ class DefaultSimulator(object):
         self.epsg = other.epsg
         self.initial_state_repo = other.initial_state_repo
         self.state = other.state
-        #self.time_axis = other.time_axis
         self.region_env = other.region_env
 
     @property
@@ -122,17 +119,6 @@ class DefaultSimulator(object):
         region_env.wind_speed = sources["wind_speed"]
         region_env.rel_hum = sources["relative_humidity"]
         return region_env
-
-    # def _fetch_source_run_interp(self, time_axis):
-    #     print("Fetching sources and running interpolation...")
-    #     bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-    #     period = time_axis.total_period()
-    #     sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
-    #                                                     geo_location_criteria=bbox)
-    #     self.region_env = self._get_region_environment(sources)
-    #
-    #     interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-    #     self.region_model.run_interpolation(interp_params, time_axis, self.region_env)
 
     def simulate(self):
         runnable = all((self.state is not None, self.time_axis.size()>0, # self.time_axis is not None,
@@ -162,7 +148,7 @@ class DefaultSimulator(object):
             time_axis = self.time_axis
         else:
             self.region_model.initialize_cell_environment(time_axis)
-        self.state = self.get_initial_state() if state is None else state
+        self.state = self.get_initial_state_from_repo() if state is None else state
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
@@ -201,32 +187,16 @@ class DefaultSimulator(object):
             runnables.append(simulator)
         return runnables
 
-    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
-                 optim_method_params={'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0):
-        if not hasattr(self.region_model, "optimizer_t"):
-            raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
-                                 "another!".format(self.region_model.__class__.__name__))
-        is_correct_p_type = [isinstance(_, self.region_model.parameter_t) for _ in [p_min, p_max, p]]
-        if not all(is_correct_p_type):
-            raise SimulatorError("{} must be of type {}".format(
-                ','.join([name for i, name in enumerate(['min', 'max', 'init'])
-                          if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
-        self.state = state
-        #self.time_axis = time_axis
-        self.region_model.initialize_cell_environment(time_axis)
-        bbox = self.region_model.bounding_region.bounding_box(self.epsg)
-        period = self.time_axis.total_period()
-        sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
-                                                        geo_location_criteria=bbox)
-        self.region_env = self._get_region_environment(sources)
-        interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-        self.region_model.interpolate(interp_params, self.region_env)
-        self.region_model.set_states(self.state)
-        self.optimizer = self.region_model.optimizer_t(self.region_model,
-                                                       target_specification,
-                                                       [p_min.get(i) for i in range(p_min.size())],
-                                                       [p_max.get(i) for i in range(p_max.size())])
-        self.optimizer.set_verbose_level(verbose_level)
+    def _optimize(self, p, optim_method, optim_method_params, run_interp=True):
+        if run_interp:
+            bbox = self.region_model.bounding_region.bounding_box(self.epsg)
+            period = self.time_axis.total_period()
+            sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
+                                                            geo_location_criteria=bbox)
+            self.region_env = self._get_region_environment(sources)
+            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
+            self.region_model.interpolate(interp_params, self.region_env)
+
         p_vec = [p.get(i) for i in range(p.size())]
         print("Calibrating...")
         if optim_method == "min_bobyqa":
@@ -236,10 +206,30 @@ class DefaultSimulator(object):
         elif optim_method == "sceua":
             p_vec_opt = self.optimizer.optimize_sceua(p_vec, **optim_method_params)
         else:
-            raise ValueError("Unknown optimization method: %s" % self.optim_method)
+            raise ValueError("Unknown optimization method: %s" % optim_method)
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
         return p_res
+
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
+                 optim_method_params={'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
+        if not hasattr(self.region_model, "optimizer_t"):
+            raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
+                                 "another!".format(self.region_model.__class__.__name__))
+        is_correct_p_type = [isinstance(_, self.region_model.parameter_t) for _ in [p_min, p_max, p]]
+        if not all(is_correct_p_type):
+            raise SimulatorError("{} must be of type {}".format(
+                ','.join([name for i, name in enumerate(['min', 'max', 'init'])
+                          if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
+        self.state = state
+        self.region_model.initialize_cell_environment(time_axis)
+        self.region_model.set_states(self.state)
+        self.optimizer = self.region_model.optimizer_t(self.region_model,
+                                                       target_specification,
+                                                       [p_min.get(i) for i in range(p_min.size())],
+                                                       [p_max.get(i) for i in range(p_max.size())])
+        self.optimizer.set_verbose_level(verbose_level)
+        return self._optimize(p, optim_method, optim_method_params, run_interp)
 
     @property
     def reg_model_state(self):
@@ -247,19 +237,22 @@ class DefaultSimulator(object):
         self.region_model.get_states(state)
         return state
 
-    def get_initial_state(self):
-        state_id = 0
-        if hasattr(self.initial_state_repo, 'n'): # No stored state, generated on-the-fly
-            self.initial_state_repo.n = self.region_model.size()
+    def get_initial_state_from_repo(self):
+        if self.initial_state_repo is None:
+            raise SimulatorError("No repo to fetch init state from. Pass in state explicitly.")
         else:
-            states = self.initial_state_repo.find_state(
-                region_model_id_criteria=self.region_model_id,
-                utc_timestamp_criteria=self.time_axis.start, tag_criteria=None)
-            if len(states) > 0:
-                state_id = states[0].state_id #most_recent_state i.e. <= start time
+            state_id = 0
+            if hasattr(self.initial_state_repo, 'n'): # No stored state, generated on-the-fly
+                self.initial_state_repo.n = self.region_model.size()
             else:
-                raise SimulatorError('No initial state matching criteria.')
-        return self.initial_state_repo.get_state(state_id)
+                states = self.initial_state_repo.find_state(
+                    region_model_id_criteria=self.region_model_id,
+                    utc_timestamp_criteria=self.time_axis.start, tag_criteria=None)
+                if len(states) > 0:
+                    state_id = states[0].state_id #most_recent_state i.e. <= start time
+                else:
+                    raise SimulatorError('No initial state matching criteria.')
+            return self.initial_state_repo.get_state(state_id)
 
     def discharge_adjusted_state(self, obs_discharge, state=None):
         """
