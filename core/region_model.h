@@ -263,7 +263,7 @@ namespace shyft {
             region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param) {
                 cells = std::make_shared<std::vector<C>>();
                 state_t s0;
-                auto global_parameter = make_shared<cell_t::parameter_t>();
+                auto global_parameter = make_shared<typename cell_t::parameter_t>();
                 for (const auto&gcd : geov)  cells->push_back(cell_t{ gcd, global_parameter, s0 });
                 set_region_parameter(region_param);// ensure we have a correct region_param for all cells
                 ncore = thread::hardware_concurrency() * 4;
