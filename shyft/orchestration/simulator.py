@@ -217,7 +217,7 @@ class DefaultSimulator(object):
                           if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
         self.region_model.initial_state = state
         self.region_model.initialize_cell_environment(time_axis)
-        self.optimizer.target_target_specification = target_specification
+        self.optimizer.target_specification = target_specification
         self.optimizer.parameter_lower_bound = p_min
         self.optimizer.parameter_upper_bound = p_max
         self.optimizer.set_verbose_level(verbose_level)
