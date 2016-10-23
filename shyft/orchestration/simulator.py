@@ -83,13 +83,11 @@ class DefaultSimulator(object):
                                                                      catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
         self.initial_state_repo = initial_state_repository
-        self.state = None
-        self.region_env = None
-        #self.optimizer = None
         if hasattr(self.region_model,"optimizer_t"):
             self.optimizer = self.region_model.optimizer_t(self.region_model)
         else:
             self.optimizer = None
+
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository
@@ -102,11 +100,8 @@ class DefaultSimulator(object):
             self.region_model = clone_op(other.region_model)
         else:
             self.region_model = other.region_model.__class__(other.region_model)
-        #  self.region_model = other.region_model.clone() # __class__(other.region_model)
         self.epsg = other.epsg
         self.initial_state_repo = other.initial_state_repo
-        self.state = other.state
-        self.region_env = other.region_env
 
     @property
     def time_axis(self):
@@ -125,12 +120,12 @@ class DefaultSimulator(object):
         return region_env
 
     def simulate(self):
-        runnable = all((self.state is not None, self.time_axis.size()>0, # self.time_axis is not None,
-                        self.region_env is not None))
+        runnable = all((self.region_model.initial_state.size() > 0, self.time_axis.size() > 0,
+                       all([len(getattr(self.region_model.region_env, attr)) > 0 for attr in
+                            ("temperature", "wind_speed", "precipitation", "rel_hum", "radiation")])))
         if runnable:
-            self.region_model.set_states(self.state)
-            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-            self.region_model.interpolate(interp_params, self.region_env)
+            self.region_model.interpolate(self.region_model.interpolation_parameter, self.region_model.region_env)
+            self.region_model.revert_to_initial_state()
             print("Running simulation...")
             self.region_model.run_cells()
         else:
@@ -152,13 +147,13 @@ class DefaultSimulator(object):
             time_axis = self.time_axis
         else:
             self.region_model.initialize_cell_environment(time_axis)
-        self.state = self.get_initial_state_from_repo() if state is None else state
+        self.region_model.initial_state = self.get_initial_state_from_repo() if state is None else state
         bbox = self.region_model.bounding_region.bounding_box(self.epsg)
         period = time_axis.total_period()
         sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
                                                         geo_location_criteria=bbox)
-        self.region_env = self._get_region_environment(sources)
-        #self._fetch_source_run_interp(self.time_axis)
+        self.region_model.region_env = self._get_region_environment(sources)
+        self.region_model.interpolation_parameter = self.ip_repos.get_parameters(self.interpolation_id)
         self.simulate()
 
     def run_forecast(self, time_axis, t_c, state):
@@ -166,12 +161,10 @@ class DefaultSimulator(object):
         period = time_axis.total_period()
         sources = self.geo_ts_repository.get_forecast(self._geo_ts_names, period, t_c,
                                                       geo_location_criteria=bbox)
-        self.region_env = self._get_region_environment(sources)
-        #interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-        #self.region_model.run_interpolation(interp_params, time_axis, self.region_env)
         self.region_model.initialize_cell_environment(time_axis)
-        self.state = state
-        #self.time_axis = time_axis
+        self.region_model.region_env = self._get_region_environment(sources)
+        self.region_model.interpolation_parameter = self.ip_repos.get_parameters(self.interpolation_id)
+        self.region_model.initial_state = state
         self.simulate()
 
     def create_ensembles(self, time_axis, t_c, state=None):
@@ -180,14 +173,12 @@ class DefaultSimulator(object):
         sources = self.geo_ts_repository.get_forecast_ensemble(self._geo_ts_names, period, t_c,
                                                                geo_location_criteria=bbox)
         self.region_model.initialize_cell_environment(time_axis)
+        self.region_model.initial_state = self.get_initial_state_from_repo() if state is None else state
+        self.region_model.interpolation_parameter = self.ip_repos.get_parameters(self.interpolation_id)
         runnables = []
         for source in sources:
             simulator = self.copy()
-            simulator.state = state
-            #simulator.time_axis = time_axis
-            simulator.region_env = simulator._get_region_environment(source)
-            #interp_params = simulator.ip_repos.get_parameters(simulator.interpolation_id)
-            #simulator.region_model.run_interpolation(interp_params, time_axis, simulator.region_env)
+            simulator.region_model.region_env = simulator._get_region_environment(source)
             runnables.append(simulator)
         return runnables
 
@@ -197,9 +188,8 @@ class DefaultSimulator(object):
             period = self.time_axis.total_period()
             sources = self.geo_ts_repository.get_timeseries(self._geo_ts_names, period,
                                                             geo_location_criteria=bbox)
-            self.region_env = self._get_region_environment(sources)
-            interp_params = self.ip_repos.get_parameters(self.interpolation_id)
-            self.region_model.interpolate(interp_params, self.region_env)
+            region_env = self._get_region_environment(sources)
+            self.region_model.interpolate(self.region_model.interpolation_parameter, region_env)
 
         p_vec = [p.get(i) for i in range(p.size())]
         print("Calibrating...")
@@ -217,7 +207,7 @@ class DefaultSimulator(object):
 
     def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
                  optim_method_params={'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
-        if not hasattr(self.region_model, "optimizer_t"):
+        if self.optimizer is None:
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
         is_correct_p_type = [isinstance(_, self.region_model.parameter_t) for _ in [p_min, p_max, p]]
@@ -225,13 +215,11 @@ class DefaultSimulator(object):
             raise SimulatorError("{} must be of type {}".format(
                 ','.join([name for i, name in enumerate(['min', 'max', 'init'])
                           if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
-        self.state = state
+        self.region_model.initial_state = state
         self.region_model.initialize_cell_environment(time_axis)
-        self.region_model.set_states(self.state)
-        self.optimizer = self.region_model.optimizer_t(self.region_model,
-                                                       target_specification,
-                                                       [p_min.get(i) for i in range(p_min.size())],
-                                                       [p_max.get(i) for i in range(p_max.size())])
+        self.optimizer.target_target_specification = target_specification
+        self.optimizer.parameter_lower_bound = p_min
+        self.optimizer.parameter_upper_bound = p_max
         self.optimizer.set_verbose_level(verbose_level)
         return self._optimize(p, optim_method, optim_method_params, run_interp)
 

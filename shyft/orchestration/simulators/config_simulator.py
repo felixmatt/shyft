@@ -18,14 +18,12 @@ class ConfigSimulator(simulator.DefaultSimulator):
         if isinstance(arg, self.__class__):
             super().__init__(arg)
             self.region_model_id = arg.region_model_id
-            #self.time_axis = arg.time_axis
             self.dst_repo = arg.dst_repo
             self.end_state_repo = arg.end_state_repo
         else:
             super().__init__(arg.region_model_id, arg.interpolation_id, arg.get_region_model_repo(),
                              arg.get_geots_repo(), arg.get_interp_repo(), initial_state_repository=arg.get_initial_state_repo())
             self.region_model_id = arg.region_model_id
-            #self.time_axis = arg.time_axis
             self.region_model.initialize_cell_environment(arg.time_axis)
             self.dst_repo = arg.get_destination_repo()
             self.end_state_repo = arg.get_end_state_repo()
@@ -67,6 +65,9 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         sim_config = config.sim_config
         super().__init__(sim_config.region_model_id,sim_config.interpolation_id,sim_config.get_region_model_repo(),
                          sim_config.get_geots_repo(), sim_config.get_interp_repo(), initial_state_repository=sim_config.get_initial_state_repo())
+        if self.optimizer is None:
+            raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose "
+                                 "another!".format(self.region_model.__class__.__name__))
         self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
         self.region_model.initialize_cell_environment(sim_config.time_axis)
         self.region_model_id = sim_config.region_model_id
@@ -79,13 +80,12 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         if hasattr(config, 'calibrated_model_file'):
             self.calibrated_model_file = config.calibrated_model_file
         self.optimum_parameters = None
-        if not hasattr(self.region_model, "optimizer_t"):
-            raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose "
-                                 "another!".format(self.region_model.__class__.__name__))
-        self.optimizer = self.region_model.optimizer_t(self.region_model,
-                                                       self._create_target_specvect(),
-                                                       [p_min.get(i) for i in range(p_min.size())],
-                                                       [p_max.get(i) for i in range(p_max.size())])
+        self.optimizer.target_specification = self._create_target_specvect()
+        self.optimizer.parameter_lower_bound = p_min
+        self.optimizer.parameter_upper_bound = p_max
+
+    def copy(self):
+        raise NotImplementedError("Copying of ConfigCalibrator not supported yet.")
 
     @property
     def tv(self):
@@ -142,24 +142,17 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         if time_axis is not None:
             self.region_model.initialize_cell_environment(time_axis)
             run_interp = True
-        self.state = self.get_initial_state_from_repo() if state is None else state
+        self.region_model.initial_state = self.get_initial_state_from_repo() if state is None else state
         self.optim_method = optim_method if optim_method is not None else self.optim_method
         self.optim_method_params = optim_method_params if optim_method_params is not None else self.optim_method_params
         if tv is not None:
-            self.optimizer.set_target_specification(tv)
-        if p_min is None:
-            p_min = self.optimizer.parameter_lower_bound
-        if p_max is None:
-            p_max = self.optimizer.parameter_upper_bound
+            self.optimizer.target_specification = tv
+        if p_min is not None:
+            self.optimizer.parameter_lower_bound = p_min
+        if p_max is not None:
+            self.optimizer.parameter_upper_bound = p_max
         if p_init is not None:
             self.p_init = p_init
-        is_correct_p_type = [isinstance(_, self.region_model.parameter_t) for _ in [p_min, p_max, self.p_init]]
-        if not all(is_correct_p_type):
-            raise ConfigSimulatorError("{} must be of type {}".format(
-                ','.join([name for i, name in enumerate(['p_min', 'p_max', 'p_init'])
-                          if not is_correct_p_type[i]]), self.region_model.parameter_t.__name__))
-        self.optimizer.set_parameter_ranges([p_min.get(i) for i in range(p_min.size())], [p_max.get(i) for i in range(p_max.size())])
-        self.region_model.set_states(self.state)
         self.optimizer.set_verbose_level(verbose_level)
         p_res = self._optimize(self.p_init, self.optim_method, self.optim_method_params, run_interp=run_interp)
 
@@ -208,8 +201,8 @@ class ConfigForecaster(object):
         for k, v in self.forecast_sim.items():
             v.geo_ts_repository = self.forecast_cfg[k].get_geots_repo()
             v.ip_repos = self.forecast_cfg[k].get_interp_repo()
-            v.time_axis = self.forecast_cfg[k].time_axis
-            v.config = self.forecast_cfg[k]
+            #v.time_axis = self.forecast_cfg[k].time_axis
+            #v.config = self.forecast_cfg[k]
 
     def run(self, save_end_state=True, save_result_timeseries=True):
         self.historical_sim.run()
