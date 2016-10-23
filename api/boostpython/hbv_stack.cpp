@@ -123,8 +123,8 @@ namespace expose {
 
 		static void
 			models() {
-			typedef shyft::core::region_model<hbv_stack::cell_discharge_response_t> HbvOptModel;
-			typedef shyft::core::region_model<hbv_stack::cell_complete_response_t> HbvModel;
+			typedef shyft::core::region_model<hbv_stack::cell_discharge_response_t,shyft::api::a_region_environment> HbvOptModel;
+			typedef shyft::core::region_model<hbv_stack::cell_complete_response_t, shyft::api::a_region_environment> HbvModel;
 			expose::model<HbvModel>("HbvModel", "Hbv_stack");
 			expose::model<HbvOptModel>("HbvOptModel", "Hbv_stack");
 		}
@@ -137,7 +137,7 @@ namespace expose {
 
 		static void
 			model_calibrator() {
-			expose::model_calibrator<shyft::core::region_model<hbv_stack::cell_discharge_response_t>>("HbvOptimizer");
+			expose::model_calibrator<shyft::core::region_model<hbv_stack::cell_discharge_response_t, shyft::api::a_region_environment>>("HbvOptimizer");
 		}
 	}
 }

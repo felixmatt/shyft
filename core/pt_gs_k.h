@@ -240,12 +240,11 @@ namespace shyft {
          * \tparam RC Response collector type that implements:
          *    - RC.collect(utctime t, const R& response) --> Possibly save some responses at time t.
          */
-#ifndef SWIG
         template<template <typename, typename> class A, class R, class T_TS, class P_TS, class WS_TS, class RH_TS, class RAD_TS, class T,
         class S, class GCD, class P, class SC, class RC>
         void run_pt_gs_k(const GCD& geo_cell_data,
             const P& parameter,
-            const T& time_axis,
+            const T& time_axis, int start_step, int  n_steps,
             const T_TS& temp,
             const P_TS& prec,
             const WS_TS& wind_speed,
@@ -282,7 +281,9 @@ namespace shyft {
             const double forest_fraction=geo_cell_data.land_type_fractions_info().forest();
             const double altitude= geo_cell_data.mid_point().z;
             // Step through times in axis
-            for (size_t i = 0; i < time_axis.size(); ++i) {
+            size_t i_begin = n_steps > 0 ? start_step : 0;
+            size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
+            for (size_t i = i_begin ; i < i_end ; ++i) {
                 utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
@@ -326,12 +327,11 @@ namespace shyft {
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);///< \note collect the response valid for the i'th period (current state is now at the end of period)
-                if(i+1==time_axis.size())
+                if(i+1==i_end)
                     state_collector.collect(i+1, state);///< \note last iteration,collect the  final state as well.
             }
             response_collector.set_end_response(response);
         }
-#endif
     } // pt_gs_k
   } // core
 } // shyft

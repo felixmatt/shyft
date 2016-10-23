@@ -11,10 +11,9 @@ from shyft.api import hbv_stack
 class RegionModel(unittest.TestCase):
     @staticmethod
     def build_model(model_t, parameter_t, model_size, num_catchments=1):
-
-        cells = model_t.cell_t.vector_t()
         cell_area = 1000 * 1000
         region_parameter = parameter_t()
+        gcds = api.GeoCellDataVector()  # creating models from geo_cell-data is easier and more flexible
         for i in range(model_size):
             loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
             gp = api.GeoPoint(*loc)
@@ -22,12 +21,10 @@ class RegionModel(unittest.TestCase):
             if num_catchments > 1:
                 cid = random.randint(1, num_catchments)
             geo_cell_data = api.GeoCellData(gp, cell_area, cid, 0.9, api.LandTypeFractions(0.01, 0.05, 0.19, 0.3, 0.45))
-            # geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
-            cell = model_t.cell_t()
-            cell.geo = geo_cell_data
-            cells.append(cell)
+            geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
+            gcds.append(geo_cell_data)
 
-        return model_t(cells, region_parameter)
+        return model_t(gcds, region_parameter)
 
     @staticmethod
     def build_mock_state_dict(**kwargs):
@@ -111,6 +108,14 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
 
+    def test_extract_geo_cell_data_vector(self):
+        num_cells = 20
+        model_type = hbv_stack.HbvModel
+        model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        gcdv = model.extract_geo_cell_data()
+        self.assertEqual(len(gcdv),num_cells)
+
     def test_model_area_functions(self):
         num_cells = 20
         model_type = pt_gs_k.PTGSKModel
@@ -133,6 +138,11 @@ class RegionModel(unittest.TestCase):
         model_type = pt_gs_k.PTGSKModel
         model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        # demo of feature for threads
+        self.assertGreaterEqual(model.ncore,1)  # defaults to hardware concurrency*4
+        model.ncore = 4  # set it to 4, and
+        self.assertEqual(model.ncore, 4)  # verify it works
+
         # now modify snow_cv forest_factor to 0.1
         region_parameter = model.get_region_parameter()
         region_parameter.gs.snow_cv_forest_factor = 0.1
@@ -177,12 +187,24 @@ class RegionModel(unittest.TestCase):
             s0.append(si)
         model.set_states(s0)
         model.set_state_collection(-1, True)  # enable state collection for all cells
-        model.run_cells()
+        model2 = model_type(model)  # make a copy, so that we in the stepwise run below get a clean copy with all values zero.
+        model.run_cells()  # the default arguments applies: thread_cell_count=0,start_step=0,n_steps=0)
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
         self.assertGreaterEqual(sum_discharge_value, 130.0)
         self.assertIsNotNone(sum_discharge)
+        # now, re-run the process in 24-hours steps x 10
+        model.set_states(s0)  # restore state s0
+        self.assertEqual(s0.size(),model.initial_state.size())
+        for section in range(10):
+            model2.run_cells(thread_cell_count=0, start_step=section*24, n_steps=24)
+            section_discharge = model2.statistics.discharge(cids)
+            self.assertEqual(section_discharge.size(),sum_discharge.size()) # notice here that the values after current step are 0.0
+        stepwise_sum_discharge = model2.statistics.discharge(cids)
+        # assert stepwise_sum_discharge == sum_discharge
+        diff_ts = sum_discharge.values.to_numpy()-stepwise_sum_discharge.values.to_numpy()
+        self.assertAlmostEqual((diff_ts*diff_ts).max(),0.0,4)
         # Verify that if we pass in illegal cids, then it raises exception(with first failing
         try:
             illegal_cids = api.IntVector([0, 4, 5])
@@ -230,7 +252,7 @@ class RegionModel(unittest.TestCase):
             si = pt_gs_k.PTGSKState()
             si.kirchner.q = 40.0
             s0.append(si)
-        model.set_states(s0)
+        model.set_states(s0)  # at this point the intial state of model is established as well
         model.run_cells()
         cids = api.IntVector.from_numpy([0])  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
@@ -242,7 +264,7 @@ class RegionModel(unittest.TestCase):
         #
         # create target specification
         #
-        model.set_states(s0)  # remember to set the s0 again, so we have the same initial condition for our game
+        model.revert_to_initial_state()  # set_states(s0)  # remember to set the s0 again, so we have the same initial condition for our game
         tsa = api.TsTransform().to_average(t0, dt, n, sum_discharge)
         t_spec_1 = api.TargetSpecificationPts(tsa, cids, 1.0, api.KLING_GUPTA, 1.0, 0.0, 0.0, api.DISCHARGE, 'test_uid')
 

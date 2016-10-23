@@ -64,6 +64,7 @@
 			<Add library="pthread" />
 			<Add library="boost_filesystem" />
 			<Add library="boost_system" />
+			<Add library="boost_serialization" />
 			<Add library="blas" />
 			<Add library="lapack" />
 			<Add directory="/usr/local/lib64" />

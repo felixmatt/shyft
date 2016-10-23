@@ -7,7 +7,7 @@ list(REMOVE_ITEM cpps "core_pch.cpp")
 set(SOURCES ${headers} ${cpps})
 
 message(STATUS "Compiling boost library (only selected components)...")
-execute_process(COMMAND ./bootstrap.sh --prefix=${SHYFT_DEPENDENCIES}/local --with-libraries=filesystem,system,python,date_time
+execute_process(COMMAND ./bootstrap.sh --prefix=${SHYFT_DEPENDENCIES}/local --with-libraries=filesystem,system,python,date_time,serialization
   WORKING_DIRECTORY ${SHYFT_DEPENDENCIES}/boost
   RESULT_VARIABLE rv
   OUTPUT_VARIABLE output

@@ -44,6 +44,7 @@ namespace expose {
         .def_readwrite("geo",&T::geo,"geo_cell_data information for the cell")
         .add_property("parameter",&T::get_parameter,&T::set_parameter,"reference to parameter for this cell, typically shared for a catchment")
         .def_readwrite("env_ts",&T::env_ts,"environment time-series as projected to the cell")
+        .def_readwrite("state",&T::state,"Current state of the cell")
         .def_readonly("sc",&T::sc,"state collector for the cell")
         .def_readonly("rc",&T::rc,"response collector for the cell")
         .def("set_parameter",&T::set_parameter,args("parameter"),"set the cell method stack parameters, typical operations at region_level, executed after the interpolation, before the run")
@@ -85,17 +86,28 @@ namespace expose {
             "The region model keeps a list of cells, of specified type \n"
                 ,model_name);
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
-        auto run_interpolation_f= &M::template run_interpolation<shyft::api::a_region_environment>;
-		auto interpolate_f = &M::template interpolate<shyft::api::a_region_environment>;
+        auto run_interpolation_f= &M::run_interpolation;
+		auto interpolate_f = &M::interpolate;
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
+         .def(init< const vector<shyft::core::geo_cell_data>&, const typename M::parameter_t& >(args("geo_data_vector", "region_param"), "creates a model from geo_data vector and region model parameters"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
-		 .def_readonly("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
+		 .def_readwrite("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
+         .def_readwrite("initial_state",&M::initial_state,"empty or the the initial state as established on the first invokation of .set_states() or .run_cells()")
+         .def_readwrite("ncore",&M::ncore,
+                        "determines how many core to utilize during run_cell processing,\n"
+                        "0(=default) means detect by hardware probe"
+                        )
+         .def_readwrite("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
-		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
-			 "Initializes the cell enviroment (cell.env.ts* )\n" 
+		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
+             "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"
+             "be passed into a the constructor of a new region-model (clone-operation)\n"
+         )
+         .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
+			 "Initializes the cell enviroment (cell.env.ts* )\n"
 			 "\n"
 			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
 			 "that is local to the cell.The initial values of these time - series is set to zero.\n"
@@ -131,7 +143,20 @@ namespace expose {
 				" env: RegionEnvironemnt\n"
 				"     contains the ref: region_environment type\n"
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0),"run_cells calculations over specified time_axis, require that run_interpolation is done first")
+         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+             "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
+             "require that initialize(time_axis) or run_interpolation is done first\n"
+             "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
+             "notice that in any case, the current model state is used as a starting point\n"
+             "Parameters\n"
+             "----------\n"
+             "thread_cell_count : int\n"
+             "\t number of cells pr.worker thread, if 0 is passed, the the core-count is used to determine the count\n"
+             "start_step : int\n"
+             "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
+             "n_steps :int\n"
+             "\t number of steps to run in a partial run, default=0 indicating the complete time-axis is covered\n"
+         )
          .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
                     "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
                     "to a value representative for the cell.mid_point().\n"
@@ -178,11 +203,18 @@ namespace expose {
                     "note that catchment filter can influence which states are calculated/updated.\n"
                     "param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.\n"
         )
+
         .def("set_states",&M::set_states,args("states"),
                     "set current state for all the cells in the model.\n"
                     "states is a vector<state_t> of all states, must match size/order of cells.\n"
                     "note throws runtime-error if states.size is different from cells.size\n"
         )
+        .def("revert_to_initial_state",&M::revert_to_initial_state,
+             "Given that the cell initial_states are established, these are \n"
+             "copied back into the cells\n"
+             "Note that the cell initial_states vector is established at the first call to \n"
+             ".set_states() or run_cells()\n"
+             )
         .def("set_state_collection",&M::set_state_collection,args("catchment_id","on_or_off"),
                     "enable state collection for specified or all cells\n"
                     "note that this only works if the underlying cell is configured to\n"
@@ -251,7 +283,7 @@ namespace expose {
                     "param p_max maximum values for the parameters to be  optimized\n"
                   )
         )
-        .def(init<RegionModel&>(boost::python::args("model"), 
+        .def(init<RegionModel&>(boost::python::args("model"),
             "Construct a parameter Optimizer for the supplied model\n"
             "Use method .set_target_specification(...) to provide the target specification,\n"
             "then invoke opt_param= o.optimize(p_starting_point..)\n"

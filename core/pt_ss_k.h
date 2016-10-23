@@ -151,7 +151,7 @@ namespace shyft {
                  class P, class SC, class RC>
         void run(const GCD& geo_cell_data,
             const P& parameter,
-            const T& time_axis,
+            const T& time_axis, int start_step,int  n_steps,
             const T_TS& temp,
             const P_TS& prec,
             const WS_TS& wind_speed,
@@ -185,7 +185,9 @@ namespace shyft {
             skaugen::calculator<typename P::snow_parameter_t, typename S::snow_state_t, typename R::snow_response_t> skaugen_snow;
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
             // Step through times in axis
-            for (size_t i=0; i < time_axis.size(); ++i) {
+            size_t i_begin = n_steps > 0 ? start_step : 0;
+            size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
+            for (size_t i = i_begin; i < i_end; ++i) {
                 utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
                 double rad = rad_accessor.value(i);
@@ -228,7 +230,7 @@ namespace shyft {
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);
 
-                if(i+1==time_axis.size())
+                if(i+1==i_end)
                     state_collector.collect(i+1, state);///< \note last iteration,collect the  final state as well.
             }
             response_collector.set_end_response(response);

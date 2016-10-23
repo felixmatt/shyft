@@ -83,7 +83,7 @@ void hbv_stack_test::test_call_stack() {
 	state state{snow_state,soil_state, tank_state};
 	parameter parameter(pt_param, snow_param, ae_param, soil_param, tank_param, p_corr_param);
 	geo_cell_data geo_cell_data;
-	hbv_stack::run_hbv_stack<direct_accessor, response>(geo_cell_data, parameter, time_axis, temp,  //What is the difference between ptgsk & pthsk??
+	hbv_stack::run_hbv_stack<direct_accessor, response>(geo_cell_data, parameter, time_axis,0,0, temp,  //What is the difference between ptgsk & pthsk??
 		prec, wind_speed, rel_hum, radiation, state,
 		state_collector, response_collector);
 

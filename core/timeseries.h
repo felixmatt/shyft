@@ -61,6 +61,7 @@ namespace shyft{
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
         };
+        typedef point_interpretation_policy fx_policy_t;
         //typedef point_interpretation_policy point_interpretation_policy;// BW compatible
 
         inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
@@ -166,6 +167,7 @@ namespace shyft{
                 std::transform(begin(v), end(v), other.v.cbegin(), begin(v), [scale](double a, double b) {return a + b*scale; });
             }
             void fill(double value) { std::fill(begin(v), end(v), value); }
+            void fill_range(double value, int start_step, int n_steps) { if (n_steps == 0)fill(value); else std::fill(begin(v) + start_step, begin(v) + start_step + n_steps, value); }
 			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
 
         };
@@ -742,6 +744,8 @@ namespace shyft{
             size_t size() const { return time_axis.size(); }
             // Accessor interface
             double value(size_t i) const { return cvalue; }
+            void fill(double v) { cvalue = v; }
+            void fill_range(double v, int start_step, int n_steps) { cvalue = v; }
             point_interpretation_policy point_interpretation() const {return POINT_AVERAGE_VALUE;}
             void set_point_interpretation(point_interpretation_policy point_interpretation) {}///<ignored
         };

@@ -79,3 +79,15 @@ class Vectors(unittest.TestCase):
             self.assertEqual(gpv[i].x, i)
             self.assertEqual(gpv[i].y, i * 2)
             self.assertEqual(gpv[i].z, i * 3)
+
+    def test_geo_cell_data_vector(self):
+        gcdv = api.GeoCellDataVector()
+        for i in range(5):
+            p = api.GeoPoint(100, 200, 300)
+            ltf = api.LandTypeFractions()
+            ltf.set_fractions(glacier=0.1, lake=0.1, reservoir=0.1, forest=0.1)
+            gcd=api.GeoCellData(p,1000000.0,i,0.9,ltf)
+            gcdv.append(gcd)
+        self.assertEqual(len(gcdv),5)
+        for i in range(5):
+            self.assertEqual(gcdv[i].catchment_id(),i)

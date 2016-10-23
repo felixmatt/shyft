@@ -126,8 +126,8 @@ namespace expose {
 
         static void
         models() {
-            typedef shyft::core::region_model<pt_ss_k::cell_discharge_response_t> PTSSKOptModel;
-            typedef shyft::core::region_model<pt_ss_k::cell_complete_response_t> PTSSKModel;
+            typedef shyft::core::region_model<pt_ss_k::cell_discharge_response_t, shyft::api::a_region_environment> PTSSKOptModel;
+            typedef shyft::core::region_model<pt_ss_k::cell_complete_response_t, shyft::api::a_region_environment> PTSSKModel;
             expose::model<PTSSKModel>("PTSSKModel","PTSSK");
             expose::model<PTSSKOptModel>("PTSSKOptModel","PTSSK");
         }
@@ -140,7 +140,7 @@ namespace expose {
 
         static void
         model_calibrator() {
-            expose::model_calibrator<shyft::core::region_model<pt_ss_k::cell_discharge_response_t>>("PTSSKOptimizer");
+            expose::model_calibrator<shyft::core::region_model<pt_ss_k::cell_discharge_response_t, shyft::api::a_region_environment>>("PTSSKOptimizer");
         }
 
     }
