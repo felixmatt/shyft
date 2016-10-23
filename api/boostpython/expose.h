@@ -91,17 +91,22 @@ namespace expose {
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
+         .def(init< const vector<shyft::core::geo_cell_data>&, const typename M::parameter_t& >(args("geo_data_vector", "region_param"), "creates a model from geo_data vector and region model parameters"))
          .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
          .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
-		 .def_readonly("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
+		 .def_readwrite("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
          .def_readwrite("initial_state",&M::initial_state,"empty or the the initial state as established on the first invokation of .set_states() or .run_cells()")
          .def_readwrite("ncore",&M::ncore,
                         "determines how many core to utilize during run_cell processing,\n"
                         "0(=default) means detect by hardware probe"
                         )
-         .def_readonly("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
+         .def_readwrite("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
-		 .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
+		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
+             "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"
+             "be passed into a the constructor of a new region-model (clone-operation)\n"
+         )
+         .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
 			 "Initializes the cell enviroment (cell.env.ts* )\n"
 			 "\n"
 			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
