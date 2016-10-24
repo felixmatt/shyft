@@ -1,9 +1,11 @@
 import os.path
 import glob
 import platform
-from setuptools import setup, find_packages
 import subprocess
 import sys
+import setuptools
+import distutils.command.bdist_conda
+from setuptools import setup, find_packages
 
 # Build shyft using the build_script
 # Create package using 'python setup.py bdist_conda'
@@ -55,9 +57,11 @@ setup(
     url='https://github.com/statkraft/shyft',
     description='An OpenSource hydrological toolbox',
     license='LGPL v3',
+    distclass=distutils.command.bdist_conda.CondaDistribution,
     packages=find_packages(),
     package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 'tests/netcdf/*']},
     entry_points={},
     conda_import_tests=False,
+    conda_command_tests=False,
     requires=["numpy", "nose", "netCDF4"]
 )
