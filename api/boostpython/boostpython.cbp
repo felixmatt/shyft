@@ -145,10 +145,10 @@
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
 			<Add directory="$(#numpy.include)" />
+			<Add directory="$(#boost.include)" />
+			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#dlib.include)" />
 		</Compiler>
-		<ResourceCompiler>
-			<Add option="-Winvalid-pch" />
-		</ResourceCompiler>
 		<Linker>
 			<Add option="-pthread" />
 			<Add library="blas" />

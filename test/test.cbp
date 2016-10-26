@@ -56,6 +56,10 @@
 			<Add directory="../../cxxtest" />
 			<Add directory=".." />
 			<Add directory="../../dlib" />
+			<Add directory="$(#boost.include)" />
+			<Add directory="$(#dlib.include)" />
+			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#cxxtest.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />

@@ -43,10 +43,12 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-std=c++1y" />
 			<Add option="-Wall" />
+			<Add option="-std=c++1y" />
 			<Add option="-fexceptions -fPIC -pthread -Winvalid-pch" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add directory="$(#boost.include)" />
+			<Add directory="$(#armadillo.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />

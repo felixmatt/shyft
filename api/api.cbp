@@ -44,6 +44,9 @@
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory=".." />
 			<Add directory="../../dlib" />
+			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#dlib.include)" />
+			<Add directory="$(#boost.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
