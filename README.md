@@ -26,7 +26,7 @@ REQUIREMENTS
 
 For compiling and running SHyFT, you will need:
 
-* A C++11 compiler
+* A C++1y compiler
 * The BLAS and LAPACK libraries (development packages)
 * A Python3 (3.4 or higher) interpreter
 * The NumPy package (>= 1.8.0)
@@ -57,6 +57,7 @@ here (yet).
 You can compile SHyFT by using the typical procedure for Python packages:
 
 ```bash
+$ export SHYFT_DEPENDENCIES_DIR=`pwd`/..
 $ python setup.py build
 ```
 
@@ -67,6 +68,7 @@ Although SHyFT tests are meant to be run from the sources directory
 shyft repo sources), you can also install it with:
 
 ```bash
+$ export SHYFT_DEPENDENCIES_DIR=`pwd`/..
 $ python setup.py install
 ```
 
@@ -89,7 +91,7 @@ $ export SHYFT_SOURCES=shyft_root_directory  # absolute path required!
 $ cd $SHYFT_SOURCES
 $ mkdir build
 $ cd build
-$ export SHYFT_DEPENDENCIES_DIR=directory_to_keep_dependencies  # absolute path
+$ export SHYFT_DEPENDENCIES_DIR=$SHYFT_SOURCES/.. # directory_to_keep_dependencies,  absolute path
 $ cmake ..      # configuration step; or "ccmake .." for curses interface
 $ make -j 4     # do the actual compilation of C++ sources (using 4 processes)
 $ make install  # copy Python extensions somewhere in $SHYFT_SOURCES
@@ -121,8 +123,8 @@ $ nosetests
 ```
 from the root directory.
 
-The test suite is not very comprehensive yet, but at least would provide
-indications that your installation is sane.
+The test suite is comprehensive, and in addition to unit-tests covering c++ parts
+and python parts, it also covers integration tests with netcdf and geo-services.
 
 INSTALLING
 ==========
