@@ -102,14 +102,13 @@ cd $SHYFT_WORKSPACE/shyft
 
 And you should be ready to build, install, and run Shyft!
 
-COMPILING
-=========
+BUILDING
+========
 
 NOTE: the compiling instructions below have been mainly tested on Linux platforms. Shyft can also be compiled (and it is actively maintained) for Windows, but the building instructions are not covered here (yet).
 
-<div class="alert alert-success">
-Note the dependency regarding a modern compiler. gcc-5 is required at present to build Shyft.
-</div>
+NOTE: the dependency regarding a modern compiler generally means gcc-5 is required to build Shyft.
+
 
 You can compile Shyft by using the typical procedure for Python packages. We use environment variables to control the build. The `SHYFT_DEPENDENCIES_DIR` defines where the dependencies will be built (or exist). When you call `setup.py` the script will call cmake. If the dependencies exist in the aforementioned directory, they will be used. Otherwise, they will be downloaded and built into that directory as part of the build process. If not set, cmake will create a directory `shyft-dependencies` in the `shyft` repository directory. A suggestion is to set the `shyft-dependencies` directory to your `shyft-workspace`. If you have set these as part of your `conda environment` per the instructions above, and are active in that environment, then simply:
  
@@ -133,14 +132,14 @@ python setup.py build_ext --inplace
 ```
 
 
-TESTING
-=======
-It is recommended to at least run a few of the tests after building. This will ensure your paths are set correctly.
+QUICK TEST
+==========
+It is recommended to at least run a few of the tests after building. This will ensure your paths and environment variables are set correctly.
 
 The quickest and easiest test to run is:
 
 ```bash
-python -c "from shyft import api
+python -c "from shyft import api"
 ```
 
 If this raises:
@@ -152,14 +151,12 @@ Then you don't have your `LD_LIBRARY_PATH` set correctly. This should point to:
 export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
 ```
 
-To run further tests, you need to be in the `shyft` repository directory. Shyft tests are meant to be run from the sources directory and expect the `shyft-data` repo to be cloned locally next to the `shyft` repository. As a start, you can run the api test suite by:
+To run further tests, see the TESTING section below. 
 
-```bash
-cd $SHYFT_WORKSPACE/shyft/shyft/tests/api
-nosetests
-```
+INSTALLING
+==========
 
-If these run, then you can simply install Shyft using:
+If the tests above run, then you can simply install Shyft using:
 
 ```bash
 cd $SHYFT_WORKSPACE
@@ -169,12 +166,6 @@ python setup.py install
 Just be aware of the dependency of the LD_LIBRARY_PATH so that the libboost libraries are found.
 
 Now, you should be set to start working with the notebooks and learning Shyft!
-
-## Comprehensive Tests
-
-To conduct further testing and to run direct C++ tests, you need to be sure you have the `shyft-data` repository as a sibling of the current working directory.
-
-
 
 
 COMPILING MANUALLY VIA CMAKE
@@ -220,19 +211,28 @@ The way to test Shyft is by running:
 ```bash
 $ nosetests
 ```
-from the root directory.
+from the root shyft repository directory.
 
-The test suite is comprehensive, and in addition to unit-tests covering c++ parts
-and python parts, it also covers integration tests with netcdf and geo-services.
+The test suite is comprehensive, and in addition to unit-tests covering c++ parts and python parts, it also covers integration tests with netcdf and geo-services.
 
-INSTALLING
-==========
-
-Once you tested you Shyft package you can install it in your system via::
+Shyft tests are meant to be run from the sources directory. As a start, you can run the python api test suite by:
 
 ```bash
-$ python setup.py install
+cd $SHYFT_WORKSPACE/shyft/shyft/tests/api
+nosetests
 ```
+
+## Comprehensive Tests
+
+To conduct further testing and to run direct C++ tests, you need to be sure you have the `shyft-data` repository as a sibling of the `shyft` repository directory.
+
+To run some of the C++ core tests you can try the following:
+
+```bash
+cd $SHYFT_WORKSPACE/shyft/build/test
+make test
+```
+
 
 AUTHORS
 =======
