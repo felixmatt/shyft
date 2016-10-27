@@ -5,77 +5,176 @@ README
 |------------|---------|
 |master       | [![Build Status](https://travis-ci.org/statkraft/shyft.svg?branch=master)](https://travis-ci.org/statkraft/shyft) |
 
-SHyFT is an OpenSource hydrological toolbox developed by
+Shyft is an OpenSource hydrological toolbox developed by
 [Statkraft](http://www.statkraft.com).
 
-It is optimized for highly efficient modeling of hydrologic processes
-following the paradigm of distributed, lumped parameter models -- though
-recent developments have introduced more physically based / process-level
-methods.
+It is optimized for highly efficient modeling of hydrologic processes following the paradigm of distributed, lumped parameter models -- though recent developments have introduced more physically based / process-level methods.
 
-The code is based on an early initiative for distributed hydrological
-simulation, called [ENKI](https://bitbucket.org/enkiopensource/enki)
-developed at Sintef by Sjur Kolberg with contributions from Kolbjorn
-Engeland and Oddbjorn Bruland.
+The code is based on an early [initiative for distributed hydrological simulation](http://www.sintef.no/sintef-energi/xergi/xergi-2004/nr-1---april/betre-tilsigsprognoser-med-meir-informasjon/) , called [ENKI](https://bitbucket.org/enkiopensource/enki) funded by Statkraft and developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland and Oddbjorn Bruland.
 
-Wiki for [SHyFT](https://github.com/statkraft/shyft/wiki) includes details
-for how to get prebuilt binaries, how to build and contribute.
+IMPORTANT: While Shyft is being developed to support Linux and Windows platforms, it should be noted that the instructions contained in this README are geared toward linux systems. A Wiki for [Shyft](https://github.com/statkraft/shyft/wiki) includes details for how to get prebuilt binaries, a few other build recipes, and how to contribute.
 
 REQUIREMENTS
 ============
 
-For compiling and running SHyFT, you will need:
+For compiling and running Shyft, you will need:
 
-* A C++1y compiler
+* A C++1y compiler (gcc-5 or higher)
 * The BLAS and LAPACK libraries (development packages)
 * A Python3 (3.4 or higher) interpreter
 * The NumPy package (>= 1.8.0)
 * The netCDF4 package (>= 1.2.1)
 * The CMake building tool (2.8.7 or higher)
 
-In addition, a series of Python packages are needed mainly for running
-the tests.  These can be easily installed via:
+In addition, a series of Python packages are needed mainly for running the tests. These can be easily installed via:
 
 ```bash
-$ pip install -r requeriments.txt
+$ pip install -r requirements.txt
 ```
 
-or, if you are using conda:
+or, if you are using conda (see below):
 
 ```bash
 $ cat requirements.txt | xargs conda install
 ```
 
+
+CLONING
+=========
+Shyft is distributed in three separate code repositories. This repository, `Shyft` provides the main code base. A second repository (required for tests) is located at [shyft-data](https://github.com/statkraft/shyft-data). A third repository [shyft-doc](https://github.com/statkraft/shyft-doc) is available containing example notebooks and tutorials. The three repositories assume they have been checked out in parallel into a `shyft_workspace` directory:
+
+```bash
+mkdir shyft_workspace && cd shyft_workspace
+export SHYFT_WORKSPACE=`pwd`
+git clone https://github.com/statkraft/shyft.git
+git clone https://github.com/statkraft/shyft-data.git
+git clone https://github.com/statkraft/shyft-doc.git
+```
+
+PYTHON SET UP
+=============
+A general recommendation is to use conda from [Continuum Analytics](http://conda.pydata.org/docs/get-started.html). Below we instruct to create an Anaconda environment. If you are running Shyft, there are several other resources this will provide for plotting and visualization of results -- including jupyter for running the tutorial notebooks. If you prefer a leaner solution, simply use the requirements.txt file included with the repository and a miniconda environment.
+
+Unless you are building from scratch using one of the provided build scripts or would prefer to use an isolated miniconda environment for Shyft, we recommend (and only provide instructions for) setting up a [conda environment](http://conda.pydata.org/docs/using/envs.html#create-an-environment):
+
+```bash
+conda create --name shyft python=3.5 anaconda
+```
+
+A few other customizations to the environment will help with your workflow. First, define a few `env_vars` for the new environment. The easiest way to do this is to find the directory where you've created your environment (probably `$HOME/.conda/envs/shyft`). Inside that directory create the following files:
+
+```bash
+cd $HOME/.conda/envs/shyft
+mkdir -p ./etc/conda/activate.d
+mkdir -p ./etc/conda/deactivate.d
+touch ./etc/conda/activate.d/env_vars.sh
+touch ./etc/conda/deactivate.d/env_vars.sh
+```
+
+Then edit the `$HOME/.conda/envs/shyft/etc/conda/activate.d/env_vars.sh` file to include the following environment variables:
+
+```bash
+#!/bin/bash
+SHYFT_WORKSPACE=/path/to_directory_into_which_you_cloned/shyft-repositories
+
+#SHYFT
+export SHYFT_DEPENDENCIES_DIR=$SHYFT_WORKSPACE/shyft-dependencies
+export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
+export PYTHONPATH=$SHYFT_WORKSPACE/shyft
+```
+
+Next edit the `$HOME/.conda/envs/shyft/etc/conda/deactivate.d/env_vars.sh` file to unset the environment variables:
+
+```bash
+#!/bin/bash
+
+#SHYFT
+unset SHYFT_DEPENDENCIES_DIR
+unset PYTHONPATH
+```
+
+Now, to build activate the shyft environment and cd to your `$SHYFT_WORKSPACE` directory:
+
+```bash
+source activate shyft
+cd $SHYFT_WORKSPACE/shyft
+```
+
+And you should be ready to build, install, and run Shyft!
+
 COMPILING
 =========
 
-NOTE: the compiling instructions below have been mainly tested on
-Linux platforms.  SHyFT can also be compiled (and it is actively
-maintained) for Windows, but the building instructions are not covered
-here (yet).
+NOTE: the compiling instructions below have been mainly tested on Linux platforms. Shyft can also be compiled (and it is actively maintained) for Windows, but the building instructions are not covered here (yet).
 
-You can compile SHyFT by using the typical procedure for Python packages:
+<div class="alert alert-success">
+Note the dependency regarding a modern compiler. gcc-5 is required at present to build Shyft.
+</div>
+
+You can compile Shyft by using the typical procedure for Python packages. We use environment variables to control the build. The `SHYFT_DEPENDENCIES_DIR` defines where the dependencies will be built (or exist). When you call `setup.py` the script will call cmake. If the dependencies exist in the aforementioned directory, they will be used. Otherwise, they will be downloaded and built into that directory as part of the build process. If not set, cmake will create a directory `shyft-dependencies` in the `shyft` repository directory. A suggestion is to set the `shyft-dependencies` directory to your `shyft-workspace`. If you have set these as part of your `conda environment` per the instructions above, and are active in that environment, then simply:
+ 
+ ```bash
+ pip install -r requirements.txt
+ python setup.py build_ext --inplace 
+ 
+ ```
+
+
+NOTE: If you haven't set `env_vars` as part of your conda environment, then you need to do the following:
 
 ```bash
-$ export SHYFT_DEPENDENCIES_DIR=`pwd`/..
-$ python setup.py build
+# assumes you are still in the shyft_workspace directory containing
+# the git repositories
+export SHYFT_WORKSPACE=`pwd`
+mkdir shyft-dependencies
+export SHYFT_DEPENDENCIES_DIR=$SHYFT_WORKSPACE/shyft-dependencies
+cd shyft #the shyft repository
+python setup.py build_ext --inplace
 ```
 
-from the root directory.
 
-Although SHyFT tests are meant to be run from the sources directory
-(e.g. it expects the shyft-data repo to be cloned locally next to the
-shyft repo sources), you can also install it with:
+TESTING
+=======
+It is recommended to at least run a few of the tests after building. This will ensure your paths are set correctly.
+
+The quickest and easiest test to run is:
 
 ```bash
-$ export SHYFT_DEPENDENCIES_DIR=`pwd`/..
-$ python setup.py install
+python -c "from shyft import api
 ```
 
-Although you won't be able to run the tests except in a very
-restricted scenario (i.e. `shyft-data` should be a sibling of the
-current working directory), this won't prevent you to use SHyFT on top
-of your own datasets.
+If this raises:
+`ImportError: libboost_python3.so.1.61.0: cannot open shared object file: No such file or directory`
+
+Then you don't have your `LD_LIBRARY_PATH` set correctly. This should point to:
+
+```bash
+export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
+```
+
+To run further tests, you need to be in the `shyft` repository directory. Shyft tests are meant to be run from the sources directory and expect the `shyft-data` repo to be cloned locally next to the `shyft` repository. As a start, you can run the api test suite by:
+
+```bash
+cd $SHYFT_WORKSPACE/shyft/shyft/tests/api
+nosetests
+```
+
+If these run, then you can simply install Shyft using:
+
+```bash
+cd $SHYFT_WORKSPACE
+python setup.py install
+```
+
+Just be aware of the dependency of the LD_LIBRARY_PATH so that the libboost libraries are found.
+
+Now, you should be set to start working with the notebooks and learning Shyft!
+
+## Comprehensive Tests
+
+To conduct further testing and to run direct C++ tests, you need to be sure you have the `shyft-data` repository as a sibling of the current working directory.
+
+
 
 
 COMPILING MANUALLY VIA CMAKE
@@ -106,7 +205,7 @@ $ export PYTHONPATH=$SHYFT_SOURCES
 $ nosetests ..  # run the Python tests
 ```
 
-If all the tests pass, then you have an instance of SHyFT that is
+If all the tests pass, then you have an instance of Shyft that is
 fully functional.  In case this directory is going to act as a
 long-term installation it is recommended to persist your
 $LD_LIBRARY_PATH and $PYTHONPATH environment variables (in ~/.bashrc
@@ -116,7 +215,7 @@ or similar).
 TESTING
 =======
 
-The way to test SHyFT is by running:
+The way to test Shyft is by running:
 
 ```bash
 $ nosetests
@@ -129,7 +228,7 @@ and python parts, it also covers integration tests with netcdf and geo-services.
 INSTALLING
 ==========
 
-Once you tested you SHyFT package you can install it in your system via::
+Once you tested you Shyft package you can install it in your system via::
 
 ```bash
 $ python setup.py install
@@ -138,7 +237,7 @@ $ python setup.py install
 AUTHORS
 =======
 
-SHyFT is developed by Statkraft, and the two main initial authors to
+Shyft is developed by Statkraft, and the two main initial authors to
 the C++ core were Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and
 Ola Skavhaug <ola@xal.no>.
 
@@ -163,5 +262,5 @@ Contributors and current project participants include:
 
 COPYING / LICENSE
 =================
-SHyFT is released under LGPL V.3
+Shyft is released under LGPL V.3
 See LICENCE
