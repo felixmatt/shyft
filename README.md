@@ -41,7 +41,7 @@ $ cat requirements.txt | xargs conda install
 
 CLONING
 =========
-Shyft is distributed in three separate code repositories. This repository, `Shyft` provides the main code base. A second repository (required for tests) is located at [shyft-data](https://github.com/statkraft/shyft-data). A third repository [shyft-doc](https://github.com/statkraft/shyft-doc) is available containing example notebooks and tutorials. The three repositories assume they have been checked out in parallel into a `shyft_workspace` directory:
+Shyft is distributed in three separate code repositories. This repository, `shyft` provides the main code base. A second repository (required for tests) is located at [shyft-data](https://github.com/statkraft/shyft-data). A third repository [shyft-doc](https://github.com/statkraft/shyft-doc) is available containing example notebooks and tutorials. The three repositories assume they have been checked out in parallel into a `shyft_workspace` directory:
 
 ```bash
 mkdir shyft_workspace && cd shyft_workspace
@@ -73,7 +73,7 @@ touch ./etc/conda/deactivate.d/env_vars.sh
 
 Then edit the `$HOME/.conda/envs/shyft/etc/conda/activate.d/env_vars.sh` file to include the following environment variables:
 
-```bash
+```
 #!/bin/bash
 SHYFT_WORKSPACE=/path/to_directory_into_which_you_cloned/shyft-repositories
 
@@ -85,7 +85,7 @@ export PYTHONPATH=$SHYFT_WORKSPACE/shyft
 
 Next edit the `$HOME/.conda/envs/shyft/etc/conda/deactivate.d/env_vars.sh` file to unset the environment variables:
 
-```bash
+```
 #!/bin/bash
 
 #SHYFT
@@ -105,12 +105,12 @@ And you should be ready to build, install, and run Shyft!
 BUILDING
 ========
 
-NOTE: the compiling instructions below have been mainly tested on Linux platforms. Shyft can also be compiled (and it is actively maintained) for Windows, but the building instructions are not covered here (yet).
+NOTE: the build/compile instructions below have been mainly tested on Linux platforms. Shyft can also be compiled (and it is actively maintained) for Windows, but the building instructions are not covered here (yet).
 
 NOTE: the dependency regarding a modern compiler generally means gcc-5 is required to build Shyft.
 
 
-You can compile Shyft by using the typical procedure for Python packages. We use environment variables to control the build. The `SHYFT_DEPENDENCIES_DIR` defines where the dependencies will be built (or exist). When you call `setup.py` the script will call cmake. If the dependencies exist in the aforementioned directory, they will be used. Otherwise, they will be downloaded and built into that directory as part of the build process. If not set, cmake will create a directory `shyft-dependencies` in the `shyft` repository directory. A suggestion is to set the `shyft-dependencies` directory to your `shyft-workspace`. If you have set these as part of your `conda environment` per the instructions above, and are active in that environment, then simply:
+You can compile Shyft by using the typical procedure for Python packages. We use environment variables to control the build. The `SHYFT_DEPENDENCIES_DIR` defines where the dependencies will be built (or exist). When you call `setup.py` the script will call cmake. If the dependencies exist in the aforementioned directory, they will be used. Otherwise, they will be downloaded and built into that directory as part of the build process. If not set, cmake will create a directory `shyft-dependencies` in the `shyft` repository directory. A suggestion is to set the `shyft-dependencies` directory to your `shyft-workspace`. If you have set these as part of your `conda environment` per the instructions above, and assuming you are active in that environment, then simply:
  
  ```bash
  pip install -r requirements.txt
@@ -159,13 +159,13 @@ INSTALLING
 If the tests above run, then you can simply install Shyft using:
 
 ```bash
-cd $SHYFT_WORKSPACE
+cd $SHYFT_WORKSPACE/shyft
 python setup.py install
 ```
 
 Just be aware of the dependency of the LD_LIBRARY_PATH so that the libboost libraries are found.
 
-Now, you should be set to start working with the notebooks and learning Shyft!
+Now, you should be set to start working with the [shyft-doc](https://github.com/statkraft/shyft-doc) notebooks and learning Shyft!
 
 
 COMPILING MANUALLY VIA CMAKE
@@ -173,11 +173,11 @@ COMPILING MANUALLY VIA CMAKE
 
 Although (at least on Linux) the `setup.py` method above uses the
 CMake building tool behind the scenes, you can also compile it
-manually (in fact, this is recommended because you will be able to run
+manually (in fact, if you plan to develop Shyft, this may be recommended because you will be able to run
 the integrated C++ tests).  The steps are the usual ones:
 
 ```bash
-$ export SHYFT_SOURCES=shyft_root_directory  # absolute path required!
+$ export SHYFT_SOURCES=$SHYFT_WORKSPACE  # absolute path required!
 $ cd $SHYFT_SOURCES
 $ mkdir build
 $ cd build
@@ -199,8 +199,8 @@ $ nosetests ..  # run the Python tests
 If all the tests pass, then you have an instance of Shyft that is
 fully functional.  In case this directory is going to act as a
 long-term installation it is recommended to persist your
-$LD_LIBRARY_PATH and $PYTHONPATH environment variables (in ~/.bashrc
-or similar).
+`$LD_LIBRARY_PATH` and `$PYTHONPATH` environment variables (in `~/.bashrc`
+or using the conda `env_vars` described above).
 
 
 TESTING
