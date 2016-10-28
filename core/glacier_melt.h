@@ -16,28 +16,17 @@
 ///
 /// This implementation is an adapted version of the temperature index model for glacier
 /// ice melt, Eq.(1), in "Hock, R. (2003), Temperature index modelling in mountain areas, J. Hydrol., 282, 104-115."
-///
+/// Implemented by Felix Matt
 
 #pragma once
-#include "utctime_utilities.h"
+#include "timeseries.h"
 namespace shyft {
     namespace core {
 		namespace glacier_melt {
 
 		    struct parameter {
-                double dtf = 5.0;
-                parameter(double dtf=5.0):dtf(dtf) {}
-            };
-
-            struct state {
-                double glacier_height = 100000.0;
-
-                state(double glacier_height=100000.0)
-                  : glacier_height(glacier_heit) { /* Do nothing */ }
-                bool operator==(const state& x)const {
-                    const double eps=1e-6;
-                    return fabs(glacier_height-x.glacier_height)<eps;
-                }
+                double dtf = 6.0;
+                parameter(double dtf=6.0):dtf(dtf) {}
             };
 
             struct response {
@@ -49,39 +38,39 @@ namespace shyft {
              *
              * \param P
              * Parameter that supplies:
-             * -# P.dtf() const --> double, Degree Timestep Factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
-             * \param S
-             * State class that supports
-             * -# S.glacier_height --> double, glacier ice storage over glaciated cell area [mm ice-water equivalent]
+             * -# P.dtf() const --> double, degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
              *
              * \param R
              * Response class that supports
              * -# R.glacier_melt --> double, ice melt [mm ice-water equivalent]
              */
-            template<class P, class S>
+            template<class P, class R>
             class calculator {
                 private:
                     double glacier_fraction_ = 0.0;
-                    const double glacier_tol = 1.0e-10;
                 public:
                     void set_glacier_fraction(double glacier_fraction) {glacier_fraction_=glacier_fraction;}
                     double glacier_fraction() const {return glacier_fraction_;}
 
-                    void step(S& s,
-                              R& r,
+                    void step(R& r,
                               shyft::timeseries::utctimespan dt,
                               const P& p,
                               const double T,
                               const double sca) const {
-                        double T_effective = std::max(0,T);
-                        double area_effective = std::max(0, glacier_fraction_ - sca);
+
+                        /** Input variables:
+                         *
+                         * T -> air temperature in deg C.
+                         * sca -> fraction of snow cover in cell
+                         */
+
+                        double T_effective = std::max(0.0,T);
+                        double area_effective = std::max(0.0, glacier_fraction_ - sca);
                         double glacier_melt = p.dtf * T_effective * area_effective * dt/calendar::DAY;
-                        double glacier_melt = std:min(s.glacier_height, glacier_melt);
-                        s.glacier_height -= glacier_melt;
-                        r.glacier_melt = glacier_melt;
+                        r.glacier_melt = std::max(0.0,glacier_melt) * calendar::HOUR/dt; // convert to mm/h
                     }
 
-            }
+            };
 
 		} // glacier_melt
     } // core
