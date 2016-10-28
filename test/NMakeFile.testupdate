@@ -1,6 +1,7 @@
 # Makefile for test_shyft on Windows. Please keep in sync with the Linux MakeFile.testupdate
 
 CoreTests = time_axis_test.h \
+    region_model_test.h \
 	inverse_distance_test.h \
 	priestley_taylor_test.h \
 	gamma_snow_test.h \
@@ -12,11 +13,11 @@ CoreTests = time_axis_test.h \
 	calibration_test.h \
 	hbv_snow_test.h \
 	pt_hs_k_test.h \
-	api_test.h \
-	skaugen_test.h \
-	timeseries_test.h \
-	cell_builder_test.h \
 	pt_ss_k_test.h \
+	timeseries_test.h \
+	api_test.h \
+	cell_builder_test.h \
+	skaugen_test.h \
 	sceua_test.h \
 	gridpp_test.h \
 	kalman_test.h \
@@ -24,7 +25,7 @@ CoreTests = time_axis_test.h \
 	hbv_tank_test.h \
 	hbv_actual_evapotranspiration_test.h \
 	hbv_stack_test.h \
-	region_model_test.h
+	glacier_melt_test.h
 
 TestHeaders = $(CoreTests)
 
