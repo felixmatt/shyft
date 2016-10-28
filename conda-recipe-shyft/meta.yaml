@@ -1,0 +1,14 @@
+package:
+  name: shyft
+  version: "REPLACED_BY_TEAMCITY"
+ 
+requirements:
+  build:
+    - python
+ 
+  run:
+    - python
+     
+source:
+  path: ../
+  

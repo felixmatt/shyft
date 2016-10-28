@@ -45,3 +45,4 @@ cachegrind.out.*
 /SHyFT.VC.db
 *.opendb
 *.user
+.conda_lock
