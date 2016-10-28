@@ -94,6 +94,8 @@
 		<Unit filename="gamma_snow_test.h" />
 		<Unit filename="gaussian_random_field_test.cpp" />
 		<Unit filename="gaussian_random_field_test.h" />
+		<Unit filename="glacier_melt_test.cpp" />
+		<Unit filename="glacier_melt_test.h" />
 		<Unit filename="gridpp_test.cpp" />
 		<Unit filename="gridpp_test.h" />
 		<Unit filename="hbv_actual_evapotranspiration_test.cpp" />
