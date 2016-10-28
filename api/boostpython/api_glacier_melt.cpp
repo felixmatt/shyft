@@ -12,21 +12,22 @@ namespace expose {
             .def(init<double>(args("dtf"),"create parameter object with specified values"))
             .def_readwrite("dtf", &parameter::dtf,"degree timestep factor, default=6.0 [mm/day/degC]")
             ;
-        class_<response>("GlacierMeltResponse","The response(output) from galcier-melt for one time-step")
-            .def_readwrite("glacier_melt",&response::glacier_melt,"Glacier melt (outflow) [mm/h]")
-            ;
-        typedef calculator<parameter,response> GlacierMeltCalculator;
-        class_<GlacierMeltCalculator>("GlacierMeltCalculator")
-            .def("set_glacier_fraction",&GlacierMeltCalculator::set_glacier_fraction,"set the glacier fraction parameter for the calculation")
-            .def("glacier_fraction",&GlacierMeltCalculator::glacier_fraction,"get the glacier fraction parameter used for the calculation")
-            .def("step",&GlacierMeltCalculator::step,args("response","dt","parameter","temperature","sca"),
-                "Step the snow model forward from time t to t+dt, given parameters and input.\n"
-                "Updates the response upon return.\n"
-                " param response result of type R, output only, ref. template parameters\n"
-                " param temperature degC, considered constant over timestep dt\n"
-                " param sca, fraction of snow cover in cell [0..1], glacier melt occurs only if glacier fraction > snow fraction\n"
-            )
-            ;
-
+        def("glacier_melt_step", step, args("dt","dtf","temperature","sca","glacier_fraction"),
+            "Calculates outflow from glacier melt for one time step [mm/h].\n"
+            "Parameters\n"
+            "----------\n"
+            "dt : int\n"
+            "\t time step [s]\n"
+            "dtf : float\n"
+            "\t degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.\n"
+            "temperature : float\n"
+            "\t degC, considered constant over timestep dt\n"
+            "sca : float\n"
+            "\t fraction of snow cover in cell [0..1], glacier melt occurs only if glacier fraction > snow fraction\n"
+            "Return\n"
+            "------\n"
+            "glacier_melt : float\n"
+            "\t outflow from glacier melt for one time step [mm/h].\n"
+        );
     }
 }

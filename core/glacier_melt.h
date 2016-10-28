@@ -19,7 +19,7 @@
 /// Implemented by Felix Matt
 
 #pragma once
-#include "timeseries.h"
+#include "utctime_utilities.h"
 namespace shyft {
     namespace core {
 		namespace glacier_melt {
@@ -29,48 +29,29 @@ namespace shyft {
                 parameter(double dtf=6.0):dtf(dtf) {}
             };
 
-            struct response {
-                double glacier_melt = 0.0;
-            };
-
-
-            /** Gamma Snow model
+            /** Glacier Melt model
              *
-             * \param P
-             * Parameter that supplies:
-             * -# P.dtf() const --> double, degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+             * \param dt time step [s]
              *
-             * \param R
-             * Response class that supports
-             * -# R.glacier_melt --> double, ice melt [mm ice-water equivalent]
+             * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+             *
+             * \param T temperature [deg. C]
+             *
+             * \param sca, fraction of snow cover [0..1]
+             *
+             * \param glacier_fraction, fraction of glacier cover [0..1]
+             *
+             * \return glacier_melt, outflow from glacier melt [mm/h]
              */
-            template<class P, class R>
-            class calculator {
-                private:
-                    double glacier_fraction_ = 0.0;
-                public:
-                    void set_glacier_fraction(double glacier_fraction) {glacier_fraction_=glacier_fraction;}
-                    double glacier_fraction() const {return glacier_fraction_;}
 
-                    void step(R& r,
-                              shyft::timeseries::utctimespan dt,
-                              const P& p,
-                              const double T,
-                              const double sca) const {
-
-                        /** Input variables:
-                         *
-                         * T -> air temperature in deg C.
-                         * sca -> fraction of snow cover in cell
-                         */
-
-                        double T_effective = std::max(0.0,T);
-                        double area_effective = std::max(0.0, glacier_fraction_ - sca);
-                        double glacier_melt = p.dtf * T_effective * area_effective * dt/calendar::DAY;
-                        r.glacier_melt = std::max(0.0,glacier_melt) * calendar::HOUR/dt; // convert to mm/h
-                    }
-
-            };
+            inline double step(utctimespan dt, const double dtf, const double T, const double sca, const double glacier_fraction){
+                if(glacier_fraction<=0.0)
+                    return 0.0;
+                double T_effective = std::max(0.0,T);
+                double area_effective = std::max(0.0, glacier_fraction - sca);
+                double glacier_melt = dtf * T_effective * area_effective * dt/calendar::DAY;
+                return std::max(0.0,glacier_melt) * calendar::HOUR/dt; // convert to mm/h
+            }
 
 		} // glacier_melt
     } // core

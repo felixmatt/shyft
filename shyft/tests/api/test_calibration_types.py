@@ -29,7 +29,7 @@ class ShyftApi(unittest.TestCase):
             self.assertEqual(valid_names[i],p_name)
 
     def test_pt_hs_k_param(self):
-        pthsk_size = 12
+        pthsk_size = 13
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
         self.assertEqual(pthsk.size(), pthsk_size)
@@ -49,6 +49,7 @@ class ShyftApi(unittest.TestCase):
                     "hs.cx",
                     "hs.ts",
                     "hs.cfr",
+                    "gm.dtf",
                     "p_corr.scale_factor",
                     "pt.albedo",
                     "pt.alpha"

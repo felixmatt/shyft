@@ -65,7 +65,6 @@ namespace shyft {
                 void collect(size_t idx, const response_t& response) {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge,destination_area)); // wants m3/s, q_avg is given in mm/h, so compute the totals in  mm/s
                     snow_outflow.set(idx, response.snow.outflow);//mm/h ?? //TODO: current mm/h. Want m3/s, but we get mm/h from snow output
-                    glacier_melt.set(idx, response.gm.glacier_melt); //mm/h ?? //TODO: current mm/h. Want m3/s, but we get mm/h from glacier routine
                     ae_output.set(idx, response.ae.ae);
                     pe_output.set(idx, response.pt.pot_evapotranspiration);
                 }
