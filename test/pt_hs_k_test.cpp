@@ -15,6 +15,7 @@ using namespace shyfttest;
 
 namespace pt = shyft::core::priestley_taylor;
 namespace hs = shyft::core::hbv_snow;
+namespace gm = shyft::core::glacier_melt;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
@@ -61,6 +62,7 @@ void pt_hs_k_test::test_call_stack() {
     std::vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
     pt::parameter pt_param;
     hs::parameter snow_param(s, a);
+    gm::parameter gm_param;
     ae::parameter ae_param;
     kr::parameter k_param;
     pc::parameter p_corr_param;
@@ -77,7 +79,7 @@ void pt_hs_k_test::test_call_stack() {
     shyfttest::mock::StateCollector<timeaxis> state_collector(state_time_axis);
 
     state state {snow_state, kirchner_state};
-    parameter parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
+    parameter parameter(pt_param, snow_param, gm_param, ae_param, k_param, p_corr_param);
     geo_cell_data geo_cell_data;
     pt_hs_k::run<direct_accessor, response>(geo_cell_data, parameter, time_axis,0,0, temp,
                                               prec, wind_speed, rel_hum, radiation, state,
