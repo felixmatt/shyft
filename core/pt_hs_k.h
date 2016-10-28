@@ -3,6 +3,7 @@
 #include "priestley_taylor.h"
 #include "kirchner.h"
 #include "hbv_snow.h"
+#include "glacier_melt.h"
 #include "actual_evapotranspiration.h"
 #include "precipitation_correction.h"
 
@@ -14,28 +15,32 @@ namespace shyft {
         struct parameter {
             typedef priestley_taylor::parameter pt_parameter_t;
             typedef hbv_snow::parameter snow_parameter_t;
+            typedef glacier_melt::parameter glacier_parameter_t;
             typedef actual_evapotranspiration::parameter ae_parameter_t;
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
 
             pt_parameter_t pt;
             snow_parameter_t hs;
+            glacier_parameter_t gm;
             ae_parameter_t ae;
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
 
             parameter(const pt_parameter_t& pt,
                         const snow_parameter_t& snow,
+                        const glacier_parameter_t& gm,
                         const ae_parameter_t& ae,
                         const kirchner_parameter_t& kirchner,
                         const precipitation_correction_parameter_t& p_corr)
-             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
-             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+             : pt(pt), hs(snow), gm(gm), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
+             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), gm(c.gm), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
 			parameter(){}
 			parameter& operator=(const parameter &c) {
                 if(&c != this) {
                     pt = c.pt;
                     hs = c.hs;
+                    gm = c.gm;
                     ae = c.ae;
                     kirchner = c.kirchner;
                     p_corr = c.p_corr;
@@ -43,7 +48,7 @@ namespace shyft {
                 return *this;
 			}
             ///< Calibration support, size is the total number of calibration parameters
-            size_t size() const { return 12; }
+            size_t size() const { return 13; }
 
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -58,6 +63,7 @@ namespace shyft {
                 hs.cx = p[i++];
                 hs.ts = p[i++];
                 hs.cfr = p[i++];
+                gm.dtf = p[i++];
                 p_corr.scale_factor = p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
@@ -75,9 +81,10 @@ namespace shyft {
                     case  6:return hs.cx;
                     case  7:return hs.ts;
                     case  8:return hs.cfr;
-                    case  9:return p_corr.scale_factor;
-					case 10:return pt.albedo;
-					case 11:return pt.alpha;
+                    case  9:return gm.dtf;
+                    case 10:return p_corr.scale_factor;
+					case 11:return pt.albedo;
+					case 12:return pt.alpha;
                 default:
                     throw runtime_error("pt_hs_k parameter accessor:.get(i) Out of range.");
                 }
@@ -96,6 +103,7 @@ namespace shyft {
                     "hs.cx",
                     "hs.ts",
                     "hs.cfr",
+                    "gm.dtf",
                     "p_corr.scale_factor",
                     "pt.albedo",
                     "pt.alpha"
@@ -124,10 +132,12 @@ namespace shyft {
         struct response {
             typedef priestley_taylor::response pt_response_t;
             typedef hbv_snow::response snow_response_t;
+            typedef glacier_melt::response glacier_response_t;
             typedef actual_evapotranspiration::response ae_response_t;
             typedef kirchner::response kirchner_response_t;
             pt_response_t pt;
             snow_response_t snow;
+            glacier_response_t gm;
             ae_response_t ae;
             kirchner_response_t kirchner;
 
@@ -170,8 +180,10 @@ namespace shyft {
             precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
             priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
             hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> hbv_snow(parameter.hs, state.snow);
+            glacier_melt::calculator<typename P::glacier_parameter_t, typename R::glacier_response_t> gm;
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
-
+            //
+            gm.set_glacier_fraction(geo_cell_data.land_type_fractions_info().glacier());
             // Step through times in axis
             size_t i_begin = n_steps > 0 ? start_step : 0;
             size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
@@ -196,11 +208,15 @@ namespace shyft {
                 // Communicate snow
                 // At my pos xx mm of snow moves in direction d.
 
+                // Glacier Melt
+                gm.step(response.gm, period.timespan(), parameter.gm, temp, state.snow.sca);
+                double outflow = response.snow.outflow + response.gm.glacier_melt;
+
                 // Actual Evapotranspiration
                 response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
 
                 // Use responses from PriestleyTaylor and HBVSnow in Kirchner
-                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae);
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, outflow, response.ae.ae);
 
                 //
                 // Adjust land response for lakes and reservoirs (Treat them the same way for now)
