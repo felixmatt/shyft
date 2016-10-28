@@ -47,7 +47,7 @@ namespace expose {
         class_<response>("GammaSnowResponse","The response(output) from gamma-snow for one time-step")
           .def_readwrite("sca",&response::sca,"Snow covered area [0..1]")
           .def_readwrite("storage",&response::storage,"Snow storage in [mm] over the area")
-          .def_readwrite("outflow",&response::outflow,"Water out from the snow pack [mm]")
+          .def_readwrite("outflow",&response::outflow,"Water out from the snow pack [mm/h]")
           ;
         typedef calculator<parameter,state,response> GammaSnowCalculator;
         class_<GammaSnowCalculator>("GammaSnowCalculator")
@@ -59,7 +59,7 @@ namespace expose {
                 " param state state of type S,in/out, ref template parameters\n"
                 " param response result of type R, output only, ref. template parameters\n"
                 " param temperature degC, considered constant over timestep dt\n"
-                " param radiation ..\n"
+                " param radiation in W/m2, considered constant over timestep\n"
                 " param precipitation in mm/h\n"
                 " param wind_speed in m/s\n"
                 " param rel_hum 0..1\n"
