@@ -19,7 +19,7 @@ namespace shyft {
          * area: area in m2
          *
          * \tparam TS a time-series type
-         * \note that both temperature and snow covered area (sca) ts is of same type
+         * \note that both temperature and snow covered area (sca) TS is of same type
          * \ref shyft::core::glacier_melt::step function
          */
 		template<class TS>
@@ -52,10 +52,11 @@ namespace shyft {
 			double value(size_t i) const {
 				if (i >= time_axis().size())
 					return nan;
+                utcperiod p=time_axis().period(i);
 				double t_i = temperature.value(i);
-				double sca_i= sca.value(i);
-				utctimespan dt = time_axis().period(i).timespan();
-				return shyft::core::glacier_melt::step(dt, dtf, t_i,sca_i, glacier_fraction) * area_m2* 1000.0/3600.0; // mm/h * m2  *1000m/3600s-> m3/s
+				size_t ix_hint=i;// assume same indexing of sca and temperature
+				double sca_i= average_value(sca,p,ix_hint,sca.fx_policy==fx_policy_t::POINT_INSTANT_VALUE);
+				return shyft::core::glacier_melt::step(dtf, t_i,sca_i, glacier_fraction) * area_m2* 1000.0/3600.0; // mm/h * m2  *1000m/3600s-> m3/s
 			}
 			double operator()(utctime t) const {
 				size_t i = index_of(t);
@@ -93,10 +94,7 @@ void glacier_melt_test::test_melt() {
     const double dtf = 6.0;
     glacier_melt::parameter p(dtf);
 
-    // Glacier melt under various conditions
-	utctimespan dt_h = deltahours(1); // hourly
-
-	double sca = 0.0;
+ 	double sca = 0.0;
 	while(sca <= 1.0)
     {
         double gf = 0.0;
@@ -106,7 +104,7 @@ void glacier_melt_test::test_melt() {
             while(temp <= 10)
             {
 
-                double melt = glacier_melt::step(dt_h,p.dtf, temp, sca, gf);
+                double melt = glacier_melt::step(p.dtf, temp, sca, gf);
                 TS_ASSERT(melt >= 0.0);
                 if (temp <= 0.0)
                     TS_ASSERT_DELTA(melt, 0.0, glacier_test_constant::EPS);
@@ -125,10 +123,9 @@ void glacier_melt_test::test_melt() {
     double temp = 1.0;
     sca = 0.0;
     double gf = 1.0;
-    utctimespan dt_d = deltahours(24); // daily
 
-    const double melt_hourly =  glacier_melt::step(dt_h,p.dtf, temp, sca, gf);
-    const double melt_daily =  glacier_melt::step(dt_d,p.dtf, temp, sca, gf);
+    const double melt_hourly =  glacier_melt::step(p.dtf, temp, sca, gf);
+    const double melt_daily =  glacier_melt::step(p.dtf, temp, sca, gf);
 
 
     TS_ASSERT(melt_hourly > 0.0);
@@ -159,6 +156,6 @@ void glacier_melt_test::test_melt_ts(){
         sca.set(i,0.5 *(1.0 - double(i)/ta.size()));
     glacier_melt_ts<pts_t> melt(temperature,sca,glacier_fraction,dtf,area_m2);
     for(size_t i=0;i<ta.size();++i) {
-        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dt,dtf,temperature.value(i),sca.value(i),glacier_fraction)*area_m2*1000.0/3600.0,0.0001);
+        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dtf,temperature.value(i),sca.value(i),glacier_fraction)*area_m2*1000.0/3600.0,0.0001);
     }
 }

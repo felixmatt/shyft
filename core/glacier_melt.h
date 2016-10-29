@@ -31,11 +31,9 @@ namespace shyft {
 
             /** Glacier Melt model
              *
-             * \param dt time step [s]
-             *
              * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
              *
-             * \param T temperature [deg. C]
+             * \param t temperature [deg. C]
              *
              * \param sca, fraction of snow cover [0..1]
              *
@@ -44,13 +42,12 @@ namespace shyft {
              * \return glacier_melt, outflow from glacier melt [mm/h]
              */
 
-            inline double step(utctimespan dt, const double dtf, const double T, const double sca, const double glacier_fraction){
+            inline double step(const double dtf, const double t, const double sca, const double glacier_fraction){
                 if(glacier_fraction<=0.0)
                     return 0.0;
-                double T_effective = std::max(0.0,T);
+                double t_effective = std::max(0.0,t);
                 double area_effective = std::max(0.0, glacier_fraction - sca);
-                double glacier_melt = dtf * T_effective * area_effective * dt/calendar::DAY;
-                return std::max(0.0,glacier_melt) * calendar::HOUR/dt; // convert to mm/h
+                return dtf * t_effective * area_effective/24.0; // convert from mm/day to mm/h
             }
 
 		} // glacier_melt

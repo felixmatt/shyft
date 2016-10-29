@@ -206,7 +206,7 @@ namespace shyft {
                 // At my pos xx mm of snow moves in direction d.
 
                 // Glacier Melt
-                double outflow = glacier_melt::step(period.timespan(), parameter.gm.dtf, temp, state.snow.sca, geo_cell_data.land_type_fractions_info().glacier());
+                double outflow = glacier_melt::step(parameter.gm.dtf, temp, state.snow.sca, geo_cell_data.land_type_fractions_info().glacier());
                 outflow += response.snow.outflow;
 
                 // Actual Evapotranspiration

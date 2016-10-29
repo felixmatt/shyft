@@ -14,10 +14,9 @@ class GlacierMelt(unittest.TestCase):
         self.assertAlmostEqual(p.dtf, 5.0)
 
     def test_glacier_melt_step_function(self):
-        dt = deltahours(1)
         dtf = 6.0
         temperature = 10.0
         sca = 0.5
         gf = 1.0
-        m = glacier_melt_step(dt, dtf, temperature, sca, gf)
+        m = glacier_melt_step(dtf, temperature, sca, gf)
         self.assertAlmostEqual(1.25, m)
