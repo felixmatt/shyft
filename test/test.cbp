@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  kalman_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  glacier_melt_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
