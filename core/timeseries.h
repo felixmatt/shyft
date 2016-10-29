@@ -13,6 +13,9 @@
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
 #endif
+
+#include "glacier_melt.h" // to get the glacier melt function
+
 /** \file
 * Contains the minimal concepts for the time-series and point source functionality needed in shyft
 */
@@ -468,6 +471,66 @@ namespace shyft{
 			}
 		};
 
+        /**\brief glacier melt ts
+         *
+         * Using supplied temperature and snow covered area time-series
+         * computes the glacier melt in units of [m3/s] using the
+         * the following supplied parameters:
+         *  -# dtf:day temperature factor (dtf),
+         *  -# gf: glacier fraction
+         *  -# area: area in m2
+         *
+         * \tparam TS a time-series type
+         * \note that both temperature and snow covered area (sca) TS is of same type
+         * \ref shyft::core::glacier_melt::step function
+         */
+		template<class TS>
+		struct glacier_melt_ts {
+			typedef typename TS::ta_t ta_t;
+			TS temperature;
+			TS sca;
+			double glacier_fraction;
+			double dtf;
+			double area_m2;
+			point_interpretation_policy fx_policy;
+			const ta_t& time_axis() const { return temperature.ta; }
+
+			/** construct a glacier_melt_ts
+			 * \param temperature in degree Celsius
+			 * \param sca snow covered area in range [0..1]
+			 * \param glacier fraction in range [0..1]
+			 * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+			 * \param area_m2 the area of the glacier in units of [m2]
+			 */
+			glacier_melt_ts(const TS& temperature, const TS& sca, double glacier_fraction, double dtf, double area_m2)
+				:temperature(temperature), sca(sca),glacier_fraction(glacier_fraction),dtf(dtf),area_m2(area_m2)
+				, fx_policy(fx_policy_t::POINT_AVERAGE_VALUE) {
+			}
+
+			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
+			size_t size() const { return time_axis().size(); }
+			size_t index_of(utctime t) const { return time_axis().index_of(t); }
+			//--
+			double value(size_t i) const {
+				if (i >= time_axis().size())
+					return nan;
+                utcperiod p=time_axis().period(i);
+				double t_i = temperature.value(i);
+				size_t ix_hint=i;// assume same indexing of sca and temperature
+				double sca_i= average_value(sca,p,ix_hint,sca.fx_policy==fx_policy_t::POINT_INSTANT_VALUE);
+				return shyft::core::glacier_melt::step(dtf, t_i,sca_i, glacier_fraction) * area_m2* 1000.0/3600.0; // mm/h * m2  *1000m/3600s-> m3/s
+			}
+			double operator()(utctime t) const {
+				size_t i = index_of(t);
+				if (i == string::npos)
+					return nan;
+                return value(i);
+			}
+		};
+
+
+
+
         /** \brief Basic math operators
          *
          * Here we take a very direct approach, just create a bin_op object for
@@ -580,6 +643,9 @@ namespace shyft{
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
         template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
+		// This is to allow this ts to participate in ts-math expressions
+		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
 
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};

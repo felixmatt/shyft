@@ -547,9 +547,11 @@ void timeseries_test::test_TxFxSource() {
 	double s1,s2;
 	auto msec1 = measure<>::execution(f1,s1);
 	auto msec2 = measure<>::execution(f2, s2);
-	cout << "\nTiming results:" << endl;
-	cout << "    T generic : " << msec1 << " (" << s1 << ")" << endl;
-	cout << "    T fast    : " << msec2 << " (" << s2 << ")" << endl;
+	TS_ASSERT_LESS_THAN(std::abs(msec1-msec2),100);
+
+	//cout << "\nTiming results:" << endl;
+	//cout << "    T generic : " << msec1 << " (" << s1 << ")" << endl;
+	//cout << "    T fast    : " << msec2 << " (" << s2 << ")" << endl;
 }
 
 void timeseries_test::test_point_timeseries_with_point_timeaxis() {
@@ -817,13 +819,14 @@ void timeseries_test::test_ts_statistics_speed() {
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, deltahours(24), n_days);
     auto tsv1 = create_test_ts(n_ts, ta, fx_1);
-    cout << "\nStart calc percentiles " << n_days << " days, x " << n_ts << " ts\n";
+    bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
+    if(verbose) cout << "\nStart calc percentiles " << n_days << " days, x " << n_ts << " ts\n";
     //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
     vector<tts_t> r1;
     auto f1 = [&tad, &tsv1, &r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
     for (int sz = tad.size(); sz > 100; sz /= 2) {
         auto msec1 = measure<>::execution(f1,sz);
-        cout<<"statistics speed tests, "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
+        if(verbose) cout<<"statistics speed tests, "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
     }
     //auto msec2= measure<>::execution(f1,tad.size()/4);
     //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;
@@ -863,7 +866,7 @@ void timeseries_test::test_periodic_ts_t() {
 
 	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
-	
+
 	TS_ASSERT_EQUALS(pts.size(), 1000);
 	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
 }
@@ -937,7 +940,7 @@ void timeseries_test::test_periodic_template_ts() {
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
 	timeaxis ta(t0, deltahours(10), 1000);
-	
+
 	profile_description pd(t0, dt, pv);
 
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
@@ -950,10 +953,10 @@ void timeseries_test::test_periodic_template_ts() {
 	TS_ASSERT_EQUALS(fun.value(0), 2.2);
 	TS_ASSERT_EQUALS(fun.value(1), 5.5);
 	TS_ASSERT_EQUALS(fun.value(2), 4.0);
-	// case 1: as case 0, but 
+	// case 1: as case 0, but
 	// t0 of the profile do *not* match the time-axis tstart
 	// and time-of day is also different:
-	// 
+	//
 	profile_description pd1(utc.time(2000,1,1,2), dt, pv);
 	periodic_ts<profile_description, timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
 	TS_ASSERT_EQUALS(fx.value(0), 3.1);// verified using excel
@@ -1034,7 +1037,7 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	TS_ASSERT_DELTA(0.5*deltahours(1), ats.value(1), 0.001);
 	// now the ats have some extra feature through it's f(t), operator()
 	TS_ASSERT_DELTA(0.25*deltaminutes(30), ats(t + deltaminutes(30)), 0.0001);
-	// the accessor should be smart, trying to re-use prior computation, I verify the result here, 
+	// the accessor should be smart, trying to re-use prior computation, I verify the result here,
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
 
@@ -1052,7 +1055,7 @@ void timeseries_test::test_partition_by() {
 	shyft::api::apoint_ts src_a(ta, values, point_interpretation_policy::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
 
   // core version : auto mk_time_shift = [](const decltype(src_a)  &ts, utctimespan dt)-> time_shift_ts<decltype(src_a)> {return time_shift(ts,dt);};
-	// below is the raw- time-shift version 
+	// below is the raw- time-shift version
 	auto mk_raw_time_shift = [](const decltype(src_a)& ts, utctimespan dt)->shyft::api::apoint_ts {
 		return shyft::api::apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
 	};
@@ -1089,7 +1092,7 @@ void timeseries_test::test_partition_by() {
 		ty = utc.add(ty, calendar::YEAR, 1);
 	}
 	ty = t;
-	// verify the raw shift case, where the time-axis are just shifted to align same-value at common_t0 time 
+	// verify the raw shift case, where the time-axis are just shifted to align same-value at common_t0 time
 	for (const auto& ts : partitions_raw_shift) {
 		// verify that the value at common_t0, equals value(t0)
 		auto src_ix = src_a.index_of(ty);
