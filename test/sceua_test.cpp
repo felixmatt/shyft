@@ -45,7 +45,9 @@ void sceua_test::test_basic(){
     TS_ASSERT_DELTA(y,0.0,1e-5);
     TS_ASSERT_DELTA(x[0],0.0,1e-5);
     TS_ASSERT_DELTA(x[1],0.0,1e-5);
-    cout<<endl<<"Found solution x{"<<x[0]<<","<<x[1]<<"} -> "<<y<<endl<<"\t n_iterations:"<<f_basic.n_eval<<endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        cout<<endl<<"Found solution x{"<<x[0]<<","<<x[1]<<"} -> "<<y<<endl<<"\t n_iterations:"<<f_basic.n_eval<<endl;
+    }
 }
 
 void sceua_test::test_complex() {
@@ -66,11 +68,15 @@ void sceua_test::test_complex() {
     TS_ASSERT_DELTA(y,0.7028,1e-3);
     double rr=sqrt(x[0]*x[0]+x[1]*x[1]);
     TS_ASSERT_DELTA(rr,2.5,1e-2);
-    cout<<endl<<"Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        cout<<endl<<"Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
+    }
     f_complex.n_eval=0;
     x[0]=-4.01;
     x[1]=-7.5;
     r=opt.find_min(n,x_min,x_max,x,y,f_complex,eps, -1,-2,x_eps,100);
     TS_ASSERT_EQUALS(r,OptimizerState::FinishedMaxIterations);
-    cout<<endl<<"2. approximate Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        cout<<endl<<"2. approximate Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
+    }
 }

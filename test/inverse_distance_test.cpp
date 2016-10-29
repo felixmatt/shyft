@@ -348,8 +348,8 @@ void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, n_sources);
 	s[2].set_value_at_t(Tstart + dt, NAN);
 
-	// at second, and last.. , timestep, only s[0] and s[1] are valid, 
-	// so diff. calc. applies to second step, 
+	// at second, and last.. , timestep, only s[0] and s[1] are valid,
+	// so diff. calc. applies to second step,
 	// the other tests verifies that it can calculate ok first n steps.
 
 	//
@@ -407,11 +407,12 @@ void inverse_distance_test::test_performance() {
 	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
 		[](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
 	const clock_t total = clock() - start;
-	cout << "\nAlg. IDW2i:\n";
-	double time = 1000 * double(total) / double(CLOCKS_PER_SEC);
-	cout << "Temperature interpolation took: " << time << " ms" << endl;
-	cout << "Each temperature timestep took: " << time / double(n) << " ms" << endl;
-
+	if(getenv("SHYFT_VERBOSE")) {
+        cout << "\nAlg. IDW2i:\n";
+        double time = 1000 * double(total) / double(CLOCKS_PER_SEC);
+        cout << "Temperature interpolation took: " << time << " ms" << endl;
+        cout << "Each temperature timestep took: " << time / double(n) << " ms" << endl;
+	}
 	//
 	// Assert
 	//

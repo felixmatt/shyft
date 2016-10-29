@@ -77,7 +77,7 @@ void glacier_melt_test::test_melt_ts(){
         sca.set(i,0.5 *(1.0 - double(i)/ta.size()));
     glacier_melt_ts<pts_t> melt(temperature,sca,glacier_fraction,dtf,area_m2);
     for(size_t i=0;i<ta.size();++i) {
-        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dtf,temperature.value(i),sca.value(i),glacier_fraction)*area_m2*1000.0/3600.0,0.0001);
+        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dtf,temperature.value(i),sca.value(i),glacier_fraction)*area_m2*0.001/3600.0,0.0001);
     }
     // just verify that glacier_melt_ts can participate in ts-operations
     auto a= melt*3.0 + sca; // if this compiles, then it works like we want
