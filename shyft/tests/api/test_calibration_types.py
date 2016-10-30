@@ -171,7 +171,8 @@ class ShyftApi(unittest.TestCase):
         kp.c2 = -0.9
         kp.c3 = 0.01
         spcp = api.PrecipitationCorrectionParameter(scale_factor=0.9)
-        ptgsk_p = pt_gs_k.PTGSKParameter(ptp, gsp, aep, kp, spcp)
+        gm = api.GlacierMeltParameter(dtf=5.9)  # verify we can construct glacier parameter
+        ptgsk_p = pt_gs_k.PTGSKParameter(ptp, gsp, aep, kp, spcp, gm)  # passing optional gm parameter here
         ptgsk_p.ae.ae_scale_factor = 1.2  # sih: just to demo ae scale_factor can be set directly
         return ptgsk_p
 
