@@ -181,23 +181,19 @@ namespace shyft {
             auto rad_accessor = rad_accessor_t(rad, time_axis);
             auto wind_speed_accessor = ws_accessor_t(wind_speed, time_axis);
 
-            // Get the initial states
-            auto &snow_state = state.snow;
-            double q = state.kirchner.q;
             R response;
-
+            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
+            const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
+            const double kirchner_fraction = 1 - total_lake_fraction - glacier_fraction;
+            const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
             // Initialize the method stack
             precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
             priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
             skaugen::calculator<typename P::snow_parameter_t, typename S::snow_state_t, typename R::snow_response_t> skaugen_snow;
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
-            // Step through times in axis
+
             size_t i_begin = n_steps > 0 ? start_step : 0;
             size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
-            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
-            const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
-            const double kirchner_fraction = 1 - total_lake_fraction - glacier_fraction;
-            const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
             for (size_t i = i_begin; i < i_end; ++i) {
                 utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
@@ -207,11 +203,11 @@ namespace shyft {
                 double wind_speed = wind_speed_accessor.value(i);
                 state_collector.collect(i, state);
 
-                skaugen_snow.step(period.timespan(), parameter.ss, temp, prec, rad, wind_speed, snow_state, response.snow);
+                skaugen_snow.step(period.timespan(), parameter.ss, temp, prec, rad, wind_speed, state.snow, response.snow);
                 response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf, temp, geo_cell_data.area()*state.snow.sca, glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
                 response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/s -> mm/h, interpreted as over the entire area(!)
                 response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration,
-                    parameter.ae.ae_scale_factor, std::max(state.snow.sca, glacier_fraction),  // a evap only on non-snow/non-glac area 
+                    parameter.ae.ae_scale_factor, std::max(state.snow.sca, glacier_fraction),  // a evap only on non-snow/non-glac area
                     period.timespan());
                 kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); //all units mm/h over 'same' area
 

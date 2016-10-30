@@ -284,6 +284,7 @@ namespace shyft {
 
 					snow.step(state.snow, response.snow, period.start, period.end, parameter.snow, prec, temp);
 
+                    response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf,temp,geo_cell_data.area()*state.snow.sca,glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
                     response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h
                     response.ae.ae = hbv_actual_evapotranspiration::calculate_step(
                         state.soil.sm, response.pt.pot_evapotranspiration,

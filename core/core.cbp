@@ -100,6 +100,7 @@
 		<Unit filename="skaugen.h" />
 		<Unit filename="time_axis.h" />
 		<Unit filename="timeseries.h" />
+		<Unit filename="unit_conversion.h" />
 		<Unit filename="utctime_utilities.cpp" />
 		<Unit filename="utctime_utilities.h" />
 		<Extensions>

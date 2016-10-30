@@ -1106,3 +1106,9 @@ void timeseries_test::test_partition_by() {
 	}
 
 }
+void timeseries_test::test_unit_conversion() {
+    double area_m2 =1000;
+    double q_m3s = 1;
+    TS_ASSERT_DELTA(shyft::m3s_to_mmh(q_m3s,area_m2),q_m3s/area_m2*(1000.0*3600.0),1e-10);
+    TS_ASSERT_DELTA(shyft::mmh_to_m3s(shyft::m3s_to_mmh(q_m3s,area_m2),area_m2),q_m3s,1e-10);
+}
