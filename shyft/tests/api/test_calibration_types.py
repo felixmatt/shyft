@@ -29,7 +29,7 @@ class ShyftApi(unittest.TestCase):
             self.assertEqual(valid_names[i],p_name)
 
     def test_pt_hs_k_param(self):
-        pthsk_size = 12
+        pthsk_size = 13
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
         self.assertEqual(pthsk.size(), pthsk_size)
@@ -49,14 +49,16 @@ class ShyftApi(unittest.TestCase):
                     "hs.cx",
                     "hs.ts",
                     "hs.cfr",
+                    "gm.dtf",
                     "p_corr.scale_factor",
                     "pt.albedo",
-                    "pt.alpha"
+                    "pt.alpha",
+                    "gm.dtf"
 				]
         self.verify_parameter_for_calibration(pthsk, pthsk_size,valid_names)
 
     def test_hbv_stack_param(self):
-        hbv_size = 16
+        hbv_size = 17
         hbv = hbv_stack.HbvParameter()
         self.assertIsNotNone(hbv)
         self.assertEqual(hbv.size(), hbv_size)
@@ -76,12 +78,13 @@ class ShyftApi(unittest.TestCase):
         "snow.cfr",
         "p_corr.scale_factor",
         "pt.albedo",
-        "pt.alpha"
+        "pt.alpha",
+        "gm.dtf"
         ]
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 24
+        ptgsk_size = 25
         valid_names = [
         "kirchner.c1",
         "kirchner.c2",
@@ -106,7 +109,8 @@ class ShyftApi(unittest.TestCase):
         "pt.alpha",
         "gs.initial_bare_ground_fraction",
         "gs.winter_end_day_of_year",
-        "gs.calculate_iso_pot_energy"
+        "gs.calculate_iso_pot_energy",
+        "gm.dtf"
         ]
         p=pt_gs_k.PTGSKParameter()
         self.verify_parameter_for_calibration(p, ptgsk_size,valid_names)
@@ -126,7 +130,7 @@ class ShyftApi(unittest.TestCase):
         self.assertFalse(p.gs.calculate_iso_pot_energy)
 
     def test_pt_ss_k_param(self):
-        ptssk_size = 15
+        ptssk_size = 16
         valid_names=[
             "kirchner.c1",
             "kirchner.c2",
@@ -142,7 +146,8 @@ class ShyftApi(unittest.TestCase):
             "ss.cfr",
             "p_corr.scale_factor",
             "pt.albedo",
-            "pt.alpha"
+            "pt.alpha",
+            "gm.dtf"
         ]
         self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size,valid_names)
 
@@ -166,7 +171,8 @@ class ShyftApi(unittest.TestCase):
         kp.c2 = -0.9
         kp.c3 = 0.01
         spcp = api.PrecipitationCorrectionParameter(scale_factor=0.9)
-        ptgsk_p = pt_gs_k.PTGSKParameter(ptp, gsp, aep, kp, spcp)
+        gm = api.GlacierMeltParameter(dtf=5.9)  # verify we can construct glacier parameter
+        ptgsk_p = pt_gs_k.PTGSKParameter(ptp, gsp, aep, kp, spcp, gm)  # passing optional gm parameter here
         ptgsk_p.ae.ae_scale_factor = 1.2  # sih: just to demo ae scale_factor can be set directly
         return ptgsk_p
 

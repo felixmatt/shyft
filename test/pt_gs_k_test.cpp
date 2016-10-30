@@ -159,17 +159,18 @@ void pt_gs_k_test::test_raster_call_stack()
               rc
               );
     });
+    bool verbose= getenv("SHYFT_VERBOSE")!=nullptr;
+    if(verbose) {
+        for (size_t i=0; i < 3; ++i)
+            std::cout << "Catchment "<< i << " first total discharge = " << catchment_discharge.at(i).value(0) << std::endl;
+        for (size_t i=0; i < 3; ++i)
+            std::cout << "Catchment "<< i << " second total discharge = " << catchment_discharge.at(i).value(1) << std::endl;
+        for (size_t i=0; i < 3; ++i)
+            std::cout << "Catchment "<< i << " third total discharge = " << catchment_discharge.at(i).value(2) << std::endl;
 
-    for (size_t i=0; i < 3; ++i)
-        std::cout << "Catchment "<< i << " first total discharge = " << catchment_discharge.at(i).value(0) << std::endl;
-    for (size_t i=0; i < 3; ++i)
-        std::cout << "Catchment "<< i << " second total discharge = " << catchment_discharge.at(i).value(1) << std::endl;
-    for (size_t i=0; i < 3; ++i)
-        std::cout << "Catchment "<< i << " third total discharge = " << catchment_discharge.at(i).value(2) << std::endl;
-
-    const std::clock_t total = std::clock() - start;
-    std::cout << "One year and " << n_dests << " destinatons with catchment discharge aggregation took: " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
-
+        const std::clock_t total = std::clock() - start;
+        std::cout << "One year and " << n_dests << " destinatons with catchment discharge aggregation took: " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    }
 
 }
 

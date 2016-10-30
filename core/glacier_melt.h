@@ -14,19 +14,41 @@
 /// Shyft, usually located under the Shyft root directory in two files named COPYING.txt
 /// and COPYING_LESSER.txt.	If not, see <http://www.gnu.org/licenses/>.
 ///
-/// Extracted from early enki method GammaSnow programmed by Kolbjørn Engeland and 
-/// Sjur Kolberg, and adapted according to discussions with Gaute Lappegard and Eli Alfnes
-///
+/// This implementation is an adapted version of the temperature index model for glacier
+/// ice melt, Eq.(1), in "Hock, R. (2003), Temperature index modelling in mountain areas, J. Hydrol., 282, 104-115."
+/// Implemented by Felix Matt
 
 #pragma once
 #include "utctime_utilities.h"
 namespace shyft {
     namespace core {
 		namespace glacier_melt {
-			double glacier_melt(double radiation, double albedo, double sca, double temporary_snow, utctimespan dt) {
-				const double melt_heat = 333660.0; // Latent heat of ice at T = 0C in [J/kg]
-				return temporary_snow > 0.0 ? 0.0 : radiation*(1.0 - albedo)*(double)dt / melt_heat*(1.0 - sca);
-			}
-		}
-    } // End namespace core
+
+		    struct parameter {
+                double dtf = 6.0;///<degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+                parameter(double dtf=6.0):dtf(dtf) {}
+            };
+
+            /** Glacier Melt model
+             *
+             * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+             *
+             * \param t temperature [deg.C]
+             *
+             * \param snow_covered_area_m2, unit[m2]
+             *
+             * \param glacier_area_m2, unit[m2]
+             *
+             * \return glacier_melt in [m3/s]
+             */
+
+            inline double step(const double dtf, const double t, const double snow_covered_area_m2, const double glacier_area_m2){
+                if(glacier_area_m2 <= snow_covered_area_m2 || t <= 0.0) // melt is 0.0 if area uncovered by snow less than 0.0, and t below zero
+                    return 0.0;
+                const double convert_m2_x_mm_d_to_m3_s= 0.001/86400.0;// ref. input units ,mm=0.001m/d=86400s
+                return dtf*t*(glacier_area_m2-snow_covered_area_m2)* convert_m2_x_mm_d_to_m3_s;
+            }
+
+		} // glacier_melt
+    } // core
 } // shyft

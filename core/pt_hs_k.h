@@ -3,9 +3,10 @@
 #include "priestley_taylor.h"
 #include "kirchner.h"
 #include "hbv_snow.h"
+#include "glacier_melt.h"
 #include "actual_evapotranspiration.h"
 #include "precipitation_correction.h"
-
+#include "unit_conversion.h"
 namespace shyft {
   namespace core {
     namespace pt_hs_k {
@@ -17,25 +18,30 @@ namespace shyft {
             typedef actual_evapotranspiration::parameter ae_parameter_t;
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
+            typedef glacier_melt::parameter glacier_parameter_t;
 
             pt_parameter_t pt;
             snow_parameter_t hs;
             ae_parameter_t ae;
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
+            glacier_parameter_t gm;
+
 
             parameter(const pt_parameter_t& pt,
                         const snow_parameter_t& snow,
                         const ae_parameter_t& ae,
                         const kirchner_parameter_t& kirchner,
-                        const precipitation_correction_parameter_t& p_corr)
-             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr) { /* Do nothing */ }
-             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr) {}
+                        const precipitation_correction_parameter_t& p_corr,
+                        glacier_parameter_t gm = glacier_parameter_t()) // for backwards compatibility pass default glacier parameter
+             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr), gm(gm) { /* Do nothing */ }
+             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr), gm(c.gm) {}
 			parameter(){}
 			parameter& operator=(const parameter &c) {
                 if(&c != this) {
                     pt = c.pt;
                     hs = c.hs;
+                    gm = c.gm;
                     ae = c.ae;
                     kirchner = c.kirchner;
                     p_corr = c.p_corr;
@@ -43,7 +49,7 @@ namespace shyft {
                 return *this;
 			}
             ///< Calibration support, size is the total number of calibration parameters
-            size_t size() const { return 12; }
+            size_t size() const { return 13; }
 
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -58,6 +64,7 @@ namespace shyft {
                 hs.cx = p[i++];
                 hs.ts = p[i++];
                 hs.cfr = p[i++];
+                gm.dtf = p[i++];
                 p_corr.scale_factor = p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
@@ -75,9 +82,10 @@ namespace shyft {
                     case  6:return hs.cx;
                     case  7:return hs.ts;
                     case  8:return hs.cfr;
-                    case  9:return p_corr.scale_factor;
-					case 10:return pt.albedo;
-					case 11:return pt.alpha;
+                    case  9:return gm.dtf;
+                    case 10:return p_corr.scale_factor;
+					case 11:return pt.albedo;
+					case 12:return pt.alpha;
                 default:
                     throw runtime_error("pt_hs_k parameter accessor:.get(i) Out of range.");
                 }
@@ -96,6 +104,7 @@ namespace shyft {
                     "hs.cx",
                     "hs.ts",
                     "hs.cfr",
+                    "gm.dtf",
                     "p_corr.scale_factor",
                     "pt.albedo",
                     "pt.alpha"
@@ -130,7 +139,7 @@ namespace shyft {
             snow_response_t snow;
             ae_response_t ae;
             kirchner_response_t kirchner;
-
+            double gm_melt_m3s;
             // Stack response
             double total_discharge;
         };
@@ -162,9 +171,6 @@ namespace shyft {
             auto rel_hum_accessor = rel_hum_accessor_t(rel_hum, time_axis);
             auto rad_accessor = rad_accessor_t(rad, time_axis);
 
-            // Get the initial states
-            //double q = state.kirchner.q;
-            R response;
 
             // Initialize the method stack
             precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
@@ -172,7 +178,12 @@ namespace shyft {
             hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> hbv_snow(parameter.hs, state.snow);
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
 
-            // Step through times in axis
+            R response;
+            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
+            const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
+            const double kirchner_fraction = 1 - total_lake_fraction - glacier_fraction;
+            const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
+
             size_t i_begin = n_steps > 0 ? start_step : 0;
             size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
             for (size_t i = i_begin; i < i_end; ++i) {
@@ -183,32 +194,20 @@ namespace shyft {
                 double prec = p_corr.calc(prec_accessor.value(i));
                 state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
 
-                //
-                // Land response:
-                //
+                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp); // outputs mm/h, interpreted as over the entire area
 
-                // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/h
+                response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf,temp,geo_cell_data.area()*state.snow.sca,glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
+                
+                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/s -> mm/h, interpreted as over the entire area(!)
+                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, 
+                                    parameter.ae.ae_scale_factor,std::max(state.snow.sca,glacier_fraction),  // a evap only on non-snow/non-glac area 
+                                    period.timespan());
+                
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); //all units mm/h over 'same' area
 
-                // HBVSnow
-                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp);
-
-                // Communicate snow
-                // At my pos xx mm of snow moves in direction d.
-
-                // Actual Evapotranspiration
-                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
-
-                // Use responses from PriestleyTaylor and HBVSnow in Kirchner
-                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae);
-
-                //
-                // Adjust land response for lakes and reservoirs (Treat them the same way for now)
-                //
-                double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
-                double lake_corrected_discharge = prec*total_lake_fraction + (1.0 - total_lake_fraction)*response.kirchner.q_avg;
-
-                response.total_discharge = lake_corrected_discharge;
+                response.total_discharge = prec*total_lake_fraction
+                    + m3s_to_mmh(response.gm_melt_m3s, geo_cell_data.area())
+                    + response.kirchner.q_avg * kirchner_fraction;
                 response.snow.snow_state=state.snow;//< note/sih: we need snow in the response due to calibration
 
                 // Possibly save the calculated values using the collector callbacks.

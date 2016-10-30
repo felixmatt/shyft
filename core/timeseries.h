@@ -13,10 +13,15 @@
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
 #endif
+
+#include "glacier_melt.h" // to get the glacier melt function
+#include "unit_conversion.h"
 /** \file
 * Contains the minimal concepts for the time-series and point source functionality needed in shyft
 */
 namespace shyft{
+
+
 
     const double nan = std::numeric_limits<double>::quiet_NaN();
     /** \namespace The timeseries namespace contains all needed concepts related
@@ -97,6 +102,169 @@ namespace shyft{
             typedef T type;
         };
 
+
+
+        /** \brief hint_based search to eliminate binary-search in irregular time-point series.
+		 *
+         *  utilizing the fact that most access are periods, sequential, so the average_xxx functions
+         *  can utilize this, and keep the returned index as a hint for the next request for average_xxx
+         *  value.
+         * \tparam S a point ts source, must have .get(i) ->point, and .size(), and .index_of(t)->size_t
+         * \param source a point ts source as described above
+         * \param p utcperiod for which we search a start point <= p.start
+         * \param i the start-of-search hint, could be -1, then ts.index_of(p.start) is used to figure out the ix.
+		 * \return lowerbound index or npos if not found
+		 * \note We should specialize this for sources with computed time-axis to improve speed
+         */
+        template<class S>
+        size_t hint_based_search(const S& source, const utcperiod& p, size_t i) {
+			const size_t n = source.size();
+			if (n == 0)
+                return std::string::npos;
+            if (i != std::string::npos && i<n) { // hint-based search logic goes here:
+                const size_t max_directional_search = 5; // +-5 just a guess for what is a reasonable try upward/downward
+                auto ti = source.get(i).t;
+                if (ti == p.start) { // direct hit and extreme luck ?
+                    return i; // just use it !
+                } else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
+					if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
+					size_t i_max = std::min(i + max_directional_search, n);
+					while (++i < i_max) {
+						ti = source.get(i).t;
+						if (ti < p.start )
+							continue;
+						return  ti > p.start? i - 1 : i;// we either got one to far, or direct-hit
+					}
+					return (i < n) ? source.index_of(p.start):n-1; // either local search failed->bsearch etc., or we are at the end -> n-1
+                } else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
+					if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
+						return 0;//std::string::npos;
+					size_t i_min =  (i - std::min(i, max_directional_search));
+					do {
+						ti = source.get(--i).t;//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
+						if ( ti > p.start)
+							continue;
+						return i; // we found the lower left bound (either exact, or less p.start)
+					} while (i > i_min);
+                    return i>0? source.index_of(p.start): std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
+                }
+            }
+            return source.index_of(p.start);// no hint given, just use binary search to establish the start.
+        }
+
+		/** \brief accumulate_value provides a projection/interpretation
+		* of the values of a pointsource on to a time-axis as provided.
+		* This includes interpolation and true average, linear between points
+		* and nan-handling semantics.
+		* In addition the Accessor allows fast sequential access to these values
+		* using clever caching of the last position used in the underlying
+		* point source. The time axis and point source can be of any type
+		* as listed above as long as the basic type requirement as described below
+		* are satisfied.
+		* \tparam S point source, must provide:
+		*  -# .size() const               -> number of points in the source
+		*  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
+		*  -# .get(size_t i) const        -> return the i'th point  (t,v)
+		* \param source of type S
+		* \param p the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
+		* \param last_idx, in/out, position of the last time point used on the source, updated after each call.
+		* \param tsum out, the sum of time under non-nan areas of the curve
+		* \return double, the area under the non-nan areas of the curve, specified by tsum ref-parameter
+		*/
+		template <class S>
+		double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
+			const size_t n = source.size();
+			if (n == 0) // early exit if possible
+				return shyft::nan;
+			size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
+
+			if (i == std::string::npos) { // this might be a case
+				last_idx = 0;// we update the hint to the left-most possible index
+				return shyft::nan; // and is equivalent to no points, or all points after requested period.
+			}
+			point l;// Left point
+			bool l_finite = false;
+
+			double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
+			tsum = 0; // length of non-nan f(t) time-axis
+
+			while (true) { //there are two exit criteria: no more points, or we pass the period end.
+				if (!l_finite) {//search for 'point' anchor phase
+					l = source.get(i++);
+					l_finite = std::isfinite(l.v);
+					if (i == n) { // exit condition
+						if (l_finite && l.t < p.end) {//give contribution
+							utctimespan dt = p.end - l.t;
+							tsum += dt;
+							area += dt* l.v; // extrapolate value flat
+						}
+						break;//done
+					}
+					if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
+						break;//done
+					}
+				} else { // got point anchor l, search for right point/end
+					point r = source.get(i++);// r is guaranteed > p.start due to hint-based search
+					bool r_finite = std::isfinite(r.v);
+					utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
+					utctimespan dt = px.timespan();
+					tsum += dt;
+
+					// now add area contribution for l..r
+					if (linear && r_finite) {
+						double a = (r.v - l.v) / (r.t - l.t);
+						double b = r.v - a*r.t;
+						//area += dt* 0.5*( a*px.start+b + a*px.end+b);
+						area += dt * (0.5*a*(px.start + px.end) + b);
+					} else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
+						area += l.v*dt;
+					}
+					if (i == n) { // exit condition: final value in sequence, then we need to finish, but
+						if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
+							dt = p.end - r.t;
+							tsum += dt;
+							area += dt* r.v; // extrapolate value flat
+						}
+						break;//done
+					}
+					if (r.t >= p.end)
+						break;//also exit condition, done
+					l_finite = r_finite;
+					l = r;
+				}
+
+			}
+			last_idx = i - 1;
+			return tsum ? area : shyft::nan;
+		}
+
+       /** \brief average_value provides a projection/interpretation
+         * of the values of a pointsource on to a time-axis as provided.
+         * This includes interpolation and true average, linear between points
+         * and nan-handling semantics.
+         * In addition the Accessor allows fast sequential access to these values
+         * using clever caching of the last position used in the underlying
+         * point source. The time axis and point source can be of any type
+         * as listed above as long as the basic type requirement as described below
+         * are satisfied.
+         * \tparam S point source, must provide:
+         *  -# .size() const               -> number of points in the source
+         *  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
+         *  -# .get(size_t i) const        -> return the i'th point  (t,v)
+         * \param source of type S
+         * \param p the period [start,end) on time-axis
+         * \param last_idx, in/out, position of the last time point used on the source, updated after each call.
+         * \return double, the value at the as true average of the specified period
+         */
+        template <class S>
+        inline double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
+			utctimespan tsum = 0;
+			double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
+			return tsum>0?area/tsum:shyft::nan;
+        }
+
+
+
         /**\brief point time-series, pts, defined by
          * its
          * templated time-axis, ta
@@ -141,7 +309,7 @@ namespace shyft{
             }
 
             /**\brief value of the i'th interval fx_policy taken into account,
-             * Hmm. is that policy every useful in this context ?
+             * Hmm. is that policy ever useful in this context ?
              */
             double value(size_t i) const  {
                 //if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
@@ -468,6 +636,66 @@ namespace shyft{
 			}
 		};
 
+        /**\brief glacier melt ts
+         *
+         * Using supplied temperature and snow covered area[m2] time-series
+         * computes the glacier melt in units of [m3/s] using the
+         * the following supplied parameters:
+         *  -# dtf:day temperature factor (dtf),
+         *  -# glacier_area_m2: glacier area in [m2] units
+         *
+         * \tparam TS a time-series type
+         * \note that both temperature and snow covered area (sca) TS is of same type
+         * \ref shyft::core::glacier_melt::step function
+         */
+		template<class TS_A,class TS_B=TS_A>
+		struct glacier_melt_ts {
+			typedef typename d_ref_t<TS_A>::type::ta_t ta_t;
+			TS_A temperature;
+			TS_B sca_m2;
+			double glacier_area_m2;
+			double dtf;
+			point_interpretation_policy fx_policy;
+			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
+
+			/** construct a glacier_melt_ts
+			 * \param temperature in [deg.C]
+			 * \param sca_m2 snow covered area [m2]
+			 * \param glacier_area_m2 [m2]
+			 * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+			 */
+            template<class A_,class B_>
+			glacier_melt_ts(A_&& temperature, B_&& sca_m2, double glacier_area_m2, double dtf)
+				:temperature(forward<A_>(temperature)), sca_m2(forward<B_>(sca_m2)),glacier_area_m2(glacier_area_m2),dtf(dtf)
+				, fx_policy(fx_policy_t::POINT_AVERAGE_VALUE) {
+			}
+			// std. ct etc
+            glacier_melt_ts(){dtf=0.0;glacier_area_m2=0.0;fx_policy=fx_policy_t::POINT_AVERAGE_VALUE;}
+            // ts property definitions
+			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
+			size_t size() const { return time_axis().size(); }
+			size_t index_of(utctime t) const { return time_axis().index_of(t); }
+			//--
+			double value(size_t i) const {
+				if (i >= time_axis().size())
+					return nan;
+                utcperiod p=time_axis().period(i);
+				double t_i = d_ref(temperature).value(i);
+				size_t ix_hint=i;// assume same indexing of sca and temperature
+				double sca_m2_i= average_value(d_ref(sca_m2),p,ix_hint,d_ref(sca_m2).point_interpretation()==fx_policy_t::POINT_INSTANT_VALUE);
+				return shyft::core::glacier_melt::step(dtf, t_i,sca_m2_i, glacier_area_m2);
+			}
+			double operator()(utctime t) const {
+				size_t i = index_of(t);
+				if (i == string::npos)
+					return nan;
+                return value(i);
+			}
+		};
+
+
+
+
         /** \brief Basic math operators
          *
          * Here we take a very direct approach, just create a bin_op object for
@@ -580,6 +808,9 @@ namespace shyft{
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
         template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
+		// This is to allow this ts to participate in ts-math expressions
+		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
 
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
@@ -750,166 +981,6 @@ namespace shyft{
             void set_point_interpretation(point_interpretation_policy point_interpretation) {}///<ignored
         };
 
-
-
-
-        /** \brief hint_based search to eliminate binary-search in irregular time-point series.
-		 *
-         *  utilizing the fact that most access are periods, sequential, so the average_xxx functions
-         *  can utilize this, and keep the returned index as a hint for the next request for average_xxx
-         *  value.
-         * \tparam S a point ts source, must have .get(i) ->point, and .size(), and .index_of(t)->size_t
-         * \param source a point ts source as described above
-         * \param p utcperiod for which we search a start point <= p.start
-         * \param i the start-of-search hint, could be -1, then ts.index_of(p.start) is used to figure out the ix.
-		 * \return lowerbound index or npos if not found
-		 * \note We should specialize this for sources with computed time-axis to improve speed
-         */
-        template<class S>
-        size_t hint_based_search(const S& source, const utcperiod& p, size_t i) {
-			const size_t n = source.size();
-			if (n == 0)
-                return std::string::npos;
-            if (i != std::string::npos && i<n) { // hint-based search logic goes here:
-                const size_t max_directional_search = 5; // +-5 just a guess for what is a reasonable try upward/downward
-                auto ti = source.get(i).t;
-                if (ti == p.start) { // direct hit and extreme luck ?
-                    return i; // just use it !
-                } else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
-					if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
-					size_t i_max = std::min(i + max_directional_search, n);
-					while (++i < i_max) {
-						ti = source.get(i).t;
-						if (ti < p.start )
-							continue;
-						return  ti > p.start? i - 1 : i;// we either got one to far, or direct-hit
-					}
-					return (i < n) ? source.index_of(p.start):n-1; // either local search failed->bsearch etc., or we are at the end -> n-1
-                } else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
-					if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
-						return 0;//std::string::npos;
-					size_t i_min =  (i - std::min(i, max_directional_search));
-					do {
-						ti = source.get(--i).t;//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
-						if ( ti > p.start)
-							continue;
-						return i; // we found the lower left bound (either exact, or less p.start)
-					} while (i > i_min);
-                    return i>0? source.index_of(p.start): std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
-                }
-            }
-            return source.index_of(p.start);// no hint given, just use binary search to establish the start.
-        }
-		/** \brief accumulate_value provides a projection/interpretation
-		* of the values of a pointsource on to a time-axis as provided.
-		* This includes interpolation and true average, linear between points
-		* and nan-handling semantics.
-		* In addition the Accessor allows fast sequential access to these values
-		* using clever caching of the last position used in the underlying
-		* point source. The time axis and point source can be of any type
-		* as listed above as long as the basic type requirement as described below
-		* are satisfied.
-		* \tparam S point source, must provide:
-		*  -# .size() const               -> number of points in the source
-		*  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
-		*  -# .get(size_t i) const        -> return the i'th point  (t,v)
-		* \param source of type S
-		* \param p the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
-		* \param last_idx, in/out, position of the last time point used on the source, updated after each call.
-		* \param tsum out, the sum of time under non-nan areas of the curve
-		* \return double, the area under the non-nan areas of the curve, specified by tsum ref-parameter
-		*/
-		template <class S>
-		double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
-			const size_t n = source.size();
-			if (n == 0) // early exit if possible
-				return shyft::nan;
-			size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
-
-			if (i == std::string::npos) { // this might be a case
-				last_idx = 0;// we update the hint to the left-most possible index
-				return shyft::nan; // and is equivalent to no points, or all points after requested period.
-			}
-			point l;// Left point
-			bool l_finite = false;
-
-			double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
-			tsum = 0; // length of non-nan f(t) time-axis
-
-			while (true) { //there are two exit criteria: no more points, or we pass the period end.
-				if (!l_finite) {//search for 'point' anchor phase
-					l = source.get(i++);
-					l_finite = std::isfinite(l.v);
-					if (i == n) { // exit condition
-						if (l_finite && l.t < p.end) {//give contribution
-							utctimespan dt = p.end - l.t;
-							tsum += dt;
-							area += dt* l.v; // extrapolate value flat
-						}
-						break;//done
-					}
-					if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
-						break;//done
-					}
-				} else { // got point anchor l, search for right point/end
-					point r = source.get(i++);// r is guaranteed > p.start due to hint-based search
-					bool r_finite = std::isfinite(r.v);
-					utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
-					utctimespan dt = px.timespan();
-					tsum += dt;
-
-					// now add area contribution for l..r
-					if (linear && r_finite) {
-						double a = (r.v - l.v) / (r.t - l.t);
-						double b = r.v - a*r.t;
-						//area += dt* 0.5*( a*px.start+b + a*px.end+b);
-						area += dt * (0.5*a*(px.start + px.end) + b);
-					} else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
-						area += l.v*dt;
-					}
-					if (i == n) { // exit condition: final value in sequence, then we need to finish, but
-						if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
-							dt = p.end - r.t;
-							tsum += dt;
-							area += dt* r.v; // extrapolate value flat
-						}
-						break;//done
-					}
-					if (r.t >= p.end)
-						break;//also exit condition, done
-					l_finite = r_finite;
-					l = r;
-				}
-
-			}
-			last_idx = i - 1;
-			return tsum ? area : shyft::nan;
-		}
-
-       /** \brief average_value provides a projection/interpretation
-         * of the values of a pointsource on to a time-axis as provided.
-         * This includes interpolation and true average, linear between points
-         * and nan-handling semantics.
-         * In addition the Accessor allows fast sequential access to these values
-         * using clever caching of the last position used in the underlying
-         * point source. The time axis and point source can be of any type
-         * as listed above as long as the basic type requirement as described below
-         * are satisfied.
-         * \tparam S point source, must provide:
-         *  -# .size() const               -> number of points in the source
-         *  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
-         *  -# .get(size_t i) const        -> return the i'th point  (t,v)
-         * \param source of type S
-         * \param p the period [start,end) on time-axis
-         * \param last_idx, in/out, position of the last time point used on the source, updated after each call.
-         * \return double, the value at the as true average of the specified period
-         */
-        template <class S>
-        double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
-			utctimespan tsum = 0;
-			double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
-			return tsum>0?area/tsum:shyft::nan;
-        }
 
 
         /** \brief average_accessor provides a projection/interpretation

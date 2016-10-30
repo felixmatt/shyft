@@ -184,8 +184,10 @@ void bayesian_kriging_test::test_covariance_calculation() {
 	utils::cov(dqms, covs2, params);
 	arma::mat CC(covs2);
 	CC.reshape(n, m);
-	const std::clock_t total2 = std::clock() - start2;
-	std::cout << "Computing full covariance matrix with nnz " << n*m << " took: " << 1000 * (total2) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+	if(getenv("SHYFT_VERBOSE")) {
+        const std::clock_t total2 = std::clock() - start2;
+        std::cout << "Computing full covariance matrix with nnz " << n*m << " took: " << 1000 * (total2) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+	}
 }
 
 void bayesian_kriging_test::test_build_covariance_matrices() {
@@ -237,9 +239,10 @@ void bayesian_kriging_test::test_interpolation() {
 	const std::clock_t start = std::clock();
 	btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
 	const std::clock_t total = std::clock() - start;
-	std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+	bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
+	if(verbose) std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
 	MCell d = destinations[destinations.size() - 1];
-	std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;
+	if(verbose) std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;
 	d = destinations[0];
 	if (getenv("SHYFT_BTK_VERBOSE")) {
 		std::cout << "Temp at altitude " << d.mid_point().z << " is " << d.temperature(0) << std::endl;

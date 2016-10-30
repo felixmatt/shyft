@@ -32,10 +32,11 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTGSK assembly\n"
                               "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter>(args("pt","gs","ae","k","p_corr"),"create object with specified parameters"))
+                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter, optional<glacier_melt::parameter>>(args("pt","gs","ae","k","p_corr","gm"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
                 .def_readwrite("gs",&parameter::gs,"gamma-snow parameter")
+                .def_readwrite("gm", &parameter::gm, "glacier melt parameter")
 				.def_readwrite("ae",&parameter::ae,"actual evapotranspiration parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
@@ -65,6 +66,7 @@ namespace expose {
             class_<response>("PTGSKResponse","This struct contains the responses of the methods used in the PTGSK assembly")
                 .def_readwrite("pt",&response::pt,"priestley_taylor response")
                 .def_readwrite("gs",&response::gs,"gamma-snnow response")
+                .def_readwrite("gm_melt_m3s", &response::gm_melt_m3s, "glacier melt response[m3s]")
                 .def_readwrite("ae",&response::ae,"actual evapotranspiration response")
                 .def_readwrite("kirchner",&response::kirchner,"kirchner response")
                 .def_readwrite("total_discharge",&response::total_discharge,"total stack response")
@@ -80,6 +82,7 @@ namespace expose {
                 .def_readonly("snow_sca",&PTGSKAllCollector::snow_sca," gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTGSKAllCollector::snow_swe,"gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep")
                 .def_readonly("snow_outflow",&PTGSKAllCollector::snow_outflow," gamma snow output [m³/s] for the timestep")
+                .def_readonly("glacier_melt", &PTGSKAllCollector::glacier_melt, " glacier melt (outflow) [m3/s] for the timestep")
                 .def_readonly("ae_output",&PTGSKAllCollector::ae_output,"actual evap mm/h")
                 .def_readonly("pe_output",&PTGSKAllCollector::pe_output,"pot evap mm/h")
                 .def_readonly("end_reponse",&PTGSKAllCollector::end_reponse,"end_response, at the end of collected")

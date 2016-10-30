@@ -85,6 +85,9 @@
     <ClInclude Include="hbv_tank_test.h">
       <Filter>methods</Filter>
     </ClInclude>
+    <ClInclude Include="glacier_melt_test.h">
+      <Filter>methods</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -172,6 +175,9 @@
       <Filter>method-stacks</Filter>
     </ClCompile>
     <ClCompile Include="hbv_tank_test.cpp">
+      <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="glacier_melt_test.cpp">
       <Filter>methods</Filter>
     </ClCompile>
   </ItemGroup>

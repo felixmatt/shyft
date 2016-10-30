@@ -109,7 +109,7 @@ namespace shyft{
 		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
 			return shyft::api::time_shift(*this, dt);
 		}
-		
+
 		std::vector<apoint_ts> apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
 			// some very rudimentary argument checks:
 			if (n_partitions < 1)
@@ -214,6 +214,53 @@ namespace shyft{
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
 			return 1.0 - shyft::timeseries::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
 		}
+		// glacier_melt_ts as apoint_ts with it's internal being a glacier_melt_ts
+        struct aglacier_melt_ts:ipoint_ts {
+            glacier_melt_ts<std::shared_ptr<ipoint_ts>> gm;
+            //-- default stuff, ct/copy etc goes here
+            aglacier_melt_ts() {}
+            aglacier_melt_ts(const aglacier_melt_ts& c):gm(c.gm) {}
+            aglacier_melt_ts(aglacier_melt_ts&&c):gm(std::move(c.gm)) {}
+            aglacier_melt_ts& operator=(const aglacier_melt_ts& o) {
+                if(this != &o) {
+                    gm=o.gm;
+                }
+                return *this;
+            }
+
+            aglacier_melt_ts& operator=(aglacier_melt_ts&& o) {
+                gm= std::move(o.gm);
+                return *this;
+            }
+
+            //-- useful ct goes here
+            aglacier_melt_ts(const apoint_ts& temp,const apoint_ts& sca_m2, double glacier_area_m2,double dtf):
+                gm(temp.ts,sca_m2.ts,glacier_area_m2,dtf)
+                {
+                }
+            //aglacier_melt_ts(apoint_ts&& ats, utctimespan dt):ts(std::move(ats.ts)),ta(time_axis::time_shift(ats.time_axis(),dt)),dt(dt) {}
+            //aglacier_melt_ts(const std::shared_ptr<ipoint_ts> &ts, utctime dt ):ts(ts),ta(time_axis::time_shift(ts->time_axis(),dt)),dt(dt){}
+
+            // implement ipoint_ts contract:
+            virtual point_interpretation_policy point_interpretation() const {return gm.fx_policy;}
+            virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {gm.fx_policy=point_interpretation;}
+            virtual const gta_t& time_axis() const {return gm.time_axis();}
+            virtual utcperiod total_period() const {return gm.time_axis().total_period();}
+            virtual size_t index_of(utctime t) const {return gm.time_axis().index_of(t);}
+            virtual size_t size() const {return gm.time_axis().size();}
+            virtual utctime time(size_t i) const {return gm.time_axis().time(i);};
+            virtual double value(size_t i) const {return gm.value(i);}
+            virtual double value_at(utctime t) const {return gm(t);}
+            virtual std::vector<double> values() const {
+                std::vector<double> r;r.reserve(size());
+                for(size_t i=0;i<size();++i) r.push_back(value(i));
+                return r;
+            }
+
+        };
+        apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf) {
+            return apoint_ts(make_shared<aglacier_melt_ts>(temp,sca_m2,glacier_area_m2,dtf));
+        }
 
     }
 }

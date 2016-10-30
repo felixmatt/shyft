@@ -167,6 +167,9 @@ namespace expose {
             rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
             vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
 
+            rts_ (rc_stat::*glacier_melt_ts)(cids_) const = &rc_stat::glacier_melt;
+            vd_  (rc_stat::*glacier_melt_vd)(cids_, ix_) const = &rc_stat::glacier_melt;
+
             class_<rc_stat>(response_name,"GammaSnow response statistics",no_init)
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct GammaSnow cell response statistics object"))
                 .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
@@ -178,6 +181,9 @@ namespace expose {
 				.def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("sca_value", &rc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("glacier_melt", glacier_melt_ts, args("catchment_indexes"), "returns sum  for catcment_ids[m3/s]")
+                .def("glacier_melt", glacier_melt_vd, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep [m3/s]")
+                .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
 
                 ;
 
@@ -208,13 +214,18 @@ namespace expose {
 
             rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
             vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
+            rts_ (rc_stat::*glacier_melt_ts)(cids_) const = &rc_stat::glacier_melt;
+            vd_  (rc_stat::*glacier_melt_vd)(cids_, ix_) const = &rc_stat::glacier_melt;
 
             class_<rc_stat>(response_name,"HBVSnow response statistics",no_init)
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell response statistics object"))
                 .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
-            ;
+                .def("glacier_melt", glacier_melt_ts, args("catchment_indexes"), "returns sum  for catcment_ids[m3/s]")
+                .def("glacier_melt", glacier_melt_vd, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep [m3/s]")
+                .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
+                ;
         }
 
         template <class cell>
@@ -264,6 +275,8 @@ namespace expose {
             vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
             rts_ (rc_stat::*total_stored_water_ts)(cids_) const = &rc_stat::total_stored_water;
             vd_  (rc_stat::*total_stored_water_vd)(cids_,ix_) const =&rc_stat::total_stored_water;
+            rts_ (rc_stat::*glacier_melt_ts)(cids_) const = &rc_stat::glacier_melt;
+            vd_  (rc_stat::*glacier_melt_vd)(cids_, ix_) const = &rc_stat::glacier_melt;
 
             class_<rc_stat>(response_name,"Skaugen snow response statistics",no_init)
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct Skaugen snow cell response statistics object"))
@@ -273,7 +286,10 @@ namespace expose {
                 .def("total_stored_water",total_stored_water_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("total_stored_water",total_stored_water_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("total_stored_water_value", &rc_stat::total_stored_water_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
-            ;
+                .def("glacier_melt", glacier_melt_ts, args("catchment_indexes"), "returns sum  for catcment_ids[m3/s]")
+                .def("glacier_melt", glacier_melt_vd, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep [m3/s]")
+                .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
+                ;
         }
 
         template <class cell>

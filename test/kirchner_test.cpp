@@ -85,8 +85,10 @@ void kirchner_test::test_simple_average_loads()
         sum_q += Q;
         sum_qa += Q_avg;
     }
-    const std::clock_t total = std::clock() - start;
-    std::cout << "Stepping simple avg Kirchner model " << n_x*n_y << " times took " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        const std::clock_t total = std::clock() - start;
+        std::cout << "Stepping simple avg Kirchner model " << n_x*n_y << " times took " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    }
 }
 using namespace std;
 void kirchner_test::test_composite_average_loads()
@@ -108,7 +110,9 @@ void kirchner_test::test_composite_average_loads()
         sum_q += Q;
         sum_qa += Q_avg;
     }
-    const std::clock_t total = std::clock() - start;
-    std::cout<< " Q: "<< sum_q/n_x/n_y<<" Qa: "<< sum_qa/(n_x*n_y)<<endl;
-    std::cout << "Stepping composite avg Kirchner model " << n_x*n_y << " times took " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    if(getenv("SHYFT_VERBOSE")) {
+        const std::clock_t total = std::clock() - start;
+        std::cout<< " Q: "<< sum_q/n_x/n_y<<" Qa: "<< sum_qa/(n_x*n_y)<<endl;
+        std::cout << "Stepping composite avg Kirchner model " << n_x*n_y << " times took " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+    }
 }
