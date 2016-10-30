@@ -21,6 +21,17 @@
 */
 namespace shyft{
 
+    const double mmh_to_m3s_scale_factor = 1 / (3600.0*1000.0);
+
+    /** \brief convert [mm/h] over an area_m² to [m³/s] units */
+    inline double mmh_to_m3s(double mm_pr_hour, double area_m2) {
+        return area_m2*mm_pr_hour*mmh_to_m3s_scale_factor;
+    }
+    /** \brief convert [m³/s] to [mm/h] over area_m²  */
+    inline double m3s_to_mmh(double m3s,double area_m2) {
+        return m3s/(mmh_to_m3s_scale_factor*area_m2);
+    }
+
     const double nan = std::numeric_limits<double>::quiet_NaN();
     /** \namespace The timeseries namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
@@ -307,7 +318,7 @@ namespace shyft{
             }
 
             /**\brief value of the i'th interval fx_policy taken into account,
-             * Hmm. is that policy every useful in this context ?
+             * Hmm. is that policy ever useful in this context ?
              */
             double value(size_t i) const  {
                 //if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
@@ -636,12 +647,11 @@ namespace shyft{
 
         /**\brief glacier melt ts
          *
-         * Using supplied temperature and snow covered area time-series
+         * Using supplied temperature and snow covered area[m2] time-series
          * computes the glacier melt in units of [m3/s] using the
          * the following supplied parameters:
          *  -# dtf:day temperature factor (dtf),
-         *  -# gf: glacier fraction
-         *  -# area: area in m2
+         *  -# glacier_area_m2: glacier area in [m2] units
          *
          * \tparam TS a time-series type
          * \note that both temperature and snow covered area (sca) TS is of same type
@@ -651,27 +661,25 @@ namespace shyft{
 		struct glacier_melt_ts {
 			typedef typename d_ref_t<TS_A>::type::ta_t ta_t;
 			TS_A temperature;
-			TS_B sca;
-			double glacier_fraction;
+			TS_B sca_m2;
+			double glacier_area_m2;
 			double dtf;
-			double area_m2;
 			point_interpretation_policy fx_policy;
 			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
 
 			/** construct a glacier_melt_ts
-			 * \param temperature in degree Celsius
-			 * \param sca snow covered area in range [0..1]
-			 * \param glacier fraction in range [0..1]
+			 * \param temperature in [deg.C]
+			 * \param sca_m2 snow covered area [m2]
+			 * \param glacier_area_m2 [m2]
 			 * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
-			 * \param area_m2 the area of the glacier in units of [m2]
 			 */
             template<class A_,class B_>
-			glacier_melt_ts(A_&& temperature, B_&& sca, double glacier_fraction, double dtf, double area_m2)
-				:temperature(forward<A_>(temperature)), sca(forward<B_>(sca)),glacier_fraction(glacier_fraction),dtf(dtf),area_m2(area_m2)
+			glacier_melt_ts(A_&& temperature, B_&& sca_m2, double glacier_area_m2, double dtf)
+				:temperature(forward<A_>(temperature)), sca_m2(forward<B_>(sca_m2)),glacier_area_m2(glacier_area_m2),dtf(dtf)
 				, fx_policy(fx_policy_t::POINT_AVERAGE_VALUE) {
 			}
 			// std. ct etc
-            glacier_melt_ts(){}
+            glacier_melt_ts(){dtf=0.0;glacier_area_m2=0.0;fx_policy=fx_policy_t::POINT_AVERAGE_VALUE;}
             // ts property definitions
 			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
 			size_t size() const { return time_axis().size(); }
@@ -683,8 +691,8 @@ namespace shyft{
                 utcperiod p=time_axis().period(i);
 				double t_i = d_ref(temperature).value(i);
 				size_t ix_hint=i;// assume same indexing of sca and temperature
-				double sca_i= average_value(d_ref(sca),p,ix_hint,d_ref(sca).point_interpretation()==fx_policy_t::POINT_INSTANT_VALUE);
-				return shyft::core::glacier_melt::step(dtf, t_i,sca_i, glacier_fraction) * area_m2* 0.001/3600.0; // mm/h * m2  *0.001 m/3600s-> m3/s
+				double sca_m2_i= average_value(d_ref(sca_m2),p,ix_hint,d_ref(sca_m2).point_interpretation()==fx_policy_t::POINT_INSTANT_VALUE);
+				return shyft::core::glacier_melt::step(dtf, t_i,sca_m2_i, glacier_area_m2);
 			}
 			double operator()(utctime t) const {
 				size_t i = index_of(t);

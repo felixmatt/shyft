@@ -190,19 +190,18 @@ namespace expose {
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        def("create_glacier_melt_ts_m3s",shyft::api::create_glacier_melt_ts_m3s,args("temperature","sca","glacier_fraction","dtf","area_m2"),
+        def("create_glacier_melt_ts_m3s",shyft::api::create_glacier_melt_ts_m3s,args("temperature","sca_m2","glacier_area_m2","dtf"),
             "Parameters\n"
             "----------\n"
             "temperature : time-series\n"
             "\t a temperature time-series, unit [deg.Celcius]\n"
-            "sca : time-series\n"
-            "\t a snow covered area (sca) time-series, range [0..1], of the area_m2\n"
-            "glacier_fraction: float\n"
-            "\t the glacier fraction of the area, range [0..1]\n"
+            "sca_m2 : time-series\n"
+            "\t a snow covered area (sca) time-series, unit [m2]\n"
+            "glacier_area_m2: float\n"
+            "\t the glacier area, unit[m2]\n"
             "dtf : float\n"
             "\t degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.\n"
-            "area_m2 : float\n"
-            "\t the total (cell) area in units of [m2]\n\n"
+            "\n"
             "Returns\n"
             "-------\n"
             "\t a time-series that's an expression computing the glacier melt\n"

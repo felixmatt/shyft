@@ -234,8 +234,8 @@ namespace shyft{
             }
 
             //-- useful ct goes here
-            aglacier_melt_ts(const apoint_ts& temp,const apoint_ts& sca, double glacier_fraction,double dtf,double area_m2):
-                gm(temp.ts,sca.ts,glacier_fraction,dtf,area_m2)
+            aglacier_melt_ts(const apoint_ts& temp,const apoint_ts& sca_m2, double glacier_area_m2,double dtf):
+                gm(temp.ts,sca_m2.ts,glacier_area_m2,dtf)
                 {
                 }
             //aglacier_melt_ts(apoint_ts&& ats, utctimespan dt):ts(std::move(ats.ts)),ta(time_axis::time_shift(ats.time_axis(),dt)),dt(dt) {}
@@ -258,8 +258,8 @@ namespace shyft{
             }
 
         };
-        apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca,double glacier_fraction,double dtf,double area_m2) {
-            return apoint_ts(make_shared<aglacier_melt_ts>(temp,sca,glacier_fraction,dtf,area_m2));
+        apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf) {
+            return apoint_ts(make_shared<aglacier_melt_ts>(temp,sca_m2,glacier_area_m2,dtf));
         }
 
     }

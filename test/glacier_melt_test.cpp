@@ -40,21 +40,13 @@ void glacier_melt_test::test_melt() {
         sca += 0.2;
     }
 
-    // Glacier melt with different time steps, must return same value under same conditions (mm/h)
+    // Verify one step manually:
     double temp = 1.0;
     sca = 0.0;
     double gf = 1.0;
 
-    const double melt_hourly =  glacier_melt::step(p.dtf, temp, sca, gf);
-    const double melt_daily =  glacier_melt::step(p.dtf, temp, sca, gf);
-
-
-    TS_ASSERT(melt_hourly > 0.0);
-    TS_ASSERT(melt_daily > 0.0);
-    TS_ASSERT_DELTA(melt_hourly, melt_daily, glacier_test_constant::EPS);
-    // 1 day of melt at 1 deg. C on full glaciated cell without snow
-    // must be same as proportionallity parameter; must be integrated from mm/h -> mm/day
-    TS_ASSERT_DELTA(melt_daily*24, dtf, glacier_test_constant::EPS)
+    const double melt_m3s =  glacier_melt::step(p.dtf, temp, sca, gf);
+    TS_ASSERT_DELTA(melt_m3s, dtf*(gf-sca)*temp*0.001/86400.0, glacier_test_constant::EPS)
 
 }
 
@@ -72,14 +64,14 @@ void glacier_melt_test::test_melt_ts(){
     double glacier_fraction= 0.5;
     double area_m2 = 10 * 1000* 1000;
     pts_t temperature(ta,10.0,fx_policy_t::POINT_AVERAGE_VALUE);
-    pts_t sca(ta,0.5,fx_policy_t::POINT_AVERAGE_VALUE);
+    pts_t sca_m2(ta,0.5*area_m2,fx_policy_t::POINT_AVERAGE_VALUE);
     for(size_t i=0;i<ta.size();++i)
-        sca.set(i,0.5 *(1.0 - double(i)/ta.size()));
-    glacier_melt_ts<pts_t> melt(temperature,sca,glacier_fraction,dtf,area_m2);
+        sca_m2.set(i,area_m2*0.5 *(1.0 - double(i)/ta.size()));
+    glacier_melt_ts<pts_t> melt(temperature,sca_m2,glacier_fraction*area_m2,dtf);
     for(size_t i=0;i<ta.size();++i) {
-        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dtf,temperature.value(i),sca.value(i),glacier_fraction)*area_m2*0.001/3600.0,0.0001);
+        TS_ASSERT_DELTA(melt.value(i),glacier_melt::step(dtf,temperature.value(i),sca_m2.value(i),area_m2*glacier_fraction),0.0001);
     }
     // just verify that glacier_melt_ts can participate in ts-operations
-    auto a= melt*3.0 + sca; // if this compiles, then it works like we want
+    auto a= melt*3.0 + sca_m2; // if this compiles, then it works like we want
     auto b = a*3.0;
 }

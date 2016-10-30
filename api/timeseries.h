@@ -725,7 +725,7 @@ namespace shyft {
 			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
 
-            apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca,double glacier_fraction,double dtf,double area_m2);
+            apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf);
 
 			double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta);
 

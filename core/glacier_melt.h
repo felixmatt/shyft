@@ -25,7 +25,7 @@ namespace shyft {
 		namespace glacier_melt {
 
 		    struct parameter {
-                double dtf = 6.0;
+                double dtf = 6.0;///<degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
                 parameter(double dtf=6.0):dtf(dtf) {}
             };
 
@@ -33,21 +33,20 @@ namespace shyft {
              *
              * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
              *
-             * \param t temperature [deg. C]
+             * \param t temperature [deg.C]
              *
-             * \param sca, fraction of snow cover [0..1]
+             * \param snow_covered_area_m2, unit[m2]
              *
-             * \param glacier_fraction, fraction of glacier cover [0..1]
+             * \param glacier_area_m2, unit[m2]
              *
-             * \return glacier_melt, outflow from glacier melt [mm/h]
+             * \return glacier_melt in [m3/s]
              */
 
-            inline double step(const double dtf, const double t, const double sca, const double glacier_fraction){
-                if(glacier_fraction<=0.0)
+            inline double step(const double dtf, const double t, const double snow_covered_area_m2, const double glacier_area_m2){
+                if(glacier_area_m2 <= snow_covered_area_m2 || t <= 0.0) // melt is 0.0 if area uncovered by snow less than 0.0, and t below zero
                     return 0.0;
-                double t_effective = std::max(0.0,t);
-                double area_effective = std::max(0.0, glacier_fraction - sca);
-                return dtf * t_effective * area_effective/24.0; // convert from mm/day to mm/h
+                const double convert_m2_x_mm_d_to_m3_s= 0.001/86400.0;// ref. input units ,mm=0.001m/d=86400s
+                return dtf*t*(glacier_area_m2-snow_covered_area_m2)* convert_m2_x_mm_d_to_m3_s;
             }
 
 		} // glacier_melt

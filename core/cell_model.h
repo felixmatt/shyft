@@ -13,11 +13,7 @@ namespace shyft {
 		typedef constant_timeseries<timeaxis> cts_t;
 		typedef timeaxis timeaxis_t;
 
-        /** \brief convert [mm/h] over an area_m² to [m³/s] units */
-        inline double mmh_to_m3s(double mm_pr_hour, double area_m2) {
-            const double mmh_to_m3s_scale_factor = 1 / (3600.0*1000.0);
-            return area_m2*mm_pr_hour*mmh_to_m3s_scale_factor;
-        }
+
 		// cell-model goes here
 
 		/** \brief environment supplies the temperature, precipitation,radiation,rel_hum and  wind_speed

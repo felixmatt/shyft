@@ -139,7 +139,7 @@ namespace shyft {
             snow_response_t snow;
             ae_response_t ae;
             kirchner_response_t kirchner;
-
+            double gm_melt_m3s;
             // Stack response
             double total_discharge;
         };
@@ -171,8 +171,6 @@ namespace shyft {
             auto rel_hum_accessor = rel_hum_accessor_t(rel_hum, time_axis);
             auto rad_accessor = rad_accessor_t(rad, time_axis);
 
-            // Get the initial states
-            //double q = state.kirchner.q;
             R response;
 
             // Initialize the method stack
@@ -184,6 +182,8 @@ namespace shyft {
             // Step through times in axis
             size_t i_begin = n_steps > 0 ? start_step : 0;
             size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
+            const double glacier_fraction=geo_cell_data.land_type_fractions_info().glacier();
+            const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
             for (size_t i = i_begin; i < i_end; ++i) {
                 utcperiod period = time_axis.period(i);
                 double temp = temp_accessor.value(i);
@@ -192,28 +192,11 @@ namespace shyft {
                 double prec = p_corr.calc(prec_accessor.value(i));
                 state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
 
-                //
-                // Land response:
-                //
-
-                // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/h
-
-                // HBVSnow
-                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp);
-
-                // Communicate snow
-                // At my pos xx mm of snow moves in direction d.
-
-                // Glacier Melt
-                double outflow = glacier_melt::step(parameter.gm.dtf, temp, state.snow.sca, geo_cell_data.land_type_fractions_info().glacier());
-                outflow += response.snow.outflow;
-
-                // Actual Evapotranspiration
-                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, parameter.ae.ae_scale_factor, state.snow.sca, period.timespan());
-
-                // Use responses from PriestleyTaylor and HBVSnow in Kirchner
-                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, outflow, response.ae.ae);
+                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/s -> mm/h, interpreted as over the entire area(!)
+                hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp); // outputs mm/h, interpreted as over the entire area
+                response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf,temp,geo_cell_data.area()*state.snow.sca,glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
+                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, parameter.ae.ae_scale_factor,std::max(state.snow.sca,glacier_fraction), period.timespan());
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); // all units mm/h, over the entire cell-area
 
                 //
                 // Adjust land response for lakes and reservoirs (Treat them the same way for now)
@@ -221,7 +204,7 @@ namespace shyft {
                 double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
                 double lake_corrected_discharge = prec*total_lake_fraction + (1.0 - total_lake_fraction)*response.kirchner.q_avg;
 
-                response.total_discharge = lake_corrected_discharge;
+                response.total_discharge = lake_corrected_discharge + m3s_to_mmh(response.gm_melt_m3s,geo_cell_data.area());
                 response.snow.snow_state=state.snow;//< note/sih: we need snow in the response due to calibration
 
                 // Possibly save the calculated values using the collector callbacks.
