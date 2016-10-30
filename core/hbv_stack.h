@@ -6,7 +6,8 @@
 #include "hbv_soil.h"
 #include "hbv_tank.h"
 #include "precipitation_correction.h"
-
+#include "glacier_melt.h"
+#include "unit_conversion.h"
 
 namespace shyft {
 	namespace core {
@@ -31,19 +32,21 @@ namespace shyft {
 				typedef hbv_soil::parameter soil_parameter_t;
 				typedef hbv_tank::parameter tank_parameter_t;
 				typedef precipitation_correction::parameter precipitation_correction_parameter_t;
+                typedef glacier_melt::parameter glacier_parameter_t;
 
 				parameter(pt_parameter_t pt,
 					snow_parameter_t snow,
 					ae_parameter_t ae,
 					soil_parameter_t soil,
 					tank_parameter_t tank,
-					precipitation_correction_parameter_t p_corr)
-					: pt(pt), snow(snow), ae(ae), soil(soil), tank(tank), p_corr(p_corr)  { /*Do nothing */}
+					precipitation_correction_parameter_t p_corr,
+                    glacier_parameter_t gm = glacier_parameter_t())
+					: pt(pt), snow(snow), ae(ae), soil(soil), tank(tank), p_corr(p_corr),gm(gm)  { /*Do nothing */}
 
 				parameter() {}
 				parameter(const parameter& other)
 					: pt(other.pt), snow(other.snow), ae(other.ae),
-					soil(other.soil), tank(other.tank), p_corr(other.p_corr)  { /*Do nothing */}
+					soil(other.soil), tank(other.tank), p_corr(other.p_corr),gm(other.gm)  { /*Do nothing */}
 
 				pt_parameter_t pt;						// I followed pt_gs_k but pt_hs_k differ
 				snow_parameter_t snow;
@@ -51,9 +54,9 @@ namespace shyft {
 				soil_parameter_t soil;
 				tank_parameter_t  tank;
 				precipitation_correction_parameter_t p_corr;
-
+                glacier_parameter_t gm;
 				///<calibration support, needs vector interface to params, size is the total count
-				size_t size() const { return 16; }
+				size_t size() const { return 17; }
 				///<calibration support, need to set values from ordered vector
 				void set(const vector<double>& p) {
 					if (p.size() != size())
@@ -75,6 +78,7 @@ namespace shyft {
 					p_corr.scale_factor = p[i++];
 					pt.albedo = p[i++];
 					pt.alpha = p[i++];
+                    gm.dtf = p[i++];
 
 				}
 
@@ -97,6 +101,7 @@ namespace shyft {
 					case 13:return p_corr.scale_factor;
 					case 14:return pt.albedo;
 					case 15:return pt.alpha;
+                    case 16:return gm.dtf;
 					default:
 						throw runtime_error("HBV_stack Parameter Accessor:.get(i) Out of range.");
 					}
@@ -121,7 +126,8 @@ namespace shyft {
 						"snow.cfr",
 						"p_corr.scale_factor",
 						"pt.albedo",
-						"pt.alpha"
+						"pt.alpha",
+                        "gm.dtf"
 					};
 					if (i >= size())
 						throw runtime_error("hbv_stack Parameter Accessor:.get_name(i) Out of range.");
@@ -166,7 +172,7 @@ namespace shyft {
 				ae_response_t ae;
 				soil_response_t soil;
 				tank_response_t tank;
-
+                double gm_melt_m3s;
 				// Stack response
 				double total_discharge;
 			};
@@ -258,29 +264,14 @@ namespace shyft {
 				precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
 				priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
 				hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> snow(parameter.snow, state.snow);
-				// --
-				// hbv_soil::calculater<typename P::soil_paramer_t, typename S::soil_state, ...> soil(parameter.soil);
-				// hbv_soil::calculator<typename P::soil_parameter_t> soil(parameter.soil);
 				hbv_soil::calculator<typename P::soil_parameter_t> soil(parameter.soil);
-
-				// hbv_tank::calculator<hbv_tank::trapezoidal_average, typename P::hbv_tank_parameter_t> hbv_tank(parameter.hbv_tank);
-				//hbv_tank::calculator<typename P::tank_parameter_t> tank(parameter.tank);
 				hbv_tank::calculator<typename P::tank_parameter_t> tank(parameter.tank);
-
-				//snow.set_glacier_fraction(geo_cell_data.land_type_fractions_info().glacier());
-
-				// Get the initial states					//Check with Prof??
-				//auto &snow_state = state.snow;
-				//double soil_moisture = state.sm;			// Check with Prof
-				//double sm = state.soil.sm;					//Check with Prof
-				//double water_level = state.tank.water_level;		// Check with Prof
-				//double uz = state.tank.uz;							//Check with Prof
-				//double lz = state.tank.lz;
-
 				R response;
-				//const double forest_fraction = geo_cell_data.land_type_fractions_info().forest();
-				//const double altitude = geo_cell_data.mid_point().z;
-				// Step through times in axis
+                const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
+                const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
+                const double land_fraction = 1 - total_lake_fraction - glacier_fraction;
+                const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;//const double forest_fraction = geo_cell_data.land_type_fractions_info().forest();
+
                 size_t i_begin = n_steps > 0 ? start_step : 0;
                 size_t i_end = n_steps > 0 ? start_step + n_steps : time_axis.size();
                 for (size_t i = i_begin; i < i_end; ++i) {
@@ -290,46 +281,23 @@ namespace shyft {
 					double rel_hum = rel_hum_accessor.value(i);
 					double prec = p_corr.calc(prec_accessor.value(i));
 					state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
-													  //
-													  // Land response:
-													  //
 
-													  // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-					double pot_evap = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h
-					response.pt.pot_evapotranspiration = pot_evap;
-
-					// Hbv Snow
-					//snow.step(snow_state, response.snow, period.start, period.timespan(), parameter.snow,
-					//	temp, rad, prec, wind_speed_accessor.value(i), rel_hum, forest_fraction, altitude);
-					//HBV Snow
 					snow.step(state.snow, response.snow, period.start, period.end, parameter.snow, prec, temp);
 
-					// TODO: Communicate snow
-					// At my pos xx mm of snow moves in direction d.
+                    response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h
+                    response.ae.ae = hbv_actual_evapotranspiration::calculate_step(
+                        state.soil.sm, response.pt.pot_evapotranspiration,
+					    parameter.ae.lp, std::max(state.snow.sca,glacier_fraction), // a evap only on non-snow/non-glac area
+                        period.timespan());
 
-					// Actual Evapotranspiration
-					double act_evap = hbv_actual_evapotranspiration::calculate_step(state.soil.sm, pot_evap,
-					parameter.ae.lp, state.snow.sca, period.timespan());
-					response.ae.ae = act_evap;
+                    soil.step(state.soil, response.soil, period.start, period.end, response.snow.outflow, response.ae.ae);
 
-					// soil layer goes here:
-					// if( geo_cell_data.something), decide action.
-					// outflow_soil=hbv_soil.step(state.hbv_soil, response.snow.outflow);
-					// Use responses from actual_evaporation and snow outflow in soil
-					soil.step(state.soil, response.soil, period.start, period.end, response.snow.outflow, response.ae.ae);
-
-					// Use responses from soil_outflow in tank
-					//tank.step(period.start, period.end, q, q_avg, response.soil.outflow, 0.0, geo_cell_data.urban_area);
 					tank.step(state.tank, response.tank, period.start, period.end, response.soil.outflow);
-					//state.kirchner.q = q; // Save discharge state variable //Discuss with Prof??
 
-					// Adjust land response for lakes and reservoirs (Treat them the same way for now)
-					double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() +
-						geo_cell_data.land_type_fractions_info().reservoir();
-					double corrected_discharge = prec*total_lake_fraction +
-						response.snow.outflow*geo_cell_data.land_type_fractions_info().glacier() +
-						(1.0 - total_lake_fraction - geo_cell_data.land_type_fractions_info().glacier())*response.tank.outflow;
-					response.total_discharge = corrected_discharge;
+                    response.total_discharge =
+                        prec*total_lake_fraction // precipitation on lake|reservoirs give direct response in this alg.
+                        + m3s_to_mmh(response.gm_melt_m3s, geo_cell_data.area()) // the glacier also direct
+                        + response.tank.outflow * land_fraction;
 
 					// Possibly save the calculated values using the collector callbacks.
 					response_collector.collect(i, response);///< \note collect the response valid for the i'th period (current state is now at the end of period)

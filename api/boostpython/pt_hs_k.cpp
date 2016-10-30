@@ -31,7 +31,7 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTHSK assembly\n"
                               "priestley_taylor,hbv_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&,optional<const glacier_melt::parameter&>>(args("pt","snow","ae","k","p_corr","gm"),"create object with specified parameters"))
+                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&,optional<glacier_melt::parameter>>(args("pt","snow","ae","k","p_corr","gm"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
 				.def_readwrite("ae", &parameter::ae, "actual evapotranspiration parameter")
@@ -62,7 +62,7 @@ namespace expose {
             class_<response>("PTHSKResponse","This struct contains the responses of the methods used in the PTHSK assembly")
                 .def_readwrite("pt",&response::pt,"priestley_taylor response")
                 .def_readwrite("snow",&response::snow,"hbc-snow response")
-                //.def_readwrite("gm",&response::gm,"glacier melt response")
+                .def_readwrite("gm_melt_m3s",&response::gm_melt_m3s,"glacier melt response[m3s]")
                 .def_readwrite("ae",&response::ae,"actual evapotranspiration response")
                 .def_readwrite("kirchner",&response::kirchner,"kirchner response")
                 .def_readwrite("total_discharge",&response::total_discharge,"total stack response")

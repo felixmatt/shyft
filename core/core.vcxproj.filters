@@ -123,6 +123,7 @@
     <ClInclude Include="hbv_stack_cell_model.h">
       <Filter>method-stacks</Filter>
     </ClInclude>
+    <ClInclude Include="unit_conversion.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

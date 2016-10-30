@@ -595,6 +595,26 @@ namespace shyft {
 				sum_catchment_feature_value(*cells, catchment_indexes,
 					[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
 		}
+        apoint_ts glacier_melt(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) {
+                return c.rc.glacier_melt;
+            }
+                )
+            );
+        }
+        vector<double> glacier_melt(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+        double glacier_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                sum_catchment_feature_value(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+
 	};
 
     ///< access to skaugen's snow routine's state statistics
@@ -737,6 +757,26 @@ namespace shyft {
 				average_catchment_feature_value(*cells, catchment_indexes,
 					[](const cell& c) { return c.rc.snow_total_stored_water; }, ith_timestep);
 		}
+        apoint_ts glacier_melt(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) {
+                return c.rc.glacier_melt;
+            }
+                )
+            );
+        }
+        vector<double> glacier_melt(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+        double glacier_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                sum_catchment_feature_value(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+
 	};
 
     ///< access to hbv snow routine's state statistics
@@ -804,21 +844,6 @@ namespace shyft {
             return apoint_ts(*shyft::core::cell_statistics::
                 sum_catchment_feature(*cells, catchment_indexes,
                     [](const cell& c) {
-                        // a bit more complicated:
-                        //  c.rc.sca
-                        //  c.env_ts.temperature
-                        //  c.geo.land_type_info().glacier()
-                        //  c.geo.area_m2()
-                        //  c.parameter->gm.dtf
-                        // and create glacier_melt_ts(...)
-                        //  create result ts pts_t(ta,...),
-                        //
-                        //auto snow_sca_m2 = c.sc.snow_sca * c.geo.area();
-                        //shyft::timeseries::glacier_melt_ts<pts_t, decltype(snow_sca_m2)> melt_ts(c.env_ts.temperature,snow_sca_m2,c.area()*c.geo.land_type_fractions_info().glacier(),c.parameter->gm.dtf);
-                        //pts_t r(c.sc.snow_sca.ta,0.0,point_interpretation_policy::POINT_AVERAGE_VALUE);
-                        //for(size_t i=0;i<r.size();++i)
-                        //    r.set(i,melt_ts.value(i));
-                        //return r;
                         return c.rc.glacier_melt;
                     }
                 )

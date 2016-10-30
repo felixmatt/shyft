@@ -124,7 +124,6 @@ namespace shyft {
              *
              * \param P
              * Parameter that supplies:
-             * -# P.glacier_fraction --> Fraction of area covered by glacier // TODO: Remove from GammaSnow and put into glacier method parameter?
              * -# P.winter_end --> Last day of accumulation season
              * -# P.initial_bare_ground_fraction --> Bare ground fraction at melt onset
              * -# P.snow_cv --> Spatial coefficient variation of fresh snowfall
@@ -165,7 +164,6 @@ namespace shyft {
     #endif
               private:
                 calendar cal;
-                double glacier_fraction_ = 0.0;  //TODO: move into special alg. for glacier
                 const double melt_heat = 333660.0;
                 const double water_heat = 4180.0;
                 const double ice_heat = 2050.0;
@@ -288,9 +286,6 @@ namespace shyft {
                   }
 
               public:
-                  //TODO: move these into special alg. for glacier.
-                  void set_glacier_fraction(double glacier_fraction) {glacier_fraction_=glacier_fraction;}
-                  double glacier_fraction() const {return glacier_fraction_;}
                   /*
                   * \brief step the snow model forward from time t to t+dt, state, parameters and input
                   * updates the state and response upon return.
@@ -489,17 +484,6 @@ namespace shyft {
                     outflow = prec + start_storage_value - storage;
 
                     if (outflow < 0.0) outflow = 0.0;  // Tiny rounding errors may occur.
-
-                    // TODO: Move the glacier melt to separate method, and assume that the sca of a glacier is that same as for
-                    // the ground. Glacier melt should not be part of the ground water response, but collected separately (e.g.
-                    // counted directly as total discharge).
-                    if (glacier_fraction_ > sca) {
-                        if (temp_swe <= 0.0) {
-                            potential_melt += rad*(albedo - p.glacier_albedo)*dt/melt_heat; // This eventually gives unit in mm over timestep.
-                            if (potential_melt > 0.0)
-                                outflow += potential_melt*(glacier_fraction_ - sca);
-                        }
-                    }
 
                     // Store updated state variables
                     s.albedo = albedo;

@@ -5,8 +5,8 @@
 #include "gamma_snow.h"
 #include "actual_evapotranspiration.h"
 #include "precipitation_correction.h"
-
-
+#include "glacier_melt.h"
+#include "unit_conversion.h"
 namespace shyft {
   namespace core {
     namespace pt_gs_k {
@@ -29,25 +29,26 @@ namespace shyft {
             typedef actual_evapotranspiration::parameter ae_parameter_t;
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
-
+            typedef glacier_melt::parameter glacier_melt_parameter_t;
             parameter(pt_parameter_t pt,
                       gs_parameter_t gs,
                       ae_parameter_t ae,
                       kirchner_parameter_t k,
-                      precipitation_correction_parameter_t p_corr)
-             : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) { /*Do nothing */ }
+                      precipitation_correction_parameter_t p_corr,glacier_melt_parameter_t gm=glacier_melt_parameter_t())
+             : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) ,gm(gm){ /*Do nothing */ }
             parameter() {}
             parameter(const parameter& other)
              : pt(other.pt), gs(other.gs), ae(other.ae),
-               kirchner(other.kirchner), p_corr(other.p_corr) { /*Do nothing */ }
+               kirchner(other.kirchner), p_corr(other.p_corr),gm(other.gm) { /*Do nothing */ }
 
             pt_parameter_t pt;
             gs_parameter_t gs;
             ae_parameter_t ae;
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
+            glacier_melt_parameter_t gm;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 24; }
+            size_t size() const { return 25; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -77,6 +78,7 @@ namespace shyft {
 				gs.initial_bare_ground_fraction = p[i++];
 				gs.winter_end_day_of_year = size_t(p[i++]);
 				gs.calculate_iso_pot_energy = p[i++] != 0.0 ? true : false;
+                gm.dtf = p[i++];
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -106,6 +108,7 @@ namespace shyft {
 					case 21:return gs.initial_bare_ground_fraction;
 					case 22:return (double)gs.winter_end_day_of_year;
 					case 23:return gs.calculate_iso_pot_energy ? 1.0 : 0.0;
+                    case 24:return gm.dtf;
 
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
@@ -139,7 +142,8 @@ namespace shyft {
                     "pt.alpha",
 					"gs.initial_bare_ground_fraction",
 					"gs.winter_end_day_of_year",
-					"gs.calculate_iso_pot_energy"
+					"gs.calculate_iso_pot_energy",
+                    "gm.dtf"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");
@@ -180,7 +184,7 @@ namespace shyft {
             gs_response_t gs;
             ae_response_t ae;
             kirchner_response_t kirchner;
-
+            double gm_melt_m3s;
             // Stack response
             double total_discharge;
         };
@@ -273,12 +277,13 @@ namespace shyft {
             gamma_snow::calculator<typename P::gs_parameter_t, typename S::gs_state_t, typename R::gs_response_t> gs;
             kirchner::calculator<kirchner::trapezoidal_average, typename P::kirchner_parameter_t> kirchner(parameter.kirchner);
             //
-            gs.set_glacier_fraction(geo_cell_data.land_type_fractions_info().glacier());
             // Get the initial states
-            auto &gs_state = state.gs;
-            double q = state.kirchner.q;
             R response;
             const double forest_fraction=geo_cell_data.land_type_fractions_info().forest();
+            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir(); // both give direct response for now
+            const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
+            const double kirchner_fraction = 1 - total_lake_fraction - glacier_fraction;
+            const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
             const double altitude= geo_cell_data.mid_point().z;
             // Step through times in axis
             size_t i_begin = n_steps > 0 ? start_step : 0;
@@ -290,40 +295,20 @@ namespace shyft {
                 double rel_hum = rel_hum_accessor.value(i);
                 double prec = p_corr.calc(prec_accessor.value(i));
                 state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
-                //
-                // Land response:
-                //
-
-                // PriestleyTaylor (scale by timespan since it delivers results in mm/s)
-                double pot_evap = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h
-                response.pt.pot_evapotranspiration=pot_evap;
-
-                // Gamma Snow
-                gs.step(gs_state, response.gs, period.start, period.timespan(), parameter.gs,
+                                
+                gs.step(state.gs, response.gs, period.start, period.timespan(), parameter.gs,
                         temp, rad, prec, wind_speed_accessor.value(i), rel_hum,forest_fraction,altitude);
-
-                // TODO: Communicate snow
-                // At my pos xx mm of snow moves in direction d.
-
-                // Actual Evapotranspiration
-                double act_evap = actual_evapotranspiration::calculate_step(q, pot_evap,
-                                  parameter.ae.ae_scale_factor, response.gs.sca, period.timespan());
-                response.ae.ae = act_evap;
-
-                // Use responses from PriestleyTaylor and GammaSnow in Kirchner
-                double q_avg;
-                kirchner.step(period.start, period.end, q, q_avg, response.gs.outflow, act_evap);
-                state.kirchner.q = q; // Save discharge state variable
-                response.kirchner.q_avg = q_avg;
-
-                //
-                // Adjust land response for lakes and reservoirs (Treat them the same way for now)
-                double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() +
-                    geo_cell_data.land_type_fractions_info().reservoir();
-                double corrected_discharge = prec*total_lake_fraction +
-                    response.gs.outflow*geo_cell_data.land_type_fractions_info().glacier() +
-                    (1.0 - total_lake_fraction - geo_cell_data.land_type_fractions_info().glacier())*q_avg;
-                response.total_discharge = corrected_discharge;
+                response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf, temp, geo_cell_data.area()*response.gs.sca, glacier_area_m2);
+                response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; //mm/s -> mm/h
+                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration,
+                                  parameter.ae.ae_scale_factor, std::max(response.gs.sca,glacier_fraction), // a evap only on non-snow/non-glac area
+                                  period.timespan());
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.gs.outflow, response.ae.ae); // all units mm/h over 'same' area
+                
+                response.total_discharge = 
+                      prec*total_lake_fraction 
+                    + shyft::m3s_to_mmh(response.gm_melt_m3s,geo_cell_data.area())
+                    + response.kirchner.q_avg*kirchner_fraction;
 
                 // Possibly save the calculated values using the collector callbacks.
                 response_collector.collect(i, response);///< \note collect the response valid for the i'th period (current state is now at the end of period)

@@ -28,6 +28,7 @@ namespace shyft {
 										// these are the one that we collects from the response, to better understand the model::
 				pts_t pe_output;///< potential evap mm/h
 				pts_t snow_outflow;///< HBV snow output [m³/s] for the timestep
+                pts_t glacier_melt;///< [m³/s] for the timestep
                 pts_t snow_sca;
 				pts_t snow_swe;
 				pts_t ae_output;///< actual evap mm/h
@@ -38,7 +39,7 @@ namespace shyft {
 				all_response_collector() : destination_area(0.0) {}
 				all_response_collector(const double destination_area) : destination_area(destination_area) {}
 				all_response_collector(const double destination_area, const timeaxis_t& time_axis)
-					: destination_area(destination_area), pe_output(time_axis, 0.0), snow_outflow(time_axis, 0.0),snow_sca(time_axis,0.0),snow_swe(time_axis,0), ae_output(time_axis, 0.0),
+					: destination_area(destination_area), pe_output(time_axis, 0.0), snow_outflow(time_axis, 0.0),glacier_melt(time_axis,0.0),snow_sca(time_axis,0.0),snow_swe(time_axis,0), ae_output(time_axis, 0.0),
 						soil_outflow(time_axis, 0.0), avg_discharge(time_axis, 0.0) {}
 
 				/**\brief called before run to allocate space for results */
@@ -46,6 +47,7 @@ namespace shyft {
 					destination_area = area;
                     ts_init(pe_output, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_outflow, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(glacier_melt, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_sca, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_swe, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(ae_output, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
@@ -65,6 +67,7 @@ namespace shyft {
 				void collect(size_t idx, const response_t& response) {
 					pe_output.set(idx, response.pt.pot_evapotranspiration);
 					snow_outflow.set(idx, response.snow.outflow);//mm ?? //TODO: current mm/h. Want m3/s, but we get mm/h from snow output
+                    glacier_melt.set(idx, response.gm_melt_m3s);
                     snow_sca.set(idx, response.snow.snow_state.sca);
 					snow_swe.set(idx, response.snow.snow_state.swe);
 					ae_output.set(idx, response.ae.ae);

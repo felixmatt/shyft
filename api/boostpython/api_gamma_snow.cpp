@@ -51,8 +51,6 @@ namespace expose {
           ;
         typedef calculator<parameter,state,response> GammaSnowCalculator;
         class_<GammaSnowCalculator>("GammaSnowCalculator")
-            .def("set_glacier_fraction",&GammaSnowCalculator::set_glacier_fraction,"set the glacier fraction parameter for the calculation")
-            .def("glacier_fraction",&GammaSnowCalculator::glacier_fraction,"get the glacier fraction parameter used for the calculation")
             .def("step",&GammaSnowCalculator::step,args("state","response","t","dt","parameter","temperature","radiation","precipitation","wind_speed","rel_hum","forest_fraction","altitude"),
                 "Step the snow model forward from time t to t+dt, given state, parameters and input.\n"
                 "Updates the state and response upon return.\n"

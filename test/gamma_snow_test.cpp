@@ -119,7 +119,6 @@ void gamma_snow_test::test_warm_winter_effect() {
     //double temp_swe = 0.0;
 
     // Value for node 231
-    double param_glacier_fraction(0.55);
     double albedo = 0.6;
     double lwc = 3148.9609375;
     double surface_heat = 0.0;
@@ -136,7 +135,6 @@ void gamma_snow_test::test_warm_winter_effect() {
     double prec = 0.0;
     double wind_speed = 2.0;
     double rel_hum = 0.70;
-    gs.set_glacier_fraction(param_glacier_fraction);
     auto dt = shyft::core::deltahours(1);
     size_t num_days = 100;
 	bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
