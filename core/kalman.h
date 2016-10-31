@@ -50,11 +50,21 @@ namespace shyft {
                 double covariance_init=0.5;/// for the error covariance P matrix
                 double std_error_bias_measurements=2.0;///'mV', st.dev
                 double ratio_std_w_over_v=0.06;/// st.dev W /st.dev V
-                parameter(int n_daily_observations=8,/// 'mDim' dt= n_daily_obserations/24hours
-                       double hourly_correlation=0.93,/// correlation from one-hour to the next
-                       double covariance_init=0.5,/// for the error covariance P matrix
-                       double std_error_bias_measurements=2.0,///st.dev
-                       double ratio_std_w_over_v=0.06 ///'mRatio' w= process noise, v= measurement noise
+                /** \brief constructs a kalman parameter
+                 *
+                 * where the values have reasonable defaults
+                 *
+                 * \param n_daily_observations typically 8, 3h sampling frequency
+                 * \param hourly_correlation correlation from one-hour to the next
+                 * \param covariance_init for the error covariance P matrix
+                 * \param std_error_bias_measurements std.dev for bias measurements
+                 * \param ratio_std_w_over_v w= process noise, v= measurement noise
+                */
+                parameter(int n_daily_observations=8,
+                       double hourly_correlation=0.93,
+                       double covariance_init=0.5,
+                       double std_error_bias_measurements=2.0,
+                       double ratio_std_w_over_v=0.06
                        ):
                        n_daily_observations(n_daily_observations),
                        hourly_correlation(hourly_correlation),
@@ -78,7 +88,7 @@ namespace shyft {
              *
              * Credits: Thanks to met.no for providing the original source for this algorithm.
              *
-             * \sa https://en.wikipedia.org/wiki/Kalman_filter
+             * \sa <a href="https://en.wikipedia.org/wiki/Kalman_filter">Kalman Filter</a>
              *
              */
             struct filter {
@@ -102,7 +112,7 @@ namespace shyft {
                  * \param observed_bias nan if no observation is available otherwise obs-fc
                  * \param t utctime of observation, this filter utilizes daily solar patterns, so time
                  *        in day-cycle is the only important aspect.
-                 * \param p contains the kalman state x,k and P, updated at exit
+                 * \param s contains the kalman state x,k and P, updated at exit
                  *
                  */
                 void update(double observed_bias,utctime t,state& s) const {

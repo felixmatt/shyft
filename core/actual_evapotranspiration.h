@@ -19,7 +19,7 @@
 #pragma once
 
 #include "utctime_utilities.h"
-/*!\tfile
+/**
 contains the actual evatransporation parameters and algorithm
 */
 namespace shyft {
@@ -42,7 +42,8 @@ namespace shyft {
 			 * \param water_level
 			 * \param potential_evapotranspiration
 			 * \param scale_factor typically 1.5
-			 * \param snow_fraction 0..1
+			 * \param snow_fraction 0..1 - only snow free areas have evapotranspiration in this model
+			 * \param dt delta_t \note currently not used in computation
 			 * \return calculated actual evapotranspiration
 			 *
 			 */

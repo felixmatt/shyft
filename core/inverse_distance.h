@@ -9,7 +9,7 @@
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "geo_point.h"
-/** \file
+/**
  * Contains all IDW related stuff, parameters, the IDW algorithm, IDW Models, and IDW Runner
  */
 
@@ -107,7 +107,7 @@ namespace shyft {
 			*    -# P.max_distance const --> double, - locations outside this distance is not available
 			*    -# P.max_members const --> size_t, - max number of members to use in weight
 			*    -# P.distance_measure_factor --> double, - as in pow(x, distance_measure_factor)
-			*    -# P.zscale --> double, - scaling z for distance computing 
+			*    -# P.zscale --> double, - scaling z for distance computing
 			* \tparam T
 			* TimeAxis providing:
 			*  -#  T.size() const --> size_t, number of non-overlapping time intervals
@@ -239,7 +239,6 @@ namespace shyft {
 					}
 				}
 			}
-#ifndef SWIG
 			/** \brief temperature_gradient_scale_computer
 			* based on a number of geo-located temperature-sources, compute the temperature gradient.
 			* The algorithm uses the two valid points with highest/lowest z among the surrounding points.
@@ -330,7 +329,6 @@ namespace shyft {
 			private:
 				double default_gradient;
 			};
-#endif
 
 			/** \brief Provide a minimal temperature model for the IDW algorithm,
 			 *  providing functionality for transformation of source temperature to
@@ -374,7 +372,6 @@ namespace shyft {
 			 */
 			template <class S, class D, class P, class G>
 			struct radiation_model {
-#ifndef SWIG
 				struct scale_computer {
 					static  bool is_source_based() { return false; }
 					scale_computer(const P&) {}
@@ -382,7 +379,6 @@ namespace shyft {
 					double compute() const { return 1.0; }
 					void clear() {}
 				};
-#endif
 				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
 					return G::distance_measure(a, b, f, zscale);
 				}
@@ -401,7 +397,6 @@ namespace shyft {
 			 */
 			template <class S, class D, class P, class G>
 			struct precipitation_model {
-#ifndef SWIG
 				struct scale_computer {
 					static  bool is_source_based() { return false; }
 
@@ -411,7 +406,6 @@ namespace shyft {
 					double compute() const { return precipitation_gradient; }
 					void clear() {}
 				};
-#endif
 				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
 					return G::distance_measure(a, b, f, zscale);
 				}
@@ -428,7 +422,6 @@ namespace shyft {
 			*/
 			template <class S, class D, class P, class G>
 			struct wind_speed_model {
-#ifndef SWIG
 				struct scale_computer {
 					static bool is_source_based() { return false; }
 					scale_computer(const P&) {}
@@ -436,7 +429,6 @@ namespace shyft {
 					double compute() const { return 1.0; }
 					void clear() {}
 				};
-#endif
 				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
 					return G::distance_measure(a, b, f, zscale);
 				}
@@ -451,7 +443,6 @@ namespace shyft {
 			*/
 			template <class S, class D, class P, class G>
 			struct rel_hum_model {
-#ifndef SWIG
 				struct scale_computer {
 					static  bool is_source_based() { return false; }
 					scale_computer(const P&) {}
@@ -459,7 +450,6 @@ namespace shyft {
 					double compute() const { return 1.0; }
 					void clear() {}
 				};
-#endif
 				static inline double distance_measure(const G &a, const G &b, double f, double zscale) {
 					return G::distance_measure(a, b, f, zscale);
 				}

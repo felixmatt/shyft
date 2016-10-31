@@ -16,28 +16,24 @@
 
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
-/** \file
-* Contains the minimal concepts for the time-series and point source functionality needed in shyft
-*/
+
 namespace shyft{
-
-
-
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    /** \namespace The timeseries namespace contains all needed concepts related
+
+    /** The timeseries namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
     *
     * concepts:
     *  -#: point, -a time,value pair,utctime,double representing points on a time-series, f(t).
     *  -#: timeaxis, -(TA)the fundation for the timeline, represented by the timeaxis class, a non-overlapping set of periods ordered ascending.
-    *  -#: point_source,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
+    *  -#: point_ts,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
     *  -#: accessor, -(A) average_accessor and direct_accessor, provides transformation from f(t) to some provide time-axis
     */
     namespace timeseries {
 
         using namespace shyft::core;
         using namespace std;
-        const double EPS=1e-12;
+        const double EPS=1e-12; ///< used some places for comparison to equality, \ref point
 
 		/** \brief simply a point identified by utctime t and value v */
         struct point {
@@ -166,10 +162,11 @@ namespace shyft{
 		*  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
 		*  -# .get(size_t i) const        -> return the i'th point  (t,v)
 		* \param source of type S
-		* \param p the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
-		* \param last_idx, in/out, position of the last time point used on the source, updated after each call.
-		* \param tsum out, the sum of time under non-nan areas of the curve
-		* \return double, the area under the non-nan areas of the curve, specified by tsum ref-parameter
+		* \param p         the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
+		* \param last_idx  position of the last time point used on the source, updated after each call.
+		* \param tsum      the sum of time under non-nan areas of the curve
+		* \param linear    interpret points as linear between, if set to false, use stair-case start of step def
+		* \return the area under the non-nan areas of the curve, specified by tsum reference-parameter
 		*/
 		template <class S>
 		double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
@@ -253,7 +250,8 @@ namespace shyft{
          *  -# .get(size_t i) const        -> return the i'th point  (t,v)
          * \param source of type S
          * \param p the period [start,end) on time-axis
-         * \param last_idx, in/out, position of the last time point used on the source, updated after each call.
+         * \param last_idx in/out, position of the last time point used on the source, updated after each call.
+         * \param linear how to interpret the points, if true, use linear between points specification
          * \return double, the value at the as true average of the specified period
          */
         template <class S>
@@ -1209,14 +1207,14 @@ namespace shyft{
         }
 
 		/**\brief Nash Sutcliffe model effiency coefficient based goal function
-		* \ref http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient
+		* <a ref href=http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient">NS coeffecient</a>
 		* \note throws runtime exception if supplied arguments differs in .size() or .size()==0
 		* \note if obs. is a constant, we get 1/0
 		* \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
 		* \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
 		* \param observed_ts contains the observed values for the model
 		* \param model_ts contains the (simulated) model output values
-		* \returns 1- E, given E=n.s,  i.e. 0 is best performance > 0 .. +oo is less good performance.
+		* \return 1- E, given E=n.s,  i.e. 0 is best performance > 0 .. +oo is less good performance.
 		*/
 		template<class TSA1, class TSA2>
 		double nash_sutcliffe_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
@@ -1238,7 +1236,7 @@ namespace shyft{
 			return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
 		}
 
-        /** \brief \ref KLING-GUPTA Journal of Hydrology 377
+        /** \brief KLING-GUPTA Journal of Hydrology 377
          *              (2009) 80–91, page 83,
          *                     formula (10), where shorthands are
          *                     a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed

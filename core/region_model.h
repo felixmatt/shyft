@@ -9,7 +9,8 @@
 #include "pt_hs_k.h"
 #include "geo_cell_data.h"
 
-/** \file This file now contains mostly things to provide the PTxxK model,or
+/**
+ * This file now contains mostly things to provide the PTxxK model,or
  * in general a region model, based on distributed cells where
  *  each cell keep its local properties, state, and local. env. data,
  *   and when run, starts from an initial state, and steps through the time-axis giving response and state-changes as output.
@@ -285,7 +286,7 @@ namespace shyft {
                     clone(c);
                 return *this;
             }
-            ///-- \section properties accessible to user
+            ///-- properties accessible to user
             timeaxis_t time_axis; ///<The time_axis as set from run_interpolation, determines the axis for run()..
             size_t ncore = 0; ///<< defaults to 4x hardware concurrency, controls number of threads used for cell processing
 			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
@@ -452,7 +453,7 @@ namespace shyft {
             *
             *
             * \param ip_parameter contains wanted parameters for the interpolation
-            * \param time_axis should be equal to the \ref timeaxis the \ref region_model is prepared running for.
+            * \param time_axis should be equal to the \ref shyft::time_axis the \ref region_model is prepared running for.
             * \param env contains the \ref region_environment type
             * \return void
             *
@@ -475,10 +476,12 @@ namespace shyft {
             *  -# catchment_parameters should be set (and applied to the matching cells)
             * \post :
             *  -# all cells have updated state variables
-            *  -#
-            *  \note the call
-            * \tparam TA time-axis, \ref shyft::timeseries::timeaxis
-            * \param time_axis of type TA
+            *
+            *
+            * \param thread_cell_count if 0 figure out cells pr thread using hardware info,
+            *   otherwise use supplied value. Setting 1000 means one thread gets 1000 cells to work with.
+            * \param start_step of time-axis, defaults to 0, starting at the beginning
+            * \param n_steps number of steps to run from the start_step, a value of 0 means running all time-steps
             * \return void
             *
             */
@@ -527,7 +530,7 @@ namespace shyft {
 
             /** \brief creates/modifies a pr catchment override parameter
                 \param catchment_id the 0 based catchment_id that correlates to the cells catchment_id
-                \param a reference to the parameter that will be kept for those cells
+                \param p a reference to the parameter that will be used/applied to those cells
             */
             void set_catchment_parameter(int catchment_id, const parameter_t & p) {
                 if (catchment_parameters.find(catchment_id) == catchment_parameters.end()) {
@@ -573,7 +576,7 @@ namespace shyft {
             /** \brief set/reset the catchment based calculation filter. This affects what get simulate/calculated during
              * the run command. Pass an empty list to reset/clear the filter (i.e. no filter).
              *
-             * \param catchment_id_list is a (zero-based) catchment id vector
+             * \param catchment_id_list is a catchment id vector
              *
              */
             void set_catchment_calculation_filter(const std::vector<int>& catchment_id_list) {
@@ -651,9 +654,9 @@ namespace shyft {
                         cell.set_state_collection(on_or_off);
             }
             /** \brief enable/disable collection of snow sca|sca for calibration purposes
-             * \param cachment_id to enable snow calibration for, -1 means turn on/off for all
+             * \param catchment_id to enable snow calibration for, -1 means turn on/off for all
              * \param on_or_off true|or false.
-             * \note if the underlying cell do not support snow sca|swe collection, this
+             * \note if the underlying cell do not support snow sca|swe collection, this call has no effect
              */
             void set_snow_sca_swe_collection(int catchment_id,bool on_or_off) {
                 for(auto& cell:*cells)
@@ -670,8 +673,9 @@ namespace shyft {
              * \tparam TSV a vector<timeseries> type, where timeseries supports:
              *  -# .ct(timeaxis_t, double) fills a series with 0.0 for all time_axis elements
              *  -# .add( const some_ts & ts)
+             * \param cr catchment result vector to be filled in
              * \note the ts type should have proper move/copy etc. semantics
-             * \treturns filled in cr, dimensioned to number of catchments, where the i'th entry correspond to cid using cix_to_cid(i)
+             * \return filled in cr, dimensioned to number of catchments, where the i'th entry correspond to cid using cix_to_cid(i)
              */
             template <class TSV>
             void catchment_discharges( TSV& cr) const {
@@ -690,8 +694,10 @@ namespace shyft {
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *
              * \param time_axis forwarded to the cell.run(time_axis)
-             * \param beg iterator to first cell in range
-             * \param endc iterator to end cell in range (one past last element)
+             * \param start_step of time-axis
+             * \param n_steps number of steps to run
+             * \param 'beg' the beginning of the cell-range
+             * \param 'endc' the end of cell range
              */
             void single_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc) {
                 for(auto& cell:boost::make_iterator_range(beg,endc)) {
@@ -701,11 +707,13 @@ namespace shyft {
             }
             /** \brief uses async to execute the single_run, partitioning the cell range into thread-cell count
              *
-             * \throws runtime_error if thread_cell_count is zero
-             * \returns when all cells calculated
+             * \throw runtime_error if thread_cell_count is zero
+             * \return when all cells calculated
              * \param time_axis time-axis to use
-             * \param beg start of cell range
-             * \param end end of cell range
+             * \param start_step of time-axis
+             * \param n_steps number of steps to run
+             * \param 'beg' the beginning of the cell-range
+             * \param 'endc' the end of cell range
              * \param thread_cell_count number of cells given to each async thread
              */
             void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
