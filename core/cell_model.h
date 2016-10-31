@@ -13,11 +13,7 @@ namespace shyft {
 		typedef constant_timeseries<timeaxis> cts_t;
 		typedef timeaxis timeaxis_t;
 
-        /** \brief convert [mm/h] over an area_m² to [m³/s] units */
-        inline double mmh_to_m3s(double mm_pr_hour, double area_m2) {
-            const double mmh_to_m3s_scale_factor = 1 / (3600.0*1000.0);
-            return area_m2*mm_pr_hour*mmh_to_m3s_scale_factor;
-        }
+
 		// cell-model goes here
 
 		/** \brief environment supplies the temperature, precipitation,radiation,rel_hum and  wind_speed
@@ -28,7 +24,7 @@ namespace shyft {
 		* \see cell
 		* \tparam timeaxis type, the ts-type should all be constructible/resetable with a timeaxis and a fill-value.
 		*
-		* \tparam temperature_ts type for the temperature ts, usually a/like \ref shyft::timeseries::point_source
+		* \tparam temperature_ts type for the temperature ts, usually a shyft::timeseries::points_ts<TA> type
 		* \tparam precipitation_ts
 		* \tparam radiation_ts
 		* \tparam relhum_ts
@@ -83,7 +79,7 @@ namespace shyft {
 		* -# sc         state collector, plays its role during run(), collects wanted state each step
 		* -# rc         response collector,plays its role during run(), collects wanted response each step
 		*
-		* \tparam P  parameter type  for the cell method stack, e.g. \ref shyft::core::PTGSKParameter
+		* \tparam P  parameter type  for the cell method stack, e.g. \ref shyft::core::pt_gs_k::parameter
 		* \tparam E  environment type for the cell
 		* \tparam S  state type for the cell
 		* \tparam SC state collector type for the cell (usually a a null collector)
@@ -182,7 +178,7 @@ namespace shyft {
              * \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
              * \param cells that we want to perform calculation on
              * \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are averaged
-             * \param cell_ts , a callable that fetches the cell feature we want to average
+             * \param cell_ts a callable that fetches the cell feature we want to average
              * \throw runtime_error if number of cells are zero
              * \return area weighted feature sum, as a ts, a  shared_ptr<pts_ts>
              */
@@ -219,8 +215,8 @@ namespace shyft {
 			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
 			* \param cells that we want to perform calculation on
 			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are averaged
-			* \param cell_ts , a callable that fetches the cell feature we want to average
-			* \param i, the i'th time-step for which we compute the value
+			* \param cell_ts  a callable that fetches the cell feature we want to average
+			* \param i the i'th time-step for which we compute the value
 			* \throw runtime_error if number of cells are zero
 			* \return area weighted feature sum, as a double value
 			*/
@@ -258,7 +254,7 @@ namespace shyft {
              * \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
              * \param cells that we want to perform calculation on
              * \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
-             * \param cell_ts, a callable that fetches the cell feature we want to sum
+             * \param cell_ts a callable that fetches the cell feature we want to sum
              * \throw runtime_error if number of cells are zero
              * \return feature sum, as a ts, a  shared_ptr<pts_ts>
              */
@@ -291,7 +287,8 @@ namespace shyft {
 			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
 			* \param cells that we want to perform calculation on
 			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
-			* \param cell_ts, a callable that fetches the cell feature we want to sum
+			* \param cell_ts a callable that fetches the cell feature we want to sum
+			* \param i the i'th time-step of the time-axis to use
 			* \throw runtime_error if number of cells are zero
 			* \return feature sum, as a ts, a  shared_ptr<pts_ts>
 			*/
@@ -325,8 +322,8 @@ namespace shyft {
 			* \tparam cell_feature_ts a callable that takes a const cell ref, returns a ts
 			* \param cells that we want to extract feature from
 			* \param catchment_indexes list of catchment-id that identifies the cells, if zero length, all are summed
-			* \param cell_ts, a callable that fetches the cell feature ts
-			* \param i, the i'th step on the time-axis of the cell-feature
+			* \param cell_ts a callable that fetches the cell feature ts
+			* \param i the i'th step on the time-axis of the cell-feature
 			* \throw runtime_error if number of cells are zero
 			* \return vector filled with feature for the i'th time-step on timeaxis
 			*/

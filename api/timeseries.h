@@ -62,11 +62,12 @@ namespace shyft {
              *
              */
             struct ipoint_ts {
+                typedef gta_t ta_t;// time-axis type
+
                 virtual ~ipoint_ts(){}
 
                 virtual point_interpretation_policy point_interpretation() const =0;
                 virtual void set_point_interpretation(point_interpretation_policy point_interpretation) =0;
-
 
                 /** \return Returns the effective time-axis of the timeseries
                  */
@@ -107,6 +108,7 @@ namespace shyft {
             struct average_ts;//fwd api
 			struct accumulate_ts;//fwd api
             struct time_shift_ts;// fwd api
+            struct aglacier_melt_ts;// fwd api
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
              *  This is the class that we expose to python, with operations, expressions etc.
@@ -124,6 +126,7 @@ namespace shyft {
 				   friend struct average_ts;
 				   friend struct time_shift_ts;
 				   friend struct accumulate_ts;
+				   friend struct aglacier_melt_ts;
                 // constructors that we want to expose
                 // like
 
@@ -323,21 +326,21 @@ namespace shyft {
 
 			/** \brief The accumulate_ts is used for providing accumulated(integrated) ts values over a time-axis
 			*
-			* Given a any ts, concrete, or an expression, provide the true accumulated values, 
-			* defined as area under non-nan values of the f(t) curve, 
+			* Given a any ts, concrete, or an expression, provide the true accumulated values,
+			* defined as area under non-nan values of the f(t) curve,
 			* on the intervals points as provided by the specified time-axis.
 			*
 			* The value at the i'th point of the time-axis is given by:
 			*
-			*   integral of f(t) dt from t0 to ti , 
+			*   integral of f(t) dt from t0 to ti ,
 			*
-			*   where t0 is time_axis.period(0).start, and ti=time_axis.period(i).start 
+			*   where t0 is time_axis.period(0).start, and ti=time_axis.period(i).start
 			*
 			* using the f(t) interpretation of the supplied ts (linear or stair case).
 			*
 			* \note The value at t=t0 is 0.0 (by definition)
 			* \note The value of t outside ta.total_period() is nan
-			* 
+			*
 			* The \ref point_interpretation_policy is always POINT_INSTANT_VALUE for the result ts.
 			*
 			* \note if a nan-value intervals are excluded from the integral and time-computations.
@@ -399,7 +402,7 @@ namespace shyft {
 				}
 				virtual std::vector<double> values() const {
 					std::vector<double> r;r.reserve(ta.size());
-					accumulate_accessor<ipoint_ts, gta_t> accumulate(*ts, ta);// use accessor, that 
+					accumulate_accessor<ipoint_ts, gta_t> accumulate(*ts, ta);// use accessor, that
 					for (size_t i = 0;i<ta.size();++i) {                      // given sequential access
 						r.push_back(accumulate.value(i));                     // reuses acc.computation
 					}
@@ -721,11 +724,13 @@ namespace shyft {
 
 			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
-			
+
+            apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf);
+
 			double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta);
 
 			double kling_gupta(const apoint_ts& observation_ts, const apoint_ts&  model_ts, const gta_t& ta, double s_r, double s_a, double s_b);
-			
+
 			apoint_ts create_periodic_pattern_ts(const vector<double>& pattern, utctimespan dt,utctime t0, const gta_t& ta);
 
             apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) ;

@@ -15,16 +15,17 @@ namespace shyft {
              * by Michael J. D. Powell. See the "The BOBYQA Algorithm for Bound Constrained Optimization Without Derivatives",
              * Technical report, Department of Applied Mathematics and Theoretical Physics, University of Cambridge, 2009.
              *
-             * We use the dlib implementation of this algorithm, see www.dlib.net/optimization.html#find_min_bobyqa.
+             * We use the dlib implementation of this algorithm, see <a href="www.dlib.net/optimization.html#find_min_bobyqa">dlib bobyqua</a>.
              *
              * \tparam M Model to be optimized, implementing the interface:
-             *   - double operator()(const dlib::matrix<double, 0, 1> params) --> Evaluate the functional for parameter set params.
-             *   -vector<double> to_scaled(std::vector<double> params) --> Scale original parameters to [0,1]
-             *   -vector<double> from_scaled(const dlib::matrix<double, 0, 1> scaled_params) --> Unscale parameters
-             *  \param x --> Initial guess
-             *  \param max_n_evaluations --> stop/throw if not converging after n evaluations
-             *  \param tr_start --> Initial trust region radius
-             *  \param tr_stop --> Stopping trust region radius
+             *   -# double operator()(const dlib::matrix<double, 0, 1> params) --> Evaluate the functional for parameter set params.
+             *   -# vector<double> to_scaled(std::vector<double> params) --> Scale original parameters to [0,1]
+             *   -# vector<double> from_scaled(const dlib::matrix<double, 0, 1> scaled_params) --> Unscale parameters
+             *  \param model the model to be optimized
+             *  \param x Initial guess
+             *  \param max_n_evaluations stop/throw if not converging after n evaluations
+             *  \param tr_start Initial trust region radius
+             *  \param tr_stop Stopping trust region radius
              */
             template  <class M>
             double min_bobyqa(M& model, vector<double>& x, int max_n_evaluations, double tr_start, double tr_stop) {
@@ -96,7 +97,8 @@ namespace shyft {
             /** \brief template for the function that finds the x that minimizes the evaluated value of model M using SCEUA algorithm
              * \tparam M the model, that provide .to_scaled(x) and .from_scaled(x) to normalize the parameters to 0..1 range
              * \param model a reference to the model evaluated
-             * \param max_n_iterations stop after max_n_interations reached(keep best x until then)
+             * \param x starting point for the parameters
+             * \param max_n_evaluations stop after max_n_interations reached(keep best x until then)
              * \param x_eps stop when all x's changes less than x_eps(recall range 0..1), convergence in x
              * \param y_eps stop when last y-values (model goal functions) seems to have converged (no improvements)
              * \return the goal function of m value, and x is the corresponding parameter-set.
@@ -213,9 +215,15 @@ namespace shyft {
                 }
                 /** \brief Constructs a target specification element for calibration, specifying all needed parameters
                  *
-                 * \param ts; the target time-series that contain the target/observed discharge values
-                 * \param cids;  a vector of the catchment ids in the model that together should add up to the target time-series
-                 * \param scale_factor; the weight that this target_specification should have relative to the possible other target_specs.
+                 * \param ts the target time-series that contain the target/observed discharge values
+                 * \param cids  a vector of the catchment ids in the model that together should add up to the target time-series
+                 * \param scale_factor the weight that this target_specification should have relative to the possible other target_specs.
+                 * \param calc_mode how to calculate goal-function nash-sutcliffe or the more advanced and flexible kling-gupta
+                 * \param s_r scale factor r in kling-gupta
+                 * \param s_a scale factor a in kling-gupta
+                 * \param s_b scale factor b in kling-gupta
+                 * \param catchment_property_ determines if this target specification is for DISCHARGE|SNOW_COVERED_AREA|SNOW_WATER_EQUIVALENT
+                 * \param uid a user supplied uid, string, to help user correlate this target to external data-sources
                  */
                 target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                     target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
@@ -287,14 +295,14 @@ namespace shyft {
             };
 
 
-            /** \brief The optimizer for parameters in a \ref shyft::core::region_model
+            /** \brief The optimizer for parameters in a shyft::core::region_model
              * provides needed functionality to orchestrate a search for the optimal parameters so that the goal function
              * specified by the target_specifications are minmized.
              * The user can specify which parameters (model specific) to optimize, giving range min..max for each of the
              * parameters. Only parameters with min != max are used, thus minimizing the parameter space.
              *
              * Target specification \ref target_specification allows a lot of flexiblity when it comes to what
-             * goes into the \ref nash_sutcliffe goal function.
+             * goes into the shyft::timeseries::nash_sutcliffe_goal_function or kling-gupta function.
              *
              * The search for optimium starts with the current parameter-set, the current start state, over the specified model time-axis.
              * After a run, the goal function is calculated and returned back to the minbobyqa algorithm that continue searching for the minimum
@@ -336,7 +344,7 @@ namespace shyft {
                 //Need to handle expanded/reduced parameter vector based on min..max range to optimize speed for bobyqa
                 const double activate_limit = 0.000001;
                 bool is_active_parameter(size_t i) const { return fabs(p_max[i] - p_min[i]) > activate_limit; }
-                
+
                 vector<double> reduce_p_vector(const vector<double>& fp) const {
                     std::vector<double> r; r.reserve(fp.size());
                     for (size_t i = 0; i < fp.size(); ++i) {
@@ -362,12 +370,12 @@ namespace shyft {
             public:
 
                 /**\brief construct an opt model for ptgsk, use p_min=p_max to disable optimization for a parameter
-                * 
+                *
                 *
                 * \param model reference to the model to be optimized, the model should be initialized, i.e. the interpolation step done.
-                * \param vector<target_specification_t> specifies how to calculate the goal-function, \ref shyft::core::model_calibration::target_specification
+                * \param targetsA specifies how to calculate the goal-function, \ref shyft::core::model_calibration::target_specification
                 * \param p_min minimum values for the parameters to be optimized
-                * \param p_max maximum values for the parameters to be  optimized
+                * \param p_max maximum values for the parameters to be optimized
                 */
                 optimizer(region_model_t& model, const vector<target_specification_t>& targetsA,
                     const vector<double>& p_min, const vector<double>& p_max)
@@ -379,7 +387,7 @@ namespace shyft {
                 }
 
                 /** Create an optimizer based on the supplied model, kept as a reference(!)
-                 * To optimize, first call set_target_specification(), then 
+                 * To optimize, first call set_target_specification(), then
                  * call any of optimize_xxx(...)
                  */
                 optimizer(region_model_t& model) :
@@ -391,7 +399,7 @@ namespace shyft {
                 /**Set all parameters that matters for the calibration.
                  * The lower and upper bounds determines which parameters are subject to calibration.
                  * If lower and upper bound are equal, the parameter is untouched during calibration (regardless value)
-                 * 
+                 *
                  * \param targetsA specifies the goal function description
                  * \param param_lower_bound specifies the lower bound of the parameter set
                  * \param param_upper_bound specifies the upper bound of the parameter set
@@ -409,7 +417,7 @@ namespace shyft {
                     model.get_states(model.initial_state);
                 }
 
-                /** prepare the optimization process by looking at the current state of the supplied 
+                /** prepare the optimization process by looking at the current state of the supplied
                  * parameters.
                  * Ensures :
                  *  -# the model have a global parameter-set
@@ -479,7 +487,7 @@ namespace shyft {
                     p = expand_p_vector(rp);
                     return p;
                 }
-                
+
                 /**optimize using minbobyqa, using p as starting parameters, return new optimized parameters */
                 PA optimize(const PA &p, size_t max_n_evaluations = 1500, double tr_start = 0.1, double tr_stop = 1.0e-5) {
                     PA r;

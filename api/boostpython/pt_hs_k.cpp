@@ -5,6 +5,7 @@
 #include "core/actual_evapotranspiration.h"
 #include "core/precipitation_correction.h"
 #include "core/hbv_snow.h"
+#include "core/glacier_melt.h"
 #include "core/kirchner.h"
 #include "core/pt_hs_k.h"
 #include "api/api.h"
@@ -30,11 +31,12 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTHSK assembly\n"
                               "priestley_taylor,hbv_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&>(args("pt","snow","ae","k","p_corr"),"create object with specified parameters"))
+                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&,optional<glacier_melt::parameter>>(args("pt","snow","ae","k","p_corr","gm"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
 				.def_readwrite("ae", &parameter::ae, "actual evapotranspiration parameter")
                 .def_readwrite("hs",&parameter::hs,"hbv-snow parameter")
+                .def_readwrite("gm",&parameter::gm,"glacier melt parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
                 .def("size",&parameter::size,"returns total number of calibration parameters")
@@ -60,6 +62,7 @@ namespace expose {
             class_<response>("PTHSKResponse","This struct contains the responses of the methods used in the PTHSK assembly")
                 .def_readwrite("pt",&response::pt,"priestley_taylor response")
                 .def_readwrite("snow",&response::snow,"hbc-snow response")
+                .def_readwrite("gm_melt_m3s",&response::gm_melt_m3s,"glacier melt response[m3s]")
                 .def_readwrite("ae",&response::ae,"actual evapotranspiration response")
                 .def_readwrite("kirchner",&response::kirchner,"kirchner response")
                 .def_readwrite("total_discharge",&response::total_discharge,"total stack response")
@@ -71,10 +74,11 @@ namespace expose {
             typedef shyft::core::pt_hs_k::all_response_collector PTHSKAllCollector;
             class_<PTHSKAllCollector>("PTHSKAllCollector", "collect all cell response from a run")
                 .def_readonly("destination_area",&PTHSKAllCollector::destination_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTHSKAllCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
-                //.def_readonly("snow_sca",&PTHSKAllCollector::snow_sca," hbv snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
-                //.def_readonly("snow_swe",&PTHSKAllCollector::snow_swe,"hbv snow swe, [mm] over the cell sca.. area, - at the end of timestep")
+                .def_readonly("avg_discharge",&PTHSKAllCollector::avg_discharge,"Kirchner Discharge given in [m3/s] for the timestep")
+                .def_readonly("snow_sca",&PTHSKAllCollector::snow_sca," hbv snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
+                .def_readonly("snow_swe",&PTHSKAllCollector::snow_swe,"hbv snow swe, [mm] over the cell sca.. area, - at the end of timestep")
                 .def_readonly("snow_outflow",&PTHSKAllCollector::snow_outflow," hbv snow output [m³/s] for the timestep")
+                .def_readonly("glacier_melt",&PTHSKAllCollector::glacier_melt," glacier melt (outflow) [m3/s] for the timestep")
                 .def_readonly("ae_output",&PTHSKAllCollector::ae_output,"actual evap mm/h")
                 .def_readonly("pe_output",&PTHSKAllCollector::pe_output,"pot evap mm/h")
                 .def_readonly("end_reponse",&PTHSKAllCollector::end_reponse,"end_response, at the end of collected")

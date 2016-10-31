@@ -1,14 +1,15 @@
+#pragma once
 #include "timeseries.h"
 #include <armadillo>
 #include <algorithm>
 #include <exception>
 
-/** \tfile
+/**
  * contains all BayesianKriging stuff, like concrete useful Parameters and the templated BTK algorithm
  *
  */
 
-#pragma once
+
 namespace shyft {
     namespace core {
 		namespace bayesian_kriging {
@@ -23,7 +24,10 @@ namespace shyft {
 	             * Parameter that supplies:
 	             *  -# P.zscale() const
 	             * \tparam GP
-	             *  Parameter GeoPoint, supplies ::zscaled_distance(GP p1,GPp2 ,double zscale)
+	             *  Parameter GeoPoint, that should have the zscaled_distance(GP p1,GPp2 ,double zscale) method defined
+	             * \param p1 first point
+	             * \param p2 second point
+	             * \param 'param' the parameter containing zscale used
 	             * \return scaled distance.
 	             */
 	            template<class P,class GP> double scaled_dist(const GP& p1, const GP& p2, const P& param)
@@ -69,6 +73,9 @@ namespace shyft {
 	             *    -# parameter.nug() const --> Nugget value of the semivariogram
 	             *    -# parameter.range() const --> Range of the semivariogram
 	             *    -# P.zscale() const --> Height scaling factor
+	             * \param source_begin,source_end is specifying the range for the input sources
+	             * \param destination_begin,destination_end is specifying the range for the target of the interpolation
+	             * \param parameter contains the parameter for the function
 	             * \param K
 	             * Symmetric, positive semi-definite source-source covariance matrix
 	             * \param k
@@ -121,6 +128,8 @@ namespace shyft {
 	             *  Destination (location/area)
 	             *  Type that implements:
 	             *    -# D.mid_point() const --> 3D point, GeoPoint, specifies the location
+                 * \param source_begin,source_end is specifying the range for the input sources
+	             * \param destination_begin,destination_end is specifying the range for the target of the interpolation
 	             * \param F
 	             * Matrix \f$ F\in{} \mathcal{R}^{n,2} \f$, where \f$n\f$ is the number of sources.
 	             * \param f

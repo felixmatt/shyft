@@ -69,4 +69,6 @@ add_test(kalman_test ${target} kalman_test)
 add_test(hbv_tank_test ${target} hbv_tank_test)
 add_test(hbv_soil_test ${target} hbv_soil_test)
 add_test(hbv_actual_evapotranspiration_test ${target} hbv_actual_evapotranspiration_test)
+add_test(glacier_melt_test ${target} glacier_melt_test)
+
 

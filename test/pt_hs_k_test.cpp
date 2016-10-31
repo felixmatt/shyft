@@ -15,6 +15,7 @@ using namespace shyfttest;
 
 namespace pt = shyft::core::priestley_taylor;
 namespace hs = shyft::core::hbv_snow;
+namespace gm = shyft::core::glacier_melt;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;

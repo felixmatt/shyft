@@ -183,6 +183,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_glacier_melt.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_hbv_actual_evapotranspiration.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />

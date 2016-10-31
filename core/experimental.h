@@ -29,7 +29,7 @@
 
 namespace shyft {
     using  namespace std;
-    /** \brief experimental classes to support testing */
+    /** \brief experimental classes to support testing in C++ */
     namespace experimental {
         namespace geo = boost::geometry;///< we are using boost::geometry to take care of everything that needs geo computation
         namespace ec = shyft::core;
@@ -518,10 +518,10 @@ namespace shyft {
              *  -# a digital terrain model (dtm)
              *  in a sub- directory .
              * These are read into memory \ref shyft::experimental::io::slurp and
-             *  processed by \ref shyft::experimental::io::wkt_reader into boost::geometry multipolygons
+             *  processed by \ref shyft::experimental::wkt_reader into boost::geometry multipolygons
              * then feed into the \ref geo_cell_data_computer that uses the rudimentary \ref region_grid
              * class to provide a grid-type of geometry, 1km x 1km squares.
-             * \tparam C cell type that supports construction, ::state_t and :: parameter_t
+             * \tparam C cell type that supports construction, state_t and parameter_t
              */
             template <class C>
             class cell_file_repository {

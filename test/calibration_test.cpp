@@ -211,7 +211,7 @@ namespace shyfttest {
 
         catchment_t run(parameter_t param) {
             catchment_t catchment_discharge(time_axis, 0.0);
-			//shyft::time_axis::fixed_dt 
+			//shyft::time_axis::fixed_dt
 			auto state_time_axis=time_axis;
 			state_time_axis.n++;//add room for end-state
             size_t i = 0;
@@ -306,14 +306,15 @@ void calibration_test::test_dummy() {
         TS_ASSERT_DELTA(x[i], target[i], 1.0e-16);
     /// the dream algorithm seems to have very sloppy accuracy
     /// most likely a bug
-    TS_WARN("DREAM: simple tests with just 0.3 accuracy requirement");
+    bool verbose = getenv("SHYFT_VERBOSE")!=nullptr;
+    if(verbose) TS_WARN("DREAM: simple tests with just 0.3 accuracy requirement");
     double residual2=model_calibration::min_dream(model,x2,10000);
     TS_ASSERT_DELTA(residual2, 0.0, 1.0e-1);
     for (size_t i = 0; i < x2.size(); ++i)
         TS_ASSERT_DELTA(x2[i], target[i], 0.3);
 
 
-    TS_WARN("SCEUA: simple tests with just 0.001 accuracy requirement");
+    if(verbose) TS_WARN("SCEUA: simple tests with just 0.001 accuracy requirement");
     double residual3=model_calibration::min_sceua(model,x3,10000,0.001,0.0001);
     TS_ASSERT_DELTA(residual3, 0.0, 1.0e-1);
     for (size_t i = 0; i < x3.size(); ++i)
@@ -384,48 +385,54 @@ void calibration_test::test_simple() {
     using std::cout;
     using std::endl;
     model.p_expanded = x;
-    cout << "True Parameter settings:" << endl;
-    cout << "========================" << endl;
-    for (size_t i = 0; i < n_params; ++i)
-        cout << model.parameter.get_name(i) << " = " << model.parameter.get(i) << endl;
-    cout << "===============" << endl;
-    cout << "Initial guess :" << endl;
-    cout << "===============" << endl;
-    for (size_t i = 0; i < n_params; ++i)
-        cout << model.parameter.get_name(i) << " = " << x[i] << endl;
-    cout << "====================" << endl;
-    cout << "Found:" << endl;
-    cout << "Found:" << endl;
+    bool verbose = getenv("SHYFT_VERBOSE")!=nullptr;
+    if(verbose) {
+        cout << "True Parameter settings:" << endl;
+        cout << "========================" << endl;
+        for (size_t i = 0; i < n_params; ++i)
+            cout << model.parameter.get_name(i) << " = " << model.parameter.get(i) << endl;
+        cout << "===============" << endl;
+        cout << "Initial guess :" << endl;
+        cout << "===============" << endl;
+        for (size_t i = 0; i < n_params; ++i)
+            cout << model.parameter.get_name(i) << " = " << x[i] << endl;
+        cout << "====================" << endl;
+        cout << "Found:" << endl;
+        cout << "Found:" << endl;
+    }
     // Solve the optimization problem
 	size_t n_max = 15000;
 	const double tr_start = 0.1;
 	const double tr_end = 1e-6;
 	auto rx = model.reduce_p_vector(x);
     double residual = min_bobyqa(model, rx, n_max, tr_start, tr_end);//min_sceua(model,rx,n_max,0.001,0.001);//min_dream(model,rx,n_max);//min_bobyqa(model, rx,n_max, tr_start,tr_end);
-    cout << "====================" << endl;
 	x = model.expand_p_vector(rx);
 	model.p_expanded = x;
-    for (size_t i = 0; i < n_params; ++i)
-        cout << model.parameter.get_name(i) << " = " << x[i] << endl;
-    cout << "====================" << endl;
-    cout << "Residual = " << residual << endl;
-    cout << "Number of function evals = " << model.n_evals << endl;
-    cout << "====================" << endl;
-    cout << "Trying once more:" << endl;
+    if(verbose) {
+        cout << "====================" << endl;
+        for (size_t i = 0; i < n_params; ++i)
+            cout << model.parameter.get_name(i) << " = " << x[i] << endl;
+        cout << "====================" << endl;
+        cout << "Residual = " << residual << endl;
+        cout << "Number of function evals = " << model.n_evals << endl;
+        cout << "====================" << endl;
+        cout << "Trying once more:" << endl;
+    }
     model.n_evals = 0;
 	rx = model.reduce_p_vector(x);
     residual = min_bobyqa(model, rx, n_max*2, tr_start/2, tr_end/2);//min_dream(model,rx,n_max);//
 	x = model.expand_p_vector(rx);
 	model.p_expanded = x;
-    cout << "====================" << endl;
-    cout << "min_bobyqa:" << endl;
-    for (size_t i = 0; i < n_params; ++i)
-        cout << model.parameter.get_name(i) << " = " << x[i] << endl;
-    cout << "====================" << endl;
-    cout << "Residual = " << residual << endl;
-    cout << "Number of function evals = " << model.n_evals << endl;
-    cout << "====================" << endl;
-
+	if(verbose) {
+        cout << "====================" << endl;
+        cout << "min_bobyqa:" << endl;
+        for (size_t i = 0; i < n_params; ++i)
+            cout << model.parameter.get_name(i) << " = " << x[i] << endl;
+        cout << "====================" << endl;
+        cout << "Residual = " << residual << endl;
+        cout << "Number of function evals = " << model.n_evals << endl;
+        cout << "====================" << endl;
+	}
 
 }
 void calibration_test::test_nash_sutcliffe_goal_function() {

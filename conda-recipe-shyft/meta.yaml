@@ -1,0 +1,14 @@
+package:
+  name: shyft
+  version: "{{load_setup_py_data().version}}"
+ 
+requirements:
+  build:
+    - python
+ 
+  run:
+    - python
+     
+source:
+  path: ../
+  

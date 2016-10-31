@@ -117,6 +117,7 @@
     <ClInclude Include="calibration_test.h" />
     <ClInclude Include="cell_builder_test.h" />
     <ClInclude Include="api_test.h" />
+    <ClInclude Include="glacier_melt_test.h" />
     <ClInclude Include="gridpp_test.h" />
     <ClInclude Include="hbv_actual_evapotranspiration_test.h" />
     <ClInclude Include="hbv_soil_test.h" />
@@ -156,6 +157,7 @@
     </ClCompile>
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
+    <ClCompile Include="glacier_melt_test.cpp" />
     <ClCompile Include="gridpp_test.cpp" />
     <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />
     <ClCompile Include="hbv_soil_test.cpp" />

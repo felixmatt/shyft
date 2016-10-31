@@ -79,9 +79,7 @@ namespace shyft {
 			utctime start;
 			utctime end;
 			std::string to_string() const;
-#ifndef SWIG
             friend std::ostream& operator<<(std::ostream& os, const utcperiod& p);
-#endif
 		};
 		inline bool is_valid(const utcperiod &p) {return p.valid();}
         inline utcperiod intersection(const utcperiod&a, const utcperiod& b) {
@@ -300,7 +298,7 @@ namespace shyft {
 
             /**\brief construct a timezone based on region id
              * uses internal tz_info_database to lookup the name.
-             * \param region_id, like Europe/Oslo, \sa time_zone::tz_info_database
+             * \param region_id like Europe/Oslo, \sa time_zone::tz_info_database
              */
             calendar(std::string region_id);
             /**\brief get list of available time zone region */
@@ -382,9 +380,9 @@ namespace shyft {
 			 *   -# if t and resulting t have different utc-offsets, the result is adjusted dst adjustment with the difference.
 			 *
 			 *
-			 * \param t utctime
-			 * \param delta T utctimespan, that can be any, but with calendar::DAY,WEEK,MONTH,YEAR calendar semantics applies
-			 * \param n numer of delta T to add, can be negative
+			 * \param t utctime to add n deltaT from
+			 * \param deltaT that can be any, but with calendar::DAY,WEEK,MONTH,YEAR calendar semantics applies
+			 * \param n number of delta T to add, can be negative
 			 * \return new calculated utctime
 			 */
 			utctime add(utctime t, utctimespan deltaT, long n) const ;

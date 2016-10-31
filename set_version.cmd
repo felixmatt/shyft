@@ -1,9 +1,9 @@
 @echo off
 
-git rev-list --count HEAD > REVISION
+git rev-list --count --all > REVISION
 
 set /p minor=<REVISION
 
-echo 3.0.%minor% > VERSION
+echo 4.0.%minor% > VERSION
 
-echo ##teamcity[buildNumber '3.0.%minor%']
+echo ##teamcity[buildNumber '4.0.%minor%']
