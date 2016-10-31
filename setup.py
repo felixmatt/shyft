@@ -40,6 +40,11 @@ else:
     print("Only windows and Linux supported")
     exit()
 
+# Get revision number
+p = subprocess.Popen('set_version.cmd', universal_newlines=True,
+    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+p.wait()
+
 VERSION = open('VERSION').read().strip()
 # Create the version.py file
 open('shyft/version.py', 'w').write('__version__ = "%s"\n' % VERSION)

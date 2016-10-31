@@ -1,6 +1,6 @@
 package:
   name: shyft
-  version: "REPLACED_BY_TEAMCITY"
+  version: "{{load_setup_py_data().version}}"
  
 requirements:
   build:
