@@ -78,10 +78,10 @@ namespace expose {
             typedef shyft::core::pt_gs_k::all_response_collector PTGSKAllCollector;
             class_<PTGSKAllCollector>("PTGSKAllCollector", "collect all cell response from a run")
                 .def_readonly("destination_area",&PTGSKAllCollector::destination_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTGSKAllCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+                .def_readonly("avg_discharge",&PTGSKAllCollector::avg_discharge,"Kirchner Discharge given in [m^3/s] for the timestep")
                 .def_readonly("snow_sca",&PTGSKAllCollector::snow_sca," gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTGSKAllCollector::snow_swe,"gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep")
-                .def_readonly("snow_outflow",&PTGSKAllCollector::snow_outflow," gamma snow output [m³/s] for the timestep")
+                .def_readonly("snow_outflow",&PTGSKAllCollector::snow_outflow," gamma snow output [m^3/s] for the timestep")
                 .def_readonly("glacier_melt", &PTGSKAllCollector::glacier_melt, " glacier melt (outflow) [m3/s] for the timestep")
                 .def_readonly("ae_output",&PTGSKAllCollector::ae_output,"actual evap mm/h")
                 .def_readonly("pe_output",&PTGSKAllCollector::pe_output,"pot evap mm/h")
@@ -91,7 +91,7 @@ namespace expose {
             typedef shyft::core::pt_gs_k::discharge_collector PTGSKDischargeCollector;
             class_<PTGSKDischargeCollector>("PTGSKDischargeCollector", "collect all cell response from a run")
                 .def_readonly("cell_area",&PTGSKDischargeCollector::cell_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTGSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+                .def_readonly("avg_discharge",&PTGSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m^3/s] for the timestep")
                 .def_readonly("snow_sca",&PTGSKDischargeCollector::snow_sca," gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTGSKDischargeCollector::snow_swe,"gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep")
                 .def_readonly("end_reponse",&PTGSKDischargeCollector::end_response,"end_response, at the end of collected")

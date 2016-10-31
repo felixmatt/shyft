@@ -28,9 +28,9 @@ namespace shyft {
             *       a 'state in time' value or a average-value for the time-step.
             */
             struct all_response_collector {
-                double destination_area;///< in [m²]
+                double destination_area;///< in [m^2]
                 // these are the one that we collects from the response, to better understand the model::
-                pts_t avg_discharge; ///< Kirchner Discharge given in [m³/s] for the timestep
+                pts_t avg_discharge; ///< Kirchner Discharge given in [m^3/s] for the timestep
                 pts_t snow_outflow;///<  snow output [mm/h] for the timestep TODO: want to have m3 s-1
                 pts_t snow_sca;
                 pts_t snow_swe;
@@ -81,7 +81,7 @@ namespace shyft {
             /** \brief a collector that collects/keep discharge only */
             struct discharge_collector {
                 double destination_area;
-                pts_t avg_discharge; ///< Discharge given in [m³/s] as the average of the timestep
+                pts_t avg_discharge; ///< Discharge given in [m^3/s] as the average of the timestep
                 response_t end_response;///<< end_response, at the end of collected
                 bool collect_snow;
                 pts_t snow_sca;

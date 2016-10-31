@@ -77,7 +77,7 @@ namespace expose {
                 .def_readonly("avg_discharge",&PTHSKAllCollector::avg_discharge,"Kirchner Discharge given in [m3/s] for the timestep")
                 .def_readonly("snow_sca",&PTHSKAllCollector::snow_sca," hbv snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTHSKAllCollector::snow_swe,"hbv snow swe, [mm] over the cell sca.. area, - at the end of timestep")
-                .def_readonly("snow_outflow",&PTHSKAllCollector::snow_outflow," hbv snow output [m³/s] for the timestep")
+                .def_readonly("snow_outflow",&PTHSKAllCollector::snow_outflow," hbv snow output [m^3/s] for the timestep")
                 .def_readonly("glacier_melt",&PTHSKAllCollector::glacier_melt," glacier melt (outflow) [m3/s] for the timestep")
                 .def_readonly("ae_output",&PTHSKAllCollector::ae_output,"actual evap mm/h")
                 .def_readonly("pe_output",&PTHSKAllCollector::pe_output,"pot evap mm/h")
@@ -87,7 +87,7 @@ namespace expose {
             typedef shyft::core::pt_hs_k::discharge_collector PTHSKDischargeCollector;
             class_<PTHSKDischargeCollector>("PTHSKDischargeCollector", "collect all cell response from a run")
                 .def_readonly("destination_area",&PTHSKDischargeCollector::destination_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTHSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+                .def_readonly("avg_discharge",&PTHSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m^3/s] for the timestep")
                 .def_readonly("snow_sca",&PTHSKDischargeCollector::snow_sca," hbv snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTHSKDischargeCollector::snow_swe,"hbv snow swe, [mm] over the cell sca.. area, - at the end of timestep")
                 .def_readonly("end_reponse",&PTHSKDischargeCollector::end_response,"end_response, at the end of collected")

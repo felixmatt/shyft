@@ -26,11 +26,11 @@ namespace shyft {
             *       a 'state in time' value or a average-value for the time-step.
             */
             struct all_response_collector {
-                double destination_area;  ///< in [m²]
+                double destination_area;  ///< in [m^2]
                 // Collect responses as time series
-                pts_t avg_discharge;  ///< Kirchner Discharge given in [m³/s] for the timestep
+                pts_t avg_discharge;  ///< Kirchner Discharge given in [m^3/s] for the timestep
                 pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm]
-                pts_t snow_outflow;  ///< gamma snow output [m³/s] for the timestep
+                pts_t snow_outflow;  ///< gamma snow output [m^3/s] for the timestep
                 pts_t glacier_melt;///< [m3/s] for the timestep
                 pts_t ae_output;  ///< actual evap mm/h
                 pts_t pe_output;  ///< actual evap mm/h
@@ -78,7 +78,7 @@ namespace shyft {
             /** \brief collector for discharge only */
             struct discharge_collector {
                 double destination_area;
-                pts_t avg_discharge; ///< Discharge given in [m³/s] as the average of the timestep
+                pts_t avg_discharge; ///< Discharge given in [m^3/s] as the average of the timestep
                 response_t end_response;///<< end_response, at the end of collected
                 bool collect_snow;
                 pts_t snow_sca;

@@ -28,7 +28,7 @@ namespace shyfttest {
 		map<int, observation_location> location_map; ///< map of location_id|geo_id and observation_location ( id, name, position, remember?)
 		shared_ptr<vector<geo_xts_t>> temperatures;///<  geo located temperatures, observation/forecast [degC]
 		shared_ptr<vector<geo_xts_t>> precipitations;///< geo located precipitations, [mm/h]
-		shared_ptr<vector<geo_xts_t>> radiations; ///< geo located radiations,  [W/m²]
+		shared_ptr<vector<geo_xts_t>> radiations; ///< geo located radiations,  [W/m^2]
 		shared_ptr<vector<geo_xts_t>> discharges;///< geo|id located discharges from catchments,  [m3/s] .. not really geo located, it's catchment id associated.. but for test/mock that is ok for now
 
 		region_environment_t get_region_environment() {

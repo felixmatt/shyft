@@ -62,7 +62,7 @@ namespace shyft {
 				/** \brief Calculate PotentialEvapotranspiration, given specified parameters
 				 *
 				 * \param temperature in [degC]
-				 * \param global_radiation [W/m²]
+				 * \param global_radiation [W/m^2]
 				 * \param rhumidity in interval [0,1]
 				 * \return PotentialEvapotranspiration in [mm/s] units
 				 *
@@ -83,10 +83,10 @@ namespace shyft {
 				/** \brief calculate net radiation (long +short) given specfied parameters
 				 *
 				 * \param temperature in [degC]
-				 * \param global_radiation [W/m²]
+				 * \param global_radiation [W/m^2]
 				 * \param rhumidity in interval [0,1]
 				 * \param vapour_pressure [kPa]
-				 * \return net_radiation [W/m²]
+				 * \return net_radiation [W/m^2]
 				 *
 				 */
 				double net_radiation(double temperature, double global_radiation, double rhumidity, double vapour_pressure) const {
@@ -95,7 +95,7 @@ namespace shyft {
 					return    bolz*pow(k_temp, 4)*(e_atm - 0.98) // net longwave radiatin, Ta2m is used for both up- and downward LW-rad,so net balance is just an emissivity difference.
 						+ global_radiation*(1.0 - land_albedo);	// Net shortwave radiation
 				}
-				const double bolz = 0.0000000567;// Stephan-Bolzman constant [W/(m² K⁴)]
+				const double bolz = 0.0000000567;// Stephan-Bolzman constant [W/(m^2 K^4)]
 				const double psycr = 0.066;       // psycometric constant [ kPa/C ]
 				const double ck1 = 0.610780;    //cck4&ck7,equal originally(KE)
 #ifndef WIN32

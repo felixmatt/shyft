@@ -79,9 +79,9 @@ namespace expose {
             typedef shyft::core::pt_ss_k::all_response_collector PTSSKAllCollector;
             class_<PTSSKAllCollector>("PTSSKAllCollector", "collect all cell response from a run")
                 .def_readonly("destination_area",&PTSSKAllCollector::destination_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTSSKAllCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+                .def_readonly("avg_discharge",&PTSSKAllCollector::avg_discharge,"Kirchner Discharge given in [m^3/s] for the timestep")
                 .def_readonly("snow_total_stored_water",&PTSSKAllCollector::snow_total_stored_water," skaugen aka sca*(swe + lwc) in [mm]")
-                .def_readonly("snow_outflow",&PTSSKAllCollector::snow_outflow," skaugen snow output [m³/s] for the timestep")
+                .def_readonly("snow_outflow",&PTSSKAllCollector::snow_outflow," skaugen snow output [m^3/s] for the timestep")
                 .def_readonly("glacier_melt", &PTSSKAllCollector::glacier_melt, " glacier melt (outflow) [m3/s] for the timestep")
                 .def_readonly("ae_output",&PTSSKAllCollector::ae_output,"actual evap mm/h")
                 .def_readonly("pe_output",&PTSSKAllCollector::pe_output,"pot evap mm/h")
@@ -91,7 +91,7 @@ namespace expose {
             typedef shyft::core::pt_ss_k::discharge_collector PTSSKDischargeCollector;
             class_<PTSSKDischargeCollector>("PTSSKDischargeCollector", "collect all cell response from a run")
                 .def_readonly("destination_area",&PTSSKDischargeCollector::destination_area,"a copy of cell area [m2]")
-                .def_readonly("avg_discharge",&PTSSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m³/s] for the timestep")
+                .def_readonly("avg_discharge",&PTSSKDischargeCollector::avg_discharge,"Kirchner Discharge given in [m^3/s] for the timestep")
                 .def_readonly("snow_sca",&PTSSKDischargeCollector::snow_sca," skaugen snow covered area fraction, sca.. 0..1 - at the end of timestep (state)")
                 .def_readonly("snow_swe",&PTSSKDischargeCollector::snow_swe,"skaugen snow swe, [mm] over the cell sca.. area, - at the end of timestep")
                 .def_readonly("end_reponse",&PTSSKDischargeCollector::end_response,"end_response, at the end of collected")

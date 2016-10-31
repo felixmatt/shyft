@@ -130,7 +130,7 @@ namespace shyft {
 
 
             struct response {
-                double outflow = 0.0;///< m³/s
+                double outflow = 0.0;///< m^3/s
                 double total_stored_water = 0.0;// def. as sca*(swe+lwc)
                 double sca =0.0;// fraction, sih-note: we need it for snow calibration collection
                 double swe= 0.0;// mm, as noted above, for calibration, def. as (swe+lwc)
