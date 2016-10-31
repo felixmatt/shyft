@@ -20,6 +20,7 @@
 ///  Sampling. Int. J. of Nonlinear Sciences and Numerical Simulation 10(3) 2009.
 ///
 /// Thanks to Powel for contributing with the reimplementation
+
 namespace shyft {
     namespace core {
         namespace optimizer {

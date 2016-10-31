@@ -675,9 +675,9 @@ namespace shyft {
                     add_tz_info(tzdef[i].region,tzdef[i].posix_definition);
                 }
             }
-        } // time_zone
+        }
 
-        calendar::calendar(string region_id) {
+        calendar::calendar(std::string region_id) {
             for(size_t i=0;i<time_zone::n_tzdef;++i) {
                 if(region_id==time_zone::tzdef[i].region) {
                     tz_info=time_zone::create_from_posix_definition(region_id,time_zone::tzdef[i].posix_definition);

@@ -63,10 +63,10 @@ namespace shyft {
              * by the tolerance of the ode solver for some internal time step \f$t_i\f$, where \f$t_{i+1} = t_i + dt_i\f$.
              * At this sub interval, we use the composite trapezoidal rule to compute the average of each sub-interval using
              * \f$n\f$ sub-sub-intervals. This is a costly routine, requiring \f$n-1\f$ interpolations at each sub-interval.
-             * \tparam S Stepper that provides:
+             * \tparam S Stepper type with:
              *   -# .calc_state ..
-             *   -# ::state_type
-             * \sa Kirchner
+             *   -#  state_type
+             * \sa kirchner
              */
             template<class S> class
             composite_trapezoidal_average {

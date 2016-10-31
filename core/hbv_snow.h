@@ -28,7 +28,6 @@ namespace shyft {
     namespace core {
         namespace hbv_snow {
             using namespace std;
-            #ifndef SWIG
 
             /** \brief integrate function f given as linear interpolated between the f_i(x_i) from a to b for a, b in x.
              * If f_rhs_is_zero is set, f(b) = 0, unless b = x[i] for some i in [0,n).
@@ -64,8 +63,6 @@ namespace shyft {
                 return area;
             }
 
-            #endif // SWIG
-
             struct parameter {
                 vector<double> s;///<snow redistribution factors
                 vector<double> intervals;///< snow quantiles list 0, 0.25 0.5 1.0
@@ -88,11 +85,9 @@ namespace shyft {
                   :  tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) {
                       set_std_distribution_and_quantiles();
                 }
-                #ifndef SWIG
                 parameter(const vector<double>& s, const vector<double>& intervals,
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
-                #endif // SWIG
 
                 void set_snow_redistribution_factors(const vector<double>& values) { s = values; }
                 void set_snow_quantiles(const vector<double>& values) { intervals = values; }

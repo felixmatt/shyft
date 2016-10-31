@@ -14,12 +14,12 @@
 /// Shyft, usually located under the Shyft root directory in two files named COPYING.txt
 /// and COPYING_LESSER.txt.	If not, see <http://www.gnu.org/licenses/>.
 ///
-/// Inspired by early enki method programmed by Kolbjørn Engeland and Sjur Kolberg, and 
+/// Inspired by early enki method programmed by Kolbjørn Engeland and Sjur Kolberg, and
 /// the later changes performed by Kalkulo AS.
 ///
 
 /*
- * Some Refences to be included in code later
+ * Some References to be included in code later
  * About the pointlessness of burn out: http://users.stat.umn.edu/~geyer/mcmc/burn.html
  *
  *
@@ -57,7 +57,7 @@ namespace shyft {
                     T.at(0, 1) =  sin(kernel);
                     T.at(1, 0) = -sin(kernel)*anisotropy_ratio;
                     T.at(1, 1) =  cos(kernel)*anisotropy_ratio;
-                } else 
+                } else
                     T.operator=( arma::eye(2, 2));
                 return T;
             }
@@ -120,7 +120,7 @@ namespace shyft {
                 for (arma::uword i = 0; i < distances.n_cols; ++i) idx.at(i) = i;
                 for (arma::uword i = 0; i < distances.n_rows; ++i) {
                     arma::uvec row = idx;
-                    std::partial_sort(std::begin(row), std::begin(row) + num_neighbours, 
+                    std::partial_sort(std::begin(row), std::begin(row) + num_neighbours,
                                       std::end(row), [&distances, i] (arma::uword a, arma::uword b) {
                         return distances.at(i, a) < distances.at(i, b);
                     });
@@ -274,11 +274,11 @@ namespace shyft {
                 }
            };
 
-            /** \brif Simple krig method to calculate gibbs weights for
+            /** \brief Simple krig method to calculate gibbs weights for
              *        the sub set of indices given by sub_set.
              *
              * For an excellent introduction to kriging interpolation,
-             * see http://people.ku.edu/~gbohling/cpe940/Kriging.pdf
+             * see <a href="http://people.ku.edu/~gbohling/cpe940/Kriging.pdf">Kriging</a>
              * This method assumes that the trend component of the random
              * field is known and constant mean, m(u) = m, see pages
              * 7 and 8 in the reference.
@@ -381,7 +381,7 @@ namespace shyft {
                     w = l.subvec(0, m - 2);
                 }
                 // TODO: This method is greatly simplyfied as compared to the intention of the original method, but equivalent to
-                // the actual implementation of it. Figure out if solving a second kringing problem is needed, and if so, recalc 
+                // the actual implementation of it. Figure out if solving a second kringing problem is needed, and if so, recalc
                 // indices.
                 dest.set_weights(w, sub_indices);
             }
@@ -515,17 +515,17 @@ namespace shyft {
             void conditional_random_field_simulation(size_t num_realizations,
                                                      const P& parameter,
                                                      const D& destination_begin,
-                                                     const D& destination_end, 
+                                                     const D& destination_end,
                                                      const SV& semi_var,
                                                      std::vector<double>& gauss_field) {
 
                 // Call R-functionality to run random field simulation. No const-correctness implemented there, unfortunately.
 
-                std::vector<double> grid_info = {parameter.x_min() + 0.5*parameter.dx(), 
-                                                 parameter.x_max() - 0.5*parameter.dx(), 
-                                                 parameter.dx(), 
-                                                 parameter.y_min() + 0.5*parameter.dy(), 
-                                                 parameter.y_max() - 0.5*parameter.dy(), 
+                std::vector<double> grid_info = {parameter.x_min() + 0.5*parameter.dx(),
+                                                 parameter.x_max() - 0.5*parameter.dx(),
+                                                 parameter.dx(),
+                                                 parameter.y_min() + 0.5*parameter.dy(),
+                                                 parameter.y_max() - 0.5*parameter.dy(),
                                                  parameter.dy()};
                 double T = 1.0;
                 int dim = 2;
@@ -577,7 +577,7 @@ namespace shyft {
                 DeleteKey(&key);
 
                 const double std_dev = sqrt(semi_var.nugget());
-                //if (std_dev > 0.0) 
+                //if (std_dev > 0.0)
                 //    for_each(begin(gauss_field), end(gauss_field), [&std_dev] (double& value) { value += rcore::rnorm(0.0, std_dev); });
 
 
@@ -737,12 +737,12 @@ namespace shyft {
                 }
                 arma::mat source_dest_dists;
                 if (valid_indices != prev_valid_indices) {
-                    grf::calculate_anisotropy_distances(begin(valid_sources), 
+                    grf::calculate_anisotropy_distances(begin(valid_sources),
                                                         end(valid_sources),
-                                                        destination_begin, 
-                                                        destination_end, 
-                                                        parameter.anisotropy_ratio(), 
-                                                        parameter.anisotropy_direction(), 
+                                                        destination_begin,
+                                                        destination_end,
+                                                        parameter.anisotropy_ratio(),
+                                                        parameter.anisotropy_direction(),
                                                         source_dest_dists);
                 }
                 arma::mat source_dest_covariances;

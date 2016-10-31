@@ -35,9 +35,9 @@ namespace shyft {
              *
              * \param t temperature [deg.C]
              *
-             * \param snow_covered_area_m2, unit[m2]
+             * \param snow_covered_area_m2 of the glacier, in unit [m2] if
              *
-             * \param glacier_area_m2, unit[m2]
+             * \param glacier_area_m2 the area of the glacier, in unit [m2]
              *
              * \return glacier_melt in [m3/s]
              */
