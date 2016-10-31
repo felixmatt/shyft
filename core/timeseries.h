@@ -16,28 +16,24 @@
 
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
-/**
-* Contains the minimal concepts for the time-series and point source functionality needed in shyft
-*/
+
 namespace shyft{
-
-
-
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    /** \namespace The timeseries namespace contains all needed concepts related
+
+    /** The timeseries namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
     *
     * concepts:
     *  -#: point, -a time,value pair,utctime,double representing points on a time-series, f(t).
     *  -#: timeaxis, -(TA)the fundation for the timeline, represented by the timeaxis class, a non-overlapping set of periods ordered ascending.
-    *  -#: point_source,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
+    *  -#: point_ts,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
     *  -#: accessor, -(A) average_accessor and direct_accessor, provides transformation from f(t) to some provide time-axis
     */
     namespace timeseries {
 
         using namespace shyft::core;
         using namespace std;
-        const double EPS=1e-12;
+        const double EPS=1e-12; ///< used some places for comparison to equality, \ref point
 
 		/** \brief simply a point identified by utctime t and value v */
         struct point {

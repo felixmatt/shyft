@@ -7,22 +7,21 @@
 namespace shyft {
 
     /**\brief The time-axis concept is an important component of time-series.
-    */
+     *time_axis contains all the definitions of time_axis including the combine algorithms.
+     *
+     *
+     *   definition: time-axis is an ordered sequence of non-overlapping periods
+     *
+     *   notice:
+     *      a) the most usual time-axis is the fixed_dt time-axis
+     *         in the SHyFT core, this is the one we use(could even need a highspeed-nocompromise version)
+     *
+     *      b) continuous/dense time-axis: there are no holes in total_period
+     *                               types: fixed_dt, calendar_dt, point_dt
+     *      c) sparse time-axis: there are holes within the span of total_period
+     *                          types: period_list and calendar_dt_p
+     */
     namespace time_axis {
-        /** \namespace time_axis contains all the definitions of time_axis including the combine algorithms.
-         *
-         *
-         *   definition: time-axis is an ordered sequence of non-overlapping periods
-         *
-         *   notice:
-         *      a) the most usual time-axis is the fixed_dt time-axis
-         *         in the SHyFT core, this is the one we use(could even need a highspeed-nocompromise version)
-         *
-         *      b) continuous/dense time-axis: there are no holes in total_period
-         *                               types: fixed_dt, calendar_dt, point_dt
-         *      c) sparse time-axis: there are holes within the span of total_period
-         *                          types: period_list and calendar_dt_p
-         */
 
         using namespace std;
         using namespace shyft::core;
