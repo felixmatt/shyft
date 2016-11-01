@@ -1,8 +1,8 @@
 @echo off
 
-git rev-list --count --all > REVISION
+git rev-list --count --all > VERSION
 
-set /p minor=<REVISION
+set /p minor=<VERSION
 
 echo 4.0.%minor% > VERSION
 
