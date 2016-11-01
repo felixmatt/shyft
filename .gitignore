@@ -46,3 +46,4 @@ cachegrind.out.*
 *.opendb
 *.user
 .conda_lock
+shyft/version.py
