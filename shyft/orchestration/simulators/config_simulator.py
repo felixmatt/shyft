@@ -164,7 +164,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
     def save_calibrated_model(self, optim_param, outfile=None):
         """Save calibrated params in a model-like YAML file."""
         name_map = {"pt": "priestley_taylor", "kirchner": "kirchner", "p_corr": "precipitation_correction",
-                    "ae": "actual_evapotranspiration", "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow"}
+                    "ae": "actual_evapotranspiration", "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow","gm":"glacier_melt"}
         model_file = self.model_config_file
         model_dict = yaml.load(open(model_file))
         model_params = {}

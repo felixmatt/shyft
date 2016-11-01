@@ -180,7 +180,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         # Construct region parameter:
         name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
                     "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
-                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
+                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs","glacier_melt":"gm" }
         region_parameter = self._region_model.parameter_t()
         for p_type_name, value_ in iteritems(self._mconf.model_parameters()):
             if p_type_name in name_map:
