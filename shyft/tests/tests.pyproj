@@ -15,7 +15,8 @@
     <InterpreterId />
     <InterpreterVersion />
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>PYTHONPATH=$(SolutionDir);$(PYTHONPATH)</Environment>
+    <Environment>PYTHONPATH=$(SolutionDir);$(SHYFTDATA)\..;$(PYTHONPATH)
+PATH=C:\Miniconda3\envs\shyft_env\Library\bin;$(PATH)</Environment>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
