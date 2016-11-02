@@ -1,6 +1,6 @@
 @echo off
 
-git rev-list --count --all > VERSION
+git rev-list --count HEAD > VERSION
 
 set /p minor=<VERSION
 
