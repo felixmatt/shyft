@@ -71,7 +71,7 @@ def region_model_repo_constructor(cls,region_config, model_config, region_model_
         # Construct region parameter:
         name_map = {"priestley_taylor": "pt", "kirchner": "kirchner",
                     "precipitation_correction": "p_corr", "actual_evapotranspiration": "ae",
-                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs"}
+                    "gamma_snow": "gs", "skaugen_snow": "ss", "hbv_snow": "hs", "glacier_melt": "gm" }
         region_parameter = region_model_type.parameter_t()
         for p_type_name, value_ in iteritems(model_config.model_parameters()):
             if p_type_name in name_map:
