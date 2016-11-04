@@ -284,7 +284,7 @@ namespace shyft {
 	            arma::mat K, k, F, f, K_inv, E_beta_w, omega, BM, T_obs, E_temp_post;
 
 	            // Prior data
-	            E_beta_pri.at(0, 0) = 0.0; // Old code says this is ok. TODO: Check assumption.
+	            E_beta_pri(0, 0) = 0.0; // Old code says this is ok. TODO: Check assumption.
 	            arma::mat22 eye22 = arma::diagmat(arma::vec(2, arma::fill::ones));
 
 	            // Gather spatial data for all stations and destinations
@@ -294,15 +294,15 @@ namespace shyft {
 	            // Build full operators
 
 	            K_inv = K.i();
-	            H_inv.operator=(F.t()*K_inv*F);
+	            H_inv = F.t()*K_inv*F;
 	            if (arma::rank(H_inv) == 1) {
 	                throw std::runtime_error("The bayestian temperature kriging algorithm needs at least two sources at different heights.");
 	            }
-	            H.operator=(H_inv.i());
+	            H = H_inv.i();
 	            G_inv = H_inv;
 	            G_inv.at(1, 1) += 1/(parameter.temperature_gradient_sd()*parameter.temperature_gradient_sd());
-	            G.operator=(G_inv.i());
-	            GH_inv.operator=(G*H_inv);
+	            G = G_inv.i();
+	            GH_inv = G*H_inv;
 	            BM = (f - F.t()*K_inv*k).t()*(eye22 - GH_inv);
 	            E_beta_w = H*F.t()*K_inv; // beta_est_weights
 	            omega = k.t()*K_inv;    // krig_weights
@@ -355,11 +355,11 @@ namespace shyft {
 	                        arma::uvec sub_idx(valid_inds);
 	                        F_r = F.rows(sub_idx);
 							K_inv = K.submat(sub_idx, sub_idx).i();
-	                        H_inv.operator=(F_r.t()*K_inv*F_r);
-	                        H.operator=(H_inv.i());
+	                        H_inv = F_r.t()*K_inv*F_r;
+	                        H = H_inv.i();
 	                        G_inv = H_inv;
-	                        G_inv.at(1, 1) += 1/(parameter.temperature_gradient_sd()*parameter.temperature_gradient_sd());
-	                        G.operator=(G_inv.i());
+	                        G_inv(1, 1) += 1/(parameter.temperature_gradient_sd()*parameter.temperature_gradient_sd());
+	                        G = G_inv.i();
 	                        GH_inv_r = G*H_inv;
 	                        arma::mat k_red = k.rows(sub_idx);
 	                        BM_r = (f - F_r.t()*K_inv*k_red).t()*(eye22 - GH_inv_r);
@@ -375,16 +375,16 @@ namespace shyft {
 	                }
 
 	                // Build prior data for time step:
-	                E_beta_pri.at(1, 0) = parameter.temperature_gradient(time_axis.period(t_step));
-	                E_beta_w_pri.operator=((eye22 - *GH_inv_p)*E_beta_pri);
+	                E_beta_pri(1, 0) = parameter.temperature_gradient(time_axis.period(t_step));
+	                E_beta_w_pri = ((eye22 - *GH_inv_p)*E_beta_pri);
 
 	                // Fill T_obs with valid temperatures
 	                T_obs.set_size((arma::uword)valid_inds.size(), 1);
 	                std::copy(std::begin(temperatures), std::end(temperatures), T_obs.begin_col(0));
 	                // Core computational work here:
-	                beta_hat.operator=((*E_beta_w_p)*T_obs);
+	                beta_hat = (*E_beta_w_p)*T_obs;
 	                arma::mat T_hat = f.t()*beta_hat + (*omega_p)*(T_obs - (*F_p)*beta_hat);
-	                E_beta_post.operator=((*GH_inv_p)*beta_hat + E_beta_w_pri);
+	                E_beta_post = (*GH_inv_p)*beta_hat + E_beta_w_pri;
 	                E_temp_post = arma::vec(T_hat - (*BM_p)*(beta_hat - E_beta_pri));
 
 	                arma::uword dist = 0;
