@@ -212,7 +212,7 @@ class ConfigForecaster(object):
         if save_end_state:
             self.historical_sim.save_end_state()
         for k, v in self.forecast_sim.items():
-            v.run_forecast(v.time_axis, v.time_axis.start, state)
+            v.run_forecast(self.forecast_cfg[k].time_axis, self.forecast_cfg[k].time_axis.start, state)
             state = v.reg_model_state
             if save_result_timeseries:
                 v.save_result_timeseries()
