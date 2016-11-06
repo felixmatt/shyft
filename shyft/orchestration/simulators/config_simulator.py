@@ -201,8 +201,6 @@ class ConfigForecaster(object):
         for k, v in self.forecast_sim.items():
             v.geo_ts_repository = self.forecast_cfg[k].get_geots_repo()
             v.ip_repos = self.forecast_cfg[k].get_interp_repo()
-            #v.time_axis = self.forecast_cfg[k].time_axis
-            #v.config = self.forecast_cfg[k]
 
     def run(self, save_end_state=True, save_result_timeseries=True):
         self.historical_sim.run()
