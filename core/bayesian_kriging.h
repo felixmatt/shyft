@@ -279,7 +279,7 @@ namespace shyft {
 
 	            // Allocate matrices of known sizes:
 	            arma::mat22 H, H_inv, G, G_inv, GH_inv;
-	            arma::mat::fixed<2,1> E_beta_pri, E_beta_w_pri, E_beta_post, beta_hat;
+	            arma::mat::fixed<2,1> E_beta_pri, E_beta_w_pri,/* E_beta_post,*/ beta_hat;
 	            // These matrices sizes vary with the number valid sources and the number of destinations.
 	            arma::mat K, k, F, f, K_inv, E_beta_w, omega, BM, T_obs, E_temp_post;
 
@@ -384,7 +384,7 @@ namespace shyft {
 	                // Core computational work here:
 	                beta_hat = (*E_beta_w_p)*T_obs;
 	                arma::mat T_hat = f.t()*beta_hat + (*omega_p)*(T_obs - (*F_p)*beta_hat);
-	                E_beta_post = (*GH_inv_p)*beta_hat + E_beta_w_pri;
+	                //E_beta_post = (*GH_inv_p)*beta_hat + E_beta_w_pri;
 	                E_temp_post = arma::vec(T_hat - (*BM_p)*(beta_hat - E_beta_pri));
 
 	                arma::uword dist = 0;

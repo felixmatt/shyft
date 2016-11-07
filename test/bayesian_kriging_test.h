@@ -8,6 +8,7 @@ public:
     void test_build_elevation_matrices();
     void test_build_covariance_matrices();
     void test_interpolation();
+    void test_met_no();
 };
 
 /* vim: set filetype=cpp: */

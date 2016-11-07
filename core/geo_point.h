@@ -47,12 +47,22 @@ namespace shyft {
                 return sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale);
             }
 
-            /** \brief Eucledian distance between points a and b, first projected onto xy plane.
+            /** \brief Euclidian distance between points a and b, first projected onto x-y plane.
              *
              * return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y))
              */
             static inline double xy_distance(const geo_point& a, const geo_point& b) {
                 return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+            }
+            /** \brief Euclidian distance^2 between points a and b, first projected onto x-y plane.
+            *
+            * return (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y)
+            */
+            static inline double xy_distance2(const geo_point& a, const geo_point& b) {
+                return (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y);
+            }
+            static inline double z_distance2(const geo_point& a, const geo_point& b) {
+                return (a.z - b.z)*(a.z - b.z);
             }
 
             /** \brief Difference between points a and b, i.e. a - b. Should perhaps return a
