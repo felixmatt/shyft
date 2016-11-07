@@ -28,7 +28,7 @@ class GridPP(unittest.TestCase):
         fx = lambda z : [15 for x in range(self.nt)]
         ts = api.Timeseries(ta=self.ta, values=fx(self.ta), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         for gp in geo_points:
-            # Add only one TS per GP, but should be several
+            # Add only one TS per GP, but could be several
             geo_ts = api.TemperatureSource(gp, ts)
             obs_set.append(geo_ts)
         return obs_set
@@ -59,16 +59,8 @@ class GridPP(unittest.TestCase):
 
 
     def test_calc_bias_should_match_observations(self):
-        # Workflow from C++: Should we do the same from Python?
-	    # IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
-	    # Simulate forecast offset of -2 degC 
-	    # IDW transform forecast from frid to set
-	    # Calculate bias set = observation set - forecast set
-	    # IDW transform bias from set to grid
-	    # Add bias grid to forecast grid
-	    # IDW transform corrected forecast from grid to set
-	    # Compare forecast to observation set => differences should be close to null
-
+        # Simple test of bias predictor, without Kriging
+        # Complete algorithm is described in shyft-doc/notebook
         obs_set = self._create_obs_set(self.geo_points)
         const_bias = 2.0
         fc_set = self._make_fc_from_obs(obs_set, const_bias)
@@ -77,6 +69,17 @@ class GridPP(unittest.TestCase):
         for bias in bias_set:
             for i in range(len(bias.ts)):
                 self.assertLess(bias.ts.value(i) - const_bias, 0.2)
+    
+    
+    # TODO: Workflow from shyft-doc/notebook:
+	# IDW transform observations from set to grid 10 x 10 km (called forecast grid)
+	# Simulate forecast offset of -2 degC 
+	# Kriging transform forecasts from grid to set
+	# Calculate bias set = observation set - forecast set
+	# IDW transform bias from set to grid
+	# Add bias grid to forecast grid
+	# Kriging transform corrected forecasts from grid to set
+	# Compare forecast to observation set => differences should be close to null
 
 
 if __name__ == "__main__":
