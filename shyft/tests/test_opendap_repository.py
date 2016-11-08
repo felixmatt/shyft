@@ -116,3 +116,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         dx = 1000.0
         dy = 1000.0
         return EPSG, ([x0, x0 + nx*dx, x0 + nx*dx, x0], [y0, y0, y0 + ny*dy, y0 + ny*dy])
+
+
+if __name__ == '__main__':
+    unittest.main()
