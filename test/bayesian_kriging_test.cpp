@@ -254,7 +254,7 @@ void bayesian_kriging_test::test_interpolation() {
 	const std::clock_t start = std::clock();
 	btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
 	const std::clock_t total = std::clock() - start;
-    double e_temp[6]{ 1.35,5.31,7.06,7.778,7.78,8.55 };
+    double e_temp[6]{ 1.31,4.36,5.0231,5.7484,4.274,5.5359 };
     for(size_t i=0;i<6;++i)
         TS_ASSERT_DELTA(destinations[i].temperatures[0], e_temp[i], 0.01);
 
