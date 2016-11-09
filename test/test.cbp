@@ -38,7 +38,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  kalman_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft  kriging_test" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -114,6 +114,8 @@
 		<Unit filename="kalman_test.h" />
 		<Unit filename="kirchner_test.cpp" />
 		<Unit filename="kirchner_test.h" />
+		<Unit filename="kriging_test.cpp" />
+		<Unit filename="kriging_test.h" />
 		<Unit filename="mocks.cpp" />
 		<Unit filename="mocks.h" />
 		<Unit filename="priestley_taylor_test.cpp" />

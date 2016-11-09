@@ -127,6 +127,7 @@
     <ClInclude Include="hbv_snow.h" />
     <ClInclude Include="inverse_distance.h" />
     <ClInclude Include="bayesian_kriging.h" />
+    <ClInclude Include="kriging.h" />
     <ClInclude Include="kirchner.h" />
     <ClInclude Include="optimizer_utils.h" />
     <ClInclude Include="precipitation_correction.h" />

@@ -84,6 +84,7 @@
 		<Unit filename="inverse_distance.h" />
 		<Unit filename="kalman.h" />
 		<Unit filename="kirchner.h" />
+		<Unit filename="kriging.h" />
 		<Unit filename="model_calibration.h" />
 		<Unit filename="optimizer_utils.h" />
 		<Unit filename="precipitation_correction.h" />
