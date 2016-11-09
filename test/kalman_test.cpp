@@ -3,7 +3,6 @@
 #include "mocks.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
 #include "api/timeseries.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
-#include <armadillo>
 #include "core/kalman.h"
 
 

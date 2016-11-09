@@ -1,15 +1,5 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <map>
-#include <memory>
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <cmath>
-#include <thread>
-#include <future>
-#include <stdexcept>
-#include <random>
+#include "core/core_pch.h"
 
 /**
  * \file
@@ -95,6 +85,7 @@ namespace shyft {
         void set_ts(apoint_ts x) {ts=x;}
         bool is_equal(const GeoPointSource& x) const {return mid_point_==x.mid_point_ && ts == x.ts;}
         geo_point mid_point() const { return mid_point_; }
+        bool operator==(const GeoPointSource&x) const {return is_equal(x);}
     };
 
     struct TemperatureSource : GeoPointSource {
@@ -103,7 +94,7 @@ namespace shyft {
         const apoint_ts& temperatures() const { return ts; }
 		void set_temperature(size_t ix, double v) { ts.set(ix, v); } //btk dst compliant signature, used during btk-interpolation in gridpp exposure
 		void set_value(size_t ix, double v) { ts.set(ix, v); }
-        bool operator==(const TemperatureSource& x) {return is_equal(x);}
+        bool operator==(const TemperatureSource& x) const {return is_equal(x);}
     };
 
     struct PrecipitationSource : GeoPointSource {
@@ -111,25 +102,25 @@ namespace shyft {
          : GeoPointSource(p, ts) {}
         const apoint_ts& precipitations() const { return ts; }
 		void set_value(size_t ix, double v) { ts.set(ix, v); }
-		bool operator==(const PrecipitationSource& x) {return is_equal(x);}
+		bool operator==(const PrecipitationSource& x) const {return is_equal(x);}
     };
 
     struct WindSpeedSource : GeoPointSource {
         WindSpeedSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
-        bool operator==(const WindSpeedSource& x) {return is_equal(x);}
+        bool operator==(const WindSpeedSource& x) const {return is_equal(x);}
     };
 
     struct RelHumSource : GeoPointSource {
         RelHumSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
-        bool operator==(const RelHumSource& x) {return is_equal(x);}
+        bool operator==(const RelHumSource& x) const {return is_equal(x);}
     };
 
     struct RadiationSource : GeoPointSource {
         RadiationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
          : GeoPointSource(p, ts) {}
-        bool operator==(const RadiationSource& x) {return is_equal(x);}
+        bool operator==(const RadiationSource& x) const {return is_equal(x);}
     };
 
     struct a_region_environment {

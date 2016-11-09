@@ -124,6 +124,7 @@
     <ClInclude Include="hbv_stack_test.h" />
     <ClInclude Include="hbv_tank_test.h" />
     <ClInclude Include="kalman_test.h" />
+    <ClInclude Include="kriging_test.h" />
     <ClInclude Include="pt_ss_k_test.h" />
     <ClInclude Include="sceua_test.h" />
     <ClInclude Include="test_pch.h" />
@@ -177,6 +178,7 @@
     </ClCompile>
     <ClCompile Include="hbv_snow_test.cpp" />
     <ClCompile Include="inverse_distance_test.cpp" />
+    <ClCompile Include="kriging_test.cpp" />
     <ClCompile Include="kirchner_test.cpp" />
     <ClCompile Include="mocks.cpp" />
     <ClCompile Include="priestley_taylor_test.cpp" />

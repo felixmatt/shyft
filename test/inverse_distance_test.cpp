@@ -2,8 +2,7 @@
 #include "inverse_distance_test.h"
 #include "mocks.h"
 
-#include <ctime>
-#include <cmath>
+
 
 #ifdef WIN32
 #if _MSC_VER < 1800
@@ -11,7 +10,6 @@ const unsigned long nanx[2] = { 0xffffffff, 0x7fffffff };
 const double NAN = *(double*)nanx;
 #endif
 #endif
-#include <armadillo>
 
 using namespace shyft::core;
 using namespace shyfttest::idw;

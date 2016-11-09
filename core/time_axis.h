@@ -1,8 +1,4 @@
 #pragma once
-#include <exception>
-#include <string>
-#include <memory>
-#include <algorithm>
 #include "utctime_utilities.h"
 namespace shyft {
 

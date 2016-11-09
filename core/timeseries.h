@@ -2,20 +2,12 @@
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
-#include <stdexcept>
-#include <limits>
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <type_traits>
-#include <stdexcept>
-#include <memory>
+#include "glacier_melt.h" // to get the glacier melt function
+#include "unit_conversion.h"
+
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
 #endif
-
-#include "glacier_melt.h" // to get the glacier melt function
-#include "unit_conversion.h"
 
 namespace shyft{
     const double nan = std::numeric_limits<double>::quiet_NaN();

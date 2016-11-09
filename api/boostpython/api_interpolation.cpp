@@ -2,6 +2,7 @@
 #include "api/api.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
+#include "core/kriging.h"
 #include "core/region_model.h"
 
 namespace expose {
@@ -13,6 +14,8 @@ namespace expose {
 	namespace idw = shyft::core::inverse_distance;
 
 	typedef std::vector<sc::geo_point> geo_point_vector;
+	typedef std::vector<sa::GeoPointSource> geo_ts_vector;
+	typedef std::shared_ptr<geo_ts_vector> geo_ts_vector_;
 	typedef std::vector<sa::TemperatureSource> geo_temperature_vector;
 	typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
@@ -54,6 +57,121 @@ namespace expose {
             for(auto& d:*dst) d.ts=temp_ts;
         }
         return dst;
+    }
+
+    enum ok_covariance_type {
+        GAUSSIAN =0,
+        EXPONENTIAL=1
+    };
+    struct ok_parameter {
+        double c;
+        double a;
+        double z_scale;
+        ok_covariance_type cov_type;
+        ok_parameter(double c=1.0,double a=10*1000.0,ok_covariance_type cov_type=ok_covariance_type::EXPONENTIAL, double z_scale=1.0):
+            c(c),a(a),z_scale(z_scale),cov_type(cov_type) {}
+    };
+
+    static geo_ts_vector_ ordinary_kriging(geo_ts_vector_ src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis, ok_parameter p ) {
+        validate_parameters(src,dst_points,time_axis);
+        if(p.a <=0.0)
+            throw std::runtime_error("the supplied parameter a, covariance practical range, must be >0.0");
+        if(p.c<=0.0)
+            throw std::runtime_error("the supplied parameter c, covariance sill, must be >0.0");
+        if(p.z_scale <0.0)
+            throw std::runtime_error("the supplied parameter z_scale used to scale vertical distance must be >= 0.0");
+
+        auto dst = make_dest_geo_ts<geo_ts_vector>(dst_points,time_axis);
+        typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+
+        if(src->size()>1) {
+            // make accessor for the observations
+            // build and solve the ordinary::kriging Ax = b, invert A
+            // compute the weights
+            //
+            shyft::core::kriging::covariance::exponential exp_cov(p.c,p.a);
+            shyft::core::kriging::covariance::gaussian gss_cov(p.c,p.a);
+            auto fx_cov =[p,exp_cov](const geo_ts_vector::value_type &o1,const geo_ts_vector::value_type &o2 )->double {
+                double distance = shyft::core::geo_point::zscaled_distance(o1.mid_point_,o2.mid_point_,p.z_scale);
+                return exp_cov(distance);
+            };
+            auto fg_cov =[p,gss_cov](const geo_ts_vector::value_type &o1,const geo_ts_vector::value_type &o2 )->double {
+                double distance2 = shyft::core::geo_point::zscaled_distance2(o1.mid_point_,o2.mid_point_,p.z_scale);
+                return gss_cov(distance2);
+            };
+            arma::mat A;
+            arma::mat B;
+            if(p.cov_type==ok_covariance_type::EXPONENTIAL) {
+                A = shyft::core::kriging::ordinary::build(begin(*src),end(*src),fx_cov);
+                B = shyft::core::kriging::ordinary::build(begin(*src),end(*src),begin(*dst),end(*dst),fx_cov);
+            } else {
+                A = shyft::core::kriging::ordinary::build(begin(*src),end(*src),fg_cov);
+                B = shyft::core::kriging::ordinary::build(begin(*src),end(*src),begin(*dst),end(*dst),fg_cov);
+            }
+            auto X = (A.i()*B).eval();
+            auto weights = X.head_rows(src->size());// skip sum w = 1.0 row at bottom
+            std::vector<avg_tsa_t> obs_tsa;obs_tsa.reserve(src->size());
+            for(auto&s:*src)
+                obs_tsa.emplace_back(s.ts,time_axis);
+            //TODO: make partition on destination cells and use multiple threads to exec
+            //      just copy the obs_tsa (it's a shallow copy of the stuff that could have a cost)
+            // spawn 1-4 threads pr. core available
+            // join & wait
+            arma::mat obs(1,src->size(),arma::fill::none);
+            arma::mat dst_values(1,dst->size(),arma::fill::none);
+            for(size_t p=0;p<time_axis.size();++p) {
+                // make obs. vector
+                for(size_t j=0;j<src->size();++j) obs.at(0,j) = obs_tsa[j].value(p);
+                dst_values = obs*weights;// compute the destination values
+                for(size_t j=0;j<dst->size();++j) (*dst)[j].ts.set(p,dst_values(0,j));
+                // for each d
+            }
+
+        } else {
+            avg_tsa_t tsa((*src)[0].ts,time_axis);
+            sa::apoint_ts temp_ts(time_axis, 0.0);
+            for(size_t i=0;i<time_axis.size();++i) temp_ts.set(i, tsa.value(i));
+            for(auto& d:*dst) d.ts=temp_ts;
+        }
+        return dst;
+    }
+    static void ok_kriging() {
+        enum_<ok_covariance_type>("OKCovarianceType")
+            .value("GAUSSIAN",ok_covariance_type::GAUSSIAN)
+            .value("EXPONENTIAL",ok_covariance_type::EXPONENTIAL)
+            .export_values()
+            ;
+
+        class_<ok_parameter>("OKParameter","Ordinary Kriging Parameter, keeps parameters that controls the ordinary kriging calculation")
+            .def(init<optional<double,double,ok_covariance_type,double>>(args("c","a","cov_type","z_scale")))
+            .def_readwrite("c",&ok_parameter::c,"the c-constant, sill value in the covariance formula")
+            .def_readwrite("a",&ok_parameter::a,"the a-constant, range or distance, value in the covariance formula")
+            .def_readwrite("cov_type",&ok_parameter::cov_type,"covariance type EXPONENTIAL|GAUSSIAN to be used")
+            .def_readwrite("z_scale", &ok_parameter::z_scale,"z_scale to be used for range|distance calculations")
+            ;
+
+        def("ordinary_kriging",ordinary_kriging,
+            "Runs ordinary kriging for geo sources and project the source out to the destination geo-timeseries\n"
+            "\n\n\tNotice that kriging is currently not very efficient for large grid inputs,\n"
+            "\tusing only one thread, and considering all source-timeseries (entire grid) for all destinations\n"
+            "\tFor few sources, spread out on a grid, it's quite efficient should work well\n"
+            "\tAlso note that this function currently does not elicite observations with nan-data\n"
+            "\tmost useful when you have control on the inputs, providing full set of data.\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "src : GeoSourceVector\n"
+            "\t input a geo-located list of time-series with filled in values\n\n"
+            "dst : GeoPointVector\n"
+            "\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
+            "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+            "\tand they are transformed and interpolated into the destination-timeaxis\n"
+            "parameter:OKParameter\n"
+            "\t the parameters to be used during interpolation\n\n"
+            "Returns\n"
+            "-------\n"
+            "GeoSourceVector, -with filled in ts-values according to their position, the parameters and time_axis\n"
+            );
     }
 
     static void btk_interpolation() {
@@ -219,5 +337,6 @@ namespace expose {
         idw_interpolation();
         btk_interpolation();
         interpolation_parameter();
+        ok_kriging();
     }
 }

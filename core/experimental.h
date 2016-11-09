@@ -22,9 +22,6 @@
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
-#include <vector>
-#include <algorithm>
-#include <iterator>
 
 
 namespace shyft {

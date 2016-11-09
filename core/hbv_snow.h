@@ -18,10 +18,6 @@
 ///
 
 #pragma once
-
-//#include <iostream>
-#include <sstream>
-#include <vector>
 #include "utctime_utilities.h"
 
 namespace shyft {

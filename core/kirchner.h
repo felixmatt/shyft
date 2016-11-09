@@ -1,16 +1,6 @@
-
-#include <cmath>
-
-#ifndef _MSC_VER
-// SiH: On ubuntu 15.04, with boost 1.59, gcc 4.9.2 this was needed
-// to avoid undefined static_gcd_type
-#include <boost/math_fwd.hpp>
-typedef boost::math::static_gcd_type static_gcd_type;
-#endif
-#include <boost/numeric/odeint.hpp>
-#include "timeseries.h"
-
 #pragma once
+
+#include "timeseries.h"
 
 namespace shyft {
     namespace core {

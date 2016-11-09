@@ -1,5 +1,5 @@
-#include <string>
-#include <vector>
+#pragma once
+#include "core/core_pch.h"
 #include "core/pt_gs_k.h"
 
 namespace shyft {

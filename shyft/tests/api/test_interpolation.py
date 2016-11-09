@@ -147,6 +147,55 @@ class BayesianKriging(unittest.TestCase):
             self.assertEqual(gts.ts.size(), ta_grid.size())
             self.assertFalse(np.allclose(expected_grid_1ts_values, gts.ts.values.to_numpy()))
 
+    def test_can_run_ordinary_kriging_from_observation_sites_to_1km_grid(self):
+        """
+        Somewhat more complex test, first do kriging of 1 timeseries out to grid (expect same values flat)
+        then do kriging of 3 time-series out to the grid (expect different values, no real verification here since this is done elsewhere
+
+        """
+        # arrange the test with a btk_parameter, a source grid and a destination grid
+        ok_parameter = api.OKParameter(c=1.0,a=10.0*1000.0,cov_type=api.OKCovarianceType.EXPONENTIAL,z_scale=1.0)
+        fx = lambda z: api.DoubleVector.from_numpy(np.zeros(self.n))
+
+        grid_1km_1 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        grid_1km_3 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+
+        observation_sites = api.GeoPointSourceVector()
+        ta_obs = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
+        ta_grid = api.Timeaxis(self.t, self.d, self.n)
+
+        ts_site_1 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+            (1.0) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+        ts_site_2 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+            (0.8) + 0.2 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+        ts_site_3 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+            (1.2) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+
+        observation_sites.append(api.GeoPointSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
+
+        # act 1: just one time-series put into the system, should give same ts (true-averaged) in all the grid-1km_ts (which can be improved using std.gradient..)
+        grid_1km_1ts = api.ordinary_kriging(observation_sites, grid_1km_1, ta_grid, ok_parameter)
+
+        # assert 1:
+        self.assertEqual(len(grid_1km_1ts), self.mnx * self.mny)
+        expected_grid_1ts_values = ts_site_1.average(api.Timeaxis2(ta_grid)).values.to_numpy()
+
+        for gts in grid_1km_1ts:
+            self.assertEqual(gts.ts.size(), ta_grid.size())
+            self.assertTrue(np.allclose(expected_grid_1ts_values, gts.ts.values.to_numpy()))
+
+        observation_sites.append(api.GeoPointSource(api.GeoPoint(9000.0, 500.0, 500), ts_site_2))
+        observation_sites.append(api.GeoPointSource(api.GeoPoint(9000.0, 12000.0, 1050.0), ts_site_3))
+        ok_parameter.cov_type= api.OKCovarianceType.GAUSSIAN  # just to switch covariance formula
+        grid_1km_3ts = api.ordinary_kriging(observation_sites, grid_1km_3, ta_grid, ok_parameter)
+
+        self.assertEqual(len(grid_1km_3ts), self.mnx * self.mny)
+
+        for gts in grid_1km_3ts:
+            self.assertEqual(gts.ts.size(), ta_grid.size())
+            self.assertFalse(np.allclose(expected_grid_1ts_values, gts.ts.values.to_numpy()))
+
+
     def test_idw_temperature_transform_from_set_to_grid(self):
         """
         Test IDW interpolation transforms temperature time-series according to time-axis and range.

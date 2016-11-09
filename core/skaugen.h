@@ -18,12 +18,6 @@
 /// This implementation is a slightly improved and ported version of Skaugen's snow routine
 /// implemented in R, see [ref].
 
-#include <math.h>
-#include <iomanip>
-#include <boost/math/distributions/gamma.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-#include <boost/math/tools/roots.hpp>
-#include <boost/math/tools/minima.hpp>
 #include "utctime_utilities.h"
 #include "timeseries.h"
 
