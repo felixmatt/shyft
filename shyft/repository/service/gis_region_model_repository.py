@@ -21,6 +21,13 @@ class GisDataFetchError(Exception):
     pass
 
 
+def set_no_proxy(server):
+    env = os.environ.get('NO_PROXY', '')
+    if not server in env:
+        if env: env += ', '
+        os.environ['NO_PROXY'] = env + server
+
+
 class GridSpecification(BoundingRegion):
     """
     Defines a grid, as lower left x0, y0, dx, dy, nx, ny
@@ -99,17 +106,17 @@ class BaseGisDataFetcher(object):
     arguments to the constructor helps building up this template by means of
     server_name - the host of the server where GIS -services are published
     server_port - the port-number for the service
-    service_index - arc-gis specific, we can publish several services at one url, the service_index selects
-                    which of those we adress
-    in addition, the arc-gis service request do have a set of standard parameters that are passed along
+    service_index - arc-gis specific, we can publish several services at one url, 
+    the service_index selects which of those we adress
+    in addition, the arc-gis service request does have a set of standard parameters that are passed along
     with the http-request.
-    This is represented as a dictinary (key-value)-pairs of named arguments.
+    This is represented as a dictionary (key-value)-pairs of named arguments.
     The python request package is used to pass on the request, and get the response.
     In general we try using json format wherever reasonable.
 
     """
 
-    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi002p", server_name_preprod = "oslwvagi001q",
+    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi002p", server_name_preprod="oslwvagi001q",
                  server_port="6080", service_index=None):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
@@ -118,8 +125,7 @@ class BaseGisDataFetcher(object):
         self.geometry = geometry
         self.epsg_id = epsg_id
         self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
-        self.adj_proxy_setting(self.server_name)
-
+        set_no_proxy(self.server_name)
         self.query = dict(text="",
                           objectIds="",
                           time="",
@@ -144,10 +150,6 @@ class BaseGisDataFetcher(object):
                           returnDistinctValues=False,
                           f="pjson")
 
-    def adj_proxy_setting(self, server_name_):
-        if os.environ.get("NO_PROXY", False) and not server_name_ in os.environ["NO_PROXY"]: os.environ[
-            "NO_PROXY"] += ", {}".format(server_name_)
-
     @property
     def url(self):
         """
@@ -162,7 +164,7 @@ class BaseGisDataFetcher(object):
     def _get_response(self, url_, msg, **kwargs):
         response = requests.get(url_, **kwargs)
         if response.status_code != 200:
-            raise GisDataFetchError('Could not fetch {} from gis server {]'.format(msg, self.server_name))
+            raise GisDataFetchError('Could not fetch {} from gis server {}'.format(msg, self.server_name))
         data = response.json()
         if "features" not in data:
             raise GisDataFetchError(
@@ -179,7 +181,7 @@ class BaseGisDataFetcher(object):
             print('Error description: {}'.format(str(e)))
             print('Switching from PROD server {} to PREPROD server {}'.format(self.server_name, self.server_name_preprod))
             url_ = self.url.replace(self.server_name, self.server_name_preprod)
-            self.adj_proxy_setting(self.server_name_preprod)
+            set_no_proxy(self.server_name_preprod)
             data = self._get_response(url_, msg, **kwargs)
         return data
 
@@ -299,14 +301,14 @@ class CatchmentFetcher(BaseGisDataFetcher):
                 service_index = 7
             else:
                 raise GisDataFetchError(
-                    "Unknown identifier {} for ctachment_type {}- use one of ['SUBCATCH_ID','CATCH_ID','POWER_PLANT_ID']".format(identifier,catchment_type))
+                    "Unknown identifier {} for catchment_type {}. Use one of 'SUBCATCH_ID', 'CATCH_ID', 'POWER_PLANT_ID'".format(identifier, catchment_type))
         elif catchment_type == 'unregulated':
             service_index = 8
         elif catchment_type == 'LTM':
             service_index = 3
         else:
             raise GisDataFetchError(
-                "Undefined catchment type {}. Use one of these three: 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
+                "Undefined catchment type {}. Use one of 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
         super(CatchmentFetcher, self).__init__(geometry=None,
                                                server_name=server_name,
                                                server_name_preprod=server_name_preprod,
@@ -460,7 +462,7 @@ class DTMFetcher(object):
         self.server_name_preprod = server_name_preprod  # PREPROD
         self.server_port = "6080"
         self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/Norway_DTM_1000m/ImageServer/exportImage"  # PROD
-
+        set_no_proxy(self.server_name)                
         self.query = dict(
             bboxSR=self.grid_specification.epsg(),
             size="{},{}".format(self.grid_specification.nx, self.grid_specification.ny),
@@ -477,9 +479,7 @@ class DTMFetcher(object):
             mosaicRule="",
             renderingRule="",
             f="image")
-        if os.environ.get("NO_PROXY", False) and not self.server_name in os.environ["NO_PROXY"]: os.environ[
-            "NO_PROXY"] += ", {}".format(self.server_name)
-
+        
     @property
     def url(self):
         return self.url_template.format(self.server_name, self.server_port)
