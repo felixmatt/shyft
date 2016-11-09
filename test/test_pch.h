@@ -13,24 +13,7 @@
 #define BOOST_CHRONO_PROVIDES_DATE_IO_FOR_SYSTEM_CLOCK_TIME_POINT 1
 
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <memory>
-#include <map>
-#include <string>
-#include <cstring>
-#include <algorithm>
-#include <vector>
-#include <cmath>
-#include <queue>
-#include <cerrno>
-#include <thread>
-#include <future>
-#include <stdexcept>
-#include <random>
-#include <cstring>
-
+#include "core/core_pch.h"
 #include <cxxtest/TestSuite.h>
 
 #ifndef M_PI

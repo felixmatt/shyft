@@ -5,7 +5,6 @@
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
 #include "core/geo_point.h"
-#include <armadillo>
 
 
 namespace shyfttest {

@@ -2,10 +2,6 @@
 #ifdef WIN32
 #pragma warning(disable:4503)
 #endif // WIN32
-#include <algorithm>
-#include <exception>
-#include <functional>
-#include <armadillo>
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "geo_point.h"

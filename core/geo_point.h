@@ -31,7 +31,7 @@ namespace shyft {
                 return (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z);
             }
 
-            /** \brief Distance measure on the form sum(abs(a.x - b.x)^p + abs(a.y - b.y)^p + (zscale * abs(a.z - b.z))^p) 
+            /** \brief Distance measure on the form sum(abs(a.x - b.x)^p + abs(a.y - b.y)^p + (zscale * abs(a.z - b.z))^p)
              *
              * \return the 3D distance measure between supplied arguments a and b, by using an optional z scale factor
              */
@@ -45,6 +45,14 @@ namespace shyft {
              */
             static inline double zscaled_distance(const geo_point& a, const geo_point& b, double zscale) {
                 return sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale);
+            }
+
+                        /** \brief Z scaled, non-eucledian distance between points a and b.
+             *
+             * \return  (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale
+             */
+            static inline double zscaled_distance2(const geo_point& a, const geo_point& b, double zscale) {
+                return (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale;
             }
 
             /** \brief Euclidian distance between points a and b, first projected onto x-y plane.

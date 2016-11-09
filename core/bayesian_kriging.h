@@ -1,8 +1,5 @@
 #pragma once
 #include "timeseries.h"
-#include <armadillo>
-#include <algorithm>
-#include <exception>
 
 /**
  * contains all BayesianKriging stuff, like concrete useful Parameters and the templated BTK algorithm

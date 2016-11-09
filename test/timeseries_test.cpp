@@ -6,9 +6,7 @@
 #include "core/time_axis.h"
 #include "api/api.h"
 #include "api/timeseries.h"
-#include <armadillo>
-#include <cmath>
-#include <functional>
+
 
 
 namespace shyfttest {

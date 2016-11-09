@@ -28,19 +28,38 @@
 
 #include <memory>
 #include <limits>
-#include <cstddef>
-//#include <type_traits> // for check primary type categories.
 #include <vector>
 #include <map>
 #include <string>
-#include <cstring>
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <ostream>
-#include <cerrno>
+#include <sstream>
 #include <thread>
 #include <future>
 #include <stdexcept>
 #include <random>
-#include <algorithm>
+#include <type_traits>
+#include <time.h>
+#include <cerrno>
+#include <cstring>
+#include <cstddef>
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <cmath>
+
+#ifndef _MSC_VER
+// SiH: On ubuntu 15.04, with boost 1.59, gcc 4.9.2 this was needed
+// to avoid undefined static_gcd_type
+#include <boost/math_fwd.hpp>
+typedef boost::math::static_gcd_type static_gcd_type;
+#endif
+#include <boost/numeric/odeint.hpp>
 #include <boost/range.hpp>
+#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/tools/roots.hpp>
+#include <boost/math/tools/minima.hpp>
+
+#include <armadillo>

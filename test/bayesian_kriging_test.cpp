@@ -6,11 +6,6 @@
 #include "core/timeseries.h"
 #include "core/geo_point.h"
 
-#include <armadillo>
-#include <ctime>
-#include <random>
-#include <iomanip>
-
 using namespace std;
 namespace shyfttest {
 	const double EPS = 1.0e-8;

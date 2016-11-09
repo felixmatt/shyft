@@ -1,10 +1,4 @@
 #pragma once
-#include <string>
-#include <time.h>
-#include <cmath>
-#include <vector>
-#include <map>
-#include <memory>
 
 namespace shyft {
 	namespace core {

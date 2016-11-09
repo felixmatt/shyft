@@ -27,6 +27,8 @@ namespace expose {
     }
 
     static void GeoPointSource(void) {
+        typedef std::vector<sa::GeoPointSource> GeoPointSourceVector;
+
         py::class_<sa::GeoPointSource>("GeoPointSource",
             "GeoPointSource contains common properties, functions\n"
             "for the point sources in SHyFT.\n"
@@ -38,6 +40,11 @@ namespace expose {
             // does not work  yet:.def_readwrite("ts",&sa::GeoPointSource::ts)
             .add_property("ts",&sa::GeoPointSource::get_ts,&sa::GeoPointSource::set_ts)
 			.def_readwrite("uid",&sa::GeoPointSource::uid,"user specified identifier, string")
+            ;
+
+        py::class_<GeoPointSourceVector,py::bases<>,std::shared_ptr<GeoPointSourceVector> > ("GeoPointSourceVector")
+            .def(py::vector_indexing_suite<GeoPointSourceVector>())
+            .def(py::init<const GeoPointSourceVector&>(py::args("src"),"clone src"))
             ;
         py::register_ptr_to_python<std::shared_ptr<sa::GeoPointSource>>();
         GeoPointSourceX<sa::TemperatureSource>("TemperatureSource","TemperatureSourceVector","geo located temperatures[deg Celcius]");

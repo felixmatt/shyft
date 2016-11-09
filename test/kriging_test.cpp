@@ -4,10 +4,7 @@
 #include "core/timeseries.h"
 #include "core/geo_point.h"
 
-#include <armadillo>
-#include <ctime>
-#include <random>
-#include <iomanip>
+
 namespace shyfttest {
     using namespace shyft::core;
     /** just a stub class for location concept*/

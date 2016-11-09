@@ -1,7 +1,5 @@
 #pragma once
 
-#include <armadillo>
-
 namespace shyft {
     namespace core {
         namespace kalman {
