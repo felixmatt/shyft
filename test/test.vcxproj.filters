@@ -88,6 +88,9 @@
     <ClInclude Include="glacier_melt_test.h">
       <Filter>methods</Filter>
     </ClInclude>
+    <ClInclude Include="kriging_test.h">
+      <Filter>interpolation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -179,6 +182,9 @@
     </ClCompile>
     <ClCompile Include="glacier_melt_test.cpp">
       <Filter>methods</Filter>
+    </ClCompile>
+    <ClCompile Include="kriging_test.cpp">
+      <Filter>interpolation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
