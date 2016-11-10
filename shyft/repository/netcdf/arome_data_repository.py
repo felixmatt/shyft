@@ -188,7 +188,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
         filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
-        #print(filename)
         with Dataset(filename) as dataset:
             return self._get_data_from_dataset(dataset, input_source_types, utc_period,
                                                geo_location_criteria)
@@ -495,7 +494,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         for fn in file_names:
             match = re.search(date_pattern, fn)
             if match:
-                datestr, hourstr = match.groups()
+                datestr, _ , hourstr, _ = match.groups()
                 year, month, day = int(datestr[:4]), int(datestr[4:6]), int(datestr[6:8])
                 hour = int(hourstr)
                 t = utc.time(api.YMDhms(year, month, day, hour))
