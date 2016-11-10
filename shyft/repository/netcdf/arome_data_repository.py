@@ -156,7 +156,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         if not path.isfile(filename):
             if '*' in filename:
-                filename = self._get_files(utc_period.start, "_(\d{8})_(\d{2}).nc$")
+                filename = self._get_files(utc_period.start, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
             else:
                 raise AromeDataRepositoryError("File '{}' not found".format(filename))
         with Dataset(filename) as dataset:
@@ -187,7 +187,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
-        filename = self._get_files(t_c, "_(\d{8})_(\d{2}).nc$")
+        filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
+        #print(filename)
         with Dataset(filename) as dataset:
             return self._get_data_from_dataset(dataset, input_source_types, utc_period,
                                                geo_location_criteria)
