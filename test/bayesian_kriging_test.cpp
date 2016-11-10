@@ -108,7 +108,7 @@ typedef std::vector<shyft::timeseries::point> point_vector_t;
 void build_sources_and_dests(const size_t num_sources_x, const size_t num_sources_y,
 	const size_t num_dests_x, const size_t num_dests_y,
 	const size_t ts_size, const shyft::timeseries::utctimespan dt,
-	const point_timeaxis& time_axis, bool insert_nans, SourceList& sources, DestinationList& dests) {
+	const point_timeaxis& time_axis, bool insert_nans, SourceList& sources, DestinationList& dests,bool randomize=false) {
 	const double x_min = 0.0; // [m]
 	const double x_max = 100000.0; // [m]
 	const double y_min = 0.0; // [m]
@@ -126,14 +126,20 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
         times.emplace_back(l*dt);
     times.emplace_back(shyft::core::max_utctime);
     point_timeaxis dta(times);
+    geo_point p0(x_min,y_min,0.0);
+    const double max_distance=geo_point::xy_distance(p0,geo_point(x_max,y_max,0.0));
+    auto base_temp=[&unif,&re,randomize,&p0,max_distance](geo_point p1)->double {
+        if(randomize)
+            return unif(re);
+        return 10+ 2.0*geo_point::xy_distance(p0,p1)/max_distance;
+    };
 	for (size_t i = 0; i < num_sources_x; ++i) {
 		pt.x = x_min + i*(x_max - x_min) / (num_sources_x - 1);
 		for (size_t j = 0; j < num_sources_y; ++j) {
 			pt.y = y_min + j*(y_max - y_min) / (num_sources_y - 1);
 			pt.z = 500 * std::sin(pt.x / x_max) + std::sin(pt.y / y_max) / 2;
 			vector<double> pts; pts.reserve(ts_size);
-			double b_t = unif(re);
-			//std::cout << "Base temp at pos (i,j) = " << i << ", " << j << ") = " << b_t << std::endl;
+			double b_t = base_temp(pt);
 			for (size_t l = 0; l < ts_size; ++l)
 				pts.emplace_back( b_t + pt.z*(0.6 / 100));
 			sources.emplace_back(pt, xpts_t(dta,pts));
@@ -249,12 +255,7 @@ void bayesian_kriging_test::test_interpolation() {
 	const std::clock_t start = std::clock();
 	btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
 	const std::clock_t total = std::clock() - start;
-#ifdef _WIN32
-    TS_WARN("ISSUE: BTK gives different results on windows vs. linux needs investigation");
-    double e_temp[6]{ 1.3547,5.3063,7.0617,7.7848,7.7752,8.5450 };
-#else
-    double e_temp[6]{ 1.31,4.36,5.0231,5.7484,4.274,5.5359 };
-#endif
+    double e_temp[6]{ 10.0,11.9918,12.3670,12.1815,10.5669,12.2066 };
     for(size_t i=0;i<6;++i)
         TS_ASSERT_DELTA(destinations[i].temperatures[0], e_temp[i], 0.01);
 
