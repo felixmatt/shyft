@@ -31,8 +31,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
 
         repos = GFSDataRepository(epsg, dem_file, utc.time(t0), bounding_box=bbox)
-        data_names = ("temperature", "wind_speed", "precipitation",
-                      "relative_humidity", "radiation")
+        data_names = ("temperature", "wind_speed" , "precipitation","relative_humidity", "radiation")
         sources = repos.get_timeseries(data_names, period, None)
         self.assertEqual(set(data_names), set(sources.keys()))
         self.assertEqual(len(sources["temperature"]), 6)
@@ -61,8 +60,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         t_c = utc.time(t0) + api.deltahours(7)
 
         repos = GFSDataRepository(epsg, dem_file, bounding_box=bbox)
-        data_names = ("temperature", "wind_speed", "precipitation",
-                      "relative_humidity", "radiation")
+        data_names = ("temperature",) # "wind_speed", "precipitation", "relative_humidity", "radiation")
         sources = repos.get_forecast(data_names, period, t_c, None)
         self.assertEqual(set(data_names), set(sources.keys()))
         self.assertEqual(len(sources["temperature"]), 6)
@@ -91,8 +89,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         t_c = utc.time(t0) + api.deltahours(7)
 
         repos = GFSDataRepository(epsg, dem_file, bounding_box=bbox)
-        data_names = ("temperature", "wind_speed", "precipitation",
-                      "relative_humidity", "radiation")
+        data_names = ("temperature",) # "wind_speed", "precipitation", "relative_humidity", "radiation")
         ensembles = repos.get_forecast_ensemble(data_names, period, t_c, None)
         for sources in ensembles:
             self.assertEqual(set(data_names), set(sources.keys()))
@@ -103,7 +100,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
             self.assertNotEqual(data1.mid_point().y, data2.mid_point().y)
             self.assertNotEqual(data1.mid_point().z, data2.mid_point().z)
             h_dt = (data1.ts.time(1) - data1.ts.time(0))/3600
-            self.assertEqual(data1.ts.size(), 30//h_dt)
+            self.assertEqual(data1.ts.size(), n_hours//h_dt)
 
     @property
     def epsg_bbox(self):
