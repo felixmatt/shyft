@@ -1110,3 +1110,102 @@ void timeseries_test::test_unit_conversion() {
     TS_ASSERT_DELTA(shyft::m3s_to_mmh(q_m3s,area_m2),q_m3s/area_m2*(1000.0*3600.0),1e-10);
     TS_ASSERT_DELTA(shyft::mmh_to_m3s(shyft::m3s_to_mmh(q_m3s,area_m2),area_m2),q_m3s,1e-10);
 }
+namespace shyft {
+    namespace timeseries {
+        using namespace std;
+
+        template <class TS>
+        struct ref_ts {
+            typedef typename TS::ta_t ta_t;
+            string ref;///< reference to time-series supporting storage
+            fx_policy_t fx_policy;
+            shared_ptr<TS> ts;
+            TS& bts() {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            const TS& bts() const {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            point_interpretation_policy point_interpretation() const {
+                return bts().point_interpreation();
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                bts().set_point_interpretation(point_interpretation);
+            }
+
+            ref_ts(){}
+            ta_t time_axis() const {return bts().time_axis();}
+            /**\brief the function value f(t) at time t, fx_policy taken into account */
+            double operator()(utctime t) const {
+                return bts()(t);
+            }
+
+            /**\brief value of the i'th interval fx_policy taken into account,
+             * Hmm. is that policy ever useful in this context ?
+             */
+            double value(size_t i) const  {
+                return bts().value(i);
+            }
+            // BW compatiblity ?
+            size_t size() const { return bts().size();}
+            size_t index_of(utctime t) const {return bts().index_of(t);}
+            utcperiod total_period() const {return bts().total_period();}
+            utctime time(size_t i ) const {return bts().time(i);}
+
+            // to help average_value method for now!
+            point get(size_t i) const {return bts().get(i);}
+
+            // Additional write/modify interface to operate directly on the values in the time-series
+            void set(size_t i,double x) {bts().set(i,x);}
+            void add(size_t i, double value) { bts().add(i,value); }
+            void add(const point_ts<ta_t>& other) {
+                bts().add(other);
+            }
+            void add_scale(const point_ts<ta_t>&other,double scale) {
+                bts().add_scale(other,scale);
+            }
+            void fill(double value) { bts().fill(value); }
+            void fill_range(double value, int start_step, int n_steps) {
+                bts().fill_range(value,start_step,n_steps);
+            }
+ 			void scale_by(double value) {
+ 			    bts().scale_by(value);
+            }
+
+        };
+        template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
+    }
+}
+
+void timeseries_test::test_ts_ref() {
+    using ta_t=shyft::time_axis::fixed_dt;
+    using ts_t=shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>;
+    using rts_t=shyft::timeseries::ref_ts<ts_t>;
+    using calendar=shyft::core::calendar;
+    calendar utc;
+    ta_t ta(utc.time(2016,10,1),deltahours(1),10);
+    ts_t a(ta,1.0,fx_policy_t::POINT_AVERAGE_VALUE);
+    auto b=make_shared<rts_t>(); //note that ref_ts b need to be some kind of shared_ptr
+    b->ref="netcdf://group/a/b";
+    auto c=a+b; // otherwise, we would have to bind the b copied in the expression here (also possible)
+    size_t n; // but not practical now.
+    try {
+        n=c.time_axis().size();
+        TS_FAIL("unbound ref_ts should throw on access");
+    } catch (const runtime_error& ) {
+        ;// ok
+    } catch (...) {
+        TS_FAIL("Expected runtime_error here");
+    }
+    auto bb= make_shared<ts_t>(a);
+    b->ts=bb;
+    n=c.time_axis().size();
+    TS_ASSERT_EQUALS(n,a.time_axis().size());
+
+
+}

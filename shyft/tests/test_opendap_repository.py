@@ -22,7 +22,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         n_hours = 30
         t0 = self.start_date + api.deltahours(7)
         period = api.UtcPeriod(t0, t0 + api.deltahours(n_hours))
-
+            
         repos = GFSDataRepository(epsg, dem_file, t0, bounding_box=bbox)
         data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity", "radiation")
         sources = repos.get_timeseries(data_names, period, None)

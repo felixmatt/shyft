@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="bayesian_kriging_test test_interpolation" />
+				<Option parameters="timeseries_test test_ts_ref" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  glacier_melt_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test test_ts_ref" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

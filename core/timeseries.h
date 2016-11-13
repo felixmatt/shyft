@@ -354,6 +354,8 @@ namespace shyft{
             ta_t ta;
             point_interpretation_policy fx_policy; // inherited from ts
             utctimespan dt;// despite ta time-axis, we need it
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             //-- default stuff, ct/copy etc goes here
             time_shift_ts():fx_policy(POINT_AVERAGE_VALUE),dt(0) {}
@@ -386,8 +388,6 @@ namespace shyft{
                  dt(dt) {}
 
             const ta_t& time_axis() const { return ta;}
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             point get(size_t i) const {return point(ta.time(i),ts.value(i));}
 
@@ -416,6 +416,8 @@ namespace shyft{
             TS ts;
             point_interpretation_policy fx_policy;
             const TA& time_axis() const {return ta;}
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts)
@@ -461,6 +463,8 @@ namespace shyft{
 			TS ts;
 			point_interpretation_policy fx_policy;
 			const TA& time_axis() const { return ta; }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
 			accumulate_ts(const TS&ts, const TA& ta)
 				:ta(ta), ts(ts)
@@ -604,6 +608,9 @@ namespace shyft{
 			TA ta;
 			profile_accessor<TA> pa;
 			point_interpretation_policy fx_policy;
+			const TA& time_axis() const {return ta;}
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
 			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
 				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
@@ -647,6 +654,8 @@ namespace shyft{
 			double dtf;
 			point_interpretation_policy fx_policy;
 			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
 			/** construct a glacier_melt_ts
 			 * \param temperature in [deg.C]
@@ -702,20 +711,37 @@ namespace shyft{
             B rhs;
             TA ta;
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
+                    ((bin_op*)this)->fx_policy=result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+                }
+            }
+            const TA& time_axis() const {
+                deferred_bind();
+                return ta;
+            }
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                fx_policy=point_interpretation;
+            }
+
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
-                ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
-                fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+                //ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
+                //fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
             }
             double operator()(utctime t) const {
-                if(!ta.total_period().contains(t))
+                if(!time_axis().total_period().contains(t))
                     return nan;
                 return op(d_ref(lhs)(t),d_ref(rhs)(t));
             }
             double value(size_t i) const {
-                if(i==string::npos || i>=ta.size() )
+                if(i==string::npos || i>=time_axis().size() )
                     return nan;
                 if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
                     return (*this)(ta.time(i));
@@ -736,11 +762,25 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=d_ref(rhs).time_axis();
+                    ((bin_op*)this)->fx_policy=d_ref(rhs).fx_policy;
+                }
+            }
+            const TA& time_axis() const {deferred_bind();return ta;}
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                deferred_bind();//ensure it's done
+                fx_policy=point_interpretation;
+            }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(rhs).time_axis();
-                fx_policy = d_ref(rhs).fx_policy;
+                //ta=d_ref(rhs).time_axis();
+                //fx_policy = d_ref(rhs).fx_policy;
             }
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
@@ -756,11 +796,25 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=d_ref(lhs).time_axis();
+                    ((bin_op*)this)->fx_policy=d_ref(lhs).fx_policy;
+                }
+            }
+            const TA& time_axis() const {deferred_bind();return ta;}
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                deferred_bind();//ensure it's done
+                fx_policy=point_interpretation;
+            }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(lhs).time_axis();
-                fx_policy = d_ref(lhs).fx_policy;
+                //ta=d_ref(lhs).time_axis();
+                //fx_policy = d_ref(lhs).fx_policy;
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
@@ -1048,7 +1102,7 @@ namespace shyft{
             bool linear_between_points;
           public:
             average_accessor(const S& source, const TA& time_axis)
-              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), 
+              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE){ /* Do nothing */ }
             average_accessor(std::shared_ptr<S> source,const TA& time_axis)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
