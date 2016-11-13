@@ -404,7 +404,7 @@ void inverse_distance_test::test_performance() {
     for (int i = 0;i < s_nx;++i) {
         for (int j = 0;j < s_ny;++j) {
             geo_point p(s_dxy*i, s_dxy*j, (i + j)*500.0 / (s_nx + s_ny));
-            for (size_t t = 0;t < n;++t) v[t] = 10.0 - p.x*0.1 / 1000.0 - 0.6 / 100.0*p.z;
+            for (int t = 0;t < n;++t) v[t] = 10.0 - p.x*0.1 / 1000.0 - 0.6 / 100.0*p.z;
             re.temperature->emplace_back(p, api::apoint_ts(gta, v, POINT_AVERAGE_VALUE));
         }
     }
