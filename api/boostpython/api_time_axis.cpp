@@ -34,7 +34,7 @@ namespace expose {
                 .def(init<const vector<utctime>& >(args("time_points"),"create a time-axis supplying n+1 points to define n intervals"))
                 .def("size",&point_dt::size,"returns number of intervals")
                 .def_readonly("t",&point_dt::t,"timepoints except last")
-                .def_readonly("t_end",&point_dt::t,"end of time-axis")
+                .def_readonly("t_end",&point_dt::t_end,"end of time-axis")
                 //.def_readonly("delta_t",&point_dt::dt,"timespan of each interval")
                 .def("total_period",&point_dt::total_period,"the period that covers the entire time-axis")
                 .def("time",&point_dt::time,args("i"),"return the start of the i'th period of the time-axis")
