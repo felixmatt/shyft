@@ -77,7 +77,13 @@ class CFTsRepository(TsRepository):
                                            " hydroclim variable or time not found.")
         time = convert_netcdf_time(time.units,time)
         idx_min = np.searchsorted(time, utc_period.start, side='left')
+        if time[idx_min] > utc_period.start and idx_min > 0:  # important ! ensure data *cover* the requested period, Shyft ts do take care of resolution etc.
+            idx_min -= 1  # extend range downward so we cover the entire requested period
+
         idx_max = np.searchsorted(time, utc_period.end, side='right')
+
+        if time[idx_max] < utc_period.end and idx_max +1 < len(time):
+            idx_max += 1  # extend range upward so that we cover the requested period
 
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)

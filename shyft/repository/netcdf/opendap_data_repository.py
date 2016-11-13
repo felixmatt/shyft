@@ -125,6 +125,13 @@ class GFSDataRepository(interfaces.GeoTsRepository):
         time = self.ad_to_utc(time)  # Fetch all times
         idx_min = time.searchsorted(utc_period.start, side='left')
         idx_max = time.searchsorted(utc_period.end, side='right')
+
+        if 0 < idx_min < len(time) and time[idx_min]> utc_period.start:
+            idx_min -= 1  # requirement! return data to cover request period if possible
+
+        if idx_max + 1 < len(time) and time[idx_max] < utc_period.end:
+            idx_max += 1  # requirement! return data to cover request period if possible
+
         time_slice = slice(idx_min, idx_max)
         time = time[time_slice]
 

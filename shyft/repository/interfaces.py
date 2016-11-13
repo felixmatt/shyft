@@ -269,6 +269,10 @@ class GeoTsRepository(object):
         geo_loc_ts: dictionary
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
+            Important notice: The returned time-series should at least cover the
+            requested period. It could return *more* data than in
+            the requested period, but must return sufficient data so
+            that the f(t) can be evaluated over the requested period.
         """
         pass
 
@@ -291,6 +295,10 @@ class GeoTsRepository(object):
         geo_loc_ts: dictionary
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
+            Important notice: The returned forecast time-series should at least cover the
+            requested period. It could return *more* data than in
+            the requested period, but must return sufficient data so
+            that the f(t) can be evaluated over the requested period.
         """
         pass
 
@@ -312,6 +320,10 @@ class GeoTsRepository(object):
         Returns
         -------
         ensemble: list of same type as get_timeseries
+        Important notice: The returned forecast time-series should at least cover the
+            requested period. It could return *more* data than in
+            the requested period, but must return sufficient data so
+            that the f(t) can be evaluated over the requested period.
         """
         pass
 

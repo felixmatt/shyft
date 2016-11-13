@@ -29,22 +29,27 @@ class NetCDFGeoTsRepositoryTestCase(unittest.TestCase):
         utc_calendar = Calendar()
         netcdf_repository = self._construct_from_test_data()
         self.assertIsNotNone(netcdf_repository)
-        utc_period = UtcPeriod(utc_calendar.time(YMDhms(2005, 1, 1, 0, 0, 0)),
-                               utc_calendar.time(YMDhms(2014, 12, 31, 0, 0, 0)))
+        utc_period = UtcPeriod(utc_calendar.time(2005, 1, 1, 0, 20, 0), # make it a challenge! ensure we get the first hour
+                               utc_calendar.time(2014, 12, 30, 0, 20, 0)) # and also, we should have the last hour!
         type_source_map = dict()
         type_source_map['temperature'] = TemperatureSource
-        geo_ts_dict =  netcdf_repository.get_timeseries(
+        geo_ts_dict = netcdf_repository.get_timeseries(
                                                 type_source_map,
                                                 geo_location_criteria=None,
                                                 utc_period=utc_period)
         self.assertIsNotNone(geo_ts_dict)
+        temperature_source = geo_ts_dict['temperature']
+        self.assertIsNotNone(temperature_source)
+        self.assertLessEqual(temperature_source[0].ts.time_axis.time(0),utc_period.start,'expect returned time-axis to cover the requested period')
+        self.assertGreaterEqual(temperature_source[0].ts.time_axis.total_period().end,utc_period.end,'expected returned time-axis to cover requested period')
+
 
     def test_returns_empty_ts_when_no_data_in_request_period(self):
         utc_calendar = Calendar()
         netcdf_repository = self._construct_from_test_data()
         self.assertIsNotNone(netcdf_repository)
-        utc_period = UtcPeriod(utc_calendar.time(YMDhms(2017, 1, 1, 0, 0, 0)),# a period where there is no data in
-                               utc_calendar.time(YMDhms(2020, 12, 31, 0, 0, 0)))# the file supplied
+        utc_period = UtcPeriod(utc_calendar.time(2017, 1, 1, 0, 0, 0),# a period where there is no data in
+                               utc_calendar.time(2020, 12, 31, 0, 0, 0))# the file supplied
         type_source_map = dict()
         type_source_map['temperature'] = TemperatureSource
         geo_ts_dict = netcdf_repository.get_timeseries(
@@ -58,8 +63,8 @@ class NetCDFGeoTsRepositoryTestCase(unittest.TestCase):
         netcdf_repository = self._construct_from_test_data()
         netcdf_repository.raise_if_no_data=True # yes, for now, just imagine this could work.
         self.assertIsNotNone(netcdf_repository)
-        utc_period = UtcPeriod(utc_calendar.time(YMDhms(2017, 1, 1, 0, 0, 0)),# a period where there is no data in
-                               utc_calendar.time(YMDhms(2020, 12, 31, 0, 0, 0)))# the file supplied
+        utc_period = UtcPeriod(utc_calendar.time(2017, 1, 1, 0, 0, 0),# a period where there is no data in
+                               utc_calendar.time(2020, 12, 31, 0, 0, 0))# the file supplied
         type_source_map = dict()
         type_source_map['temperature'] = TemperatureSource
 
