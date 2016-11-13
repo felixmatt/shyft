@@ -75,6 +75,8 @@ namespace shyft{
          */
         template<class U> const U& d_ref(const std::shared_ptr<U>& p) { return *p; }
         template<class U> const U& d_ref(const U& u) { return u; }
+        template<class U> U& d_ref(std::shared_ptr<U>& p) { return *p; }
+        template<class U> U& d_ref(U& u) { return u; }
 
 
         ///< \brief d_ref_t template to rip out T of shared_ptr<T> or T if T specified

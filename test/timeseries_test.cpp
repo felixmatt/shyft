@@ -1179,6 +1179,50 @@ namespace shyft {
         };
         template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
+
+        /**bind ref_ts
+         * default impl. does nothing (nothing to bind)
+         */
+        template <class Ts, class Fbind>
+        void bind_ref_ts(Ts& ts,Fbind && f_bind ) {
+        }
+
+        template<class Ts,class Fbind>
+        void bind_ref_ts( ref_ts<Ts>& ts,Fbind&& f_bind) {
+            f_bind(ts);
+        }
+        template<class A, class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
+            //bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class A, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            //bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template <class Ts,class Fbind>
+        void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(time_shift.ts,f_bind));
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
+            bind_ref_ts(d_ref(avg.ts),f_bind);
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(acc.ts),f_bind);
+        }
+        template <class TS_A,class TS_B,class Fbind>
+        void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
+            bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
+        }
     }
 }
 
@@ -1190,11 +1234,17 @@ void timeseries_test::test_ts_ref() {
     calendar utc;
     ta_t ta(utc.time(2016,10,1),deltahours(1),10);
     ts_t a(ta,1.0,fx_policy_t::POINT_AVERAGE_VALUE);
-    auto b=make_shared<rts_t>(); //note that ref_ts b need to be some kind of shared_ptr
-    b->ref="netcdf://group/a/b";
-    auto c=a+b; // otherwise, we would have to bind the b copied in the expression here (also possible)
-    size_t n; // but not practical now.
-    try {
+    auto b=make_shared<rts_t>(); // note that ref_ts b need to be some kind of shared_ptr
+    string b_ref_key("netcdf://group/a/b");
+    string x_ref_key("fame://nordic_main/price_forecast_NO1_eur_MWh");
+    auto x=make_shared<rts_t>();
+    x->ref=x_ref_key;
+    b->ref=b_ref_key;
+    auto c=3.0*a+b*a/4.0*x*x; // otherwise, we would have to bind the b copied in the expression here
+                // (also possible)
+    size_t n;   // but not practical now.
+    try
+     {
         n=c.time_axis().size();
         TS_FAIL("unbound ref_ts should throw on access");
     } catch (const runtime_error& ) {
@@ -1202,10 +1252,19 @@ void timeseries_test::test_ts_ref() {
     } catch (...) {
         TS_FAIL("Expected runtime_error here");
     }
-    auto bb= make_shared<ts_t>(a);
-    b->ts=bb;// do the bind here, simply assign the ts
+    auto bb= make_shared<ts_t>(ta,2.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
+    auto bx= make_shared<ts_t>(ta,10.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
+
+    auto resolve_sym_ref = [&bb,&b_ref_key,&bx,&x_ref_key](rts_t& rts) {
+        if(rts.ref == b_ref_key) // mimic of a lookup that could have been done here.
+            rts.ts = bb;
+        if(rts.ref== x_ref_key)
+            rts.ts = bx;
+    };
+
+    bind_ref_ts(c,resolve_sym_ref);
     n=c.time_axis().size(); // this time expr. c is valid
     TS_ASSERT_EQUALS(n,a.time_axis().size());// have proper size
-    TS_ASSERT_DELTA(c.value(0), 2.0,0.0001);// and expected value(s)
+    TS_ASSERT_DELTA(c.value(0), 3*1 + 2*1/4.0*10.0*10.0,0.0001);// and expected value(s)
 
 }
