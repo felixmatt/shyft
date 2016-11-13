@@ -24,9 +24,7 @@ utc_calendar = api.Calendar()
 def utctime_from_datetime(dt):
     """Returns utctime of datetime dt (calendar interpreted as UTC)."""
     # Number of seconds since epoch
-    nsec = np.array([dt], dtype="datetime64[s]").astype(np.long)[0]
-    dt = datetime.fromtimestamp(nsec)
-    return utc_calendar.time(api.YMDhms(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second))
+    return utc_calendar.time(dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second)
 
 
 class ConfigError(Exception):
