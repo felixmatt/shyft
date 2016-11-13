@@ -1203,9 +1203,9 @@ void timeseries_test::test_ts_ref() {
         TS_FAIL("Expected runtime_error here");
     }
     auto bb= make_shared<ts_t>(a);
-    b->ts=bb;
-    n=c.time_axis().size();
-    TS_ASSERT_EQUALS(n,a.time_axis().size());
-
+    b->ts=bb;// do the bind here, simply assign the ts
+    n=c.time_axis().size(); // this time expr. c is valid
+    TS_ASSERT_EQUALS(n,a.time_axis().size());// have proper size
+    TS_ASSERT_DELTA(c.value(0), 2.0,0.0001);// and expected value(s)
 
 }
