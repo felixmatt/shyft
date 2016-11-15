@@ -862,7 +862,7 @@ void timeseries_test::test_periodic_ts_t() {
 	utctime t0 = utc.time(2015, 1, 1);
 	timeaxis ta(t0, deltahours(10), 1000);
 
-	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000);
@@ -875,7 +875,7 @@ void timeseries_test::test_periodic_ts_over_sampled() {
 	utctime t0 = utc.time(2015, 1, 1);
 	timeaxis ta(t0, deltahours(1), 1000);
 
-	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000);
@@ -944,7 +944,7 @@ void timeseries_test::test_periodic_template_ts() {
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
 	TS_ASSERT_DELTA(pd.size(), pv.size(), 1e-9);
 
-	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
 	TS_ASSERT_EQUALS(fun.size(), 1000);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
@@ -956,20 +956,20 @@ void timeseries_test::test_periodic_template_ts() {
 	// and time-of day is also different:
 	//
 	profile_description pd1(utc.time(2000,1,1,2), dt, pv);
-	periodic_ts<profile_description, timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
+	periodic_ts<timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
 	TS_ASSERT_EQUALS(fx.value(0), 3.1);// verified using excel
 	TS_ASSERT_EQUALS(fx.value(1), 4.8);
 	TS_ASSERT_EQUALS(fx.value(2), 5.0);// overlaps next day as well
 	// case 2: now test another case where the time-axis is 1hour, and we have POINT_AVERAGE_VALUE(stair-case-type f(t))
 	// between points.
 	timeaxis ta_hour(t0, deltahours(1), 24);
-	periodic_ts<profile_description, timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
+	periodic_ts<timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
 	vector<double> expected_fs = { 8.0,8.0,1.0,1.0,1.0,2.0,2.0,2.0,3.0,3.0,3.0,4.0,4.0,4.0,5.0,5.0,5.0,6.0,6.0,6.0,7.0,7.0,7.0,8.0 };
 	for (size_t i = 0;i < expected_fs.size();++i)
 		TS_ASSERT_DELTA(expected_fs[i], fs.value(i), 0.00001);
 	// case 3: as case 2, but POINT_INSTANT_VALUE and linear-between points type of f(t)
 	//
-	periodic_ts<profile_description, timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
+	periodic_ts< timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
 	vector<double> expected_fl = { 4.500000,2.166667,1.166667,1.500000,1.833333,2.166667,2.500000,2.833333,3.166667,3.500000,3.833333,4.166667,4.500000,4.833333,5.166667,5.500000,5.833333,6.166667,6.500000,6.833333,	7.166667,7.500000,7.833333, 8.0 /*	ok, if we consider f(t) keep value at the end, otherwise it's 6.833333 */	};
 	for (size_t i = 0;i < expected_fl.size();++i)
 		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
@@ -983,7 +983,7 @@ void timeseries_test::test_periodic_ts_values() {
 	timeaxis ta(t0, deltahours(10), 1000);
 
 	profile_description pd(t0, dt, pv);
-	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 
 	auto v = fun.values();
 	TS_ASSERT_EQUALS(v.size(), ta.size());
@@ -1381,6 +1381,64 @@ namespace boost {
             & make_nvp("fx_policy",o.fx_policy)
             ;
         }
+
+        template <class Archive, class Ts, class Ta>
+        void serialize(Archive & ar, shyft::timeseries::accumulate_ts<Ts,Ta> &o,const unsigned int version ) {
+            ar
+            & make_nvp("ts",o.ts)
+            & make_nvp("ta",o.ta)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template <class Archive>
+        void serialize(Archive & ar, shyft::timeseries::profile_description &o,const unsigned int version ) {
+            ar
+            & make_nvp("t0",o.t0)
+            & make_nvp("dt",o.dt)
+            & make_nvp("profile",o.profile)
+            ;
+        }
+
+        template <class Archive,class TA>
+        void serialize(Archive & ar, shyft::timeseries::profile_accessor<TA> &o,const unsigned int version ) {
+            ar
+            & make_nvp("ta",o.ta)
+            & make_nvp("profile",o.profile)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template <class Archive,class TA>
+        void serialize(Archive & ar, shyft::timeseries::periodic_ts<TA> &o,const unsigned int version ) {
+            ar
+            & make_nvp("ta",o.ta)
+            & make_nvp("pa",o.pa)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template <class Archive,class TS_A,class TS_B>
+        void serialize(Archive & ar, shyft::timeseries::glacier_melt_ts<TS_A,TS_B> &o,const unsigned int version ) {
+            ar
+            & make_nvp("temperature",o.temperature)
+            & make_nvp("sca_m2",o.sca_m2)
+            & make_nvp("glacier_area_m2",o.glacier_area_m2)
+            & make_nvp("dtf",o.dtf)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template<class Archive,class A, class B, class O, class TA>
+        void serialize(Archive & ar, shyft::timeseries::bin_op<A,B,O,TA> &o,const unsigned int version ) {
+            ar
+            //& make_nvp("op",o.op) // not needed yet, needed when op starts to carry data
+            & make_nvp("lhs",o.lhs)
+            & make_nvp("rhs",o.rhs)
+            & make_nvp("ta",o.ta)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
     }
 }
 
@@ -1403,7 +1461,7 @@ template<class TA>
 static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::timeseries::point_ts<TA>&b) {
     if(a.size()!=b.size())
         return false;
-    if(a.total_period()!=b.total_period())
+    if(a.time_axis().total_period()!=b.time_axis().total_period())
         return false;
     if(a.fx_policy!= b.fx_policy)
         return false;
@@ -1413,11 +1471,13 @@ static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::times
             return false;
     return true;
 }
+
+
 template<class Ts>
 static bool is_equal(const Ts& a,const Ts &b) {
     if(a.size()!=b.size())
         return false;
-    if(a.total_period()!=b.total_period())
+    if(a.time_axis().total_period()!=b.time_axis().total_period())
         return false;
     if(a.point_interpretation()!= b.point_interpretation())
         return false;
@@ -1466,7 +1526,7 @@ void timeseries_test::test_serialization() {
     //
     // 2. time-axis
     //
-    time_axis::fixed_dt ta(3600*2,3600,24);
+    time_axis::fixed_dt ta(utc.time(2016,1,1),deltahours(1),24);
     auto ta2 = serialize_loop(ta);
     TS_ASSERT_EQUALS(ta.t,ta2.t);
     TS_ASSERT_EQUALS(ta.dt,ta2.dt);
@@ -1503,4 +1563,21 @@ void timeseries_test::test_serialization() {
     timeseries::average_ts<decltype(ts),decltype(ta) > tsavg(ts,ta);
     auto tsavg2=serialize_loop(tsavg);
     TS_ASSERT(is_equal(tsts,tsts2));
+
+    timeseries::accumulate_ts<decltype(ts),decltype(ta) > tsacc(ts,ta);
+    auto tsacc2=serialize_loop(tsacc);
+    TS_ASSERT(is_equal(tsacc,tsacc2));
+
+
+    timeseries::periodic_ts<decltype(ta)> tspp(vector<double>{1.0,10.0,2.0,3.0},deltahours(1),utc.time(2016,1,1),ta);
+    auto tspp2=serialize_loop(tspp);
+    TS_ASSERT(is_equal(tspp,tspp2));
+
+    timeseries::glacier_melt_ts<decltype(ts)> tsgm(ts,ts,1000.0,6.2);
+    auto tsgm2=serialize_loop(tsgm);
+    TS_ASSERT(is_equal(tsgm,tsgm2));
+
+    auto c = ts+ts*2.0+(1.0 + tsp)*tsavg;
+    auto c2 = serialize_loop(c);
+    TS_ASSERT(is_equal(c,c2));
 }

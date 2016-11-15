@@ -479,7 +479,7 @@ namespace shyft {
 			*
 			*/
 			struct periodic_ts : ipoint_ts {
-				typedef shyft::timeseries::periodic_ts<profile_description, gta_t> pts_t;
+				typedef shyft::timeseries::periodic_ts<gta_t> pts_t;
 				pts_t ts;
 
 				periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}

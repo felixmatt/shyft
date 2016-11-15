@@ -468,6 +468,7 @@ namespace shyft{
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
+            accumulate_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){} // support default construct
 			accumulate_ts(const TS&ts, const TA& ta)
 				:ta(ta), ts(ts)
 				, fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE) {
@@ -476,6 +477,7 @@ namespace shyft{
 			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
 			size_t size() const { return ta.size(); }
 			size_t index_of(utctime t) const { return ta.index_of(t); }
+			utcperiod total_period()const {return ta.total_period();}
 			//--
 			double value(size_t i) const {
 				if (i >= ta.size())
@@ -605,7 +607,7 @@ namespace shyft{
 		 * - either the instant value of a periodic profile
 		 * - or the average interpolated between two values of the periodic profile
 		 */
-		template<class PD, class TA>
+		template<class TA>
 		struct periodic_ts {
 			TA ta;
 			profile_accessor<TA> pa;
@@ -614,6 +616,7 @@ namespace shyft{
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
+            template <class PD>
 			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
 				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
@@ -624,6 +627,7 @@ namespace shyft{
 			periodic_ts() {}
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }
+            utcperiod total_period() const {return ta.total_period();}
 			size_t index_of(utctime t) const { return ta.index_of(t); }
 			double value(size_t i) const { return pa.value(i); }
 			std::vector<double> values() const {
@@ -676,6 +680,7 @@ namespace shyft{
 			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
 			size_t size() const { return time_axis().size(); }
 			size_t index_of(utctime t) const { return time_axis().index_of(t); }
+			utcperiod total_period() const {return time_axis().total_period();}
 			//--
 			double value(size_t i) const {
 				if (i >= time_axis().size())
@@ -712,6 +717,7 @@ namespace shyft{
             A lhs;
             B rhs;
             TA ta;
+            bin_op(){}
             point_interpretation_policy fx_policy;
             void deferred_bind() const {
                 if(ta.size()==0) {
@@ -753,6 +759,10 @@ namespace shyft{
                 if(isfinite(v1)) return 0.5*(v0 + v1);
                 return v0;
             }
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
         };
 
         /** specialize for double bin_op ts */
@@ -764,6 +774,7 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
+            bin_op(){}
             void deferred_bind() const {
                 if(ta.size()==0) {
                     ((bin_op*)this)->ta=d_ref(rhs).time_axis();
@@ -787,6 +798,10 @@ namespace shyft{
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
             double value(size_t i) const {return op(lhs,d_ref(rhs).value(i));}
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
         };
 
         /** specialize for ts bin_op double */
@@ -798,6 +813,7 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
+            bin_op(){}
             void deferred_bind() const {
                 if(ta.size()==0) {
                     ((bin_op*)this)->ta=d_ref(lhs).time_axis();
@@ -820,6 +836,10 @@ namespace shyft{
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
         };
 
 
