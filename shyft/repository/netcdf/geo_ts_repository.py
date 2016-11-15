@@ -90,21 +90,27 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                     times = dset.groups[tpath[0]].variables[tpath[1]][:]
                     imin = times.searchsorted(period.start, side='left')
                     imax = times.searchsorted(period.end, side='right')
+
                     if imin >= imax:
                         #policy test goes here: then either
                         if self.raise_if_no_data:
                             raise RuntimeError("No data found for period interval!")
                         # or just empty values
-                        tseries['values'] = np.array([np.nan, np.nan], dtype=np.float32) #our best guess?
+                        tseries['values'] = np.array([np.nan, np.nan], dtype=np.float32)  # our best guess?
                         tseries['time'] = [period.start, period.end]
                     # Get the indices of the valid period
                     else:
+                        if times[imin] > period.start and imin > 0:
+                            imin -= 1  # requirement! data should cover requested period
+                        if times[imax] < period.end and imax + 1 < len(times):
+                            imax += 1  # requirement! data should cover requested period
+
                         tseries['values'] = dset.groups[vpath[0]].variables[vpath[1]][imin:imax]
                         tseries['time'] = times[imin:imax].astype(np.long).tolist()
                     coords = []
                     for loc in station['location'].split(","):
                         grname, axis = loc.split(".")
-                        coords.append(float(getattr(dset.groups[grname.split('/')[1]], axis))) #enforce double type to coord
+                        coords.append(float(getattr(dset.groups[grname.split('/')[1]], axis)))  # enforce double type to coord
                     tseries['location'] = tuple(coords)
                     stations_ts.append(tseries)
         print(len(stations_ts), input_source, 'series found.')

@@ -71,7 +71,7 @@ namespace shyft {
                 if( r < n ) return r;
                 return std::string::npos;
             }
-            size_t open_range_index_of( utctime tx ) const {return n > 0 && ( tx >= t + utctimespan( n * dt ) ) ? n - 1 : index_of( tx );}
+            size_t open_range_index_of( utctime tx, size_t ix_hint=std::string::npos ) const {return n > 0 && ( tx >= t + utctimespan( n * dt ) ) ? n - 1 : index_of( tx );}
             static fixed_dt full_range() {return fixed_dt( min_utctime, max_utctime, 2 );}  //Hmm.
             static fixed_dt null_range() {return fixed_dt( 0, 0, 0 );}
         };
@@ -134,7 +134,7 @@ namespace shyft {
                        ( size_t )( ( tx - t ) / dt ) :
                        ( size_t ) cal->diff_units( t, tx, dt );
             }
-            size_t open_range_index_of( utctime tx ) const {return tx >= total_period().end && n > 0 ? n - 1 : index_of( tx );}
+            size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {return tx >= total_period().end && n > 0 ? n - 1 : index_of( tx );}
 
         };
 
@@ -225,7 +225,7 @@ namespace shyft {
                 auto r = lower_bound( t.cbegin(), t.cend(), tx,[]( utctime pt, utctime val ) { return pt <= val; } );
                 return static_cast<size_t>( r - t.cbegin() ) - 1;
             }
-            size_t open_range_index_of( utctime tx ) const {return size() > 0 && tx >= t_end ? size() - 1 : index_of( tx );}
+            size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {return size() > 0 && tx >= t_end ? size() - 1 : index_of( tx,ix_hint );}
 
             static point_dt null_range() {
                 return point_dt{};
@@ -266,7 +266,7 @@ namespace shyft {
             utcperiod period( size_t i ) const {switch( gt ) {default: case FIXED: return f.period( i ); case CALENDAR: return c.period( i ); case POINT: return p.period( i );}}
             utctime     time( size_t i ) const {switch( gt ) {default: case FIXED: return f.time( i ); case CALENDAR: return c.time( i ); case POINT: return p.time( i );}}
             size_t index_of( utctime t ) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t );}}
-            size_t open_range_index_of( utctime t ) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t );}}
+            size_t open_range_index_of( utctime t, size_t ix_hint = std::string::npos) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t,ix_hint );}}
 
         };
 
@@ -381,7 +381,7 @@ namespace shyft {
 
                 return string::npos;
             }
-            size_t open_range_index_of( utctime tx ) const {
+            size_t open_range_index_of( utctime tx , size_t ix_hint = std::string::npos) const {
                 return size() > 0 && tx >= total_period().end ? size() - 1 : index_of( tx, false );
             }
         };
@@ -472,8 +472,8 @@ namespace shyft {
                     return ix;// ok this is the closest period that matches
                 return string::npos;// no match to period,what so ever
             }
-            size_t open_range_index_of( utctime tx ) const {
-                return size() > 0 && tx >= total_period().end ? size() - 1 : index_of( tx, string::npos, false );
+            size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {
+                return size() > 0 && tx >= total_period().end ? size() - 1 : index_of( tx, ix_hint, false );
             }
 
             static period_list null_range() {

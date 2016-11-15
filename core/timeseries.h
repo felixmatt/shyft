@@ -1045,18 +1045,21 @@ namespace shyft{
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
+            bool linear_between_points;
           public:
             average_accessor(const S& source, const TA& time_axis)
-              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */ }
+              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), 
+                linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE){ /* Do nothing */ }
             average_accessor(std::shared_ptr<S> source,const TA& time_axis)// also support shared ptr. access
-              : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),source_ref(source) {}
+              : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
+                source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE) {}
 
             size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
 
             double value(const size_t i) const {
                 if(i == q_idx)
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-                q_value = average_value(source, time_axis.period(q_idx=i), last_idx,source.point_interpretation()==POINT_INSTANT_VALUE);
+                q_value = average_value(source, time_axis.period(q_idx=i), last_idx,linear_between_points);
                 return q_value;
             }
 
@@ -1180,7 +1183,22 @@ namespace shyft{
             double value(const size_t i) const { return _value; }
         };
 
-
+        template<>
+        inline size_t hint_based_search<point_ts<time_axis::fixed_dt>>(const point_ts<time_axis::fixed_dt>& source, const utcperiod& p, size_t i) {
+            return source.ta.open_range_index_of(p.start);
+        }
+        template<>
+        inline size_t hint_based_search<point_ts<time_axis::calendar_dt>>(const point_ts<time_axis::calendar_dt>& source, const utcperiod& p, size_t i) {
+            return source.ta.open_range_index_of(p.start);
+        }
+        template<>
+        inline size_t hint_based_search<point_ts<time_axis::point_dt>>(const point_ts<time_axis::point_dt>& source, const utcperiod& p, size_t i) {
+            return source.ta.open_range_index_of(p.start,i);
+        }
+        template<>
+        inline size_t hint_based_search<point_ts<time_axis::generic_dt>>(const point_ts<time_axis::generic_dt>& source, const utcperiod& p, size_t i) {
+            return source.ta.open_range_index_of(p.start,i);
+        }
         /** \brief Discrete l2 norm of input time series treated as a vector: (sqrt(sum(x_i)))
          *
          * \note only used for debug/printout during calibration

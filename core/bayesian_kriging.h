@@ -335,10 +335,10 @@ namespace shyft {
 	                    }
 	                    ++idx;
 	                }
-	                if (valid_inds != prev_valid_inds) {
+	                if (valid_inds != prev_valid_inds || valid_inds.size()==0) {
 	                    if (valid_inds.size() == 0) {
-	                        std::cout << "period("<< t_step <<"| " << num_timesteps << ") = " << time_axis.period(t_step) << std::endl;
-	                        throw std::runtime_error("No valid sources for time period, giving up.");
+	                        //std::cout << "period("<< t_step <<"| " << num_timesteps << ") = " << time_axis.period(t_step) << std::endl;
+	                        throw std::runtime_error(std::string("bayesian kriging temperature: No valid sources for time period, giving up.") + calendar().to_string(time_axis.period(t_step)));
 	                    }
 	                    if (valid_inds.size() == num_sources) {
 	                        // Use full operators

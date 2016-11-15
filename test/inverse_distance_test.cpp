@@ -372,50 +372,62 @@ void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
 	double expected_v = (v1 + v2) / (w1 + w2);
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
-
+#include "api/api.h"
+#include "api/timeseries.h"
 void inverse_distance_test::test_performance() {
-	//
-	// Arrange
-	//
-	utctime Tstart = calendar().time(2000, 1, 1);
-	utctimespan dt = 3600L;
-	#ifdef _DEBUG
-	int n = 4;// just speed up test.
-	#else
-	int n = 24 * 36; // number of timesteps
-	#endif
+    using namespace shyft;
+    //
+    // Arrange
+    //
+    utctime Tstart = calendar().time(2000, 1, 1);
+    utctimespan dt = 3600L;
+#ifdef _DEBUG
+    int n = 4;// just speed up test.
+#else
+    int n = 24 * 365; // number of timesteps
+#endif
+    int n_core = 1;
+    if (getenv("SHYFT_NCORE")) {
+        sscanf(getenv("SHYFT_NCORE"), "%d", &n_core);
+    }
+    const int n_xy = 20; // number for xy-squares for sources
+    const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
+    const int ny = 3 * n_xy;
+    const int s_nx = n_xy;
+    const int s_ny = n_xy;
+    const int n_sources = s_nx * s_ny;
+    double s_dxy = 3 * 1000; // arome typical 3 km.
+    TimeAxis ta(Tstart, dt, n);
+    api::gta_t gta(ta);
+    api::a_region_environment re;
+    std::vector<double> v(n, 0.0);
+    for (int i = 0;i < s_nx;++i) {
+        for (int j = 0;j < s_ny;++j) {
+            geo_point p(s_dxy*i, s_dxy*j, (i + j)*500.0 / (s_nx + s_ny));
+            for (int t = 0;t < n;++t) v[t] = 10.0 - p.x*0.1 / 1000.0 - 0.6 / 100.0*p.z;
+            re.temperature->emplace_back(p, api::apoint_ts(gta, v, POINT_AVERAGE_VALUE));
+        }
+    }
+    vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
+    Parameter p(s_dxy * 2, min(4, n_sources / 2)); // for practical purposes, 8 neighbours or less.
+    typedef shyft::timeseries::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
 
-	const int n_xy = 3; // number for xy-squares for sources
-	const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
-	const int ny = 3 * n_xy;
-	const int s_nx = n_xy;
-	const int s_ny = n_xy;
-	const int n_sources = s_nx * s_ny;
-	double s_dxy = 3 * 1000; // arome typical 3 km.
-	TimeAxis ta(Tstart, dt, n); // hour, 10 steps
-	vector<Source> s(move(Source::GenerateTestSourceGrid(ta, s_nx, s_ny, -0.5 * 1000, -0.5 * 1000, s_dxy)));
-	vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
-	Parameter p(s_dxy * 2, min(8, n_sources / 2)); // for practical purposes, 8 neighbours or less.
+    typedef idw_compliant_geo_point_ts<api::TemperatureSource, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 
-	//
-	// Act
-	//
-	const clock_t start = clock();
+    typedef idw::temperature_model  <idw_compliant_temperature_gts_t, MCell, Parameter, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+    const clock_t start = clock();
+    //idw::temperature_gradient_scale_computer
+    run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>( ta, *re.temperature, p, d,
+        [](MCell& d, size_t ix, double v) {; }, n_core);
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
-		[](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
-	const clock_t total = clock() - start;
-	if(getenv("SHYFT_VERBOSE")) {
+    const clock_t total = clock() - start;
+    if (getenv("SHYFT_VERBOSE")) {
         cout << "\nAlg. IDW2i:\n";
         double time = 1000 * double(total) / double(CLOCKS_PER_SEC);
-        cout << "Temperature interpolation took: " << time << " ms" << endl;
-        cout << "Each temperature timestep took: " << time / double(n) << " ms" << endl;
-	}
-	//
-	// Assert
-	//
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n](const MCell& d) {return d.set_count == n; }), nx*ny);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n](const MCell& d) {return d.v >= 0.0; }), nx*ny);
+        cout << "Temperature interpolation took: " << time << " ms, ncore= " << n_core << endl;
+        cout << "timesteps  " << n << endl;
+        cout << "sources " << n_xy << " x " << n_xy << ", dest grid " << nx << " x " << ny << endl;
+    }
 }
 
 static inline

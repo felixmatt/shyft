@@ -1,12 +1,12 @@
 import unittest
 import numpy as np
 from shyft.api import pt_gs_k
-from shyft.repository.service.gis_region_model_repository import \
-    (GridSpecification, get_grid_spec_from_catch_poly, RegionModelConfig, GisRegionModelRepository)
 
 try:
     
     from statkraft.ssa.environment import SMG_PREPROD as PREPROD
+    from shyft.repository.service.gis_region_model_repository import \
+    (GridSpecification, get_grid_spec_from_catch_poly, RegionModelConfig, GisRegionModelRepository)
 
     def import_check():
         return PREPROD  # just to silence the module unused

@@ -274,35 +274,35 @@ namespace shyft {
 				template <typename P>
 				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()), gradient_by_equation(p.gradient_by_equation) { pt.reserve(p.max_members); }
 				template<typename T, typename S> void add(const S &s, T tx) {
-					pt.emplace_back(s.mid_point(), s.value(tx));
+                    pt.emplace_back(s.mid_point(), s.value(tx));
 				}
 				double compute() const {
 					using namespace arma;
-					if (gradient_by_equation && pt.size() > 3) { // try with full gradient approach
-						try {
-							vec temperature_gradient;
-							if (solve(temperature_gradient, p_mat(pt[0].point, pt[1].point, pt[2].point, pt[3].point), dt_vec(pt[0].temperature, pt[1].temperature, pt[2].temperature, pt[3].temperature), solve_opts::no_approx))
-								return as_scalar(temperature_gradient(2));
-						} catch (...) { // singular matrix, fallback to use second strategy
-						}
-					}
-					if (pt.size() > 1) {
-						size_t n = pt.size();
-						size_t mx_i = 0; size_t mn_i = 0;
-						for (size_t i = 0; i < n; ++i) {
-							double h = pt[i].point.z;
-							if (h < pt[mn_i].point.z)mn_i = i;
-							else if (h > pt[mx_i].point.z)mx_i = i;
-						}
-						double mi_mx_dz = pt[mx_i].point.z - pt[mn_i].point.z;
-						const double minimum_z_distance = 50.0;
-						if (mi_mx_dz > minimum_z_distance) {
-							return (pt[mx_i].temperature - pt[mn_i].temperature) / (mi_mx_dz);
-						}
-						return default_gradient;
-					} else {
-						return default_gradient;
-					}
+                    const double minimum_z_distance = 50.0;
+                    size_t n = pt.size();
+                    if (gradient_by_equation && n > 3) { // try with full gradient approach
+                        try {
+                            vec temperature_gradient;
+                            if (solve(temperature_gradient, p_mat(pt[0].point, pt[1].point, pt[2].point, pt[3].point), dt_vec(pt[0].temperature, pt[1].temperature, pt[2].temperature, pt[3].temperature), solve_opts::no_approx))
+                                return as_scalar(temperature_gradient(2));
+                        } catch (...) { // singular matrix, fallback to use second strategy
+                        }
+                    }
+                    if (n > 1) {
+                        size_t mx_i = 0; size_t mn_i = 0;
+                        for (size_t i = 0; i < n; ++i) {
+                            double h = pt[i].point.z;
+                            if (h < pt[mn_i].point.z)mn_i = i;
+                            else if (h > pt[mx_i].point.z)mx_i = i;
+                        }
+                        double mi_mx_dz = pt[mx_i].point.z - pt[mn_i].point.z;
+
+                        return mi_mx_dz > minimum_z_distance ?
+                            (pt[mx_i].temperature - pt[mn_i].temperature) / mi_mx_dz
+                            : default_gradient;
+                    } else {
+                        return default_gradient;
+                    }
 				}
 				void clear() { pt.clear(); }
 			private:
@@ -483,37 +483,42 @@ namespace shyft {
 			*
 			*/
 			template<typename IDWModel, typename IDWModelSource, typename ApiSource, typename P, typename D, typename ResultSetter, typename TimeAxis>
-			void run_interpolation(const TimeAxis &ta, ApiSource const & api_sources, const P& parameters, D &cells, ResultSetter&& result_setter) {
+			void run_interpolation(const TimeAxis &ta, ApiSource const & api_sources, const P& parameters, D &cells, ResultSetter&& result_setter,int ncore=-1) {
 				using namespace std;
 				/// 1. make a vector of ts-accessors for the sources. Notice that this vector needs to be modified, since the accessor 'remembers'
 				///    the last position. It is essential for performance, -but again-, then each thread needs it's own copy of the sources.
 				///    Since the accessors just have a const *reference* to the underlying TS; there is no memory involved, so copy is no problem.
 
 				vector<IDWModelSource> src; src.reserve(api_sources.size());
-				for_each(begin(api_sources), end(api_sources), [&src, &ta](typename  ApiSource::value_type const & s) { src.emplace_back(s, ta); });
-
+                for (auto& s : api_sources) src.emplace_back(s, ta);
 				idw_timeaxis<TimeAxis> idw_ta(ta);
-				/// 2. Create a set of futures, for the threads that we want to run
-				vector<future<void>> calcs;
-				size_t n_cells = distance(begin(cells), end(cells));
 				///    - and figure out a suitable ncore number. Using single cpu 4..8 core shows we can have more threads than cores, and gain speed.
-				size_t ncore = thread::hardware_concurrency() * 4;  /// 4 found to be ok for 1 cpu 4..8 cores(subject to change later)
-				if (ncore == 0) ncore = 4;//in case of not available, default to 4,
-				size_t thread_cell_count = 1 + n_cells / ncore;
-				auto cells_iterator = begin(cells);
-				for (size_t i = 0; i < n_cells;) {
-					size_t n = thread_cell_count;
-					if (i + n > n_cells) n = n_cells - i;// Figure out a cell-partition to compute
-					calcs.emplace_back( /// spawn a thread to run IDW on this part of the cells, using *all* sources (later we could speculate in sources needed)
-						async(launch::async, [src, cells_iterator, &idw_ta, &parameters, &result_setter, n]() { /// capture src by value, we *want* a copy of that..
-						run_interpolation<IDWModel>(begin(src), end(src), cells_iterator, cells_iterator + n, idw_ta, parameters, result_setter);
-					})
-					);
-					cells_iterator = cells_iterator + n;
-					i = i + n;
-				}
-				///3. wait for the IDW computation threads to end.
-				for_each(begin(calcs), end(calcs), [](std::future<void>& f) { f.get(); });
+                if (ncore < 0) {
+                    ncore = (int) thread::hardware_concurrency();//in case of not available, default to 4,
+                    if (ncore == 0) ncore = 4;
+                }
+                if (ncore < 2) {
+                    run_interpolation<IDWModel>(begin(src), end(src), begin(cells), end(cells), idw_ta, parameters, result_setter);
+                } else {
+                    /// 2. Create a set of futures, for the threads that we want to run
+                    vector<future<void>> calcs;
+                    size_t n_cells = distance(begin(cells), end(cells));
+                    size_t thread_cell_count = 1 + n_cells / ncore;
+                    auto cells_iterator = begin(cells);
+                    for (size_t i = 0; i < n_cells;) {
+                        size_t n = thread_cell_count;
+                        if (i + n > n_cells) n = n_cells - i;// Figure out a cell-partition to compute
+                        calcs.emplace_back( /// spawn a thread to run IDW on this part of the cells, using *all* sources (later we could speculate in sources needed)
+                            async(launch::async, [src, cells_iterator, &idw_ta, &parameters, &result_setter, n]() { /// capture src by value, we *want* a copy of that..
+                            run_interpolation<IDWModel>(begin(src), end(src), cells_iterator, cells_iterator + n, idw_ta, parameters, result_setter);
+                        })
+                        );
+                        cells_iterator = cells_iterator + n;
+                        i = i + n;
+                    }
+                    ///3. wait for the IDW computation threads to end.
+                    for (auto&f : calcs) f.get();
+                }
 			}
 		} // namespace  inverse_distance
 	} // Namespace core
