@@ -420,7 +420,7 @@ namespace shyft{
             const TA& time_axis() const {return ta;}
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
-
+            average_ts(){} // allow default construct
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts)
             ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE

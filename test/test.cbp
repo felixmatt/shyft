@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="timeseries_test test_ts_ref" />
+				<Option parameters="timeseries_test test_serialization" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test test_ts_ref" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  timeseries_test test_serialization" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

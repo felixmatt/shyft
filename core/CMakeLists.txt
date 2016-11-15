@@ -1,5 +1,4 @@
 # CMake file for compiling the C++ core library
-
 # library sources
 FILE(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 FILE(GLOB cpps RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
@@ -40,6 +39,8 @@ message(STATUS "Generating Makefile for the SHyFT static library...")
 
 
 add_library(shyftcore STATIC ${SOURCES})
+# target_precompiled_header(shyftcore core_pch.h)
+
 set_target_properties(shyftcore PROPERTIES OUTPUT_NAME shyftcore)
 if (MSVC)
   set_target_properties(shyftcore PROPERTIES PREFIX lib)

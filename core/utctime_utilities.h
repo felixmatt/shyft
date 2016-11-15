@@ -104,13 +104,12 @@ namespace shyft {
              * first time applied was 1916, then 1943-1945, then 1959-1965, then 1980-to 1996,
              * where eu rules was introduced.
              */
-            class tz_table {
+            struct tz_table {
                 int start_year;
                 string tz_name;
                 vector<utcperiod> dst;
                 vector<utctimespan> dt;
 
-              public:
                 /**\brief construct a tz_table using a information from provided Tz adapter
                  *\tparam Tz a type that provids dst_start(year),dst_end(year), dst_offset(year)
                  *\param tz const ref to provide tz information that will be used to construct a table driven interpretation
@@ -145,7 +144,7 @@ namespace shyft {
             struct tz_info<tz_table> {
                 utctimespan base_tz;
                 tz_table tz;
-                tz_info(utctimespan base_tz):base_tz(base_tz),tz(base_tz) {}
+                tz_info(utctimespan base_tz=0):base_tz(base_tz),tz(base_tz) {}
                 tz_info(utctimespan base_tz,const tz_table&tz):base_tz(base_tz),tz(tz) {}
                 string name() const {return tz.name();}
                 utctimespan base_offset() const {return base_tz;}

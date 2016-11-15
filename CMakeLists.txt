@@ -17,6 +17,10 @@
 
 
 cmake_minimum_required(VERSION 2.8.7)
+
+#list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/CMakePCHCompiler")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 project(shyft)
 
 # Get the full version for SHyFT
@@ -45,7 +49,7 @@ endif()
 if(DEFINED ENV{SHYFT_DEPENDENCIES_DIR})
   set(SHYFT_DEPENDENCIES_DIR $ENV{SHYFT_DEPENDENCIES_DIR})
 else()
-  set(SHYFT_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/shyft-dependencies")
+  set(SHYFT_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/..")
 endif()
 # Our code requires an absolute directory for the dependencies
 get_filename_component(SHYFT_DEPENDENCIES ${SHYFT_DEPENDENCIES_DIR} ABSOLUTE)
@@ -87,7 +91,7 @@ set(CXXTEST_TARBALL ${CXXTEST_PREFIX}-${CXXTEST_VERSION}.tar.gz)
 set(CXXTEST_URL http://sourceforge.net/projects/cxxtest/files/cxxtest/${CXXTEST_VERSION}/${CXXTEST_TARBALL}/download)
 
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/DownloadAndExtractTarball.cmake")
 
 message(STATUS "Downloading dependencies.  This may take a while...")
