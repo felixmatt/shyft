@@ -158,7 +158,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         if not path.isfile(filename):
             if '*' in filename:
                 filename = self._get_files(utc_period.start, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
-                print(filename)
             else:
                 raise AromeDataRepositoryError("File '{}' not found".format(filename))
         with Dataset(filename) as dataset:
@@ -190,7 +189,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
         filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
-        print(filename)
         with Dataset(filename) as dataset:
             return self._get_data_from_dataset(dataset, input_source_types, utc_period,
                                                geo_location_criteria)
@@ -362,7 +360,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         idx_min = np.searchsorted(time, utc_period.start, side='left')
         idx_max = np.searchsorted(time, utc_period.end, side='right')
-
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
         x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
@@ -384,7 +381,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
                     #print(pure_arr.fill_value)
                     pure_arr = pure_arr.filled(np.nan)
-                print(k,pure_arr.shape)
                 raw_data[self._arome_shyft_map[k]] = pure_arr, k
                 #raw_data[self._arome_shyft_map[k]] = np.array(data[data_slice], dtype='d'), k
 
