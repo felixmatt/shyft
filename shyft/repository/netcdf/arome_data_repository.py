@@ -390,7 +390,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             assert np.linalg.norm(y - _y) < 1.0e-10
         elif any([nm in dataset.variables.keys() for nm in ['altitude', 'surface_geopotential']]):
             var_nm = ['altitude', 'surface_geopotential'][[nm in dataset.variables.keys() for nm in ['altitude', 'surface_geopotential']].index(True)]
-            print(var_nm)
             data = dataset.variables[var_nm]
             dims = data.dimensions
             data_slice = len(data.dimensions)*[slice(None)]
@@ -401,7 +400,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             z = z.reshape(shp[-2], shp[-1])
             if var_nm == 'surface_geopotential':
                 z /= self._G
-            print(x.shape,z.shape)
         else:
             raise AromeDataRepositoryError("No elevations found in dataset"
                                            ", and no elevation file given.")
