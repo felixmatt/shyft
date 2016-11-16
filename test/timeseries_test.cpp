@@ -1114,115 +1114,6 @@ namespace shyft {
     namespace timeseries {
         using namespace std;
 
-        template <class TS>
-        struct ref_ts {
-            typedef typename TS::ta_t ta_t;
-            string ref;///< reference to time-series supporting storage
-            fx_policy_t fx_policy;
-            shared_ptr<TS> ts;
-            TS& bts() {
-                if(ts==nullptr)
-                    throw runtime_error("unbound access to ref_ts attempted");
-                return *ts;
-            }
-            const TS& bts() const {
-                if(ts==nullptr)
-                    throw runtime_error("unbound access to ref_ts attempted");
-                return *ts;
-            }
-            point_interpretation_policy point_interpretation() const {
-                return bts().point_interpreation();
-            }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
-                bts().set_point_interpretation(point_interpretation);
-            }
-
-            ref_ts(){}
-            ta_t time_axis() const {return bts().time_axis();}
-            /**\brief the function value f(t) at time t, fx_policy taken into account */
-            double operator()(utctime t) const {
-                return bts()(t);
-            }
-
-            /**\brief value of the i'th interval fx_policy taken into account,
-             * Hmm. is that policy ever useful in this context ?
-             */
-            double value(size_t i) const  {
-                return bts().value(i);
-            }
-            // BW compatiblity ?
-            size_t size() const { return bts().size();}
-            size_t index_of(utctime t) const {return bts().index_of(t);}
-            utcperiod total_period() const {return bts().total_period();}
-            utctime time(size_t i ) const {return bts().time(i);}
-
-            // to help average_value method for now!
-            point get(size_t i) const {return bts().get(i);}
-
-            // Additional write/modify interface to operate directly on the values in the time-series
-            void set(size_t i,double x) {bts().set(i,x);}
-            void add(size_t i, double value) { bts().add(i,value); }
-            void add(const point_ts<ta_t>& other) {
-                bts().add(other);
-            }
-            void add_scale(const point_ts<ta_t>&other,double scale) {
-                bts().add_scale(other,scale);
-            }
-            void fill(double value) { bts().fill(value); }
-            void fill_range(double value, int start_step, int n_steps) {
-                bts().fill_range(value,start_step,n_steps);
-            }
- 			void scale_by(double value) {
- 			    bts().scale_by(value);
-            }
-
-        };
-        template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
-        template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
-
-        /**bind ref_ts
-         * default impl. does nothing (nothing to bind)
-         */
-        template <class Ts, class Fbind>
-        void bind_ref_ts(Ts& ts,Fbind && f_bind ) {
-        }
-
-        template<class Ts,class Fbind>
-        void bind_ref_ts( ref_ts<Ts>& ts,Fbind&& f_bind) {
-            f_bind(ts);
-        }
-        template<class A, class B, class O, class TA,class Fbind>
-        void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
-            bind_ref_ts(d_ref(ts.lhs),f_bind);
-            bind_ref_ts(d_ref(ts.rhs),f_bind);
-        }
-        template<class B, class O, class TA,class Fbind>
-        void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
-            //bind_ref_ts(d_ref(ts.lhs),f_bind);
-            bind_ref_ts(d_ref(ts.rhs),f_bind);
-        }
-        template<class A, class O, class TA,class Fbind>
-        void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
-            bind_ref_ts(d_ref(ts.lhs),f_bind);
-            //bind_ref_ts(d_ref(ts.rhs),f_bind);
-        }
-        template <class Ts,class Fbind>
-        void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
-            bind_ref_ts(d_ref(time_shift.ts,f_bind));
-        }
-        template <class Ts,class Ta,class Fbind>
-        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
-            bind_ref_ts(d_ref(avg.ts),f_bind);
-        }
-        template <class Ts,class Ta,class Fbind>
-        void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
-            bind_ref_ts(d_ref(acc.ts),f_bind);
-        }
-        template <class TS_A,class TS_B,class Fbind>
-        void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
-            bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
-            bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
-        }
     }
 }
 
@@ -1271,6 +1162,22 @@ void timeseries_test::test_ts_ref() {
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/serialization/export.hpp>
+
+//
+// needed for all shyft::api::ipoint_ts
+// ptr serialize/deserialize to work
+BOOST_CLASS_EXPORT(shyft::api::gpoint_ts);
+BOOST_CLASS_EXPORT(shyft::api::aref_ts);
+BOOST_CLASS_EXPORT(shyft::api::average_ts);
+BOOST_CLASS_EXPORT(shyft::api::accumulate_ts);
+BOOST_CLASS_EXPORT(shyft::api::periodic_ts);
+BOOST_CLASS_EXPORT(shyft::api::time_shift_ts);
+BOOST_CLASS_EXPORT(shyft::api::abin_op_scalar_ts);
+BOOST_CLASS_EXPORT(shyft::api::abin_op_ts_scalar);
+BOOST_CLASS_EXPORT(shyft::api::abin_op_ts);
+
+
 
 namespace boost {
     namespace serialization{
@@ -1352,7 +1259,7 @@ namespace boost {
         }
 
 
-        /* time-series serialization */
+        /* core time-series serialization */
 
         template <class Archive, class TA>
         void serialize(Archive & ar, shyft::timeseries::point_ts<TA> &o,const unsigned int version ) {
@@ -1362,6 +1269,16 @@ namespace boost {
             & make_nvp("values",o.v)
             ;
         }
+
+        template <class Archive, class TS>
+        void serialize(Archive & ar, shyft::timeseries::ref_ts<TS> &o,const unsigned int version ) {
+            ar
+            & make_nvp("ref",o.ref)
+            & make_nvp("fx_policy",o.fx_policy)
+            & make_nvp("ts",o.ts)
+            ;
+        }
+
 
         template <class Archive, class Ts>
         void serialize(Archive & ar, shyft::timeseries::time_shift_ts<Ts> &o,const unsigned int version ) {
@@ -1437,6 +1354,117 @@ namespace boost {
             & make_nvp("rhs",o.rhs)
             & make_nvp("ta",o.ta)
             & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        /* api time-series serialization (dyn-dispatch) */
+        template <class Archive>
+        void serialize(Archive & ar,shyft::api::ipoint_ts&, const unsigned ) {
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::gpoint_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::gpoint_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("rep",o.rep)
+            ;
+        }
+
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::aref_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::aref_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("rep",o.rep)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::average_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::average_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("ta",o.ta)
+            & make_nvp("ts",o.ts)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::accumulate_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::accumulate_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("ta",o.ta)
+            & make_nvp("ts",o.ts)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::time_shift_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::time_shift_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("ta",o.ta)
+            & make_nvp("ts",o.ts)
+            & make_nvp("dt",o.dt)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::periodic_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::periodic_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("ts",o.ts)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::abin_op_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::abin_op_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("lhs",o.lhs)
+            & make_nvp("op",o.op)
+            & make_nvp("rhs",o.rhs)
+            & make_nvp("ta", o.ta)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::abin_op_scalar_ts &o,const unsigned int version ) {
+            void_cast_register<shyft::api::abin_op_scalar_ts,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("lhs",o.lhs)
+            & make_nvp("op",o.op)
+            & make_nvp("rhs",o.rhs)
+            & make_nvp("ta", o.ta)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::abin_op_ts_scalar &o,const unsigned int version ) {
+            void_cast_register<shyft::api::abin_op_ts_scalar,shyft::api::ipoint_ts>();
+            base_object<shyft::api::ipoint_ts>(o);
+            ar
+            & make_nvp("lhs",o.lhs)
+            & make_nvp("op",o.op)
+            & make_nvp("rhs",o.rhs)
+            & make_nvp("ta", o.ta)
+            & make_nvp("fx_policy",o.fx_policy)
+            ;
+        }
+
+
+        template<class Archive>
+        void serialize(Archive & ar, shyft::api::apoint_ts &o,const unsigned int version ) {
+            ar
+            & make_nvp("ts",o.ts)
             ;
         }
     }
@@ -1577,7 +1605,47 @@ void timeseries_test::test_serialization() {
     auto tsgm2=serialize_loop(tsgm);
     TS_ASSERT(is_equal(tsgm,tsgm2));
 
-    auto c = ts+ts*2.0+(1.0 + tsp)*tsavg;
+    auto c = max(ts+ts*2.0,(1.0 + tsp)*tsavg);
     auto c2 = serialize_loop(c);
     TS_ASSERT(is_equal(c,c2));
+
+    //-- api time-series
+
+    api::gpoint_ts gts(tag,10.0);
+    auto gts2=serialize_loop(gts);
+    TS_ASSERT(is_equal(gts,gts2));
+
+    shared_ptr<api::ipoint_ts> igts=make_shared<api::gpoint_ts>(tag,2.5);
+    auto igts2 = serialize_loop(igts);
+    TS_ASSERT(is_equal(*igts,*igts2));
+
+    api::apoint_ts agts(tag,20.0);
+    auto agts2 = serialize_loop(agts);
+    TS_ASSERT(is_equal(agts,agts2));
+
+    api::average_ts gtsavg(tag,agts);
+    auto gtsavg2 = serialize_loop(gtsavg);
+    TS_ASSERT(is_equal(gtsavg,gtsavg2));
+
+    api::accumulate_ts gtsacc(tag,agts);
+    auto gtsacc2 = serialize_loop(gtsacc);
+    TS_ASSERT(is_equal(gtsacc,gtsacc2));
+
+    api::time_shift_ts atsts(igts,deltahours(24));
+    auto atsts2= serialize_loop(atsts);
+    TS_ASSERT(is_equal(atsts,atsts2));
+
+    api::periodic_ts apts(vector<double>{1.0,10.0,5.0,2.0},deltahours(1),tag);
+    auto apts2= serialize_loop(apts);
+    TS_ASSERT(is_equal(apts,apts2));
+
+    api::aref_ts arts("netcdf://file.nc");
+    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+    auto arts2=serialize_loop(arts);
+    TS_ASSERT_EQUALS(arts.rep.ref,arts2.rep.ref);
+    TS_ASSERT(is_equal(arts,arts2));
+
+    auto aexpr = (agts*2.0 + agts/4.0 + 12)/agts;
+    auto aexpr2 = serialize_loop(aexpr);
+    TS_ASSERT(is_equal(aexpr,aexpr2));
 }

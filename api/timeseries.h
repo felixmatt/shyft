@@ -63,7 +63,7 @@ namespace shyft {
              */
             struct ipoint_ts {
                 typedef gta_t ta_t;// time-axis type
-
+                ipoint_ts() {} // ease boost serialization
                 virtual ~ipoint_ts(){}
 
                 virtual point_interpretation_policy point_interpretation() const =0;
@@ -117,16 +117,15 @@ namespace shyft {
              *  an expression.
              *
              */
-            class apoint_ts {
+            struct apoint_ts {
                 /** a ref to the real implementation, could be a concrete point ts, or an expression */
                 std::shared_ptr<ipoint_ts> ts;// consider unique pointer instead,possibly public, to ease transparency in python
 
-               public:
-                   typedef gta_t ta_t;///< this is the generic time-axis type for apoint_ts, needed by timeseries namespace templates
-				   friend struct average_ts;
-				   friend struct time_shift_ts;
-				   friend struct accumulate_ts;
-				   friend struct aglacier_melt_ts;
+               typedef gta_t ta_t;///< this is the generic time-axis type for apoint_ts, needed by timeseries namespace templates
+               friend struct average_ts;
+               friend struct time_shift_ts;
+               friend struct accumulate_ts;
+               friend struct aglacier_melt_ts;
                 // constructors that we want to expose
                 // like
 
@@ -219,6 +218,7 @@ namespace shyft {
                 gpoint_ts(const gta_t& ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
 
                 // now for the gpoint_ts it self, constructors incl. move
+                gpoint_ts() {} // default for serialization conv
                 gpoint_ts(const gpoint_ts& c):rep(c.rep){}
                 gpoint_ts(gts_t&& c):rep(std::move(c)){}
                 gpoint_ts& operator=(const gpoint_ts&c) {
@@ -242,6 +242,48 @@ namespace shyft {
                 virtual double value(size_t i) const {return rep.value(i);}
                 virtual double value_at(utctime t) const {return rep(t);}
                 virtual std::vector<double> values() const {return rep.v;}
+                // implement some extra functions to manipulate the points
+                void set(size_t i, double x) {rep.set(i,x);}
+                void fill(double x) {rep.fill(x);}
+                void scale_by(double x) {rep.scale_by(x);}
+            };
+
+            struct aref_ts:ipoint_ts {
+                typedef shyft::timeseries::ref_ts<gts_t> ref_ts_t;
+                ref_ts_t rep;
+                // To create gpoint_ts, we use const ref, move ct wherever possible:
+                // note (we would normally use ct template here, but we are aiming at exposing to python)
+                //aref_ts(const gta_t&ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,fill_value,point_fx){}
+                //aref_ts(const gta_t&ta,const std::vector<double>& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,v,point_fx) {}
+                //aref_ts(gta_t&&ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),fill_value,point_fx){}
+                //aref_ts(gta_t&&ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),std::move(v),point_fx) {}
+                //aref_ts(const gta_t& ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
+                aref_ts(string sym_ref):rep(sym_ref) {}
+                // now for the aref_ts it self, constructors incl. move
+                aref_ts() {} // default for serialization conv
+                aref_ts(const aref_ts& c):rep(c.rep){}
+                aref_ts(aref_ts&& c):rep(std::move(c.rep)){}
+                aref_ts& operator=(const aref_ts&c) {
+                    if(this != &c)
+                        rep=c.rep;
+                    return *this;
+                }
+                aref_ts& operator=(aref_ts&& c) {
+                    rep=std::move(c.rep);
+                    return *this;
+                }
+
+                // implement ipoint_ts contract:
+                virtual point_interpretation_policy point_interpretation() const {return rep.point_interpretation();}
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {rep.set_point_interpretation(point_interpretation);}
+                virtual const gta_t& time_axis() const {return rep.time_axis();}
+                virtual utcperiod total_period() const {return rep.total_period();}
+                virtual size_t index_of(utctime t) const {return rep.index_of(t);}
+                virtual size_t size() const {return rep.size();}
+                virtual utctime time(size_t i) const {return rep.time(i);};
+                virtual double value(size_t i) const {return rep.value(i);}
+                virtual double value_at(utctime t) const {return rep(t);}
+                virtual std::vector<double> values() const {return rep.bts().v;}
                 // implement some extra functions to manipulate the points
                 void set(size_t i, double x) {rep.set(i,x);}
                 void fill(double x) {rep.fill(x);}
@@ -277,6 +319,7 @@ namespace shyft {
                 average_ts(const gta_t& ta,const std::shared_ptr<ipoint_ts> &ts ):ta(ta),ts(ts){}
                 average_ts(gta_t&& ta,const std::shared_ptr<ipoint_ts> &ts ):ta(std::move(ta)),ts(ts){}
                 // std copy ct and assign
+                average_ts(){}
                 average_ts(const average_ts &c):ta(c.ta),ts(c.ts) {}
                 average_ts(average_ts&&c):ta(std::move(ta)),ts(std::move(c.ts)) {}
                 average_ts& operator=(const average_ts&c) {
@@ -360,6 +403,7 @@ namespace shyft {
 				accumulate_ts(const gta_t& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(ta), ts(ts) {}
 				accumulate_ts(gta_t&& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(std::move(ta)), ts(ts) {}
 				// std copy ct and assign
+				accumulate_ts(){}
 				accumulate_ts(const accumulate_ts &c) :ta(c.ta), ts(c.ts) {}
 				accumulate_ts(accumulate_ts&&c) :ta(std::move(ta)), ts(std::move(c.ts)) {}
 				accumulate_ts& operator=(const accumulate_ts&c) {
@@ -496,7 +540,7 @@ namespace shyft {
 					ts = move(c.ts);
 					return *this;
 				}
-
+                periodic_ts(){}
 				// implement ipoint_ts contract
 				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
 				virtual void set_point_interpretation(point_interpretation_policy) { ; }
@@ -516,8 +560,9 @@ namespace shyft {
              *   E.g.: a+b
              *   The iop_t is used as the operation element of the abin_op_ts class
              */
-            typedef double (*iop_t)(double a,double b);
-
+            enum iop_t {
+                OP_NONE,OP_ADD,OP_SUB,OP_DIV,OP_MUL,OP_MIN,OP_MAX
+            };
 
             /** \brief The binary operation for type ts op ts
              *
@@ -544,7 +589,7 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
-
+                  abin_op_ts():op(iop_t::OP_NONE){}
                   abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
                       ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
@@ -603,7 +648,7 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
-
+                  abin_op_scalar_ts():op(iop_t::OP_NONE) {}
                   abin_op_scalar_ts(double lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
                       ta=rhs.time_axis();
@@ -644,14 +689,9 @@ namespace shyft {
                   size_t index_of(utctime t) const{return ta.index_of(t);};
                   size_t size() const {return ta.size();};
                   utctime time( size_t i) const {return ta.time(i);};
-                  double value_at(utctime t) const {return op(lhs,rhs(t));}
-                  double value(size_t i) const {return op(lhs,rhs.value(i));}
-                  std::vector<double> values() const {
-                      std::vector<double> r(rhs.values());
-                      for(auto& v:r)
-                        v=op(lhs,v);
-                      return r;
-                  }
+                  double value_at(utctime t) const ;
+                  double value(size_t i) const ;
+                  std::vector<double> values() const ;
 
             };
 
@@ -668,6 +708,7 @@ namespace shyft {
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
 
+                  abin_op_ts_scalar():op(iop_t::OP_NONE) {}
                   abin_op_ts_scalar(const apoint_ts &lhs,iop_t op,double rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
                       ta=lhs.time_axis();
@@ -708,14 +749,9 @@ namespace shyft {
                   size_t index_of(utctime t) const{return ta.index_of(t);};
                   size_t size() const {return ta.size();};
                   utctime time( size_t i) const {return ta.time(i);};
-                  double value_at(utctime t) const {return op(lhs(t),rhs);}
-                  double value(size_t i) const {return op(lhs.value(i),rhs);}
-                  std::vector<double> values() const {
-                      std::vector<double> r(lhs.values());
-                      for(auto& v:r)
-                        v=op(rhs,v);
-                      return r;
-                  }
+                  double value_at(utctime t) const;
+                  double value(size_t i) const;
+                  std::vector<double> values() const;
 
             };
 

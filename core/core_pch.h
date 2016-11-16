@@ -61,6 +61,8 @@ typedef boost::math::static_gcd_type static_gcd_type;
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/tools/minima.hpp>
+
+//-- serialization support
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/utility.hpp>
@@ -68,5 +70,7 @@ typedef boost::math::static_gcd_type static_gcd_type;
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 #include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/access.hpp>
 
 #include <armadillo>

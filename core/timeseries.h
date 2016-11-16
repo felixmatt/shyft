@@ -67,6 +67,10 @@ namespace shyft{
         template<typename T> struct is_shared_ptr {static const bool value=false;};
         template<typename T> struct is_shared_ptr<shared_ptr<T>> {static const bool value=true;};
 
+        /** is_ts<T> is a place holder to support specific dispatch for time-series types
+         * default is false
+         */
+        template<class T> struct is_ts {static const bool value=false;};
 
 
         /** \brief d_ref function to d_ref object or shared_ptr
@@ -699,6 +703,111 @@ namespace shyft{
 			}
 		};
 
+        /**\brief a symbolic reference ts
+         *
+         * A ref_ts is a time-series that have a ref, a uid, to some underlying
+         * time-series data store.
+         * It can be bound, or unbound.
+         * If it's bound, then it behaves like the underlying time-series ts class, typically
+         * a point_ts<ta> time-series, with a time-axis and some values associated.
+         * If it's unbound, then any attempt to use it will cause runtime_error exception
+         * to be thrown.
+         *
+         * The purpose of the ref_ts is to provide means of (unbound) time-series expressions
+         * to be transferred to a node, where the binding process can be performed, and the resulting
+         * values of the expression can be computed.
+         * The result can then be transferred back to the origin (client) for further processing/presentation.
+         *
+         * This allow for execution of ts-expressions that reduces data
+         *  to be executed at nodes close to data.
+         *
+         * Note that the mechanism is also useful, even for local evaluation of expressions, since it allow
+         * analysis and binding to happen before the final evaluation of the values of the expression.
+         *
+         */
+        template <class TS>
+        struct ref_ts {
+            typedef typename TS::ta_t ta_t;
+            string ref;///< reference to time-series supporting storage
+            fx_policy_t fx_policy;
+            shared_ptr<TS> ts;
+            TS& bts() {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            const TS& bts() const {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            point_interpretation_policy point_interpretation() const {
+                return bts().point_interpretation();
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                bts().set_point_interpretation(point_interpretation);
+            }
+            // std. ct/dt etc.
+            ref_ts(){}
+            ref_ts(const ref_ts &c):ref(c.ref),fx_policy(c.fx_policy),ts(c.ts) {}
+            ref_ts(ref_ts&&c):ref(std::move(c.ref)),fx_policy(c.fx_policy),ts(std::move(c.ts)) {}
+            ref_ts& operator=(const ref_ts& c) {
+                if(this != &c ) {
+                    ref=c.ref;
+                    fx_policy=c.fx_policy;
+                    ts=c.ts;
+                }
+                return *this;
+            }
+            ref_ts& operator=(ref_ts&& c) {
+                ref=std::move(c.ref);
+                fx_policy=c.fx_policy;
+                ts=std::move(c.ts);
+                return *this;
+            }
+
+            // useful constructors goes here:
+            ref_ts(string sym_ref):ref(sym_ref) {}
+            const ta_t& time_axis() const {return bts().time_axis();}
+            /**\brief the function value f(t) at time t, fx_policy taken into account */
+            double operator()(utctime t) const {
+                return bts()(t);
+            }
+
+            /**\brief value of the i'th interval fx_policy taken into account,
+             * Hmm. is that policy ever useful in this context ?
+             */
+            double value(size_t i) const  {
+                return bts().value(i);
+            }
+            // BW compatiblity ?
+            size_t size() const { return bts().size();}
+            size_t index_of(utctime t) const {return bts().index_of(t);}
+            utcperiod total_period() const {return bts().total_period();}
+            utctime time(size_t i ) const {return bts().time(i);}
+
+            // to help average_value method for now!
+            point get(size_t i) const {return bts().get(i);}
+
+            // Additional write/modify interface to operate directly on the values in the time-series
+            void set(size_t i,double x) {bts().set(i,x);}
+            void add(size_t i, double value) { bts().add(i,value); }
+            void add(const point_ts<ta_t>& other) {
+                bts().add(other);
+            }
+            void add_scale(const point_ts<ta_t>&other,double scale) {
+                bts().add_scale(other,scale);
+            }
+            void fill(double value) { bts().fill(value); }
+            void fill_range(double value, int start_step, int n_steps) {
+                bts().fill_range(value,start_step,n_steps);
+            }
+ 			void scale_by(double value) {
+ 			    bts().scale_by(value);
+            }
+
+        };
+
 
 
 
@@ -869,7 +978,6 @@ namespace shyft{
         /** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
          * otherwise the operators will interfere with other libraries doing the same.
          */
-        template<class T> struct is_ts {static const bool value=false;};
         template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
         template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
@@ -881,6 +989,9 @@ namespace shyft{
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
         template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+        template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
 
 
         /** time_shift function, to ease syntax and usability */
@@ -1518,5 +1629,49 @@ namespace shyft{
 				r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
 			return std::move(r);
 		}
+
+        /**bind ref_ts
+         * default impl. does nothing (nothing to bind)
+         */
+        template <class Ts, class Fbind>
+        void bind_ref_ts(Ts& ts,Fbind && f_bind ) {
+        }
+
+        template<class Ts,class Fbind>
+        void bind_ref_ts( ref_ts<Ts>& ts,Fbind&& f_bind) {
+            f_bind(ts);
+        }
+        template<class A, class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
+            //bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class A, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            //bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template <class Ts,class Fbind>
+        void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(time_shift.ts,f_bind));
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
+            bind_ref_ts(d_ref(avg.ts),f_bind);
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(acc.ts),f_bind);
+        }
+        template <class TS_A,class TS_B,class Fbind>
+        void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
+            bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
+        }
     } // timeseries
 } // shyft

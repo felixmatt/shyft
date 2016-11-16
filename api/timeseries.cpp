@@ -2,13 +2,18 @@
 #include <dlib/statistics.h>
 namespace shyft{
     namespace api {
-        static double iop_add(double a,double b) {return a + b;}
-        static double iop_sub(double a,double b) {return a - b;}
-        static double iop_div(double a,double b) {return a/b;}
-        static double iop_mul(double a,double b) {return a*b;}
-        static double iop_min(double a,double b) {return std::min(a,b);}
-        static double iop_max(double a,double b) {return std::max(a,b);}
-
+        static inline double do_op(double a,iop_t op,double b) {
+            switch(op) {
+            case iop_t::OP_ADD:return a+b;
+            case iop_t::OP_SUB:return a-b;
+            case iop_t::OP_DIV:return a/b;
+            case iop_t::OP_MUL:return a*b;
+            case iop_t::OP_MAX:return std::max(a,b);
+            case iop_t::OP_MIN:return std::min(a,b);
+            case iop_t::OP_NONE:break;// just fall to exception
+            }
+            throw std::runtime_error("unsupported shyft::api::iop_t");
+        }
        // add operators and functions to the apoint_ts class, of all variants that we want to expose
         apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
         apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
@@ -18,36 +23,36 @@ namespace shyft{
 
 		apoint_ts create_periodic_pattern_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) { return apoint_ts(make_shared<periodic_ts>(pattern, dt, pattern_t0, ta)); }
 
-        apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_add,rhs )); }
-        apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_add,rhs )); }
-        apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_add,rhs )); }
+        apoint_ts operator+(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_t::OP_ADD,rhs )); }
+        apoint_ts operator+(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_ADD,rhs )); }
+        apoint_ts operator+(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_ADD,rhs )); }
 
-        apoint_ts operator-(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_sub,rhs )); }
-        apoint_ts operator-(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_sub,rhs )); }
-        apoint_ts operator-(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_sub,rhs )); }
-        apoint_ts operator-(const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( -1.0,iop_mul,rhs )); }
+        apoint_ts operator-(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_t::OP_SUB,rhs )); }
+        apoint_ts operator-(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_SUB,rhs )); }
+        apoint_ts operator-(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_SUB,rhs )); }
+        apoint_ts operator-(const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( -1.0,iop_t::OP_MUL,rhs )); }
 
-        apoint_ts operator/(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_div,rhs )); }
-        apoint_ts operator/(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_div,rhs )); }
-        apoint_ts operator/(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_div,rhs )); }
+        apoint_ts operator/(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_t::OP_DIV,rhs )); }
+        apoint_ts operator/(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_DIV,rhs )); }
+        apoint_ts operator/(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_DIV,rhs )); }
 
-        apoint_ts operator*(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_mul,rhs )); }
-        apoint_ts operator*(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_mul,rhs )); }
-        apoint_ts operator*(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_mul,rhs )); }
+        apoint_ts operator*(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_t::OP_MUL,rhs )); }
+        apoint_ts operator*(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_MUL,rhs )); }
+        apoint_ts operator*(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_MUL,rhs )); }
 
 
-        apoint_ts max(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_max,rhs ));}
-        apoint_ts max(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_max,rhs ));}
-        apoint_ts max(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_max,rhs ));}
+        apoint_ts max(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts       >( lhs,iop_t::OP_MAX,rhs ));}
+        apoint_ts max(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_MAX,rhs ));}
+        apoint_ts max(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_MAX,rhs ));}
 
-        apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs,iop_min,rhs ));}
-        apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_min,rhs ));}
-        apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_min,rhs ));}
+        apoint_ts min(const apoint_ts& lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_ts>( lhs, iop_t::OP_MIN, rhs ));}
+        apoint_ts min(const apoint_ts& lhs,double           rhs) {return apoint_ts(std::make_shared<abin_op_ts_scalar>( lhs,iop_t::OP_MIN,rhs ));}
+        apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_MIN,rhs ));}
 
         double abin_op_ts::value_at(utctime t) const {
             if(!ta.total_period().contains(t))
                 return nan;
-            return op( lhs(t),rhs(t) );// this might cost a 2xbin-search if not the underlying ts have smart incremental search (at the cost of thread safety)
+            return do_op( lhs(t),op,rhs(t) );// this might cost a 2xbin-search if not the underlying ts have smart incremental search (at the cost of thread safety)
         }
 
         std::vector<double> abin_op_ts::values() const {
@@ -199,6 +204,24 @@ namespace shyft{
             //if(isfinite(v1)) return 0.5*(v0 + v1);
             //return v0;
         }
+        double abin_op_scalar_ts::value_at(utctime t) const {return do_op(lhs,op,rhs(t));}
+        double abin_op_scalar_ts::value(size_t i) const {return do_op(lhs,op,rhs.value(i));}
+        std::vector<double> abin_op_scalar_ts::values() const {
+          std::vector<double> r(rhs.values());
+          for(auto& v:r)
+            v=do_op(lhs,op,v);
+          return r;
+        }
+
+        double abin_op_ts_scalar::value_at(utctime t) const {return do_op(lhs(t),op,rhs);}
+        double abin_op_ts_scalar::value(size_t i) const {return do_op(lhs.value(i),op,rhs);}
+        std::vector<double> abin_op_ts_scalar::values() const {
+          std::vector<double> r(lhs.values());
+          for(auto& v:r)
+            v=do_op(rhs,op,v);
+          return r;
+        }
+
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
             return apoint_ts( std::make_shared<shyft::api::time_shift_ts>(ts,dt));
         }
