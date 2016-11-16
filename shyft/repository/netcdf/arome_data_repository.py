@@ -59,6 +59,8 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
     """
 
+    _G = 9.80665 #  WMO-defined gravity constant to calculate the height in metres from geopotential
+
     def __init__(self, epsg, directory, filename=None, bounding_box=None,
                  x_padding=5000.0, y_padding=5000.0, elevation_file=None, allow_subset=False):
         """
@@ -153,7 +155,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
         filename = self._filename
-
         if not path.isfile(filename):
             if '*' in filename:
                 filename = self._get_files(utc_period.start, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
@@ -359,7 +360,6 @@ class AromeDataRepository(interfaces.GeoTsRepository):
 
         idx_min = np.searchsorted(time, utc_period.start, side='left')
         idx_max = np.searchsorted(time, utc_period.end, side='right')
-
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
         x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
@@ -388,13 +388,20 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             _x, _y, z = self._read_elevation_file(self.elevation_file)
             assert np.linalg.norm(x - _x) < 1.0e-10  # x/y coordinates should match
             assert np.linalg.norm(y - _y) < 1.0e-10
-        elif "altitude" in dataset.variables.keys():
-            data = dataset.variables["altitude"]
+        elif any([nm in dataset.variables.keys() for nm in ['altitude', 'surface_geopotential']]):
+            var_nm = ['altitude', 'surface_geopotential'][[nm in dataset.variables.keys() for nm in ['altitude', 'surface_geopotential']].index(True)]
+            print(var_nm)
+            data = dataset.variables[var_nm]
             dims = data.dimensions
             data_slice = len(data.dimensions)*[slice(None)]
             data_slice[dims.index("x")] = m_x
             data_slice[dims.index("y")] = m_y
             z = data[data_slice]
+            shp = z.shape
+            z = z.reshape(shp[-2], shp[-1])
+            if var_nm == 'surface_geopotential':
+                z /= self._G
+            print(x.shape,z.shape)
         else:
             raise AromeDataRepositoryError("No elevations found in dataset"
                                            ", and no elevation file given.")

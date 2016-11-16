@@ -41,8 +41,8 @@ class GisLocationService(GeoLocationRepository):
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
-            q["where"] = "OBJECTID IN ({})".format(", ".join([str(i) for i in station_ids]))
-        q["outFields"] = "MOH, OBJECTID, EIER, ST_NAVN"
+            q["where"] = "GIS_ID IN ({})".format(", ".join([str(i) for i in station_ids]))
+        q["outFields"] = "MOH, GIS_ID, EIER, ST_NAVN"
         q["outSR"] = epsg_id
         return q
     
@@ -74,7 +74,7 @@ class GisLocationService(GeoLocationRepository):
             data = self._get_response(base_fetcher.url.replace(base_fetcher.server_name, base_fetcher.server_name_preprod), params=q)
         # if response.status_code == 200:
         for feature in data['features']:
-            index = feature["attributes"]["OBJECTID"]
+            index = feature["attributes"]["GIS_ID"]
             x = feature["geometry"]["x"]
             y = feature["geometry"]["y"]
             z = feature["attributes"]["MOH"]

@@ -26,7 +26,7 @@ try:
 
         def test_gis_location_service(self):
             glr=GisLocationService()
-            nea_nid=[598, 574]
+            nea_nid=[402, 460]
             # we test that for the same point, different projections, we get same heights and approx. different positions
             utm32_loc=glr.get_locations(nea_nid, 32632)
             utm33_loc=glr.get_locations(nea_nid, 32633)
@@ -34,14 +34,14 @@ try:
             self.assertIsNotNone(utm33_loc)
             for p in nea_nid:
                 self.assertAlmostEqual(utm32_loc[p][2],utm33_loc[p][2])
-                self.assertGreater(fabs(utm32_loc[p][1]-utm33_loc[p][1]),10*1000,"expect y same")
+                self.assertLess(fabs(utm32_loc[p][1]-utm33_loc[p][1]),10*1000,"expect y same")
                 self.assertGreater(fabs(utm32_loc[p][0]-utm33_loc[p][0]),30*1000,"expect x diff same")
 
         def test_get_timeseries_using_known_service_and_db_content(self):
             utc = Calendar()
             met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
-                MetStationConfig(gis_id=598, temperature=u'/NeNi-Sylsjøen......-T0017V3KI0114', precipitation=u'/NeNi-Sylsjøen-2....-T0000D9BI0124'),
-                MetStationConfig(gis_id=574, temperature=u'/NeNi-Stuggusjøen...-T0017V3KI0114', precipitation=u'/NeNi-Stuggusjøen...-T0000D9BI0124')
+                MetStationConfig(gis_id=402, temperature=u'/NeNi-Sylsjøen......-T0017V3KI0114', precipitation=u'/NeNi-Sylsjøen-2....-T0000D9BI0124'),
+                MetStationConfig(gis_id=460, temperature=u'/NeNi-Stuggusjøen...-T0017V3KI0114', precipitation=u'/NeNi-Stuggusjøen...-T0000D9BI0124')
             ]
             gis_location_repository = GisLocationService()
             smg_ts_repository = SmGTsRepository(PREPROD, FC_PREPROD)
@@ -63,7 +63,7 @@ try:
         def test_get_forecast_using_known_service_and_db_content(self):
             utc = Calendar()
             met_stations=[ # this is the list of MetStations, the gis_id tells the position, the remaining tells us what properties we observe/forecast/calculate at the metstation (smg-ts)
-                MetStationConfig(gis_id=598, temperature=u'/LTM5-Nea...........-T0017A3P_EC00_ENS', precipitation=u'/LTM5-Nea...........-T0000A5P_EC00_ENS')
+                MetStationConfig(gis_id=402, temperature=u'/LTM5-Nea...........-T0017A3P_EC00_ENS', precipitation=u'/LTM5-Nea...........-T0000A5P_EC00_ENS')
             ]
             gis_location_repository = GisLocationService()
             smg_ts_repository = SmGTsRepository(PREPROD, FC_PREPROD)
@@ -85,19 +85,19 @@ try:
     
         def test_get_ensemble_forecast_using_known_service_and_db_content(self):
             utc = Calendar()
-            met_stations = [MetStationConfig(gis_id=598, temperature=u'/LTM5-Nea...........-T0017A3P_EC00_ENS', precipitation=u'/LTM5-Nea...........-T0000A5P_EC00_ENS')]
+            met_stations = [MetStationConfig(gis_id=402, temperature=u'/LTM5-Nea...........-T0017A3P_EC00_ENS', precipitation=u'/LTM5-Nea...........-T0000A5P_EC00_ENS')]
             gis_location_repository = GisLocationService()
             smg_ts_repository = SmGTsRepository(PREPROD, FC_PREPROD)
             n_ensembles = 51
             ens_station_list = [
-                EnsembleStation(598, n_ensembles,
+                EnsembleStation(402, n_ensembles,
                     temperature_ens = lambda i:u'/LTM5-Nea...........-T0017A3P_EC00_E{0:02}'.format(i),
                     precipitation_ens = lambda i:u'/LTM5-Nea...........-T0000A5P_EC00_E{0:02}'.format(i),
                     wind_speed_ens = None,
                     radiation_ens = None,
                     relative_humidity_ens = None
                 ),
-                EnsembleStation(574, n_ensembles,
+                EnsembleStation(460, n_ensembles,
                     temperature_ens = lambda i:u'/LTM5-Tya...........-T0017A3P_EC00_E{0:02}'.format(i),
                     precipitation_ens = lambda i:u'/LTM5-Tya...........-T0000A5P_EC00_E{0:02}'.format(i),
                     wind_speed_ens = None,
