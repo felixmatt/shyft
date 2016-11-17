@@ -74,6 +74,18 @@ namespace shyft{
             :ts(std::make_shared<gpoint_ts>(ta,std::move(values),point_fx)) {
         }
 
+        apoint_ts::apoint_ts(std::string ref_ts_id)
+             :ts(std::make_shared<aref_ts>(ref_ts_id)) {
+        }
+        void apoint_ts::bind_ts_ref(const apoint_ts& bts) {
+            if(!dynamic_cast<aref_ts*>(ts.get()))
+                throw runtime_error("this time-series is not bindable");
+            if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
+                throw runtime_error("the supplied argument time-series must be a point ts");
+            dynamic_cast<aref_ts*>(ts.get())->rep.ts=
+            make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep );
+        }
+
         // and python needs these:
         apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx)
             :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {

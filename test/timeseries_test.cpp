@@ -1649,3 +1649,81 @@ void timeseries_test::test_serialization() {
     auto aexpr2 = serialize_loop(aexpr);
     TS_ASSERT(is_equal(aexpr,aexpr2));
 }
+
+struct ts_ref_info {
+    std::string ref;
+    shyft::api::apoint_ts ats;
+};
+void find_ts_refs(const std::shared_ptr<shyft::api::ipoint_ts>&its,std::vector<ts_ref_info>&r) {
+    using namespace shyft;
+    if(its==nullptr)
+        return;
+    if(dynamic_cast<const api::aref_ts*>(its.get())) {
+        auto rts=dynamic_cast<const api::aref_ts*>(its.get());
+        if(rts)
+            r.push_back(ts_ref_info{rts->rep.ref,api::apoint_ts(its)});
+        else
+            ;// maybe throw ?
+    } else if(dynamic_cast<const api::average_ts*>(its.get())) {
+        find_ts_refs(dynamic_cast<const api::average_ts*>(its.get())->ts,r);
+    } else if(dynamic_cast<const api::accumulate_ts*>(its.get())) {
+        find_ts_refs(dynamic_cast<const api::accumulate_ts*>(its.get())->ts, r);
+    } else if ( dynamic_cast<const api::time_shift_ts*>( its.get() )  ) {
+        find_ts_refs(dynamic_cast<const api::time_shift_ts*>(its.get())->ts,r);
+    } else if(dynamic_cast<const api::abin_op_ts*>(its.get())) {
+        auto bin_op = dynamic_cast<const api::abin_op_ts*>(its.get());
+        find_ts_refs(bin_op->lhs.ts,r);
+        find_ts_refs(bin_op->rhs.ts,r);
+    } else if(dynamic_cast<const api::abin_op_scalar_ts*>(its.get())) {
+        auto bin_op = dynamic_cast<const api::abin_op_scalar_ts*>(its.get());
+        find_ts_refs(bin_op->rhs.ts,r);
+    } else if(dynamic_cast<const api::abin_op_ts_scalar*>(its.get())) {
+        auto bin_op = dynamic_cast<const api::abin_op_ts_scalar*>(its.get());
+        find_ts_refs(bin_op->lhs.ts,r);
+    }
+}
+
+std::vector<ts_ref_info> find_ts_refs(const shyft::api::apoint_ts &ats) {
+    std::vector<ts_ref_info> r;
+    find_ts_refs(ats.ts,r);
+    return r;
+}
+void timeseries_test::test_api_ts_ref_binding() {
+    using namespace shyft;
+    using namespace std;
+    calendar utc;
+    time_axis::generic_dt ta(utc.time(2016,1,1),deltahours(1),24);
+    api::apoint_ts a(ta,1.0);
+    api::apoint_ts b(ta,2.0);
+    string s_c="fm::/nordic_main/xyz";
+    api::apoint_ts c(s_c);
+    string s_d="netcdf://arome_2016_01_01T00:00/UTM32/E12.123/N64.222";
+    api::apoint_ts d(s_d);
+    auto f = 3.0*a*(b+(c*d)*4);
+    auto tsr=find_ts_refs(f);
+    TS_ASSERT_EQUALS(tsr.size(),2);
+    try {
+        f.value(0);
+        TS_FAIL("Expected runtine_error here");
+
+    } catch (const runtime_error&) {
+        ;//OK!
+    }
+    // -now bind the variables
+    api::apoint_ts b_c(ta,5.0);
+    api::apoint_ts b_d(ta,3.0);
+    for(auto&bind_info:tsr) {
+        if(bind_info.ref==s_c)
+            bind_info.ats.bind_ts_ref(b_c);
+        else if(bind_info.ref==s_d)
+            bind_info.ats.bind_ts_ref(b_d);
+        else
+            TS_FAIL("ref not found");
+    }
+    // then retry evaluate
+    try {
+        f.value(0);
+    } catch (const runtime_error&) {
+        TS_FAIL("Sorry, still not bound values");
+    }
+}

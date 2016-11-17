@@ -109,6 +109,7 @@ namespace shyft {
 			struct accumulate_ts;//fwd api
             struct time_shift_ts;// fwd api
             struct aglacier_melt_ts;// fwd api
+            struct aref_ts;// fwd api
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
              *  This is the class that we expose to python, with operations, expressions etc.
@@ -146,6 +147,8 @@ namespace shyft {
                 apoint_ts(gta_t&& ta,std::vector<double>&& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(gta_t&& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
+
+                apoint_ts(std::string ref_ts_id);
                 // some more exotic stuff like average_ts
 
 
@@ -198,6 +201,8 @@ namespace shyft {
                 void set(size_t i, double x) ;
                 void fill(double x) ;
                 void scale_by(double x) ;
+                //-- porting expressions etc.
+                void bind_ts_ref(const apoint_ts& bts);
             };
 
             /** \brief gpoint_ts a generic concrete point_ts, a terminal, not an expression
