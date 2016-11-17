@@ -1485,6 +1485,15 @@ static T serialize_loop(const T& o) {
     return o2;
 }
 
+std::string serialize(const shyft::api::apoint_ts &ats) {
+        using namespace std;
+    std::ostringstream xmls;
+    boost::archive::xml_oarchive oa(xmls);
+    oa << BOOST_SERIALIZATION_NVP(ats);
+    xmls.flush();
+    return xmls.str();
+}
+
 template<class TA>
 static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::timeseries::point_ts<TA>&b) {
     if(a.size()!=b.size())
@@ -1709,6 +1718,9 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         ;//OK!
     }
+    //cout<<"expression xml before bind\n";
+    //cout<<serialize(f);
+    //cout<<"\n";
     // -now bind the variables
     api::apoint_ts b_c(ta,5.0);
     api::apoint_ts b_d(ta,3.0);
@@ -1727,4 +1739,9 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         TS_FAIL("Sorry, still not bound values");
     }
+
+    //cout<<"expression xml after bind\n";
+    //cout<<serialize(f);
+    //cout<<"\n";
+
 }

@@ -50,14 +50,14 @@ namespace shyft{
         apoint_ts min(double           lhs,const apoint_ts& rhs) {return apoint_ts(std::make_shared<abin_op_scalar_ts>( lhs,iop_t::OP_MIN,rhs ));}
 
         double abin_op_ts::value_at(utctime t) const {
-            if(!ta.total_period().contains(t))
+            if(!time_axis().total_period().contains(t))
                 return nan;
             return do_op( lhs(t),op,rhs(t) );// this might cost a 2xbin-search if not the underlying ts have smart incremental search (at the cost of thread safety)
         }
 
         std::vector<double> abin_op_ts::values() const {
-            std::vector<double> r;r.reserve(ta.size());
-            for(size_t i=0;i<ta.size();++i) {
+            std::vector<double> r;r.reserve(time_axis().size());
+            for(size_t i=0;i<time_axis().size();++i) {
                 r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
             }
             return std::move(r);
@@ -198,9 +198,9 @@ namespace shyft{
         }
 
         double abin_op_ts::value(size_t i) const {
-            if(i==std::string::npos || i>=ta.size() )
+            if(i==std::string::npos || i>=time_axis().size() )
                 return nan;
-            return value_at(ta.time(i));
+            return value_at(time_axis().time(i));
             // Hmm! here we have to define what value(i) means
             // .. we could define it as
             //     the value at the beginning of the i'th period
@@ -216,18 +216,33 @@ namespace shyft{
             //if(isfinite(v1)) return 0.5*(v0 + v1);
             //return v0;
         }
-        double abin_op_scalar_ts::value_at(utctime t) const {return do_op(lhs,op,rhs(t));}
-        double abin_op_scalar_ts::value(size_t i) const {return do_op(lhs,op,rhs.value(i));}
+        double abin_op_scalar_ts::value_at(utctime t) const {
+            deferred_bind();
+            return do_op(lhs,op,rhs(t));
+        }
+        double abin_op_scalar_ts::value(size_t i) const {
+            deferred_bind();
+            return do_op(lhs,op,rhs.value(i));
+        }
+
         std::vector<double> abin_op_scalar_ts::values() const {
+          deferred_bind();
           std::vector<double> r(rhs.values());
           for(auto& v:r)
             v=do_op(lhs,op,v);
           return r;
         }
 
-        double abin_op_ts_scalar::value_at(utctime t) const {return do_op(lhs(t),op,rhs);}
-        double abin_op_ts_scalar::value(size_t i) const {return do_op(lhs.value(i),op,rhs);}
+        double abin_op_ts_scalar::value_at(utctime t) const {
+            deferred_bind();
+            return do_op(lhs(t),op,rhs);
+        }
+        double abin_op_ts_scalar::value(size_t i) const {
+            deferred_bind();
+            return do_op(lhs.value(i),op,rhs);
+        }
         std::vector<double> abin_op_ts_scalar::values() const {
+          deferred_bind();
           std::vector<double> r(lhs.values());
           for(auto& v:r)
             v=do_op(rhs,op,v);

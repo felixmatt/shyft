@@ -594,11 +594,18 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+
+                  void deferred_bind() const {
+                    if(ta.size()==0) {
+                        ((abin_op_ts*)this)->ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
+                        ((abin_op_ts*)this)->fx_policy=result_policy(lhs.point_interpretation(),rhs.point_interpretation());;
+                    }
+                  }
                   abin_op_ts():op(iop_t::OP_NONE){}
                   abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
-                      ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
-                      fx_policy= result_policy(lhs.point_interpretation(),rhs.point_interpretation());
+                      //ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
+                      //fx_policy= result_policy(lhs.point_interpretation(),rhs.point_interpretation());
                   }
                   abin_op_ts(const abin_op_ts& c)
                     :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
@@ -630,11 +637,11 @@ namespace shyft {
                     return *this;
                   }
 
-                  virtual utcperiod total_period() const {return ta.total_period();}
-                  const gta_t& time_axis() const {return ta;};// combine lhs,rhs
-                  size_t index_of(utctime t) const{return ta.index_of(t);};
-                  size_t size() const {return ta.size();};// use the combined ta.size();
-                  utctime time( size_t i) const {return ta.time(i);}; // reeturn combined ta.time(i)
+                  virtual utcperiod total_period() const {return time_axis().total_period();}
+                  const gta_t& time_axis() const {deferred_bind(); return ta;};// combine lhs,rhs
+                  size_t index_of(utctime t) const{return time_axis().index_of(t);};
+                  size_t size() const {return time_axis().size();};// use the combined ta.size();
+                  utctime time( size_t i) const {return time_axis().time(i);}; // return combined ta.time(i)
                   double value_at(utctime t) const ;
                   double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
                   std::vector<double> values() const;
@@ -653,11 +660,18 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+                  void deferred_bind() const {
+                      if(ta.size()==0) {
+                          ((abin_op_scalar_ts*)this)->ta=rhs.time_axis();
+                          ((abin_op_scalar_ts*)this)->fx_policy= rhs.point_interpretation();
+                      }
+                  }
+
                   abin_op_scalar_ts():op(iop_t::OP_NONE) {}
                   abin_op_scalar_ts(double lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
-                      ta=rhs.time_axis();
-                      fx_policy= rhs.point_interpretation();
+                      //ta=rhs.time_axis();
+                      //fx_policy= rhs.point_interpretation();
                   }
                   abin_op_scalar_ts(const abin_op_scalar_ts& c)
                     :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
@@ -689,11 +703,11 @@ namespace shyft {
                     return *this;
                   }
 
-                  virtual utcperiod total_period() const {return ta.total_period();}
-                  const gta_t& time_axis() const {return ta;};// combine lhs,rhs
-                  size_t index_of(utctime t) const{return ta.index_of(t);};
-                  size_t size() const {return ta.size();};
-                  utctime time( size_t i) const {return ta.time(i);};
+                  virtual utcperiod total_period() const {return time_axis().total_period();}
+                  const gta_t& time_axis() const {deferred_bind();return ta;};// combine lhs,rhs
+                  size_t index_of(utctime t) const{return time_axis().index_of(t);};
+                  size_t size() const {return time_axis().size();};
+                  utctime time( size_t i) const {return time_axis().time(i);};
                   double value_at(utctime t) const ;
                   double value(size_t i) const ;
                   std::vector<double> values() const ;
@@ -712,12 +726,17 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
-
+                    void deferred_bind() const {
+                        if(ta.size()==0) {
+                            ((abin_op_ts_scalar*)this)->ta=lhs.time_axis();
+                            ((abin_op_ts_scalar*)this)->fx_policy= lhs.point_interpretation();
+                        }
+                    }
                   abin_op_ts_scalar():op(iop_t::OP_NONE) {}
                   abin_op_ts_scalar(const apoint_ts &lhs,iop_t op,double rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
-                      ta=lhs.time_axis();
-                      fx_policy= lhs.point_interpretation();
+                      //ta=lhs.time_axis();
+                      //fx_policy= lhs.point_interpretation();
                   }
                   abin_op_ts_scalar(const abin_op_ts_scalar& c)
                     :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
@@ -749,11 +768,11 @@ namespace shyft {
                     return *this;
                   }
 
-                  virtual utcperiod total_period() const {return ta.total_period();}
-                  const gta_t& time_axis() const {return ta;};
-                  size_t index_of(utctime t) const{return ta.index_of(t);};
-                  size_t size() const {return ta.size();};
-                  utctime time( size_t i) const {return ta.time(i);};
+                  virtual utcperiod total_period() const {return time_axis().total_period();}
+                  const gta_t& time_axis() const {deferred_bind();return ta;};
+                  size_t index_of(utctime t) const{return time_axis().index_of(t);};
+                  size_t size() const {return time_axis().size();};
+                  utctime time( size_t i) const {return time_axis().time(i);};
                   double value_at(utctime t) const;
                   double value(size_t i) const;
                   std::vector<double> values() const;
