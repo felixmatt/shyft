@@ -1722,7 +1722,8 @@ void timeseries_test::test_api_ts_ref_binding() {
     }
     // then retry evaluate
     try {
-        f.value(0);
+        double v0=f.value(0);
+        TS_ASSERT_DELTA(v0,3.0*1.0*(2.0+(5.0*3.0)*4),1e-9);
     } catch (const runtime_error&) {
         TS_FAIL("Sorry, still not bound values");
     }
