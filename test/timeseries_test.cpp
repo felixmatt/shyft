@@ -1494,6 +1494,14 @@ std::string serialize(const shyft::api::apoint_ts &ats) {
     return xmls.str();
 }
 
+shyft::api::apoint_ts deserialize(std::string xmlstr) {
+    istringstream xmli(xmlstr);
+    boost::archive::xml_iarchive ia(xmli);
+    shyft::api::apoint_ts ats;
+    ia >> BOOST_SERIALIZATION_NVP(ats);
+    return ats;
+}
+
 template<class TA>
 static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::timeseries::point_ts<TA>&b) {
     if(a.size()!=b.size())
@@ -1718,16 +1726,18 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         ;//OK!
     }
+    auto xmls_unbound = serialize(f);
     //cout<<"expression xml before bind\n";
     //cout<<serialize(f);
     //cout<<"\n";
     // -now bind the variables
     api::apoint_ts b_c(ta,5.0);
     api::apoint_ts b_d(ta,3.0);
-    for(auto&bind_info:tsr) {
-        if(bind_info.ref==s_c)
+
+    for (auto&bind_info : tsr) {
+        if (bind_info.ref == s_c)
             bind_info.ats.bind_ts_ref(b_c);
-        else if(bind_info.ref==s_d)
+        else if (bind_info.ref == s_d)
             bind_info.ats.bind_ts_ref(b_d);
         else
             TS_FAIL("ref not found");
@@ -1739,6 +1749,17 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         TS_FAIL("Sorry, still not bound values");
     }
+    auto a_f = deserialize(xmls_unbound);
+    auto unbound_ts = find_ts_refs(a_f);
+    for (auto&bind_info : unbound_ts) {
+        if (bind_info.ref == s_c)
+            bind_info.ats.bind_ts_ref(b_c);
+        else if (bind_info.ref == s_d)
+            bind_info.ats.bind_ts_ref(b_d);
+        else
+            TS_FAIL("ref not found");
+    }
+    TS_ASSERT_DELTA(f.value(0), a_f.value(0), 1e-9);
 
     //cout<<"expression xml after bind\n";
     //cout<<serialize(f);
