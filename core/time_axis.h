@@ -176,7 +176,21 @@ namespace shyft {
 				t_end = t.back();
 				t.pop_back();
 			}
-
+            // ms seems to need explicit move etc.
+            point_dt(const point_dt&c) : t(c.t), t_end(c.t_end) {}
+            point_dt(point_dt &&c) :t(std::move(c.t)), t_end(c.t_end) {}
+            point_dt& operator=(point_dt&&c) {
+                t = std::move(c.t);
+                t_end = c.t_end;
+                return *this;
+            }
+            point_dt& operator=(const point_dt &x) {
+                if (this != &x) {
+                    t = x.t;
+                    t_end = x.t_end;
+                }
+                return *this;
+            }
             size_t size() const {return t.size();}
 
             utcperiod total_period() const {
@@ -258,7 +272,28 @@ namespace shyft {
             generic_dt( const fixed_dt&f ): gt( FIXED ), f( f ) {}
             generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
             generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
-            // --
+            // -- need move,ct etc for msc++
+            // ms seems to need explicit move etc.
+            generic_dt(const generic_dt&cc) : gt(cc.gt),f(cc.f),c(cc.c),p(cc.p) {}
+            generic_dt(generic_dt &&cc) :gt(cc.gt),f(std::move(cc.f)), c(std::move(cc.c)), p(std::move(cc.p)) {}
+            generic_dt& operator=(generic_dt&&cc) {
+                gt = cc.gt;
+                f = std::move(cc.f);
+                c = std::move(cc.c);
+                p = std::move(cc.p);
+                return *this;
+            }
+            generic_dt& operator=(const generic_dt &x) {
+                if (this != &x) {
+                    gt = x.gt;
+                    f = x.f;
+                    c = x.c;
+                    p = x.p;
+                }
+                return *this;
+            }
+
+            //--
             bool is_fixed_dt() const {return gt != POINT;}
 
             size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}

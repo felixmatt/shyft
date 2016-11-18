@@ -1254,11 +1254,12 @@ namespace boost {
         template <class Archive>
         void serialize(Archive & ar, shyft::time_axis::generic_dt &o, const unsigned int version) {
             ar
-            & make_nvp("gt",o.gt)
-            & make_nvp("f",o.f)
-            & make_nvp("c",o.c)
-            & make_nvp("p",o.p)
+            & make_nvp("gt", o.gt)
             ;
+            if( o.gt == shyft::time_axis::generic_dt::FIXED) ar & make_nvp("f", o.f);
+            else if ( o.gt == shyft::time_axis::generic_dt::CALENDAR) ar & make_nvp("c", o.c);
+            else ar & make_nvp("p", o.p);
+            
         }
 
 
@@ -1470,6 +1471,13 @@ namespace boost {
             & make_nvp("ts",o.ts)
             ;
         }
+
+        /*      template<class Archive>
+              void serialize(Archive & ar, std::vector<shyft::api::apoint_ts> &o, const unsigned int version) {
+                  ar
+                      & make_nvp("tsv", o)
+                      ;
+              }*/
     }
 }
 
@@ -1685,6 +1693,18 @@ void timeseries_test::test_serialization() {
     auto aexpr = (agts*2.0 + agts/4.0 + 12)/agts;
     auto aexpr2 = serialize_loop(aexpr);
     TS_ASSERT(is_equal(aexpr,aexpr2));
+    
+    // verify vector stuff.
+    vector<api::apoint_ts> tsv;
+    tsv.push_back(agts);
+    tsv.push_back(3.0*agts+agts);
+    tsv.push_back(10.0*agts+ 1.0/agts);
+    auto tsv2 = serialize_loop(tsv);
+
+    TS_ASSERT_EQUALS(tsv.size(), tsv2.size());
+    for (size_t i = 0;i < tsv.size();++i)
+        TS_ASSERT(is_equal(tsv[i], tsv2[i]));
+
 }
 
 struct ts_ref_info {

@@ -326,7 +326,7 @@ namespace shyft {
                 // std copy ct and assign
                 average_ts(){}
                 average_ts(const average_ts &c):ta(c.ta),ts(c.ts) {}
-                average_ts(average_ts&&c):ta(std::move(ta)),ts(std::move(c.ts)) {}
+                average_ts(average_ts&&c):ta(std::move(c.ta)),ts(std::move(c.ts)) {}
                 average_ts& operator=(const average_ts&c) {
                     if( this != &c) {
                         ta=c.ta;
@@ -410,7 +410,7 @@ namespace shyft {
 				// std copy ct and assign
 				accumulate_ts(){}
 				accumulate_ts(const accumulate_ts &c) :ta(c.ta), ts(c.ts) {}
-				accumulate_ts(accumulate_ts&&c) :ta(std::move(ta)), ts(std::move(c.ts)) {}
+				accumulate_ts(accumulate_ts&&c) :ta(std::move(c.ta)), ts(std::move(c.ts)) {}
 				accumulate_ts& operator=(const accumulate_ts&c) {
 					if (this != &c) {
 						ta = c.ta;
