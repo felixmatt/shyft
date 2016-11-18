@@ -36,6 +36,7 @@ public:
 	void test_ts_ref();
 	void test_serialization();
 	void test_api_ts_ref_binding();
+    void test_serialization_performance();
 };
 
 

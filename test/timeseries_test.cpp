@@ -1161,6 +1161,9 @@ void timeseries_test::test_ts_ref() {
 }
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/serialization/export.hpp>
 
@@ -1502,6 +1505,23 @@ shyft::api::apoint_ts deserialize(std::string xmlstr) {
     return ats;
 }
 
+std::string bin_serialize(const shyft::api::apoint_ts &ats) {
+    using namespace std;
+    std::ostringstream xmls;
+    boost::archive::binary_oarchive oa(xmls);
+    oa << BOOST_SERIALIZATION_NVP(ats);
+    xmls.flush();
+    return xmls.str();
+}
+
+shyft::api::apoint_ts bin_deserialize(std::string xmlstr) {
+    istringstream xmli(xmlstr);
+    boost::archive::binary_iarchive ia(xmli);
+    shyft::api::apoint_ts ats;
+    ia >> BOOST_SERIALIZATION_NVP(ats);
+    return ats;
+}
+
 template<class TA>
 static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::timeseries::point_ts<TA>&b) {
     if(a.size()!=b.size())
@@ -1764,5 +1784,33 @@ void timeseries_test::test_api_ts_ref_binding() {
     //cout<<"expression xml after bind\n";
     //cout<<serialize(f);
     //cout<<"\n";
+
+}
+
+void timeseries_test::test_serialization_performance() {
+    using namespace shyft;
+    using namespace shyft::core;
+    using namespace std;
+    bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
+    //
+    // 1. create one large ts, do loop it.
+    //
+    calendar utc;
+    size_t n = 1*1000*1000;// gives 8 Mb memory
+    api::apoint_ts aa(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), 3.1415);
+    auto a = aa*3.0 + aa;
+    //
+    // 2. serialize it
+    //
+    std::clock_t t0 = std::clock();
+    auto xmls = bin_serialize(a);
+    auto ms = (std::clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+    if(verbose)cout << "\nserialization took " << ms << "ms\n";
+    TS_ASSERT_LESS_THAN(ms, 200.0); // i7 ~ 10 ms
+    t0 = std::clock();
+    auto b = bin_deserialize(xmls);
+    ms = (std::clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+    TS_ASSERT_LESS_THAN(ms, 200.0);// i7 ~ 10 ms
+    if(verbose) cout  << "de-serialization took " << ms << "ms\n\tsize:"<<xmls.size()<<" bytes \n";
 
 }
