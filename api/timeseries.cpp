@@ -77,7 +77,7 @@ namespace shyft{
         apoint_ts::apoint_ts(std::string ref_ts_id)
              :ts(std::make_shared<aref_ts>(ref_ts_id)) {
         }
-        void apoint_ts::bind_ts_ref(const apoint_ts& bts) {
+        void apoint_ts::bind(const apoint_ts& bts) {
             if(!dynamic_cast<aref_ts*>(ts.get()))
                 throw runtime_error("this time-series is not bindable");
             if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
@@ -126,6 +126,42 @@ namespace shyft{
 		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
 			return shyft::api::time_shift(*this, dt);
 		}
+
+        /** recursive function to dig out bind_info */
+        static void find_ts_bind_info(const std::shared_ptr<shyft::api::ipoint_ts>&its, std::vector<ts_bind_info>&r) {
+            using namespace shyft;
+            if (its == nullptr)
+                return;
+            if (dynamic_cast<const api::aref_ts*>(its.get())) {
+                auto rts = dynamic_cast<const api::aref_ts*>(its.get());
+                if (rts)
+                    r.push_back(api::ts_bind_info( rts->rep.ref,api::apoint_ts(its)));
+                else
+                    ;// maybe throw ?
+            } else if (dynamic_cast<const api::average_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const api::average_ts*>(its.get())->ts, r);
+            } else if (dynamic_cast<const api::accumulate_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const api::accumulate_ts*>(its.get())->ts, r);
+            } else if (dynamic_cast<const api::time_shift_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const api::time_shift_ts*>(its.get())->ts, r);
+            } else if (dynamic_cast<const api::abin_op_ts*>(its.get())) {
+                auto bin_op = dynamic_cast<const api::abin_op_ts*>(its.get());
+                find_ts_bind_info(bin_op->lhs.ts, r);
+                find_ts_bind_info(bin_op->rhs.ts, r);
+            } else if (dynamic_cast<const api::abin_op_scalar_ts*>(its.get())) {
+                auto bin_op = dynamic_cast<const api::abin_op_scalar_ts*>(its.get());
+                find_ts_bind_info(bin_op->rhs.ts, r);
+            } else if (dynamic_cast<const api::abin_op_ts_scalar*>(its.get())) {
+                auto bin_op = dynamic_cast<const api::abin_op_ts_scalar*>(its.get());
+                find_ts_bind_info(bin_op->lhs.ts, r);
+            }
+        }
+
+        std::vector<ts_bind_info> apoint_ts::find_ts_bind_info() const {
+            std::vector<ts_bind_info> r;
+            shyft::api::find_ts_bind_info(ts, r);
+            return r;
+        }
 
 		std::vector<apoint_ts> apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
 			// some very rudimentary argument checks:

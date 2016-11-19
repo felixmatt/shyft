@@ -1033,7 +1033,7 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	// simple test at ix=1:
 	TS_ASSERT_DELTA(0.5*deltahours(1), aa.value(1), 0.001);
 	TS_ASSERT_DELTA(0.5*deltahours(1), ats.value(1), 0.001);
-	// now the ats have some extra feature through it's f(t), operator()
+	// now the ts have some extra feature through it's f(t), operator()
 	TS_ASSERT_DELTA(0.25*deltaminutes(30), ats(t + deltaminutes(30)), 0.0001);
 	// the accessor should be smart, trying to re-use prior computation, I verify the result here,
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
@@ -1707,44 +1707,8 @@ void timeseries_test::test_serialization() {
 
 }
 
-struct ts_ref_info {
-    std::string ref;
-    shyft::api::apoint_ts ats;
-};
-void find_ts_refs(const std::shared_ptr<shyft::api::ipoint_ts>&its,std::vector<ts_ref_info>&r) {
-    using namespace shyft;
-    if(its==nullptr)
-        return;
-    if(dynamic_cast<const api::aref_ts*>(its.get())) {
-        auto rts=dynamic_cast<const api::aref_ts*>(its.get());
-        if(rts)
-            r.push_back(ts_ref_info{rts->rep.ref,api::apoint_ts(its)});
-        else
-            ;// maybe throw ?
-    } else if(dynamic_cast<const api::average_ts*>(its.get())) {
-        find_ts_refs(dynamic_cast<const api::average_ts*>(its.get())->ts,r);
-    } else if(dynamic_cast<const api::accumulate_ts*>(its.get())) {
-        find_ts_refs(dynamic_cast<const api::accumulate_ts*>(its.get())->ts, r);
-    } else if ( dynamic_cast<const api::time_shift_ts*>( its.get() )  ) {
-        find_ts_refs(dynamic_cast<const api::time_shift_ts*>(its.get())->ts,r);
-    } else if(dynamic_cast<const api::abin_op_ts*>(its.get())) {
-        auto bin_op = dynamic_cast<const api::abin_op_ts*>(its.get());
-        find_ts_refs(bin_op->lhs.ts,r);
-        find_ts_refs(bin_op->rhs.ts,r);
-    } else if(dynamic_cast<const api::abin_op_scalar_ts*>(its.get())) {
-        auto bin_op = dynamic_cast<const api::abin_op_scalar_ts*>(its.get());
-        find_ts_refs(bin_op->rhs.ts,r);
-    } else if(dynamic_cast<const api::abin_op_ts_scalar*>(its.get())) {
-        auto bin_op = dynamic_cast<const api::abin_op_ts_scalar*>(its.get());
-        find_ts_refs(bin_op->lhs.ts,r);
-    }
-}
 
-std::vector<ts_ref_info> find_ts_refs(const shyft::api::apoint_ts &ats) {
-    std::vector<ts_ref_info> r;
-    find_ts_refs(ats.ts,r);
-    return r;
-}
+
 void timeseries_test::test_api_ts_ref_binding() {
     using namespace shyft;
     using namespace std;
@@ -1757,7 +1721,7 @@ void timeseries_test::test_api_ts_ref_binding() {
     string s_d="netcdf://arome_2016_01_01T00:00/UTM32/E12.123/N64.222";
     api::apoint_ts d(s_d);
     auto f = 3.0*a*(b+(c*d)*4);
-    auto tsr=find_ts_refs(f);
+    auto tsr=f.find_ts_bind_info();
     TS_ASSERT_EQUALS(tsr.size(),2);
     try {
         f.value(0);
@@ -1775,10 +1739,10 @@ void timeseries_test::test_api_ts_ref_binding() {
     api::apoint_ts b_d(ta,3.0);
 
     for (auto&bind_info : tsr) {
-        if (bind_info.ref == s_c)
-            bind_info.ats.bind_ts_ref(b_c);
-        else if (bind_info.ref == s_d)
-            bind_info.ats.bind_ts_ref(b_d);
+        if (bind_info.reference == s_c)
+            bind_info.ts.bind(b_c);
+        else if (bind_info.reference == s_d)
+            bind_info.ts.bind(b_d);
         else
             TS_FAIL("ref not found");
     }
@@ -1790,12 +1754,12 @@ void timeseries_test::test_api_ts_ref_binding() {
         TS_FAIL("Sorry, still not bound values");
     }
     auto a_f = deserialize(xmls_unbound);
-    auto unbound_ts = find_ts_refs(a_f);
+    auto unbound_ts = a_f.find_ts_bind_info();
     for (auto&bind_info : unbound_ts) {
-        if (bind_info.ref == s_c)
-            bind_info.ats.bind_ts_ref(b_c);
-        else if (bind_info.ref == s_d)
-            bind_info.ats.bind_ts_ref(b_d);
+        if (bind_info.reference == s_c)
+            bind_info.ts.bind(b_c);
+        else if (bind_info.reference == s_d)
+            bind_info.ts.bind(b_d);
         else
             TS_FAIL("ref not found");
     }

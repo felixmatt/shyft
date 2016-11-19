@@ -110,6 +110,9 @@ namespace shyft {
             struct time_shift_ts;// fwd api
             struct aglacier_melt_ts;// fwd api
             struct aref_ts;// fwd api
+            struct ts_bind_info;
+
+
             /** \brief  apoint_ts, a value-type conceptual ts.
              *
              *  This is the class that we expose to python, with operations, expressions etc.
@@ -201,8 +204,36 @@ namespace shyft {
                 void set(size_t i, double x) ;
                 void fill(double x) ;
                 void scale_by(double x) ;
-                //-- porting expressions etc.
-                void bind_ts_ref(const apoint_ts& bts);
+
+                /** given that this ts is a bind-able ts (aref_ts)
+                 * and that bts is a gpoint_ts, make 
+                 * a *copy* of gpoint_ts and use it as representation
+                 * for the values of this ts
+                 * \parameter bts time-series of type point that will be applied to this ts.
+                 * \throw runtime_error if any of preconditions is not true.
+                 */
+                void bind(const apoint_ts& bts);
+
+                /** recursive search through the expression that this ts represents,
+                 *  and return a list of bind_ts_info that can be used to 
+                 *  inspect and possibly 'bind' to values \ref bind.
+                 * \return a vector of ts_bind_info
+                 */
+                std::vector<ts_bind_info> find_ts_bind_info() const;
+            };
+
+            /** ts_bind_info gives information about the timeseries and it's binding
+            * represented by encoded string reference
+            * Given that you have a concrete ts,
+            * you can bind that the bind_info.ts
+            * using bind_info.ts.bind().
+            */
+            struct ts_bind_info {
+                ts_bind_info(const std::string& id, const apoint_ts&ts) :reference(id), ts(ts) {}
+                ts_bind_info() {}
+                bool operator==(const ts_bind_info& o) const { return reference == o.reference; }
+                std::string reference;
+                apoint_ts ts;
             };
 
             /** \brief gpoint_ts a generic concrete point_ts, a terminal, not an expression
