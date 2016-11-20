@@ -61,6 +61,7 @@
 		<Unit filename="pt_ss_k.h" />
 		<Unit filename="timeseries.cpp" />
 		<Unit filename="timeseries.h" />
+		<Unit filename="ts_serialization.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

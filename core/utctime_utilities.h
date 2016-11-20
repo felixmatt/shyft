@@ -132,6 +132,7 @@ namespace shyft {
                     char s[100];sprintf(s,"UTC%+02d",int(dt/deltahours(1)));
                     tz_name=s;
                 }
+                tz_table():start_year(0){tz_name="UTC+00";}
                 inline bool is_dst() const {return dst.size()>0;}
                 string name() const {return tz_name;}
                 utctime dst_start(int year) const {return is_dst()?dst[year-start_year].start:no_utctime;}
@@ -144,7 +145,8 @@ namespace shyft {
             struct tz_info<tz_table> {
                 utctimespan base_tz;
                 tz_table tz;
-                tz_info(utctimespan base_tz=0):base_tz(base_tz),tz(base_tz) {}
+                tz_info():base_tz(0) {}// serialization
+                tz_info(utctimespan base_tz):base_tz(base_tz),tz(base_tz) {}
                 tz_info(utctimespan base_tz,const tz_table&tz):base_tz(base_tz),tz(tz) {}
                 string name() const {return tz.name();}
                 utctimespan base_offset() const {return base_tz;}

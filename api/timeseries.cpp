@@ -1,10 +1,15 @@
+#include "core/core_pch.h"
 #include "timeseries.h"
-#include "ts_serialization.h"
-
 #include <dlib/statistics.h>
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+
+#include "ts_serialization.h"
+
+
 
 #include <boost/serialization/export.hpp>
 
@@ -12,6 +17,9 @@
 //
 // needed for all shyft::api::ipoint_ts
 // ptr serialize/deserialize to work
+
+
+//BOOST_CLASS_EXPORT(shyft::api::ipoint_ts);
 BOOST_CLASS_EXPORT(shyft::api::gpoint_ts);
 BOOST_CLASS_EXPORT(shyft::api::aref_ts);
 BOOST_CLASS_EXPORT(shyft::api::average_ts);

@@ -183,43 +183,41 @@ namespace boost {
         }
 
         /* api time-series serialization (dyn-dispatch) */
+
         template <class Archive>
         void serialize(Archive & ar, shyft::api::ipoint_ts&, const unsigned) {
         }
 
+        #define serialize_virtual_base_class(ar,o) ar & make_nvp("shyft_api_ipoint_ts",base_object<shyft::api::ipoint_ts>(o))
         template<class Archive>
         void serialize(Archive & ar, shyft::api::gpoint_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::gpoint_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
-                & make_nvp("rep", o.rep)
-                ;
+            & make_nvp("rep", o.rep)
+            ;
         }
 
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::aref_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::aref_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
-                & make_nvp("rep", o.rep)
-                ;
+            & make_nvp("rep", o.rep)
+            ;
         }
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::average_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::average_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
-                & make_nvp("ta", o.ta)
-                & make_nvp("ts", o.ts)
-                ;
+            & make_nvp("ta", o.ta)
+            & make_nvp("ts", o.ts)
+            ;
         }
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::accumulate_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::accumulate_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("ta", o.ta)
                 & make_nvp("ts", o.ts)
@@ -228,8 +226,7 @@ namespace boost {
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::time_shift_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::time_shift_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("ta", o.ta)
                 & make_nvp("ts", o.ts)
@@ -239,8 +236,7 @@ namespace boost {
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::periodic_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::periodic_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("ts", o.ts)
                 ;
@@ -248,8 +244,7 @@ namespace boost {
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::abin_op_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::abin_op_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("lhs", o.lhs)
                 & make_nvp("op", o.op)
@@ -261,8 +256,7 @@ namespace boost {
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::abin_op_scalar_ts &o, const unsigned int version) {
-            void_cast_register<shyft::api::abin_op_scalar_ts, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("lhs", o.lhs)
                 & make_nvp("op", o.op)
@@ -274,8 +268,7 @@ namespace boost {
 
         template<class Archive>
         void serialize(Archive & ar, shyft::api::abin_op_ts_scalar &o, const unsigned int version) {
-            void_cast_register<shyft::api::abin_op_ts_scalar, shyft::api::ipoint_ts>();
-            base_object<shyft::api::ipoint_ts>(o);
+            serialize_virtual_base_class(ar,o);
             ar
                 & make_nvp("lhs", o.lhs)
                 & make_nvp("op", o.op)
