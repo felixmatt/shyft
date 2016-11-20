@@ -1155,8 +1155,7 @@ void timeseries_test::test_ts_ref() {
 }
 #include <boost/archive/xml_iarchive.hpp>
 #include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+
 
 template <class T>
 static T serialize_loop(const T& o) {
@@ -1173,39 +1172,7 @@ static T serialize_loop(const T& o) {
     return o2;
 }
 
-std::string serialize(const shyft::api::apoint_ts &ats) {
-        using namespace std;
-    std::ostringstream xmls;
-    boost::archive::xml_oarchive oa(xmls);
-    oa << BOOST_SERIALIZATION_NVP(ats);
-    xmls.flush();
-    return xmls.str();
-}
 
-shyft::api::apoint_ts deserialize(std::string xmlstr) {
-    istringstream xmli(xmlstr);
-    boost::archive::xml_iarchive ia(xmli);
-    shyft::api::apoint_ts ats;
-    ia >> BOOST_SERIALIZATION_NVP(ats);
-    return ats;
-}
-
-std::string bin_serialize(const shyft::api::apoint_ts &ats) {
-    using namespace std;
-    std::ostringstream xmls;
-    boost::archive::binary_oarchive oa(xmls);
-    oa << BOOST_SERIALIZATION_NVP(ats);
-    xmls.flush();
-    return xmls.str();
-}
-
-shyft::api::apoint_ts bin_deserialize(std::string xmlstr) {
-    istringstream xmli(xmlstr);
-    boost::archive::binary_iarchive ia(xmli);
-    shyft::api::apoint_ts ats;
-    ia >> BOOST_SERIALIZATION_NVP(ats);
-    return ats;
-}
 
 template<class TA>
 static bool is_equal(const shyft::timeseries::point_ts<TA>& a,const shyft::timeseries::point_ts<TA>&b) {
@@ -1407,7 +1374,7 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         ;//OK!
     }
-    auto xmls_unbound = serialize(f);
+    auto xmls_unbound = f.serialize();
     //cout<<"expression xml before bind\n";
     //cout<<serialize(f);
     //cout<<"\n";
@@ -1430,7 +1397,7 @@ void timeseries_test::test_api_ts_ref_binding() {
     } catch (const runtime_error&) {
         TS_FAIL("Sorry, still not bound values");
     }
-    auto a_f = deserialize(xmls_unbound);
+    auto a_f = api::apoint_ts::deserialize(xmls_unbound);
     auto unbound_ts = a_f.find_ts_bind_info();
     for (auto&bind_info : unbound_ts) {
         if (bind_info.reference == s_c)
@@ -1468,12 +1435,12 @@ void timeseries_test::test_serialization_performance() {
     // 2. serialize it
     //
     std::clock_t t0 = std::clock();
-    auto xmls = bin_serialize(a);
+    auto xmls = a.serialize();
     auto ms = (std::clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
     if(verbose)cout << "\nserialization took " << ms << "ms\n";
     TS_ASSERT_LESS_THAN(ms, 200.0); // i7 ~ 10 ms
     t0 = std::clock();
-    auto b = bin_deserialize(xmls);
+    auto b = api::apoint_ts::deserialize(xmls);
     ms = (std::clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
     TS_ASSERT_LESS_THAN(ms, 200.0);// i7 ~ 10 ms
     if(verbose) cout  << "de-serialization took " << ms << "ms\n\tsize:"<<xmls.size()<<" bytes \n";
