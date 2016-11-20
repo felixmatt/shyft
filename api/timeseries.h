@@ -220,6 +220,11 @@ namespace shyft {
                  * \return a vector of ts_bind_info
                  */
                 std::vector<ts_bind_info> find_ts_bind_info() const;
+
+                std::string serialize() const;
+                static apoint_ts deserialize(const std::string&ss);
+                std::vector<char> serialize_to_bytes() const;
+                static apoint_ts deserialize_from_bytes(const std::vector<char>&ss);
             };
 
             /** ts_bind_info gives information about the timeseries and it's binding

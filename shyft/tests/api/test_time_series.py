@@ -372,7 +372,7 @@ class TimeSeries(unittest.TestCase):
         b_id = "netcdf://path_to_file/path_to_ts"
         b = api.Timeseries(b_id)
         c = a + b  # make an expression, with a ts-reference, not yet bound
-
+        c_blob = c.serialize()  # converts the entire stuff into a blob
         bind_info= c.find_ts_bind_info()
 
         self.assertEqual(len(bind_info), 1,"should find just one ts to bind")
@@ -387,8 +387,13 @@ class TimeSeries(unittest.TestCase):
         bind_info[0].ts.bind(a)  # it's ok to bind same series multiple times, it takes a copy of a values
 
         # and now we can use c expression as pr. usual, evaluate etc.
-        self.assertAlmostEqual(c.value(10), a.value(10)*2,3)
+        self.assertAlmostEqual(c.value(10), a.value(10)*2, 3)
 
+        c_resurrected = api.Timeseries.deserialize(c_blob)
+
+        bi = c_resurrected.find_ts_bind_info()
+        bi[0].ts.bind(a)
+        self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2, 3)
 
 if __name__ == "__main__":
     unittest.main()

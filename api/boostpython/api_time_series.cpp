@@ -49,6 +49,7 @@ namespace expose {
             .def("create_time_point_ts",&shyft::api::TsFactory::create_time_point_ts,time_point_ts_overloads())//args("period","times","values","interpretation"),"return a point ts from specified arguments")
             ;
     }
+ 
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -186,6 +187,12 @@ namespace expose {
                 "------\n"
                 "TsBindInfoVector, a list of TsBindInfo\n"
             )
+            .def("serialize",&shyft::api::apoint_ts::serialize_to_bytes,
+                "convert ts (expression) into a binary blob\n"
+            )
+            .def("deserialize",&shyft::api::apoint_ts::deserialize_from_bytes,args("blob"),
+               "convert a blob, as returned by .serialize() into a Timeseries"
+            ).staticmethod("deserialize")
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);

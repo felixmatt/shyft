@@ -84,6 +84,7 @@ namespace expose {
         expose_vector<std::string>("StringVector");
         expose_vector<double>("DoubleVector");
         expose_vector<int>("IntVector");
+        expose_vector<char>("ByteVector");
         expose_vector<utctime>("UtcTimeVector");
         expose_geo_point_vector();
         expose_geo_cell_data_vector();
