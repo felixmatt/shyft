@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cxxtest/TestSuite.h>
-
 class timeseries_test: public CxxTest::TestSuite
 {
 public:

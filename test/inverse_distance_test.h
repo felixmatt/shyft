@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 
 class inverse_distance_test : public CxxTest::TestSuite {

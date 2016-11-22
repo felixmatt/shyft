@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cxxtest/TestSuite.h>
-
 class calibration_test: public CxxTest::TestSuite {
   public:
     void test_dummy();

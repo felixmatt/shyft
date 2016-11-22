@@ -34,9 +34,10 @@
 #include <string>
 #include <algorithm>
 #include <functional>
-#include <iostream>
-#include <ostream>
-#include <sstream>
+#include <iosfwd>
+//#include <iostream>
+//#include <ostream>
+//#include <sstream>
 #include <thread>
 #include <future>
 #include <stdexcept>
