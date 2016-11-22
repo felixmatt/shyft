@@ -158,6 +158,7 @@
 			<Add library="boost_python3" />
 			<Add library="python3.5m" />
 			<Add library="boost_serialization" />
+			<Add library="shyftcore" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">

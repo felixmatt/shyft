@@ -74,6 +74,7 @@ namespace shyft {
 			utctime end;
 			std::string to_string() const;
             friend std::ostream& operator<<(std::ostream& os, const utcperiod& p);
+            x_serialize_decl();
 		};
 		inline bool is_valid(const utcperiod &p) {return p.valid();}
         inline utcperiod intersection(const utcperiod&a, const utcperiod& b) {
@@ -138,6 +139,7 @@ namespace shyft {
                 utctime dst_start(int year) const {return is_dst()?dst[year-start_year].start:no_utctime;}
                 utctime dst_end (int year) const {return is_dst()?dst[year-start_year].end:no_utctime;}
                 utctimespan dst_offset(utctime t) const ;
+                x_serialize_decl();
             };
 
             /**\brief a table driven tz_info, using the tz_table implementation */
@@ -152,6 +154,7 @@ namespace shyft {
                 utctimespan base_offset() const {return base_tz;}
                 utctimespan utc_offset(utctime t) const {return base_tz + tz.dst_offset(t);}
                 bool is_dst(utctime t) const {return tz.dst_offset(t)!=utctimespan(0);}
+                x_serialize_decl();
             };
 
             typedef tz_info<tz_table> tz_info_t;///< tz_info type most general, supports all kinds of tz, at a minor extra cost.
@@ -399,6 +402,7 @@ namespace shyft {
 			    utctimespan ignore;
 			    return diff_units(t1,t2,deltaT,ignore);
 			}
+			x_serialize_decl();
 		};
 
         namespace time_zone {
@@ -414,3 +418,9 @@ namespace shyft {
 
 	}
 }
+//-- serialization support: expose class keys
+x_serialize_export_key(shyft::core::utcperiod);
+x_serialize_export_key(shyft::core::time_zone::tz_info_t);
+x_serialize_export_key(shyft::core::time_zone::tz_table);
+x_serialize_export_key(shyft::core::calendar);
+

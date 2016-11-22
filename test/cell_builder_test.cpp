@@ -157,56 +157,13 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/filesystem.hpp>
-namespace boost {
-    namespace serialization{
-        template <class Archive>
-        void serialize(Archive & ar, shyft::core::geo_point &o, const unsigned int version) {
-            ar
-              &  make_nvp("x",o.x)
-              &  make_nvp("y",o.y)
-              &  make_nvp("z",o.z)
-                ;
-        }
-        template <class Archive>
-        void serialize(Archive & ar, shyft::core::land_type_fractions &o, const unsigned int version) {
-            double glacier = o.glacier(), lake = o.lake(), reservoir = o.reservoir(), forest = o.forest();
-            ar
-              &  BOOST_SERIALIZATION_NVP(glacier)
-              &  BOOST_SERIALIZATION_NVP(lake)
-              &  BOOST_SERIALIZATION_NVP(reservoir)
-              &  BOOST_SERIALIZATION_NVP(forest);
-            //auto x = Archive::is_loading();
-            if (typename Archive::is_loading()) {
-                o.set_fractions(glacier, lake, reservoir, forest);
-            }
-        }
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 
-        template <class Archive>
-        void serialize(Archive & ar, shyft::core::geo_cell_data &o, const unsigned int version) {
-            shyft::core::geo_point mid_point=o.mid_point();
-            shyft::core::land_type_fractions ltf=o.land_type_fractions_info();
-            double area_m2=o.area();
-            size_t cid=o.catchment_id();
-            size_t cix=o.catchment_ix;
-            double radiation_factor=o.radiation_slope_factor();
-            ar
-                & BOOST_SERIALIZATION_NVP(mid_point)
-                & BOOST_SERIALIZATION_NVP(ltf)
-                & BOOST_SERIALIZATION_NVP(area_m2)
-                & BOOST_SERIALIZATION_NVP(cid)
-                & BOOST_SERIALIZATION_NVP(cix)
-                & BOOST_SERIALIZATION_NVP(radiation_factor)
-                ;
-            if (typename Archive::is_loading()) {
-                o = shyft::core::geo_cell_data(mid_point, area_m2, cid, radiation_factor, ltf);
-                o.catchment_ix = cix;
-            }
-        }
-    }
-}
+#include <boost/filesystem.hpp>
 
 void cell_builder_test::test_read_and_run_region_model(void) {
 	if (!getenv("SHYFT_FULL_TEST")) {
@@ -227,7 +184,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
     auto global_parameter = make_shared<cell_t::parameter_t>();
-    std::string geo_xml_fname = shyft::experimental::io::test_path("neanidelv/geo_cell_data.xml", false);
+    std::string geo_xml_fname = shyft::experimental::io::test_path("neanidelv/geo_cell_data.bin", false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
         cout << "-> xml file missing,   regenerating xml file (could take some time)" << endl;
         cell_file_repository<cell_t> cfr(test_path, 557600.0, 6960000.0, 122, 75, 1000.0, 1000.0);
@@ -237,14 +194,14 @@ void cell_builder_test::test_read_and_run_region_model(void) {
         gcd.reserve(cells->size());
         for (const auto&c : *cells) gcd.push_back(c.geo);
         std::ofstream geo_cell_xml_file(geo_xml_fname);
-        boost::archive::xml_oarchive oa(geo_cell_xml_file);
+        boost::archive::binary_oarchive oa(geo_cell_xml_file);
         oa << BOOST_SERIALIZATION_NVP(gcd);
     }
 
     {
         std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
         std::ifstream geo_cell_xml_file(geo_xml_fname);
-        boost::archive::xml_iarchive ia(geo_cell_xml_file);
+        boost::archive::binary_iarchive ia(geo_cell_xml_file);
         ia >> BOOST_SERIALIZATION_NVP(gcd);
         cells->reserve(gcd.size());
         cell_t::state_t s0;

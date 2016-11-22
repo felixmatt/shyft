@@ -2,34 +2,6 @@
 #include "timeseries.h"
 #include <dlib/statistics.h>
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
-
-#include "ts_serialization.h"
-
-
-
-#include <boost/serialization/export.hpp>
-
-/* Serialization */
-//
-// needed for all shyft::api::ipoint_ts
-// ptr serialize/deserialize to work
-
-
-//BOOST_CLASS_EXPORT(shyft::api::ipoint_ts);
-BOOST_CLASS_EXPORT(shyft::api::gpoint_ts);
-BOOST_CLASS_EXPORT(shyft::api::aref_ts);
-BOOST_CLASS_EXPORT(shyft::api::average_ts);
-BOOST_CLASS_EXPORT(shyft::api::accumulate_ts);
-BOOST_CLASS_EXPORT(shyft::api::periodic_ts);
-BOOST_CLASS_EXPORT(shyft::api::time_shift_ts);
-BOOST_CLASS_EXPORT(shyft::api::abin_op_scalar_ts);
-BOOST_CLASS_EXPORT(shyft::api::abin_op_ts_scalar);
-BOOST_CLASS_EXPORT(shyft::api::abin_op_ts);
-
 namespace shyft{
     namespace api {
         static inline double do_op(double a,iop_t op,double b) {
@@ -379,21 +351,7 @@ namespace shyft{
         }
 
 
-        std::string apoint_ts::serialize() const {
-            using namespace std;
-            std::ostringstream xmls;
-            boost::archive::binary_oarchive oa(xmls);
-            oa << BOOST_SERIALIZATION_NVP(*this);
-            xmls.flush();
-            return xmls.str();
-        }
-        apoint_ts apoint_ts::deserialize(const std::string&str_bin) {
-            istringstream xmli(str_bin);
-            boost::archive::binary_iarchive ia(xmli);
-            shyft::api::apoint_ts ats;
-            ia >> BOOST_SERIALIZATION_NVP(ats);
-            return ats;
-        }
+
         std::vector<char> apoint_ts::serialize_to_bytes() const {
             auto ss = serialize();
             return std::vector<char>(std::begin(ss), std::end(ss));

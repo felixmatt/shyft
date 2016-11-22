@@ -103,7 +103,7 @@ namespace shyft {
 
                 // to be removed:
                 point get(size_t i) const {return point(time(i),value(i));}
-
+                x_serialize_decl();
             };
             struct average_ts;//fwd api
 			struct accumulate_ts;//fwd api
@@ -206,7 +206,7 @@ namespace shyft {
                 void scale_by(double x) ;
 
                 /** given that this ts is a bind-able ts (aref_ts)
-                 * and that bts is a gpoint_ts, make 
+                 * and that bts is a gpoint_ts, make
                  * a *copy* of gpoint_ts and use it as representation
                  * for the values of this ts
                  * \parameter bts time-series of type point that will be applied to this ts.
@@ -215,7 +215,7 @@ namespace shyft {
                 void bind(const apoint_ts& bts);
 
                 /** recursive search through the expression that this ts represents,
-                 *  and return a list of bind_ts_info that can be used to 
+                 *  and return a list of bind_ts_info that can be used to
                  *  inspect and possibly 'bind' to values \ref bind.
                  * \return a vector of ts_bind_info
                  */
@@ -225,6 +225,7 @@ namespace shyft {
                 static apoint_ts deserialize(const std::string&ss);
                 std::vector<char> serialize_to_bytes() const;
                 static apoint_ts deserialize_from_bytes(const std::vector<char>&ss);
+                x_serialize_decl();
             };
 
             /** ts_bind_info gives information about the timeseries and it's binding
@@ -287,6 +288,7 @@ namespace shyft {
                 void set(size_t i, double x) {rep.set(i,x);}
                 void fill(double x) {rep.fill(x);}
                 void scale_by(double x) {rep.scale_by(x);}
+                x_serialize_decl();
             };
 
             struct aref_ts:ipoint_ts {
@@ -329,7 +331,8 @@ namespace shyft {
                 void set(size_t i, double x) {rep.set(i,x);}
                 void fill(double x) {rep.fill(x);}
                 void scale_by(double x) {rep.scale_by(x);}
-            };
+                x_serialize_decl();
+           };
 
             /** \brief The average_ts is used for providing ts average values over a time-axis
              *
@@ -406,6 +409,7 @@ namespace shyft {
                 }
                 // to help the average function, return the i'th point of the underlying timeseries
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
+                x_serialize_decl();
 
             };
 
@@ -496,6 +500,7 @@ namespace shyft {
 				}
 				// to help the average function, return the i'th point of the underlying timeseries
 				//point get(size_t i) const {return point(ts->time(i),ts->value(i));}
+                x_serialize_decl();
 
 			};
 
@@ -557,6 +562,7 @@ namespace shyft {
                 virtual double value(size_t i) const {return ts->value(i);}
                 virtual double value_at(utctime t) const {return ts->value_at(t-dt);}
                 virtual std::vector<double> values() const {return ts->values();}
+                x_serialize_decl();
 
             };
 
@@ -593,6 +599,7 @@ namespace shyft {
 				virtual double value(size_t i) const { return ts.value(i); }
 				virtual double value_at(utctime t) const { return value(index_of(t)); }
 				virtual vector<double> values() const { return ts.values(); }
+                x_serialize_decl();
 			};
 
 
@@ -681,6 +688,7 @@ namespace shyft {
                   double value_at(utctime t) const ;
                   double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
                   std::vector<double> values() const;
+                  x_serialize_decl();
 
             };
 
@@ -747,7 +755,7 @@ namespace shyft {
                   double value_at(utctime t) const ;
                   double value(size_t i) const ;
                   std::vector<double> values() const ;
-
+                  x_serialize_decl();
             };
 
             /** \brief  binary operation for type ts op double
@@ -812,6 +820,7 @@ namespace shyft {
                   double value_at(utctime t) const;
                   double value(size_t i) const;
                   std::vector<double> values() const;
+                x_serialize_decl();
 
             };
 
@@ -870,3 +879,15 @@ namespace shyft {
         }
     }
 }
+//-- serialization support
+x_serialize_export_key(shyft::api::ipoint_ts);
+x_serialize_export_key(shyft::api::gpoint_ts);
+x_serialize_export_key(shyft::api::average_ts);
+x_serialize_export_key(shyft::api::accumulate_ts);
+x_serialize_export_key(shyft::api::time_shift_ts);
+x_serialize_export_key(shyft::api::periodic_ts);
+x_serialize_export_key(shyft::api::abin_op_scalar_ts);
+x_serialize_export_key(shyft::api::abin_op_ts);
+x_serialize_export_key(shyft::api::abin_op_ts_scalar);
+x_serialize_export_key(shyft::api::aref_ts);
+x_serialize_export_key(shyft::api::apoint_ts);

@@ -81,6 +81,9 @@ namespace shyft {
             static inline geo_point difference(const geo_point& a, const geo_point& b) {
                 return geo_point(a.x - b.x, a.y - b.y, a.z - b.z);
             }
+            x_serialize_decl();
         };
     }
-} // shyft
+}
+//-- serialization support shyft
+x_serialize_export_key(shyft::core::geo_point);

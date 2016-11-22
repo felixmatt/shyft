@@ -50,18 +50,17 @@
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
-			<Add library="enkicore" />
 			<Add library="armadillo" />
 		</Linker>
 		<Unit filename="api.cpp" />
 		<Unit filename="api.h" />
+		<Unit filename="api_serialization.cpp" />
 		<Unit filename="hbv_stack.h" />
 		<Unit filename="pt_gs_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
 		<Unit filename="timeseries.cpp" />
 		<Unit filename="timeseries.h" />
-		<Unit filename="ts_serialization.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

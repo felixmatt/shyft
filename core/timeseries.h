@@ -333,7 +333,7 @@ namespace shyft{
             void fill(double value) { std::fill(begin(v), end(v), value); }
             void fill_range(double value, int start_step, int n_steps) { if (n_steps == 0)fill(value); else std::fill(begin(v) + start_step, begin(v) + start_step + n_steps, value); }
 			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
-
+            x_serialize_decl();
         };
 
         /** \brief time_shift ts do a time-shift dt on the supplied ts
@@ -406,6 +406,7 @@ namespace shyft{
             //--
             double value(size_t i) const { return ts.value(i);}
             double operator()(utctime t) const { return ts(t-dt);} ///< just here we needed the dt
+            x_serialize_decl();
         };
 
         /**\brief average_ts, average time-series
@@ -446,6 +447,7 @@ namespace shyft{
                     return nan;
                 return value(i);
             }
+            x_serialize_decl();
         };
 
 		/**\brief accumulate_ts, accumulate time-series
@@ -503,6 +505,7 @@ namespace shyft{
 				size_t ix_hint = 0;
 				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
 			}
+            x_serialize_decl();
 		};
 
 		/**\brief A simple profile description defined by start-time and a equidistance by delta-t value-profile.
@@ -535,6 +538,7 @@ namespace shyft{
 					return profile[i];
 				return nan;
 			}
+            x_serialize_decl();
 		};
 
 		/** \brief profile accessor that enables use of average_value etc.
@@ -603,6 +607,8 @@ namespace shyft{
 			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
 			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
 			size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
+			x_serialize_decl();
+
 		};
 
 		/**\brief periodic_ts, periodic pattern time-series
@@ -641,6 +647,7 @@ namespace shyft{
 					v.emplace_back(value(i));
 				return std::move(v);
 			}
+            x_serialize_decl();
 		};
 
         /**\brief glacier melt ts
@@ -701,6 +708,7 @@ namespace shyft{
 					return nan;
                 return value(i);
 			}
+            x_serialize_decl();
 		};
 
         /**\brief a symbolic reference ts
@@ -805,6 +813,7 @@ namespace shyft{
  			void scale_by(double value) {
  			    bts().scale_by(value);
             }
+            x_serialize_decl();
 
         };
 
@@ -872,7 +881,8 @@ namespace shyft{
                 deferred_bind();
                 return ta.size();
             }
-        };
+            x_serialize_decl();
+       };
 
         /** specialize for double bin_op ts */
         template<class B,class O,class TA>
@@ -911,6 +921,7 @@ namespace shyft{
                 deferred_bind();
                 return ta.size();
             }
+            x_serialize_decl();
         };
 
         /** specialize for ts bin_op double */
@@ -949,6 +960,7 @@ namespace shyft{
                 deferred_bind();
                 return ta.size();
             }
+            x_serialize_decl();
         };
 
 
@@ -1675,3 +1687,9 @@ namespace shyft{
         }
     } // timeseries
 } // shyft
+//-- serialization support
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
+
