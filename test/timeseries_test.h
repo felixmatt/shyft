@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cxxtest/TestSuite.h>
-
 class timeseries_test: public CxxTest::TestSuite
 {
 public:
@@ -33,6 +31,7 @@ public:
 	void test_accumulate_ts_and_accessor();
 	void test_partition_by();
 	void test_unit_conversion();
+	void test_ts_ref();
 };
 
 

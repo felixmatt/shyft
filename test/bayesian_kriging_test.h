@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 class bayesian_kriging_test: public CxxTest::TestSuite
 {

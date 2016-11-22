@@ -71,5 +71,6 @@ add_test(hbv_soil_test ${target} hbv_soil_test)
 add_test(hbv_actual_evapotranspiration_test ${target} hbv_actual_evapotranspiration_test)
 add_test(glacier_melt_test ${target} glacier_melt_test)
 add_test(kriging_test ${target} kriging_test)
+add_test(serialization_test ${target} serialization_test)
 
 

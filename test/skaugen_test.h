@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cxxtest/TestSuite.h>
-
 class skaugen_test: public CxxTest::TestSuite {
   public:
     void test_accumulation();

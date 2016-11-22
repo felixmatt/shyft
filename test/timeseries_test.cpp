@@ -8,7 +8,6 @@
 #include "api/timeseries.h"
 
 
-
 namespace shyfttest {
     const double EPS = 1.0e-8;
     using namespace std;
@@ -862,7 +861,7 @@ void timeseries_test::test_periodic_ts_t() {
 	utctime t0 = utc.time(2015, 1, 1);
 	timeaxis ta(t0, deltahours(10), 1000);
 
-	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000);
@@ -875,7 +874,7 @@ void timeseries_test::test_periodic_ts_over_sampled() {
 	utctime t0 = utc.time(2015, 1, 1);
 	timeaxis ta(t0, deltahours(1), 1000);
 
-	typedef periodic_ts<profile_description, timeaxis> periodic_ts_t;
+	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000);
@@ -944,7 +943,7 @@ void timeseries_test::test_periodic_template_ts() {
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
 	TS_ASSERT_DELTA(pd.size(), pv.size(), 1e-9);
 
-	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
 	TS_ASSERT_EQUALS(fun.size(), 1000);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
@@ -956,20 +955,20 @@ void timeseries_test::test_periodic_template_ts() {
 	// and time-of day is also different:
 	//
 	profile_description pd1(utc.time(2000,1,1,2), dt, pv);
-	periodic_ts<profile_description, timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
+	periodic_ts<timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
 	TS_ASSERT_EQUALS(fx.value(0), 3.1);// verified using excel
 	TS_ASSERT_EQUALS(fx.value(1), 4.8);
 	TS_ASSERT_EQUALS(fx.value(2), 5.0);// overlaps next day as well
 	// case 2: now test another case where the time-axis is 1hour, and we have POINT_AVERAGE_VALUE(stair-case-type f(t))
 	// between points.
 	timeaxis ta_hour(t0, deltahours(1), 24);
-	periodic_ts<profile_description, timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
+	periodic_ts<timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
 	vector<double> expected_fs = { 8.0,8.0,1.0,1.0,1.0,2.0,2.0,2.0,3.0,3.0,3.0,4.0,4.0,4.0,5.0,5.0,5.0,6.0,6.0,6.0,7.0,7.0,7.0,8.0 };
 	for (size_t i = 0;i < expected_fs.size();++i)
 		TS_ASSERT_DELTA(expected_fs[i], fs.value(i), 0.00001);
 	// case 3: as case 2, but POINT_INSTANT_VALUE and linear-between points type of f(t)
 	//
-	periodic_ts<profile_description, timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
+	periodic_ts< timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
 	vector<double> expected_fl = { 4.500000,2.166667,1.166667,1.500000,1.833333,2.166667,2.500000,2.833333,3.166667,3.500000,3.833333,4.166667,4.500000,4.833333,5.166667,5.500000,5.833333,6.166667,6.500000,6.833333,	7.166667,7.500000,7.833333, 8.0 /*	ok, if we consider f(t) keep value at the end, otherwise it's 6.833333 */	};
 	for (size_t i = 0;i < expected_fl.size();++i)
 		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
@@ -983,7 +982,7 @@ void timeseries_test::test_periodic_ts_values() {
 	timeaxis ta(t0, deltahours(10), 1000);
 
 	profile_description pd(t0, dt, pv);
-	periodic_ts<profile_description, timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 
 	auto v = fun.values();
 	TS_ASSERT_EQUALS(v.size(), ta.size());
@@ -1033,7 +1032,7 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	// simple test at ix=1:
 	TS_ASSERT_DELTA(0.5*deltahours(1), aa.value(1), 0.001);
 	TS_ASSERT_DELTA(0.5*deltahours(1), ats.value(1), 0.001);
-	// now the ats have some extra feature through it's f(t), operator()
+	// now the ts have some extra feature through it's f(t), operator()
 	TS_ASSERT_DELTA(0.25*deltaminutes(30), ats(t + deltaminutes(30)), 0.0001);
 	// the accessor should be smart, trying to re-use prior computation, I verify the result here,
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
@@ -1109,4 +1108,47 @@ void timeseries_test::test_unit_conversion() {
     double q_m3s = 1;
     TS_ASSERT_DELTA(shyft::m3s_to_mmh(q_m3s,area_m2),q_m3s/area_m2*(1000.0*3600.0),1e-10);
     TS_ASSERT_DELTA(shyft::mmh_to_m3s(shyft::m3s_to_mmh(q_m3s,area_m2),area_m2),q_m3s,1e-10);
+}
+
+void timeseries_test::test_ts_ref() {
+    using ta_t=shyft::time_axis::fixed_dt;
+    using ts_t=shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>;
+    using rts_t=shyft::timeseries::ref_ts<ts_t>;
+    using calendar=shyft::core::calendar;
+    calendar utc;
+    ta_t ta(utc.time(2016,10,1),deltahours(1),10);
+    ts_t a(ta,1.0,fx_policy_t::POINT_AVERAGE_VALUE);
+    auto b=make_shared<rts_t>(); // note that ref_ts b need to be some kind of shared_ptr
+    string b_ref_key("netcdf://group/a/b");
+    string x_ref_key("fame://nordic_main/price_forecast_NO1_eur_MWh");
+    auto x=make_shared<rts_t>();
+    x->ref=x_ref_key;
+    b->ref=b_ref_key;
+    auto c=3.0*a+b*a/4.0*x*x; // otherwise, we would have to bind the b copied in the expression here
+                // (also possible)
+    size_t n;   // but not practical now.
+    try
+     {
+        n=c.time_axis().size();
+        TS_FAIL("unbound ref_ts should throw on access");
+    } catch (const runtime_error& ) {
+        ;// ok
+    } catch (...) {
+        TS_FAIL("Expected runtime_error here");
+    }
+    auto bb= make_shared<ts_t>(ta,2.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
+    auto bx= make_shared<ts_t>(ta,10.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
+
+    auto resolve_sym_ref = [&bb,&b_ref_key,&bx,&x_ref_key](rts_t& rts) {
+        if(rts.ref == b_ref_key) // mimic of a lookup that could have been done here.
+            rts.ts = bb;
+        if(rts.ref== x_ref_key)
+            rts.ts = bx;
+    };
+
+    bind_ref_ts(c,resolve_sym_ref);
+    n=c.time_axis().size(); // this time expr. c is valid
+    TS_ASSERT_EQUALS(n,a.time_axis().size());// have proper size
+    TS_ASSERT_DELTA(c.value(0), 3*1 + 2*1/4.0*10.0*10.0,0.0001);// and expected value(s)
+
 }

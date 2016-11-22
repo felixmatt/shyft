@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 class kriging_test: public CxxTest::TestSuite {
     public:

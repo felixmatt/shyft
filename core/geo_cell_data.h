@@ -68,6 +68,7 @@ namespace shyft {
 			double lake_;   // not regulated, assume time-delay until discharge
 			double reservoir_;// regulated, assume zero time-delay to discharge
 			double forest_;
+			x_serialize_decl();
         };
 
 
@@ -110,6 +111,10 @@ namespace shyft {
 			double radiation_slope_factor_;
 			land_type_fractions fractions;
 			// geo-type  parts, interesting for some/most response routines, sum fractions should be <=1.0
+			x_serialize_decl();
 		};
     }
-} // shyft
+}
+//-- serialization support shyft
+x_serialize_export_key(shyft::core::land_type_fractions);
+x_serialize_export_key(shyft::core::geo_cell_data);

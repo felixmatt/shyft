@@ -65,13 +65,13 @@ set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT
 #set(CMAKE_CXX_FLAGS ${C_FLAGS} CACHE STRING "CXX flags." FORCE)
 
 # Set the common C++ files
-set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp ${CMAKE_SOURCE_DIR}/api/timeseries.cpp)
+set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/core_serialization.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api_serialization.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp ${CMAKE_SOURCE_DIR}/api/timeseries.cpp)
 
 # Create the API destination directory
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # Additional libraries
-set(LIBS "-lblas -llapack -lboost_python3")
+set(LIBS "-lblas -llapack -lboost_python3 -lboost_serialization")
 
 # Compile extensions api extension
 foreach(python_api_extension  "api" )

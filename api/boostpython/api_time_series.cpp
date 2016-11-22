@@ -49,6 +49,7 @@ namespace expose {
             .def("create_time_point_ts",&shyft::api::TsFactory::create_time_point_ts,time_point_ts_overloads())//args("period","times","values","interpretation"),"return a point ts from specified arguments")
             ;
     }
+ 
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -62,6 +63,23 @@ namespace expose {
         self_ts_t  min_ts_f =&pts_t::min;
         self_dbl_t max_double_f=&pts_t::max;
         self_ts_t  max_ts_f =&pts_t::max;
+        typedef shyft::api::ts_bind_info TsBindInfo;
+        class_<TsBindInfo>("TsBindInfo",
+            "TsBindInfo gives information about the time-series and it's binding\n"
+            "represented by encoded string reference\n"
+            "Given that you have a concrete ts,\n"
+            "you can bind that the bind_info.ts\n"
+            "using bind_info.ts.bind()\n"
+            "see also Timeseries.find_ts_bind_info() and Timeseries.bind()\n"
+            )
+            .def_readwrite("id", &shyft::api::ts_bind_info::reference, "a unique id/url that identifies a time-series in a ts-database/file-store/service")
+            .def_readwrite("ts", &shyft::api::ts_bind_info::ts,"the ts, provides .bind(another_ts) to set the concrete values")
+            ;
+
+        typedef vector<TsBindInfo> TsBindInfoVector;
+        class_<TsBindInfoVector>("TsBindInfoVector", "A vector of TsBindInfo\nsee also TsBindInfo")
+            .def(vector_indexing_suite<TsBindInfoVector>())
+            ;
 
 
 		class_<shyft::api::apoint_ts>("Timeseries", "A timeseries providing mathematical and statistical operations and functionality")
@@ -79,6 +97,14 @@ namespace expose {
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
 			.def(init<const vector<double>&, utctimespan,utctime, const time_axis::generic_dt&>(args("pattern", "dt","t0", "ta"), "construct a timeseries given a equally spaced dt pattern, starting at t0, and a timeaxis ta"))
+            .def(init<std::string>(args("id"),
+                "constructs a bind-able ts,\n"
+                "providing a symbolic possibly unique id that at a later time\n"
+                "can be bound, using the .bind(ts) method to concrete values\n"
+                "if the ts is used as ts, like size(),.value(),time() before it\n"
+                "is bound, then a runtime-exception is raised\n"
+                )
+            )
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 			.def("get_time_axis", &shyft::api::apoint_ts::time_axis, "returns the time-axis", return_internal_reference<>())
@@ -140,6 +166,33 @@ namespace expose {
 				"-------\n"
 				"TsVector with len n_partitions"
 				)
+            .def("bind",&shyft::api::apoint_ts::bind,args("bts"),
+                "given that this ts is a bind-able ts (aref_ts)\n"
+                "and that bts is a gpoint_ts, make\n"
+                "a *copy* of gpoint_ts and use it as representation\n"
+                "for the values of this ts\n\n"
+                "Parameters\n"
+                "----------\n"
+                "bts : Timeseries\n"
+                "\t a point ts, with time-axis and values\n\n"
+                "Throws\n"
+                "------\n"
+                "runtime_error if any of preconditions is not true.\n"
+            )
+            .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,
+                "recursive search through the expression that this ts represents,\n"
+                "and return a list of TsBindInfo that can be used to\n"
+                "inspect and possibly 'bind' to ts-values \ref bind.\n"
+                "Return\n"
+                "------\n"
+                "TsBindInfoVector, a list of TsBindInfo\n"
+            )
+            .def("serialize",&shyft::api::apoint_ts::serialize_to_bytes,
+                "convert ts (expression) into a binary blob\n"
+            )
+            .def("deserialize",&shyft::api::apoint_ts::deserialize_from_bytes,args("blob"),
+               "convert a blob, as returned by .serialize() into a Timeseries"
+            ).staticmethod("deserialize")
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);

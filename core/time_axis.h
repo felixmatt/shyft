@@ -74,6 +74,7 @@ namespace shyft {
             size_t open_range_index_of( utctime tx, size_t ix_hint=std::string::npos ) const {return n > 0 && ( tx >= t + utctimespan( n * dt ) ) ? n - 1 : index_of( tx );}
             static fixed_dt full_range() {return fixed_dt( min_utctime, max_utctime, 2 );}  //Hmm.
             static fixed_dt null_range() {return fixed_dt( 0, 0, 0 );}
+            x_serialize_decl();
         };
 
         /** A variant of time_axis that adheres to calendar periods, possibly including DST handling
@@ -135,7 +136,7 @@ namespace shyft {
                        ( size_t ) cal->diff_units( t, tx, dt );
             }
             size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {return tx >= total_period().end && n > 0 ? n - 1 : index_of( tx );}
-
+            x_serialize_decl();
         };
 
         /** \brief point_dt is the most generic dense time-axis.
@@ -176,7 +177,21 @@ namespace shyft {
 				t_end = t.back();
 				t.pop_back();
 			}
-
+            // ms seems to need explicit move etc.
+            point_dt(const point_dt&c) : t(c.t), t_end(c.t_end) {}
+            point_dt(point_dt &&c) :t(std::move(c.t)), t_end(c.t_end) {}
+            point_dt& operator=(point_dt&&c) {
+                t = std::move(c.t);
+                t_end = c.t_end;
+                return *this;
+            }
+            point_dt& operator=(const point_dt &x) {
+                if (this != &x) {
+                    t = x.t;
+                    t_end = x.t_end;
+                }
+                return *this;
+            }
             size_t size() const {return t.size();}
 
             utcperiod total_period() const {
@@ -230,7 +245,7 @@ namespace shyft {
             static point_dt null_range() {
                 return point_dt{};
             }
-
+            x_serialize_decl();
         };
 
         /** \brief a generic (not sparse) time interval time-axis.
@@ -258,7 +273,28 @@ namespace shyft {
             generic_dt( const fixed_dt&f ): gt( FIXED ), f( f ) {}
             generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
             generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
-            // --
+            // -- need move,ct etc for msc++
+            // ms seems to need explicit move etc.
+            generic_dt(const generic_dt&cc) : gt(cc.gt),f(cc.f),c(cc.c),p(cc.p) {}
+            generic_dt(generic_dt &&cc) :gt(cc.gt),f(std::move(cc.f)), c(std::move(cc.c)), p(std::move(cc.p)) {}
+            generic_dt& operator=(generic_dt&&cc) {
+                gt = cc.gt;
+                f = std::move(cc.f);
+                c = std::move(cc.c);
+                p = std::move(cc.p);
+                return *this;
+            }
+            generic_dt& operator=(const generic_dt &x) {
+                if (this != &x) {
+                    gt = x.gt;
+                    f = x.f;
+                    c = x.c;
+                    p = x.p;
+                }
+                return *this;
+            }
+
+            //--
             bool is_fixed_dt() const {return gt != POINT;}
 
             size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}
@@ -267,7 +303,7 @@ namespace shyft {
             utctime     time( size_t i ) const {switch( gt ) {default: case FIXED: return f.time( i ); case CALENDAR: return c.time( i ); case POINT: return p.time( i );}}
             size_t index_of( utctime t ) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t );}}
             size_t open_range_index_of( utctime t, size_t ix_hint = std::string::npos) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t,ix_hint );}}
-
+            x_serialize_decl();
         };
 
         /** create a new time-shifted dt time-axis */
@@ -650,3 +686,9 @@ namespace shyft {
         struct combine_type < T_A, T_B, typename enable_if < T_A::continuous::value && T_B::continuous::value >::type > {typedef generic_dt type;};
     }
 }
+//--serialization support
+x_serialize_export_key(shyft::time_axis::fixed_dt);
+x_serialize_export_key(shyft::time_axis::calendar_dt);
+x_serialize_export_key(shyft::time_axis::point_dt);
+x_serialize_export_key(shyft::time_axis::generic_dt);
+
