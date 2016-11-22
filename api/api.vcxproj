@@ -12,14 +12,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="api.cpp" />
+    <ClCompile Include="api_serialization.cpp" />
     <ClCompile Include="timeseries.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api.h" />
+    <ClInclude Include="hbv_stack.h" />
     <ClInclude Include="pt_gs_k.h" />
     <ClInclude Include="pt_ss_k.h" />
     <ClInclude Include="timeseries.h" />
-    <ClInclude Include="ts_serialization.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FDFDAA14-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>

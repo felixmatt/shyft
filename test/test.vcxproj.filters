@@ -91,6 +91,9 @@
     <ClInclude Include="kriging_test.h">
       <Filter>interpolation</Filter>
     </ClInclude>
+    <ClInclude Include="serialization_test.h">
+      <Filter>serialization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -186,6 +189,9 @@
     <ClCompile Include="kriging_test.cpp">
       <Filter>interpolation</Filter>
     </ClCompile>
+    <ClCompile Include="serialization_test.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -211,6 +217,9 @@
     </Filter>
     <Filter Include="compiler_and_testsupport">
       <UniqueIdentifier>{87c7c61d-44db-405e-94c4-d3767587e3e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="serialization">
+      <UniqueIdentifier>{dd510b90-1bd0-410d-b22c-504d8e303e96}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

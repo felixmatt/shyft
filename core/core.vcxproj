@@ -103,6 +103,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="core_serialization.cpp" />
     <ClCompile Include="dream_optimizer.cpp" />
     <ClCompile Include="experimental.cpp" />
     <ClCompile Include="sceua_optimizer.cpp" />

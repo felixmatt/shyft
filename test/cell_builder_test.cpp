@@ -184,23 +184,28 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
     auto global_parameter = make_shared<cell_t::parameter_t>();
-    std::string geo_xml_fname = shyft::experimental::io::test_path("neanidelv/geo_cell_data.bin", false);
+#ifdef _WIN32
+    const char *cell_path = "neanidelv/geo_cell_data.win.bin";
+#else
+    const char *cell_path = "neanidelv/geo_cell_data.bin";
+#endif
+    std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
-        cout << "-> xml file missing,   regenerating xml file (could take some time)" << endl;
+        cout << "-> bin file missing,   regenerating xml file (could take some time)" << endl;
         cell_file_repository<cell_t> cfr(test_path, 557600.0, 6960000.0, 122, 75, 1000.0, 1000.0);
         TS_ASSERT(cfr.read(cells));
         //-- stream cell.geo to a store
         std::vector<shyft::core::geo_cell_data> gcd;
         gcd.reserve(cells->size());
         for (const auto&c : *cells) gcd.push_back(c.geo);
-        std::ofstream geo_cell_xml_file(geo_xml_fname);
+        std::ofstream geo_cell_xml_file(geo_xml_fname,ios::binary);
         boost::archive::binary_oarchive oa(geo_cell_xml_file);
         oa << BOOST_SERIALIZATION_NVP(gcd);
     }
 
     {
         std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
-        std::ifstream geo_cell_xml_file(geo_xml_fname);
+        std::ifstream geo_cell_xml_file(geo_xml_fname,ios::binary);
         boost::archive::binary_iarchive ia(geo_cell_xml_file);
         ia >> BOOST_SERIALIZATION_NVP(gcd);
         cells->reserve(gcd.size());
