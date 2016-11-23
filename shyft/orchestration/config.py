@@ -9,7 +9,7 @@ import yaml
 import numpy as np
 
 from shyft import api
-from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k
+from shyft.api import pt_gs_k, pt_ss_k, pt_hs_k, hbv_stack
 from shyft.repository.netcdf import (
     RegionModelRepository, GeoTsRepository, get_geo_ts_collection, yaml_config)
 from shyft.repository.interpolation_parameter_repository import (

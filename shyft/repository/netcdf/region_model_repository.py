@@ -307,7 +307,8 @@ class RegionModelRepository(interfaces.RegionModelRepository):
         # Construct region parameter:
         name_map = {"gamma_snow": "gs", "priestley_taylor": "pt",
                     "kirchner": "kirchner", "actual_evapotranspiration": "ae",
-                    "skaugen": "skaugen", "hbv_snow": "snow"}
+                    "skaugen": "skaugen", "hbv_snow": "snow",
+                    "hbv_actual_evapotranspiration":"ae", "hbv_soil": "soil", "hbv_tank": "tank"}
         region_parameter = self._region_model.parameter_t()
         for p_type_name, value_ in iteritems(self._mconf.model_parameters()):
             if p_type_name in name_map:
