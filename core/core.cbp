@@ -77,6 +77,7 @@
 		<Unit filename="geo_cell_data.h" />
 		<Unit filename="geo_point.h" />
 		<Unit filename="glacier_melt.h" />
+		<Unit filename="hbv_actual_evapotranspiration.h" />
 		<Unit filename="hbv_snow.h" />
 		<Unit filename="hbv_soil.h" />
 		<Unit filename="hbv_stack.h" />

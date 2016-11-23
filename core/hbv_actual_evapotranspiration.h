@@ -9,8 +9,8 @@ namespace shyft {
 		namespace hbv_actual_evapotranspiration {
 			/**<  keeps the parameters (potential calibration/localization) for the AE */
 			struct parameter {
-				double lp = 2.0; ///<default value is 2.0
-				parameter(double lp = 2.0) : lp(lp) {}
+				double lp = 150.0; ///<default value is 150.0
+				parameter(double lp = 150.0) : lp(lp) {}
 			};
 
 			/**<  keeps the formal response of the AE method */
