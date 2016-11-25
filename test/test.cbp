@@ -71,6 +71,7 @@
 			<Add library="boost_serialization" />
 			<Add library="blas" />
 			<Add library="lapack" />
+			<Add library="dlib" />
 			<Add directory="/usr/local/lib64" />
 			<Add directory="/usr/local/lib" />
 		</Linker>

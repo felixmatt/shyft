@@ -300,3 +300,100 @@ void serialization_test::test_serialization_performance() {
     if(verbose) cout  << "de-serialization took " << ms << "ms\n\tsize:"<<xmls.size()<<" bytes \n";
     TS_ASSERT(is_equal(a, b));
 }
+
+#include <dlib/server.h>
+#include <dlib/iosockstream.h>
+
+using namespace dlib;
+using namespace std;
+
+
+template<class T>
+static api::apoint_ts read_ts(T& in) {
+    int sz;
+    in.read((char*)&sz,sizeof(sz));
+    vector<char> blob(sz,0);
+    in.read((char*)blob.data(),sz);
+    return api::apoint_ts::deserialize_from_bytes(blob);
+}
+template <class T>
+static void  write_ts( api::apoint_ts ats,T& out) {
+    auto blob= ats.serialize_to_bytes();
+    int sz=blob.size();
+    out.write((const char*)&sz,sizeof(sz));
+    out.write((const char*)blob.data(),sz);
+}
+
+class shyft_server : public server_iostream
+{
+
+    void on_connect  (
+        std::istream& in,
+        std::ostream& out,
+        const std::string& foreign_ip,
+        const std::string& local_ip,
+        unsigned short foreign_port,
+        unsigned short local_port,
+        uint64 connection_id
+    )
+    {
+        // The details of the connection are contained in the last few arguments to
+        // on_connect().  For more information, see the documentation for the
+        // server_iostream.  However, the main arguments of interest are the two streams.
+        // Here we also print the IP address of the remote machine.
+        cout << "Got a connection from " << foreign_ip << endl;
+
+        // Loop until we hit the end of the stream.  This happens when the connection
+        // terminates.
+        while (in.peek() != EOF)
+        {
+            // get the next character from the client
+            //char ch = in.get();
+            auto ats= read_ts(in);
+
+            // find stuff to bind, read and bind, then:
+
+            api::apoint_ts r(ats.time_axis(),ats.values(),ats.point_interpretation());
+
+            write_ts(r,out);            // now echo it back to them
+            //out << (char)toupper(ch);
+        }
+    }
+
+};
+api::apoint_ts mk_expression(int kb=1000) {
+    calendar utc;
+    size_t n = 1*kb*1000;// gives 8 Mb memory
+    vector<double> x;x.reserve(n);
+    for (size_t i = 0;i < n;++i)
+        x.push_back(-double(n)/2.0 + i);
+    api::apoint_ts aa(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), x);
+    auto a = aa*3.0 + aa;
+    return a;
+}
+
+void serialization_test::test_dlib_server() {
+   try
+    {
+        shyft_server our_server;
+
+        // set up the server object we have made
+        our_server.set_listening_port(1234);
+        // Tell the server to begin accepting connections.
+        our_server.start_async();
+        {
+            cout << "sending a message:\n";
+            iosockstream s0("localhost:1234");
+            auto ts_a=mk_expression(4);
+            write_ts(ts_a,s0);
+            auto ts_b=read_ts(s0);
+            cout<<"Got ts back, size= "<<ts_b.size()<<"\n";
+        }
+        cout << "Press enter to end this program" << endl;
+        cin.get();
+    }
+    catch (exception& e)
+    {
+        cout << e.what() << endl;
+    }
+}
