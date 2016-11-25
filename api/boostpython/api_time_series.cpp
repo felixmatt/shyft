@@ -141,6 +141,17 @@ namespace expose {
 				"-------\n"
 				"a new time-series, time-shifted version of self\n"
 			)
+            .def("convolve_w", &shyft::api::apoint_ts::convolve_w, args("weights", "policy"),
+                "create a new ts that is the convolved ts with the supporteds weights list"
+                "Parameters\n"
+                "----------\n"
+                "weights : DoubleVector\n"
+                "\t the weights profile, use DoubleVector.from_numpy(...) to create these.\n"
+                "\t it's the callers responsibility to ensure the sum of weights are 1.0\n"
+                "policy : convolve_policy(.USE_FIRST|USE_ZERO|USE_NAN)\n"
+                "\t Specifies how to handle initial weight.size()-1 values\n"
+                "\t  see also ConvolvePolicy\n"
+            )
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
@@ -342,6 +353,18 @@ namespace expose {
         enum_<timeseries::point_interpretation_policy>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",timeseries::POINT_INSTANT_VALUE)
             .value("POINT_AVERAGE_VALUE",timeseries::POINT_AVERAGE_VALUE)
+            .export_values()
+            ;
+        enum_<timeseries::convolve_policy>(
+            "convolve_policy",
+            "Ref Timeseries.convolve_w function, this policy determinte how to handle initial conditions\n"
+            "USE_FIRST: value(0) is used for all values before value(0), 'mass preserving'\n"
+            "USE_ZERO : fill in zero for all values before value(0):shape preserving\n"
+            "USE_NAN  : nan filled in for the first length-1 values of the filter\n"
+            )
+            .value("USE_FIRST", timeseries::convolve_policy::USE_FIRST)
+            .value("USE_ZERO", timeseries::convolve_policy::USE_ZERO)
+            .value("USE_NAN", timeseries::convolve_policy::USE_NAN)
             .export_values()
             ;
         class_<timeseries::point> ("Point", "A timeseries point specifying utctime t and value v")

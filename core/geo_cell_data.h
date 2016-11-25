@@ -71,6 +71,16 @@ namespace shyft {
 			x_serialize_decl();
         };
 
+        /** The routing_info contains the geo-static parts of the relation between
+        * the cell and the routing sink point */
+        struct routing_info {
+            routing_info(int destination_id = 0, double distance = 0.0) :
+                id(destination_id), distance(distance) {
+            }
+            int id = 0; ///< target routing input identifier (similar to catchment_id), 0 means nil,none
+            double distance = 0.0; ///< static routing distance[m] to the routing point
+            x_serialize_decl();
+        };
 
         const double default_radiation_slope_factor=0.9;
 
@@ -103,6 +113,7 @@ namespace shyft {
             bool operator==(const geo_cell_data &o) const {
                 return o.catchment_id_ == catchment_id_ && mid_point_ == o.mid_point_ && fabs(area_m2-o.area_m2)<0.1 && fractions==o.fractions;
             }
+            routing_info routing;///< keeps the geo-static routing info, where it routes to, and routing distance.
         private:
 
 			geo_point mid_point_; // midpoint
@@ -118,3 +129,5 @@ namespace shyft {
 //-- serialization support shyft
 x_serialize_export_key(shyft::core::land_type_fractions);
 x_serialize_export_key(shyft::core::geo_cell_data);
+x_serialize_export_key(shyft::core::routing_info);
+

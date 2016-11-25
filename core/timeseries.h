@@ -818,7 +818,172 @@ namespace shyft{
         };
 
 
+        /** The convolve_policy determines how the convolve_w_ts functions deals with the
+        *  initial boundary condition, i.e. when trying to convolve with values before
+        *  the first value, value(0)
+        * \sa convolve_w_ts
+        */
+        enum convolve_policy {
+            USE_FIRST, ///< ts.value(0) is used for all values before value(0): 'mass preserving'
+            USE_ZERO, ///< fill in zero for all values before value(0):shape preserving
+            USE_NAN ///< nan filled in for the first length of the filter
+        };
+        /** \brief convolve_w convolves a time-series with weights w
+        *
+        * The resulting time-series value(i) is the result of convolution (ts*w)|w.size()
+        *  value(i) => ts(i-k)*w(k), k is [0..w.size()>
+        *
+        * the convolve_policy determines how to resolve start-condition-zone
+        * where i < w.size(), \ref convolve_policy
+        *
+        * \tparam Ts any time-series
+        *  maybe \tparam W any container with .size() and [i] operator
+        */
+        template<class Ts>
+        struct convolve_w_ts {
+            typedef typename Ts::ta_t ta_t;
+            typedef std::vector<double> W;
+            Ts ts;
+            point_interpretation_policy fx_policy; // inherited from ts
+            W w;
+            convolve_policy policy = convolve_policy::USE_FIRST;
+            //-- default stuff, ct/copy etc goes here
+            convolve_w_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
+            convolve_w_ts(const convolve_w_ts& c) :ts(c.ts), fx_policy(c.fx_policy), w(c.w), policy(c.policy) {}
+            convolve_w_ts(convolve_w_ts&&c) :ts(std::move(c.ts)), fx_policy(c.fx_policy), w(std::move(c.w)), policy(c.policy) {}
 
+            convolve_w_ts& operator=(const convolve_w_ts& o) {
+                if (this != &o) {
+                    ts = o.ts;
+                    fx_policy = o.fx_policy;
+                    w = o.w;
+                    policy = o.policy;
+                }
+                return *this;
+            }
+
+            convolve_w_ts& operator=(convolve_w_ts&& o) {
+                ts = std::move(o.ts);
+                fx_policy = o.fx_policy;
+                w = o.w;
+                policy = o.policy;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_, class W_>
+            convolve_w_ts(A_ && ts, W_ && w, convolve_policy policy = convolve_policy::USE_FIRST)
+                :ts(std::forward<A_>(ts)),
+                fx_policy(POINT_AVERAGE_VALUE),//TODO: resolve issue apoint_ts method vs. property in core::ts
+                w(std::forward<W_>(w)),
+                policy(policy)                     {
+            }
+
+            const ta_t& time_axis() const { return ts.time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+
+            point get(size_t i) const { return point(ts.time(i), value(i)); }
+
+            size_t size() const { return ts.size(); }
+            size_t index_of(utctime t) const { return ts.index_of(t); }
+            utcperiod total_period() const { return ts.total_period(); }
+            utctime time(size_t i) const { return ts.time(i); }
+
+            //--
+            double value(size_t i) const {
+                double v = 0.0;
+                for (size_t j = 0;j<w.size();++j)
+                    v += j <= i ?
+                    w[j] * ts.value(i - j)
+                    :
+                    (policy == convolve_policy::USE_FIRST ? w[j] * ts.value(0) :
+                    (policy == convolve_policy::USE_ZERO ? 0.0 : shyft::nan)); // or nan ? policy based ?
+                return  v;
+            }
+            double operator()(utctime t) const {
+                return value(ts.index_of(t));
+            }
+            x_serialize_decl();
+        };
+
+        /** \brief a sum_ts computes the sum ts  of vector<ts>
+        *
+        * Enforces all ts do have at least same number of elements in time-dimension
+        * Require number of ts >0
+        * computes .value(i) so that it is the sum of all tsv.value(i)
+        * time-axis equal to tsv[0].time_axis
+        * time-axis should be equal, notice that only .size() is equal is ensured in the constructor
+        *
+        * \note The current approach only works for ts of same type, enforced by the compiler
+        *  The runtime enforces that each time-axis are equal as well, and throws exception
+        *  if not (in the non-default constructor), - if user later modifies the tsv
+        *  it could break this assumption.
+        */
+        template<class T>
+        struct uniform_sum_ts {
+            typedef typename T::ta_t ta_t;
+        private:
+            std::vector<T> tsv; ///< need this private to ensure consistency after creation
+        public:
+            point_interpretation_policy fx_policy; // inherited from ts
+            uniform_sum_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
+            uniform_sum_ts(const uniform_sum_ts& c) :tsv(c.tsv), fx_policy(c.fx_policy) {}
+            uniform_sum_ts(uniform_sum_ts&&c) :tsv(std::move(c.tsv)), fx_policy(c.fx_policy) {}
+
+            uniform_sum_ts& operator=(const uniform_sum_ts& o) {
+                if (this != &o) {
+                    tsv = o.tsv;
+                    fx_policy = o.fx_policy;
+                }
+                return *this;
+            }
+
+            uniform_sum_ts& operator=(uniform_sum_ts&& o) {
+                tsv = std::move(o.tsv);
+                fx_policy = o.fx_policy;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_>
+            uniform_sum_ts(A_ && tsv)
+                :tsv(std::forward<A_>(tsv)),
+                fx_policy(tsv.size() ? tsv[0].point_interpretation() : shyft::timeseries::POINT_AVERAGE_VALUE) {
+                if (tsv.size() == 0)
+                    throw std::runtime_error("vector<ts> size should be > 0");
+                for (size_t i = 1;i < tsv.size();++i)
+                    if (!(tsv[i].time_axis() == tsv[i - 1].time_axis())) // todo: a more extensive test needed, @ to high cost.. so  maybe provide a ta, and do true-average ?
+                        throw std::runtime_error("vector<ts> timeaxis should be aligned in sizes and numbers");
+            }
+
+            const ta_t& time_axis() const { return tsv[0].time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+
+            point get(size_t i) const { return point(tsv[0].time(i), value(i)); }
+
+            size_t size() const { return tsv.size() ? tsv[0].size() : 0; }
+            size_t index_of(utctime t) const { return tsv.size() ? tsv[0].index_of(t) : std::string::npos; }
+            utcperiod total_period() const { return tsv.size() ? tsv[0].total_period() : utcperiod(); }
+            utctime time(size_t i) const { if (tsv.size()) return tsv[0].time(i); throw std::runtime_error("uniform_sum_ts:empty sum"); }
+
+            //--
+            double value(size_t i) const {
+                if (tsv.size() == 0 || i == std::string::npos) return shyft::nan;
+                double v = tsv[0].value(i);
+                for (size_t j = 1;j < tsv.size();++j) v += tsv[j].value(i);
+                return  v;
+            }
+            double operator()(utctime t) const {
+                return value(index_of(t));
+            }
+            std::vector<double> values() const {
+                std::vector<double> r;r.reserve(size());
+                for (size_t i = 0;i < size();++i) r.push_back(value(i));
+                return std::move(r);
+            }
+        };
 
         /** \brief Basic math operators
          *
@@ -994,6 +1159,10 @@ namespace shyft{
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
         template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
+        template<class T> struct is_ts<uniform_sum_ts<T>> { static const bool value = true; };
+        template<class T> struct is_ts<shared_ptr<uniform_sum_ts<T>>> { static const bool value = true; };
+        template<class TS> struct is_ts<convolve_w_ts<TS>> { static const bool value = true; };
+        template<class TS> struct is_ts<shared_ptr<convolve_w_ts<TS>>> { static const bool value = true; };
 		// This is to allow this ts to participate in ts-math expressions
 		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
@@ -1692,4 +1861,7 @@ x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
 x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
 x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
 x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
 

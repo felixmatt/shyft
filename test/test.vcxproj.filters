@@ -94,6 +94,7 @@
     <ClInclude Include="serialization_test.h">
       <Filter>serialization</Filter>
     </ClInclude>
+    <ClInclude Include="routing_test.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -192,6 +193,7 @@
     <ClCompile Include="serialization_test.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
+    <ClCompile Include="routing_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
