@@ -32,6 +32,8 @@ public:
 	void test_partition_by();
 	void test_unit_conversion();
 	void test_ts_ref();
+    void test_convolution_w();
+	void test_uniform_sum_ts();
 };
 
 
