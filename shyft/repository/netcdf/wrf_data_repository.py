@@ -270,7 +270,7 @@ class WRFDataRepository(interfaces.GeoTsRepository):
             Boolean index array
         """
         # Get coordinate system for WRF data
-        data_proj = Proj(data_cs, x.shape)
+        data_proj = Proj(proj=data_cs)
         target_proj = Proj(target_cs)
 
         # Find bounding box in WRF projection
@@ -279,35 +279,12 @@ class WRFDataRepository(interfaces.GeoTsRepository):
         x_min, x_max = min(bb_proj[0]), max(bb_proj[0])
         y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
-        # Limit data
-        x_upper = x >= x_min
-        x_lower = x <= x_max
-        y_upper = y >= y_min
-        y_lower = y <= y_max
-        #print("x_upper, y_lower:", x_upper, y_lower)
-
-        # if sum(x_upper == x_lower) < 2:
-        #     if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
-        #         raise WRFDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-        #     x_upper[np.argmax(x_upper) - 1] = True
-        #     x_lower[np.argmin(x_lower)] = True
-        # if sum(y_upper == y_lower) < 2:
-        #     if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
-        #         raise WRFDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
-        #     y_upper[np.argmax(y_upper) - 1] = True
-        #     y_lower[np.argmin(y_lower)] = True
-
-        # Masks
-        x_mask = x_upper == x_lower
-        y_mask = y_upper == y_lower
-
-        x_inds = np.nonzero(x_mask)
-        y_inds = np.nonzero(y_mask)
+        # Mask for the limits
+        mask = ((x >= x_min) & (x <= x_max) & (y >= y_min) & (y <= y_max))
 
         # Transform from source coordinates to target coordinates
-        xx, yy = transform(data_proj, target_proj, x[x_mask], y[y_mask])
-
-        return xx, yy, (x_mask, y_mask), (x_inds, y_inds)
+        xx, yy = transform(data_proj, target_proj, x[mask], y[mask])
+        return xx, yy, (mask[0], mask[1])
 
     def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):
@@ -322,19 +299,17 @@ class WRFDataRepository(interfaces.GeoTsRepository):
             input_source_types.append("y_wind")
 
         raw_data = {}
-        x = dataset.variables.get("XLAT", None)
-        y = dataset.variables.get("XLONG", None)
+        x = dataset.variables.get("XLONG", None)
+        y = dataset.variables.get("XLAT", None)
         time = dataset.variables.get("XTIME", None)
-        print("time:", time)
-        print("x:", x[:])
-        print("x, y, time:", x.shape, y.shape, time.shape)
         if not all([x, y, time]):
             raise WRFDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
         time = convert_netcdf_time(time.units,time)
         # data_cs = dataset.variables.get("projection_lambert", None)
-        # TODO: extract the info for the projection from the file
-        data_cs_proj4 = "+proj=lcc +lon_0=78.9356 +lat_0=31.6857 +lat_1=30 +lat_2=60 +R=6.371e+06 +units=m +no_defs"
+        # TODO: Make sure that "latlong" is the correct coordinate system in WRF data
+        #data_cs_proj4 = "+proj=lcc +lon_0=78.9356 +lat_0=31.6857 +lat_1=30 +lat_2=60 +R=6.371e+06 +units=m +no_defs"
+        data_cs_proj4 = "latlong"
         if data_cs_proj4 is None:
             raise WRFDataRepositoryError("No coordinate system information in dataset.")
 
@@ -342,8 +317,7 @@ class WRFDataRepository(interfaces.GeoTsRepository):
         idx_max = np.searchsorted(time, utc_period.end, side='right')
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
-        #x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
-        x, y, (m_x, m_y), _ = self._limit(x[0], y[0], data_cs_proj4, self.shyft_cs)
+        x, y, (m_x, m_y) = self._limit(x[0], y[0], data_cs_proj4, self.shyft_cs)
         for k in dataset.variables.keys():
             if self.wrf_shyft_map.get(k, None) in input_source_types:
                 if k in self._shift_fields and issubset:  # Add one to time slice
@@ -355,9 +329,9 @@ class WRFDataRepository(interfaces.GeoTsRepository):
                 data_slice = len(data.dimensions)*[slice(None)]
                 if ensemble_member is not None:
                     data_slice[dims.index("ensemble_member")] = ensemble_member
-                data_slice[dims.index("x")] = m_x
-                data_slice[dims.index("y")] = m_y
-                data_slice[dims.index("time")] = data_time_slice
+                data_slice[dims.index("west_east")] = m_x
+                data_slice[dims.index("south_north")] = m_y
+                data_slice[dims.index("Time")] = data_time_slice
                 pure_arr = data[data_slice]
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
                     #print(pure_arr.fill_value)

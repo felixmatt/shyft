@@ -102,7 +102,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         self.allow_subset = allow_subset
         if not path.isdir(directory):
             raise AromeDataRepositoryError("No such directory '{}'".format(directory))
-        
+
         if elevation_file is not None:
             self.elevation_file = path.join(directory, elevation_file)
             if not path.isfile(self.elevation_file):
