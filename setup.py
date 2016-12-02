@@ -56,7 +56,8 @@ if "Windows" in platform.platform():
     files += [path.join(blas_dir, 'lapack_win64_MT.dll'), path.join(blas_dir, 'blas_win64_MT.dll')]
     files = [f for f in files if '-gd-' not in path.basename(f)]
     dest_dir = path.join(path.dirname(path.realpath(__file__)), 'shyft', 'lib')
-    os.mkdir(dest_dir)
+    if not path.isdir(dest_dir):
+        os.mkdir(dest_dir)
     for f in files:
         shutil.copy2(f, path.join(dest_dir, path.basename(f)))
 
