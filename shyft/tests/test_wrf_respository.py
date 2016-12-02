@@ -26,7 +26,7 @@ class WRFDataRepositoryTestCase(unittest.TestCase):
         base_dir = path.join(shyftdata_dir, "repository", "wrf_data_repository")
         f1 = "out_d02_{}.nc".format(date_str)
 
-        wrf1 = WRFDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox)
+        wrf1 = WRFDataRepository(EPSG, base_dir, filename=f1, bounding_box=bbox, allow_subset=True)
         wrf1_data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity", "radiation")
         sources = wrf1.get_timeseries(wrf1_data_names, period, None)
         self.assertTrue(len(sources) > 0)

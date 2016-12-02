@@ -284,7 +284,8 @@ class WRFDataRepository(interfaces.GeoTsRepository):
 
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, x[mask], y[mask])
-        return xx, yy, (mask[0], mask[1])
+        y_mask, x_mask = np.nonzero(mask)
+        return xx, yy, (x_mask, y_mask)
 
     def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):
@@ -306,7 +307,6 @@ class WRFDataRepository(interfaces.GeoTsRepository):
             raise WRFDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
         time = convert_netcdf_time(time.units,time)
-        # data_cs = dataset.variables.get("projection_lambert", None)
         # TODO: Make sure that "latlong" is the correct coordinate system in WRF data
         #data_cs_proj4 = "+proj=lcc +lon_0=78.9356 +lat_0=31.6857 +lat_1=30 +lat_2=60 +R=6.371e+06 +units=m +no_defs"
         data_cs_proj4 = "latlong"
@@ -319,6 +319,8 @@ class WRFDataRepository(interfaces.GeoTsRepository):
         time_slice = slice(idx_min, idx_max)
         x, y, (m_x, m_y) = self._limit(x[0], y[0], data_cs_proj4, self.shyft_cs)
         for k in dataset.variables.keys():
+            if k in ('U', 'V'):  # skip wind variables for now
+                continue
             if self.wrf_shyft_map.get(k, None) in input_source_types:
                 if k in self._shift_fields and issubset:  # Add one to time slice
                     data_time_slice = slice(time_slice.start, time_slice.stop + 1)
@@ -332,22 +334,19 @@ class WRFDataRepository(interfaces.GeoTsRepository):
                 data_slice[dims.index("west_east")] = m_x
                 data_slice[dims.index("south_north")] = m_y
                 data_slice[dims.index("Time")] = data_time_slice
-                pure_arr = data[data_slice]
+                pure_arr = data[:][data_slice]
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
                     #print(pure_arr.fill_value)
                     pure_arr = pure_arr.filled(np.nan)
                 raw_data[self.wrf_shyft_map[k]] = pure_arr, k
-                #raw_data[self.wrf_shyft_map[k]] = np.array(data[data_slice], dtype='d'), k
 
         if 'HGT' in dataset.variables.keys():
             data = dataset.variables['HGT']
             dims = data.dimensions
-            data_slice = len(data.dimensions)*[slice(None)]
-            data_slice[dims.index("x")] = m_x
-            data_slice[dims.index("y")] = m_y
-            z = data[data_slice]
-            shp = z.shape
-            z = z.reshape(shp[-2], shp[-1])
+            data_slice = [None, None]
+            data_slice[dims.index("west_east") - 1] = m_x
+            data_slice[dims.index("south_north") - 1] = m_y
+            z = data[0][data_slice]  # get the first entry in time
         else:
             raise WRFDataRepositoryError("No elevations found in dataset.")
 
