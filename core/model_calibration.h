@@ -1,6 +1,5 @@
 #pragma once
-#include <dlib/optimization.h>
-#include <dlib/statistics.h>
+
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"

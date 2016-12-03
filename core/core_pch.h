@@ -106,5 +106,14 @@ typedef boost::math::static_gcd_type static_gcd_type;
     template void T::serialize( boost::archive::AI &,const unsigned int);
 
 
-
+//--providing all needed lin-alg:
 #include <armadillo>
+
+//-- providing all needed optimization, graphs ml etc.
+
+#include <dlib/optimization.h>
+#include <dlib/statistics.h>
+
+#include <dlib/graph_utils.h>
+#include <dlib/graph.h>
+#include <dlib/directed_graph.h>

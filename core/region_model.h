@@ -700,8 +700,8 @@ namespace shyft {
              */
             template <class TSV>
             void routing_discharges( TSV& cr) const {
-                typedef typename TSV::value_type ts_t;
-                cr.clear();
+                //typedef typename TSV::value_type ts_t;
+                //cr.clear();
                 //TODO: iterate over the routing model, return results
             }
         protected:

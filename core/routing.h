@@ -105,8 +105,107 @@ namespace shyft {
                 for (size_t i = 0;i < ts.size();++i) r.push_back(ts.value(i));
                 return std::move(r);
             }
+
+            /** Provide a class that enable safe manipulation of rivers.
+             * ensure no cycles, no duplicate object-id's etc.
+             * Partly motivated by exposure to python, providing routing-id etc.
+             * to enable external simplified description and association.
+             */
+            struct river_network {
+                dlib::directed_graph<routing::river>::kernel_1a_c network;///< utilizing dlib representation and algorithms to do checking
+            private:
+                std::map<int,unsigned long> rid_map;///< user operates on rivers based on river-id
+            public:
+                void check_rid(int rid, bool must_exist=true) const {
+                    if(rid<=0) throw std::runtime_error("valid river id must be >0");
+                    if(must_exist)
+                        if(rid_map.find(rid)==rid_map.end())
+                            throw std::runtime_error(std::string("the supplied river id is not registered/does not exist")+std::to_string(rid));
+                }
+
+                river_network()=default;
+                river_network(const river_network&)=default;
+                ~river_network()=default;
+
+                // note: the dlib directed graph is nocopy
+                river_network(river_network&&c)=delete;
+                river_network& operator=(const river_network&c)=delete;
+                river_network& operator=(river_network&&c)=delete;
+                ///< .add(river), - includes possible connection, will fail if dest. do not exis
+                river_network& add(const river &r) {
+                    check_rid(r.id,false);
+                    if(rid_map.find(r.id)!=rid_map.end()) throw std::runtime_error("the supplied river id is already registered");
+                    if(r.id == r.downstream.id) throw std::runtime_error("the supplied river.downstream.id should not point to self (cycle!)");
+                    if(r.downstream.id>0 && rid_map.find(r.downstream.id) ==rid_map.end()) throw std::runtime_error("the river.downstream.id does not yet exist in the network, please downstream river-segments first");
+                    auto node_id=network.add_node();
+                    network.node(node_id).data=r;
+                    if(r.downstream.id != 0)
+                        network.add_edge(node_id,rid_map[r.downstream.id]);
+                    if(dlib::graph_contains_directed_cycle(network)) {
+                        network.remove_node(node_id);
+                        throw std::runtime_error("adding this river caused circular reference");
+                    }
+                    rid_map[r.id]= node_id;// finally ok, add it to map.
+                    return *this;
+                }
+                ///< .remove_by_id(river-id)
+                void remove_by_id(int rid) {
+                    check_rid(rid);
+                    auto node_id=rid_map[rid];
+                    // also need to nil out upstream river-references
+                    for(size_t i=0;i<network.node(node_id).number_of_parents();++i) {
+                        network.node(node_id).parent(i).data.downstream.id=0;
+                    }
+                    network.remove_node(node_id);
+                }
+                ///< .river(river-id).. --> the river-object itself, r/w
+                river& river_by_id(int rid) {
+                    check_rid(rid);
+                    return network.node(rid_map[rid]).data;
+                }
+                const river& river_by_id(int rid) const {
+                    check_rid(rid);
+                    auto nid=rid_map.find(rid)->second;
+                    return network.node(nid).data;
+                }
+                std::vector<int> upstreams_by_id(int rid) const {
+                    check_rid(rid);
+                    std::vector<int> rids;
+                    auto node_id=rid_map.find(rid)->second;
+                    for(size_t i=0;i<network.node(node_id).number_of_parents();++i) {
+                        rids.push_back(network.node(node_id).parent(i).data.id);
+                    }
+                    return rids;
+                }
+                int downstream_by_id(int rid) const {
+                    check_rid(rid);
+                    auto node_id=rid_map.find(rid)->second;
+                    return network.node(node_id).data.downstream.id;
+                }
+                void set_downstream_by_id(int rid,int downstream_rid) {
+                    check_rid(rid);
+                    if(downstream_rid>0)
+                        check_rid(downstream_rid);// maybe weak error reporting
+                    // first disconnect current rid
+                    auto nid=rid_map[rid];
+                    unsigned rid_old_downstream=network.node(nid).data.downstream.id;
+                    if(rid_old_downstream>0)
+                        network.remove_edge(nid,rid_map[rid_old_downstream]);
+                        // but keep the ref in .data until we know it works.
+                    // then if new, connect
+                    if(downstream_rid>0) {
+                        network.add_edge(nid,rid_map[downstream_rid]);
+                        if(dlib::graph_contains_directed_cycle(network)) {
+                            network.remove_edge(nid,rid_map[downstream_rid]);// rollback change
+                            network.add_edge(nid,rid_map[rid_old_downstream]);
+                            throw std::runtime_error("connection would create a cycle, not allowed");
+                        }
+                    }
+                    network.node(nid).data.downstream.id=downstream_rid;
+                }
+            };
+
             /** A routing model
-             *
              *
              * Based on modelling the routing using repeated convolution of a unit hydro-graph.
              * First from the lateral local cells that feeds into the routing-point (river/creek).
@@ -116,7 +215,6 @@ namespace shyft {
              * \tparam C
              *  Cell type that should provide
              *  -# C::ts_t the current core time-series representation, currently point_ts<fixed_dt>..
-             *  -# C::output_m3s_t the type of the call C::output_m3s() const (we could rater use result_of..)
              *
              * \note implementation:
              *    technically we are currently flattening out the ts-expression tree by computing the full
@@ -124,6 +222,14 @@ namespace shyft {
              *    Later we could utilize a dynamic dispatch to to build the recursive
              *    accumulated expression tree at any river in the routing graph. This could
              *    improve performance and resource usage in certain scenarios.
+             *
+             * \note usage and further work:
+             *    In the current form, we can use the routing::model<C> as a standalone class, which is
+             *    nice during testing. However, the time_axis (ta) member is kind of not elegant
+             *    in it's current form, since it invite to duplicate data from the region-model.
+             *    Thus, the current plan is to use it as a temporary object, for calculations,
+             *    provided by the member-functions of region_model. The region model then keep
+             *    the river-routing network, cells, etc. and this class is constructed on request.
              *
              */
 
@@ -133,11 +239,42 @@ namespace shyft {
                 //typedef typename C::output_m3s_t ots_t; // the output result from the cell, it's a convolution_w_ts<rts_t>..
                 //typedef typename shyft::timeseries::uniform_sum_ts<ots_t> sum_ts_t; // could be possible using api::apoint_ts
 
-                std::map<int, river> river_map; ///< keeps structure and routing properties
-
+                //std::map<int, river> river_map; ///< keeps structure and routing properties
+                std::shared_ptr<river_network> rivers;
                 std::shared_ptr<std::vector<C>> cells; ///< shared with the region_model !
-                timeseries::timeaxis ta;///< shared with the region_model,  should be simulation time-axis
+                time_axis::fixed_dt ta;///< shared with the region_model,  should be the simulation time-axis
 
+                model(std::shared_ptr<river_network> rivers,
+                      std::shared_ptr<std::vector<C>> cells,
+                      const time_axis::fixed_dt& ta):rivers(rivers),cells(cells),ta(ta) {}
+
+                // constructors etc.
+                model() = default;
+                model(const model&)=default;
+                model(model&&) = default;
+                ~model() =default;
+                model&operator=(const model&c) {
+                    if(&c !=this) {
+                        rivers=c.rivers;
+                        cells=c.cells;// shallow
+                        ta =c.ta;
+                    }
+                    return *this;
+                }
+                model&operator=(model &&c) {
+                    rivers=std::move(c.rivers);
+                    cells=std::move(c.cells);
+                    ta =std::move(c.ta);
+                    return *this;
+                }
+
+                // useful functions:
+                void verify_cell_river_connections() const {
+                    for(const auto&c:*cells) {
+                        if(c.geo.routing.id>0)
+                            rivers->check_rid(c.geo.routing.id);
+                    }
+                }
 
                 std::vector<double> cell_uhg(const C& c, utctimespan dt) const {
                     double steps = (c.geo.routing.distance / c.parameter->routing_uhg.velocity)/dt;// time = distance / velocity[s] // dt[s]
@@ -175,12 +312,12 @@ namespace shyft {
                  */
                 rts_t upstream_inflow(int node_id) const {
                     rts_t r(ta, 0.0, timeseries::POINT_AVERAGE_VALUE);
-                    for (const auto& i : river_map) {
-                        if (i.second.downstream.id == node_id) {
-                            auto flow_m3s = output_m3s(i.first);
-                            for (size_t t = 0;t < ta.size();++t)
-                                r.add(t, flow_m3s.value(t));
-                        }
+                    auto upstream_ids=rivers->upstreams_by_id(node_id);
+                    for(auto upstream_id:upstream_ids) {
+                        auto flow_m3s= output_m3s(upstream_id);
+                        for (size_t t = 0;t < ta.size();++t)
+                            r.add(t, flow_m3s.value(t));
+
                     }
                     return std::move(r);
                 }
@@ -192,7 +329,7 @@ namespace shyft {
                  */
                 rts_t output_m3s(int node_id) const {
                     utctimespan dt = ta.delta(); // for now need to pick up delta from the sources
-                    std::vector<double> uhg_weights = river_map.at(node_id).uhg(dt);
+                    std::vector<double> uhg_weights = rivers->river_by_id(node_id).uhg(dt);
                     auto sum_input_m3s = local_inflow(node_id)+ upstream_inflow(node_id);
                     auto response = timeseries::convolve_w_ts<decltype(sum_input_m3s)>(sum_input_m3s, uhg_weights, timeseries::convolve_policy::USE_ZERO);
                     return std::move(rts_t(ta, ts_values(response), timeseries::POINT_AVERAGE_VALUE)); // flatten values

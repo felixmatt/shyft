@@ -43,18 +43,25 @@ namespace shyft {
 
 
 
-void routing_test::test_hydrograph() {
-    //
-    //  Just for playing around with sum of routing river response
-    //
+void routing_test::test_build_valid_river_network() {
+    #if 0
+    using namespace std;
+    using namespace shyft::core;
+    map<int,routing::river> network;
+    int a_id = 1;
+    int b_id = 2;
+    int c_id = 3;
+    int d_id = 4;
+    routing::river a{ a_id,routing_info(b_id, 2*3600.0),routing::uhg_parameter(1.0) };// two hour delay from
+    routing::river b{ b_id,routing_info(d_id, 0),routing::uhg_parameter(1.0) }; // give zero delay
+    routing::river c{ c_id,routing_info(d_id, 3600.0),routing::uhg_parameter(1.0) };// give one hour delay
+    routing::river d{ d_id,routing_info(0) }; // here is our observation point river
+    //TODO: write test that verify exception thrown when building river_network wrong
+    #endif
 
 }
 
-//-- consider using dlib graph to do the graph stuff
 
-//#include <dlib/graph_utils.h>
-//#include <dlib/graph.h>
-//#include <dlib/directed_graph.h>
 
 void routing_test::test_routing_model() {
     using namespace shyft::core;
@@ -112,11 +119,20 @@ void routing_test::test_routing_model() {
     routing::model<cell_t> m;
     m.cells = cells;
     m.ta = ta;
-    m.river_map[a.id]=a;
-    m.river_map[b.id]=b;
-    m.river_map[c.id]=c;
-    m.river_map[d.id]=d;
+    m.rivers = std::make_shared<routing::river_network>();
+    // add from downstream and up (otherwise we cant refer downstream object)
+    m.rivers->add(d);
+    m.rivers->add(c);
+    m.rivers->add(b);
+    m.rivers->add(a);
 
+    try {
+        m.rivers->check_rid(5);
+        TS_FAIL("Expect runtime error here");
+    } catch(const std::runtime_error&) {
+        // ok!
+        m.rivers->check_rid(2);// ok, this exists
+    }
     /// now, with the model in place, including some fake-timeseries at cell-level, we can expect things to happen:
     // fto establish regression, uncomment and print out out the response
     auto observation_m3s = m.local_inflow(d_id) + m.upstream_inflow(d_id);// this arrives into river d:
@@ -129,23 +145,5 @@ void routing_test::test_routing_model() {
     for(size_t i=0;i<observation_m3s.size();++i)
         TS_ASSERT_DELTA(observation_m3s.value(i),expected_m3s[i],0.001);
 
-#if 0
-    double expected_m3s= {3.9,4.987,5.4,5.421,5.163,4.68,5.083,5.012,4.633,4.028,3.676,3.213,2.629,2.481,2.313,2.127,1.924,1.704,1.468,1.215,0.9441,0.6551,0.3445,4.736e-15};
-    // this is what we can easily do with dlib
-    //
-    dlib::directed_graph<routing::river>::kernel_1a_c md;
-    md.set_number_of_nodes(4);
-    md.add_edge(0,1);
-    md.add_edge(1,3);
-    md.add_edge(2,3);
-    md.node(0).data=a;
-    md.node(1).data=b;
-    md.node(2).data=c;
-    md.node(3).data=d;
 
-    TS_ASSERT_EQUALS( md.river(3).number_of_parents(),2);
-    TS_ASSERT_EQUALS( md.river(0).number_of_parents(),0);
-    TS_ASSERT_EQUALS( md.river(0).number_of_children(),1);
-    TS_ASSERT_EQUALS( md.river(3).number_of_children(),0);
-#endif
 }
