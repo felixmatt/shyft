@@ -501,6 +501,7 @@ namespace shyft {
                 if (initial_state.size() != cells->size())
                     get_states(initial_state); // snap the initial state here, unless it's already set by the user
                 parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
+                run_routing(start_step,n_steps);
             }
 
             /** \brief set the region parameter, apply it to all cells
@@ -690,6 +691,19 @@ namespace shyft {
                         cr[c.geo.catchment_ix].add(c.rc.avg_discharge);
                 }
             }
+
+            /**\brief return all discharges at the output of the routing points
+             *
+             * For all routing nodes,(maybe terminal routing nodes ?)
+             * compute the routed discharge.
+             *
+             */
+            template <class TSV>
+            void routing_discharges( TSV& cr) const {
+                typedef typename TSV::value_type ts_t;
+                cr.clear();
+                //TODO: iterate over the routing model, return results
+            }
         protected:
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *
@@ -738,6 +752,22 @@ namespace shyft {
                 for(auto &f:calcs)
                     f.get();
                 return;
+            }
+            void run_routing(int start_step,int n_steps) {
+                // TODO: implement
+                // things to consider:
+                //  a) start_step,n_steps could be a problem due to the time-delay/convolution window.
+                //     so data is not available through the convolution until after window-size.
+                //  b) for convolution, we can base the approach on 'pull', calculate on demand, possibly with memory-cached result time-series
+                //     in that scenario, we would need a 'dirty' bit to be set (initially) and when starting the run-cells step.
+                //  c) the catchment filter, based on cids, could also be extended to routing ids (rids).
+                //     also: if routing, only rids type of filter allowed ?
+                //           if rids, cell to rid is possibly multi-step lookup. Need to make a rids-filter, where members are all reachable
+                //           cells from wanted rids (to be calculated).
+                //  d) consistency: if cids are used, and routing (and rids) are enabled, auto-extend the cids so that all connected cells(and corresponding cids)
+                //     are calculated (avoid partial calculation of something that goes into a routing network...
+                //     question: how much of this consistency/complexity should we put to the user setting the calculation filter
+
             }
         };
 
