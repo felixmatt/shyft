@@ -128,7 +128,7 @@ namespace shyft {
                     if(!valid_routing_id(rid)) throw std::runtime_error("valid river|routing id must be >0");
                     if(must_exist)
                         if(rid_map.find(rid)==rid_map.end())
-                            throw std::runtime_error(std::string("the supplied river|routing id is not registered/does not exist")+std::to_string(rid));
+                            throw std::runtime_error(std::string("the supplied river|routing id is not registered/does not exist, id=")+std::to_string(rid));
                 }
 
                 /** verify there is no directed cycles in the river-network */
@@ -142,7 +142,7 @@ namespace shyft {
                         auto downstream_id=it->second.downstream.id;// indicates a cycle
                         while(valid_routing_id(downstream_id)) { // follow downstream
                             if(visited[downstream_id])
-                                return false;// got you, this is a cycle!
+                                return true;// got you, this is a cycle!
                             visited[downstream_id]=true;// mark it as visited
                             downstream_id=rid_map.find(downstream_id)->second.downstream.id;// continue downstream
                         }
@@ -172,6 +172,9 @@ namespace shyft {
                 ///< .remove_by_id(river-id)
                 void remove_by_id(int rid) {
                     check_rid(rid);
+                    auto upstreams=upstreams_by_id(rid);
+                    for(auto i:upstreams)
+                        rid_map[i].downstream.id=0;// zero out references (could also bypass,but leave it for now)
                     rid_map.erase(rid);
                 }
                 ///< .river(river-id).. --> the river-object itself, r/w

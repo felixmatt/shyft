@@ -44,10 +44,9 @@ namespace shyft {
 
 
 void routing_test::test_build_valid_river_network() {
-    #if 0
+
     using namespace std;
     using namespace shyft::core;
-    map<int,routing::river> network;
     int a_id = 1;
     int b_id = 2;
     int c_id = 3;
@@ -56,8 +55,36 @@ void routing_test::test_build_valid_river_network() {
     routing::river b{ b_id,routing_info(d_id, 0),routing::uhg_parameter(1.0) }; // give zero delay
     routing::river c{ c_id,routing_info(d_id, 3600.0),routing::uhg_parameter(1.0) };// give one hour delay
     routing::river d{ d_id,routing_info(0) }; // here is our observation point river
-    //TODO: write test that verify exception thrown when building river_network wrong
-    #endif
+    routing::river_network rn;
+    rn.add(d);
+    TS_ASSERT_THROWS(rn.add(a),std::runtime_error);// verify adding river in wrong order.
+    rn.add(c).add(b).add(a);
+    TS_ASSERT_THROWS(rn.add(a),std::runtime_error);// verify adding twice is detected
+    routing::river j0{0,routing_info(0)};//
+    TS_ASSERT_THROWS(rn.add(j0),std::runtime_error);// illegal id detect.
+    routing::river c0{5,routing_info(5)};//
+    TS_ASSERT_THROWS(rn.add(c0),std::runtime_error);// self circle  detect.
+    TS_ASSERT_THROWS(rn.set_downstream_by_id(4,1),std::runtime_error);// attempt to establish circle
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(a_id).size(),0);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(b_id).size(),1);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(c_id).size(),0);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),2);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.downstream_by_id(a_id),b_id);
+    TS_ASSERT_EQUALS(rn.downstream_by_id(b_id),d_id);
+    TS_ASSERT_EQUALS(rn.downstream_by_id(c_id),d_id);
+    TS_ASSERT_EQUALS(rn.downstream_by_id(d_id),0);
+    TS_ASSERT_DELTA(rn.river_by_id(a_id).downstream.distance,a.downstream.distance,0.01);
+
+    // remove stuff:
+    rn.remove_by_id(c_id);
+    TS_ASSERT_THROWS(rn.check_rid(c_id),std::runtime_error);
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),1);
+    rn.remove_by_id(b_id);
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),0);
+    TS_ASSERT_EQUALS(rn.downstream_by_id(a_id),0);
+    rn.remove_by_id(a_id);
+    TS_ASSERT_THROWS(rn.remove_by_id(b_id),std::runtime_error);
+    rn.remove_by_id(d_id);
 
 }
 
