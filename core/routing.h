@@ -229,7 +229,8 @@ namespace shyft {
              *    in it's current form, since it invite to duplicate data from the region-model.
              *    Thus, the current plan is to use it as a temporary object, for calculations,
              *    provided by the member-functions of region_model. The region model then keep
-             *    the river-routing network, cells, etc. and this class is constructed on request.
+             *    the river-routing network, cells, etc. and this class is constructed on request,
+             *    with life-time equal to  the scope of the corresponding function.
              *
              */
 
@@ -272,7 +273,7 @@ namespace shyft {
                 void verify_cell_river_connections() const {
                     for(const auto&c:*cells) {
                         if(c.geo.routing.id>0)
-                            rivers->check_rid(c.geo.routing.id);
+                            rivers->check_rid(c.geo.routing.id);// throws if id does not exist
                     }
                 }
 

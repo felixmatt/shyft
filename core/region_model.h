@@ -758,12 +758,21 @@ namespace shyft {
                 // things to consider:
                 //  a) start_step,n_steps could be a problem due to the time-delay/convolution window.
                 //     so data is not available through the convolution until after window-size.
+                //     possible solutions:
+                //         1) leave it to the user
+                //         2)  always run from start_step=0 ?
+                //         3) as the routing model for the largest delay counted in timesteps, start - longest delay
                 //  b) for convolution, we can base the approach on 'pull', calculate on demand, possibly with memory-cached result time-series
                 //     in that scenario, we would need a 'dirty' bit to be set (initially) and when starting the run-cells step.
+                //         1) optimization, maybe later
                 //  c) the catchment filter, based on cids, could also be extended to routing ids (rids).
                 //     also: if routing, only rids type of filter allowed ?
                 //           if rids, cell to rid is possibly multi-step lookup. Need to make a rids-filter, where members are all reachable
                 //           cells from wanted rids (to be calculated).
+                //         1) leave it to user
+                //         2) make alg. given rid's: compute cid's needed
+                //         3) if river_network available, deny cids based filter, insist on rids ?
+                //
                 //  d) consistency: if cids are used, and routing (and rids) are enabled, auto-extend the cids so that all connected cells(and corresponding cids)
                 //     are calculated (avoid partial calculation of something that goes into a routing network...
                 //     question: how much of this consistency/complexity should we put to the user setting the calculation filter
