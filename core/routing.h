@@ -59,7 +59,7 @@ namespace shyft {
             inline std::vector<double>  make_uhg_from_gamma(int n_steps, double alpha, double beta);// fwd decl
 
 
-
+            inline bool valid_routing_id(int rid ) {return rid>0;}
 
             /**\brief A river that we use for routing
              *
@@ -77,7 +77,14 @@ namespace shyft {
                 //  not really needed at core level, as we could to only with ref's in the core
                 //  but we plan to expose to python and external persistence models
                 //  so providing some handles do make sense for now.
-                int id;// self.id, >0 means valid id, 0= null
+                // python binding help
+                river()=default;
+                river(const river&)=default;
+                river(river&&)=default;
+                river&operator=(const river&)=default;
+                river&operator=(river&&)=default;
+
+                int id;///< self.id, >0 means valid id, <=0 means null
                 shyft::core::routing_info downstream;
                 uhg_parameter parameter;///< We assume each river do have distinct parameter, so no shared pointer
                 // here we could have a link to the observed time-series (can use the self.id to associate)
@@ -96,8 +103,11 @@ namespace shyft {
             };
 
             /**
-             * Convenient function to get the frozen values out,
-             * maybe candidate for timeseries, but keep it here for now
+             * Convenient function to get the 'frozen'/computed ts values out,
+             * \tparam Ts any ts supporting .size() and .value().
+             * \param ts time-series for which we extract all values
+             * \return a std::vector<double> with the values
+             * \note maybe candidate for timeseries, but keep it here for now
              */
             template <class Ts>
             inline std::vector<double> ts_values(const Ts& ts) {
@@ -112,96 +122,94 @@ namespace shyft {
              * to enable external simplified description and association.
              */
             struct river_network {
-                dlib::directed_graph<routing::river>::kernel_1a_c network;///< utilizing dlib representation and algorithms to do checking
-            private:
-                std::map<int,unsigned long> rid_map;///< user operates on rivers based on river-id
-            public:
+                std::map<int,river> rid_map;///< user operates on rivers based on river-id, we map this here
+
                 void check_rid(int rid, bool must_exist=true) const {
-                    if(rid<=0) throw std::runtime_error("valid river id must be >0");
+                    if(!valid_routing_id(rid)) throw std::runtime_error("valid river|routing id must be >0");
                     if(must_exist)
                         if(rid_map.find(rid)==rid_map.end())
-                            throw std::runtime_error(std::string("the supplied river id is not registered/does not exist")+std::to_string(rid));
+                            throw std::runtime_error(std::string("the supplied river|routing id is not registered/does not exist")+std::to_string(rid));
                 }
 
+                /** verify there is no directed cycles in the river-network */
+                bool network_contains_directed_cycle() const {
+                    std::map<int,bool> not_visited;
+                    for(auto it=rid_map.cbegin();it!=rid_map.cend();++it)
+                        not_visited[it->first]=false;
+                    for(auto it=rid_map.cbegin();it!=rid_map.cend();++it) {
+                        auto visited=not_visited;// not optimal, but simple approach
+                        visited[it->first]=true;// hitting any node visited during search
+                        auto downstream_id=it->second.downstream.id;// indicates a cycle
+                        while(valid_routing_id(downstream_id)) { // follow downstream
+                            if(visited[downstream_id])
+                                return false;// got you, this is a cycle!
+                            visited[downstream_id]=true;// mark it as visited
+                            downstream_id=rid_map.find(downstream_id)->second.downstream.id;// continue downstream
+                        }
+                    }
+                    return false;// if we reach here, no cycles detected.
+                }
+                // help python exposure
                 river_network()=default;
                 river_network(const river_network&)=default;
                 ~river_network()=default;
-
-                // note: the dlib directed graph is nocopy
-                river_network(river_network&&c)=delete;
-                river_network& operator=(const river_network&c)=delete;
-                river_network& operator=(river_network&&c)=delete;
+                river_network(river_network&&c)=default;
+                river_network& operator=(const river_network&c)=default;
+                river_network& operator=(river_network&&c)=default;
                 ///< .add(river), - includes possible connection, will fail if dest. do not exis
                 river_network& add(const river &r) {
                     check_rid(r.id,false);
                     if(rid_map.find(r.id)!=rid_map.end()) throw std::runtime_error("the supplied river id is already registered");
                     if(r.id == r.downstream.id) throw std::runtime_error("the supplied river.downstream.id should not point to self (cycle!)");
-                    if(r.downstream.id>0 && rid_map.find(r.downstream.id) ==rid_map.end()) throw std::runtime_error("the river.downstream.id does not yet exist in the network, please downstream river-segments first");
-                    auto node_id=network.add_node();
-                    network.node(node_id).data=r;
-                    if(r.downstream.id != 0)
-                        network.add_edge(node_id,rid_map[r.downstream.id]);
-                    if(dlib::graph_contains_directed_cycle(network)) {
-                        network.remove_node(node_id);
+                    if(valid_routing_id(r.downstream.id) && rid_map.find(r.downstream.id) ==rid_map.end()) throw std::runtime_error("the river.downstream.id does not yet exist in the network, please downstream river-segments first");
+                    rid_map[r.id]=r;
+                    if(network_contains_directed_cycle()) {
+                        rid_map.erase(r.id);
                         throw std::runtime_error("adding this river caused circular reference");
                     }
-                    rid_map[r.id]= node_id;// finally ok, add it to map.
                     return *this;
                 }
                 ///< .remove_by_id(river-id)
                 void remove_by_id(int rid) {
                     check_rid(rid);
-                    auto node_id=rid_map[rid];
-                    // also need to nil out upstream river-references
-                    for(size_t i=0;i<network.node(node_id).number_of_parents();++i) {
-                        network.node(node_id).parent(i).data.downstream.id=0;
-                    }
-                    network.remove_node(node_id);
+                    rid_map.erase(rid);
                 }
                 ///< .river(river-id).. --> the river-object itself, r/w
                 river& river_by_id(int rid) {
                     check_rid(rid);
-                    return network.node(rid_map[rid]).data;
+                    return rid_map[rid];
                 }
                 const river& river_by_id(int rid) const {
                     check_rid(rid);
-                    auto nid=rid_map.find(rid)->second;
-                    return network.node(nid).data;
+                    return rid_map.find(rid)->second;
                 }
+
                 std::vector<int> upstreams_by_id(int rid) const {
                     check_rid(rid);
                     std::vector<int> rids;
-                    auto node_id=rid_map.find(rid)->second;
-                    for(size_t i=0;i<network.node(node_id).number_of_parents();++i) {
-                        rids.push_back(network.node(node_id).parent(i).data.id);
+                    for(auto it=rid_map.cbegin();it!=rid_map.cend();++it) {
+                        if(it->second.downstream.id==rid)
+                            rids.push_back(it->first);
                     }
                     return rids;
                 }
+
                 int downstream_by_id(int rid) const {
                     check_rid(rid);
-                    auto node_id=rid_map.find(rid)->second;
-                    return network.node(node_id).data.downstream.id;
+                    return rid_map.find(rid)->second.downstream.id;
                 }
+
                 void set_downstream_by_id(int rid,int downstream_rid) {
                     check_rid(rid);
-                    if(downstream_rid>0)
+                    if(valid_routing_id(downstream_rid))
                         check_rid(downstream_rid);// maybe weak error reporting
                     // first disconnect current rid
-                    auto nid=rid_map[rid];
-                    unsigned rid_old_downstream=network.node(nid).data.downstream.id;
-                    if(rid_old_downstream>0)
-                        network.remove_edge(nid,rid_map[rid_old_downstream]);
-                        // but keep the ref in .data until we know it works.
-                    // then if new, connect
-                    if(downstream_rid>0) {
-                        network.add_edge(nid,rid_map[downstream_rid]);
-                        if(dlib::graph_contains_directed_cycle(network)) {
-                            network.remove_edge(nid,rid_map[downstream_rid]);// rollback change
-                            network.add_edge(nid,rid_map[rid_old_downstream]);
-                            throw std::runtime_error("connection would create a cycle, not allowed");
-                        }
+                    unsigned rid_old_downstream=rid_map[rid].downstream.id;
+                    rid_map[rid].downstream.id=downstream_rid;
+                    if(network_contains_directed_cycle()) {
+                        rid_map[rid].downstream.id=rid_old_downstream;// restore it
+                        throw std::runtime_error("connection would create a cycle, not allowed");
                     }
-                    network.node(nid).data.downstream.id=downstream_rid;
                 }
             };
 

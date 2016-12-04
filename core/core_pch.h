@@ -109,11 +109,8 @@ typedef boost::math::static_gcd_type static_gcd_type;
 //--providing all needed lin-alg:
 #include <armadillo>
 
-//-- providing all needed optimization, graphs ml etc.
+//-- providing all needed optimization
 
 #include <dlib/optimization.h>
 #include <dlib/statistics.h>
 
-#include <dlib/graph_utils.h>
-#include <dlib/graph.h>
-#include <dlib/directed_graph.h>
