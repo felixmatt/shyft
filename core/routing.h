@@ -47,18 +47,19 @@ namespace shyft {
             /** The unit hydro graph parameter contains sufficient
              * description to create a unit hydro graph, that have a shape
              * and a discretized 'time-length' according to the model time-step resolution.
-             *
+             * Currently we use a gamma function for the shape:
+             * <a ref="https://en.wikipedia.org/wiki/Gamma_distribution">gamma distribution</a>
              */
             struct uhg_parameter {
                 uhg_parameter(double velocity=1.0,double alpha=3.0,double beta=0.7):velocity(velocity),alpha(alpha),beta(beta) {}
-                double velocity= 1.0;
-                double alpha=3.0;
-                double beta =0.7;
+                double velocity= 1.0;///< in units of [m/s]
+                double alpha=3.0; ///< gamma function alpha factor
+                double beta =0.7; ///< gamma function beta factor
             };
 
             inline std::vector<double>  make_uhg_from_gamma(int n_steps, double alpha, double beta);// fwd decl
 
-
+            ///< valid routing|river id, rid, must be >0. 0 or less than 0 is interpreted as null
             inline bool valid_routing_id(int rid ) {return rid>0;}
 
             /**\brief A river that we use for routing
@@ -73,19 +74,17 @@ namespace shyft {
              * is directed and with no cycles.
              */
             struct river {
-                // binding information
-                //  not really needed at core level, as we could to only with ref's in the core
-                //  but we plan to expose to python and external persistence models
-                //  so providing some handles do make sense for now.
                 // python binding help
                 river()=default;
                 river(const river&)=default;
                 river(river&&)=default;
                 river&operator=(const river&)=default;
                 river&operator=(river&&)=default;
-
+                // python support
+                river(int id,shyft::core::routing_info downstream=shyft::core::routing_info(),uhg_parameter p=uhg_parameter()):
+                    id(id),downstream(downstream),parameter(p) {}
                 int id;///< self.id, >0 means valid id, <=0 means null
-                shyft::core::routing_info downstream;
+                shyft::core::routing_info downstream;///< downstream routing info, where to, and the static distance measure
                 uhg_parameter parameter;///< We assume each river do have distinct parameter, so no shared pointer
                 // here we could have a link to the observed time-series (can use the self.id to associate)
 
@@ -182,6 +181,7 @@ namespace shyft {
                     check_rid(rid);
                     return rid_map[rid];
                 }
+                river river_by_id2(int rid) { check_rid(rid); return rid_map[rid];}
                 const river& river_by_id(int rid) const {
                     check_rid(rid);
                     return rid_map.find(rid)->second;
