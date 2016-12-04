@@ -185,9 +185,9 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     auto cells = make_shared<vector<cell_t>>();
     auto global_parameter = make_shared<cell_t::parameter_t>();
 #ifdef _WIN32
-    const char *cell_path = "neanidelv/geo_cell_data.win.bin";
+    const char *cell_path = "neanidelv/geo_cell_data.v2.win.bin";
 #else
-    const char *cell_path = "neanidelv/geo_cell_data.bin";
+    const char *cell_path = "neanidelv/geo_cell_data.v2.bin";
 #endif
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
