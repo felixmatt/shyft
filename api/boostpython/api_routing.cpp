@@ -82,6 +82,7 @@ namespace expose {
             " * no cycles, \n"
             " * no duplicate object-id's etc.\n"
             )
+            .def(init<const routing::river_network&>(args("clone"),"make a clone of river-network"))
             .def("add",&routing::river_network::add,args("river"),
                  "add a river to the network, verifies river id, no cycles etc.\n"
                  "\nraises exception on error\ntip: build your river-network from downstream to upstream order\n"
