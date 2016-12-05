@@ -72,5 +72,7 @@ add_test(hbv_actual_evapotranspiration_test ${target} hbv_actual_evapotranspirat
 add_test(glacier_melt_test ${target} glacier_melt_test)
 add_test(kriging_test ${target} kriging_test)
 add_test(serialization_test ${target} serialization_test)
+add_test(routing_test ${target} routing_test)
+
 
 
