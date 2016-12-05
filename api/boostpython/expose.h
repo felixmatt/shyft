@@ -214,7 +214,14 @@ namespace expose {
                     "set/reset the catchment based calculation filter. This affects what get simulate/calculated during\n"
                     "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
                     "\n"
-                    "param catchment_id_list is a (zero-based) catchment id vector\n"
+                    "param catchment_id_list is a catchment id vector\n"
+         )
+         .def("set_calculation_filter", &M::set_catchment_calculation_filter, args("catchment_id_list","river_id_list"),
+                 "set/reset the catchment *and* river based calculation filter. This affects what get simulate/calculated during\n"
+                 "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
+                 "\n"
+                 "param catchment_id_list is a catchment id vector\n"
+                "param river_id_list is a river id vector\n"
          )
          .def("is_calculated",&M::is_calculated,args("catchment_id"),"true if catchment id is calculated during runs, ref set_catchment_calculation_filter")
          .def("get_states",&M::get_states,args("end_states"),

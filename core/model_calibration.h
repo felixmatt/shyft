@@ -157,10 +157,11 @@ namespace shyft {
             };
 
             /** \brief property_type for target specification */
-            enum catchment_property_type {
+            enum target_property_type {
                 DISCHARGE,
                 SNOW_COVERED_AREA,
-                SNOW_WATER_EQUIVALENT
+                SNOW_WATER_EQUIVALENT,
+                ROUTED_DISCHARGE
             };
 
             /** \brief The target specification contains:
@@ -226,16 +227,33 @@ namespace shyft {
                  */
                 target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                     target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
-                    double s_a = 1.0, double s_b = 1.0, catchment_property_type catchment_property_ = DISCHARGE, std::string uid = "")
+                    double s_a = 1.0, double s_b = 1.0, target_property_type catchment_property_ = DISCHARGE, std::string uid = "")
                     : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
                     calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b), uid(uid) {
                 }
-
+                /** \brief Constructs a target specification element for calibration, specifying all needed parameters
+                *
+                * \param ts the target time-series that contain the target/observed discharge values
+                * \param rid  identifies the river id in the model that this target specifies
+                * \param scale_factor the weight that this target_specification should have relative to the possible other target_specs.
+                * \param calc_mode how to calculate goal-function nash-sutcliffe or the more advanced and flexible kling-gupta
+                * \param s_r scale factor r in kling-gupta
+                * \param s_a scale factor a in kling-gupta
+                * \param s_b scale factor b in kling-gupta
+                * \param uid a user supplied uid, string, to help user correlate this target to external data-sources
+                */
+                target_specification(const target_time_series_t& ts, int river_id, double scale_factor,
+                    target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
+                    double s_a = 1.0, double s_b = 1.0, std::string uid = "")
+                    : ts(ts), river_id(river_id), scale_factor(scale_factor),
+                    calc_mode(calc_mode), catchment_property(ROUTED_DISCHARGE), s_r(s_r), s_a(s_a), s_b(s_b), uid(uid) {
+                }
                 target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
                 std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
+                int river_id;///< in case of catchment_property = ROUTED_DISCHARGE, this identifies the river id to get discharge for
                 double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
                 target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
-                catchment_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT
+                target_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT, ROUTED_DISCHARGE
                 double s_r; ///< KG-scalefactor for correlation
                 double s_a; ///< KG-scalefactor for alpha (variance)
                 double s_b; ///< KG-scalefactor for beta (bias)
@@ -432,12 +450,17 @@ namespace shyft {
                     // 3. figure out the catchment indexes to evaluate..
                     //    and if we need to turn on snow collection
                     vector<int> catchment_indexes;
+
                     model.set_snow_sca_swe_collection(-1, false);//turn off all snow by default.
                     for (const auto&t : targets) {
                         catchment_indexes.insert(catchment_indexes.end(), begin(t.catchment_indexes), end(t.catchment_indexes));
-                        if (t.catchment_property != DISCHARGE)
+                        if (t.catchment_property == SNOW_WATER_EQUIVALENT || t.catchment_property==SNOW_COVERED_AREA)
                             for (auto cid : t.catchment_indexes)
                                 model.set_snow_sca_swe_collection(cid, true);//turn on for those with something like snow enabled
+                        if (t.catchment_property == ROUTED_DISCHARGE) {
+                            auto river_cids = model.get_catchment_feeding_to_river(t.river_id);
+                            for (auto rc : river_cids)catchment_indexes.push_back(rc);
+                        }
                     }
                     if (catchment_indexes.size() > 1) {
                         sort(begin(catchment_indexes), end(catchment_indexes));

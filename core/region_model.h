@@ -594,11 +594,11 @@ namespace shyft {
                 else
                     return *region_parameter;
             }
+
             /** \brief set/reset the catchment based calculation filter. This affects what get simulate/calculated during
              * the run command. Pass an empty list to reset/clear the filter (i.e. no filter).
              *
              * \param catchment_id_list is a catchment id vector
-             *
              */
             void set_catchment_calculation_filter(const std::vector<int>& catchment_id_list) {
                 if (catchment_id_list.size()) {
@@ -613,6 +613,40 @@ namespace shyft {
                 } else {
                     catchment_filter.clear();
                 }
+
+            }
+
+            /** \brief set/reset the catchment and river based calculation filter.
+             * This affects what get simulate/calculated during
+             * the run command. Pass an empty list to reset/clear the filter (i.e. no filter).
+             *
+             * \param catchment_id_list is a catchment id vector
+             * \param river_id_list is a river id vector
+             */
+            void set_calculation_filter(const std::vector<int>& catchment_id_list, const std::vector<int>& river_id_list) {
+                set_catchment_calculation_filter(catchment_id_list);
+                for (auto rid : river_id_list) {
+                    auto catchments_involved = get_catchment_feeding_to_river(rid);
+                    for (auto cid : catchments_involved) {
+                        if(catchment_filter.size()==0) // none selected yet, allocate full vector, and
+                            catchment_filter = vector<bool>(cix_to_cid.size(), false);
+                        catchment_filter[cid_to_cix[cid]] = true;// then assign true
+                    }
+                }
+            }
+
+            /**compute the unique set of catchments feeding into this river_id, or any river upstream */
+            std::set<int> get_catchment_feeding_to_river(int river_id) const {
+                std::set<int> r;
+                auto all_upstreams_rid = river_network.all_upstreams_by_id(river_id);
+                all_upstreams_rid.push_back(river_id);// remember to add this river
+                for (const auto&c : *cells) {
+                    if (routing::valid_routing_id(c.geo.routing.id) &&
+                        std::find(begin(all_upstreams_rid), end(all_upstreams_rid), c.geo.routing.id) != end(all_upstreams_rid) ) {
+                        r.insert(c.geo.catchment_id());
+                    }
+                }
+                return r;
             }
 
             /** \brief using the catchment_calculation_filter to decide if discharge etc. are calculated.

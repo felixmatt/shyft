@@ -200,6 +200,16 @@ namespace shyft {
                     }
                     return rids;
                 }
+                std::vector<int> all_upstreams_by_id(int rid) const {
+                    check_rid(rid);
+                    auto rids=upstreams_by_id(rid);
+                    for (auto id : rids) {
+                        auto xtra = all_upstreams_by_id(id);
+                        for (auto x : xtra)
+                            rids.push_back(x);
+                    }
+                    return rids;
+                }
 
                 int downstream_by_id(int rid) const {
                     check_rid(rid);

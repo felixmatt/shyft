@@ -74,7 +74,8 @@ void routing_test::test_build_valid_river_network() {
     TS_ASSERT_EQUALS(rn.downstream_by_id(c_id),d_id);
     TS_ASSERT_EQUALS(rn.downstream_by_id(d_id),0);
     TS_ASSERT_DELTA(rn.river_by_id(a_id).downstream.distance,a.downstream.distance,0.01);
-
+    auto all_ups = rn.all_upstreams_by_id(d_id);
+    TS_ASSERT_EQUALS(all_ups.size(), 3);
     // remove stuff:
     rn.remove_by_id(c_id);
     TS_ASSERT_THROWS(rn.check_rid(c_id),std::runtime_error);
