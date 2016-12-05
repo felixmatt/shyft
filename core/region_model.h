@@ -831,7 +831,7 @@ namespace shyft {
                 vector<future<void>> calcs;
                 mutex pos_mx;
                 size_t pos = 0;
-                for (size_t i = 0;i < use_ncore;++i) { // using ncore = logical available core saturates cpu 100%
+                for (int i = 0;i < use_ncore;++i) { // using ncore = logical available core saturates cpu 100%
                     calcs.emplace_back(
                         async(launch::async, 
                             [this,&pos,&pos_mx,len,&time_axis,&beg,start_step,n_steps]() {
