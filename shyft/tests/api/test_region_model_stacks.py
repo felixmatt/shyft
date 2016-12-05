@@ -193,6 +193,10 @@ class RegionModel(unittest.TestCase):
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
         self.assertGreaterEqual(sum_discharge_value, 130.0)
+
+        #
+        # check values
+        #
         self.assertIsNotNone(sum_discharge)
         # now, re-run the process in 24-hours steps x 10
         model.set_states(s0)  # restore state s0
@@ -231,6 +235,27 @@ class RegionModel(unittest.TestCase):
         copy_region_model = model.__class__(model)
         self.assertIsNotNone(copy_region_model)
         copy_region_model.run_cells()  # just to verify we can copy and run the new model
+        #
+        # Play with routing and river-network
+        #
+        # 1st: add a river, with 36.000 meter hydro length, a UHGParameter with 1m/hour speed, alpha/beta suitable
+        model.river_network.add(
+            api.River(1, api.RoutingInfo(0, 3000.0), api.UHGParameter(1 / 3.60, 1.0, 0.7)))  # river id =1
+        # 2nd: let cells route to the river
+        model.connect_catchment_to_river(0, 1)  # now all cells in catchment 0 routes to river with id 1.
+        self.assertTrue(model.has_routing())
+        # 3rd: now we can have a look at water coming in and out
+        river_out_m3s = model.river_output_flow_m3s(1)  # should be delayed and reshaped
+        river_local_m3s = model.river_local_inflow_m3s(
+            1)  # should be equal to cell outputs (no routing stuff from cell to river)
+        river_upstream_inflow_m3s = model.river_upstream_inflow_m3s(
+            1)  # should be 0.0 in this case, since we do not have a routing network
+        self.assertIsNotNone(river_out_m3s)
+        self.assertAlmostEqual(river_out_m3s.value(0), 87.4, 0)
+        self.assertIsNotNone(river_local_m3s)
+        self.assertIsNotNone(river_upstream_inflow_m3s)
+        model.connect_catchment_to_river(0, 0)
+        self.assertFalse(model.has_routing())
 
     def test_optimization_model(self):
         num_cells = 20

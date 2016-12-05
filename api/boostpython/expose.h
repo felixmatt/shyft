@@ -106,6 +106,7 @@ namespace expose {
                         "See also RiverNetwork class for how to build a working river network\n"
                         "Then use the connect_catchment_to_river(cid,rid) method\n"
                         "to route cell discharge into the river-network\n")
+         .def("has_routing",&M::has_routing,"true if some cells routes to river-network")
          .def("river_output_flow_m3s",&M::river_output_flow_m3s,args("rid"),"returns the routed output flow of the specified river id (rid))")
          .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s,args("rid"),"returns the routed upstream inflow to the specified river id (rid))")
          .def("river_local_inflow_m3s",&M::river_local_inflow_m3s,args("rid"),"returns the routed local inflow from connected cells to the specified river id (rid))")

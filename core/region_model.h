@@ -736,27 +736,27 @@ namespace shyft {
                 }
                 return cr;
             }
-            pts_t river_output_flow_m3s(int rid) const {
-                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+            std::shared_ptr<pts_t> river_output_flow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
-                    r=rn.output_m3s(rid);
+                    r=std::make_shared<pts_t>(rn.output_m3s(rid));
                 }
                 return r;
             }
-            pts_t river_upstream_inflow_m3s(int rid) const {
-                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+            std::shared_ptr<pts_t> river_upstream_inflow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
-                    r=rn.upstream_inflow(rid);
+                    r=std::make_shared<pts_t>(rn.upstream_inflow(rid));
                 }
                 return r;
             }
-            pts_t river_local_inflow_m3s(int rid) const {
-                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+            std::shared_ptr<pts_t> river_local_inflow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
-                    r=rn.local_inflow(rid);
+                    r=std::make_shared<pts_t>(rn.local_inflow(rid));
                 }
                 return r;
             }
