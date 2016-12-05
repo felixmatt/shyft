@@ -739,6 +739,8 @@ namespace shyft {
                         case SNOW_WATER_EQUIVALENT:
                             property_sum = compute_swe_sum(t, catchment_swe);
                             break;
+                        case ROUTED_DISCHARGE:
+                            property_sum = *model.river_output_flow_m3s(t.river_id);
                         }
                         shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
                         double partial_goal_function_value;
