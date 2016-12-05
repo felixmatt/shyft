@@ -306,7 +306,7 @@ namespace shyft {
                 if(cid_to_cix.find(cid)==cid_to_cix.end()) throw std::runtime_error(string("specified catchment id=") + std::to_string(cid)+string(" not found"));
                 if(routing::valid_routing_id(rid)) river_network.check_rid(rid);// verify it exists.
                 for(auto&c:*cells)
-                    c.geo.routing.id=rid;
+                    if(c.geo.catchment_id()==cid) c.geo.routing.id=rid;
             }
 
             bool has_routing() const {
