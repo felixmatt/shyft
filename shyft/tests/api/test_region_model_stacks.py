@@ -139,7 +139,7 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         # demo of feature for threads
-        self.assertGreaterEqual(model.ncore,1)  # defaults to hardware concurrency*4
+        self.assertGreaterEqual(model.ncore,1)  # defaults to hardware concurrency
         model.ncore = 4  # set it to 4, and
         self.assertEqual(model.ncore, 4)  # verify it works
 
@@ -202,7 +202,7 @@ class RegionModel(unittest.TestCase):
         model.set_states(s0)  # restore state s0
         self.assertEqual(s0.size(),model.initial_state.size())
         for section in range(10):
-            model2.run_cells(thread_cell_count=0, start_step=section*24, n_steps=24)
+            model2.run_cells(use_ncore=0, start_step=section*24, n_steps=24)
             section_discharge = model2.statistics.discharge(cids)
             self.assertEqual(section_discharge.size(),sum_discharge.size()) # notice here that the values after current step are 0.0
         stepwise_sum_discharge = model2.statistics.discharge(cids)
