@@ -260,7 +260,7 @@ namespace shyft {
             region_model(std::shared_ptr<std::vector<C> >& cells, const parameter_t &region_param)
              : cells(cells) {
                 set_region_parameter(region_param);// ensure we have a correct model
-                ncore = thread::hardware_concurrency()*4;
+                ncore = thread::hardware_concurrency();
                 update_ix_to_id_mapping();
             }
             region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param) {
@@ -269,7 +269,7 @@ namespace shyft {
                 auto global_parameter = make_shared<typename cell_t::parameter_t>();
                 for (const auto&gcd : geov)  cells->push_back(cell_t{ gcd, global_parameter, s0 });
                 set_region_parameter(region_param);// ensure we have a correct region_param for all cells
-                ncore = thread::hardware_concurrency() * 4;
+                ncore = thread::hardware_concurrency() ;
                 update_ix_to_id_mapping();
             }
             region_model(std::shared_ptr<std::vector<C> >& cells,
@@ -280,7 +280,7 @@ namespace shyft {
                 update_ix_to_id_mapping();
                 for(const auto & pair:catchment_parameters)
                      set_catchment_parameter(pair.first, pair.second);
-                ncore = thread::hardware_concurrency()*4;
+                ncore = thread::hardware_concurrency();
             }
             region_model(const region_model& model) { clone(model); }
 			region_model& operator=(const region_model& c) {
@@ -498,17 +498,19 @@ namespace shyft {
             *  -# all cells have updated state variables
             *
             *
-            * \param thread_cell_count if 0 figure out cells pr thread using hardware info,
-            *   otherwise use supplied value. Setting 1000 means one thread gets 1000 cells to work with.
+            * \param use_ncore if 0 figure out threads using hardware info,
+            *   otherwise use supplied value (throws if >100x ncore)
             * \param start_step of time-axis, defaults to 0, starting at the beginning
             * \param n_steps number of steps to run from the start_step, a value of 0 means running all time-steps
             * \return void
             *
             */
-            void run_cells(size_t thread_cell_count=0, int start_step=0, int  n_steps=0) {
-                if(thread_cell_count==0) {
+            void run_cells(size_t use_ncore=0, int start_step=0, int  n_steps=0) {
+                if(use_ncore == 0) {
                     if(ncore==0) ncore=4;// a reasonable minimum..
-                    thread_cell_count = size() <= ncore ? 1 : size()/ncore;
+                    use_ncore = ncore;
+                } else if (use_ncore > 100 * ncore) {
+                    throw runtime_error(string("illegal parameter value: use_ncore(")+to_string(use_ncore)+string(" is more than 100 time available physical cores: ") + to_string(ncore));
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
@@ -520,7 +522,7 @@ namespace shyft {
                     throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
                 if (initial_state.size() != cells->size())
                     get_states(initial_state); // snap the initial state here, unless it's already set by the user
-                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
+                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells),use_ncore);
                 run_routing(start_step,n_steps);
             }
 
@@ -820,24 +822,32 @@ namespace shyft {
              * \param 'endc' the end of cell range
              * \param thread_cell_count number of cells given to each async thread
              */
-            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
+            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc,int use_ncore) {
                 size_t len = distance(beg, endc);
                 if(len == 0)
                     return;
-                if(thread_cell_count == 0)
-                    throw runtime_error("parallel_run:cell pr thread is zero ");
+                if(use_ncore == 0)
+                    throw runtime_error("parallel_run: use_ncore is zero ");
                 vector<future<void>> calcs;
-                for (size_t i = 0; i < len;) {
-                    size_t n = thread_cell_count;
-                    if (i + n > len)
-                        n = len - i;
+                mutex pos_mx;
+                size_t pos = 0;
+                for (size_t i = 0;i < use_ncore;++i) { // using ncore = logical available core saturates cpu 100%
                     calcs.emplace_back(
-                        async(launch::async, [this, &time_axis, beg, n,start_step,n_steps]() {
-                            this->single_run(time_axis, start_step,n_steps, beg, beg + n); }
+                        async(launch::async, 
+                            [this,&pos,&pos_mx,len,&time_axis,&beg,start_step,n_steps]() {
+                                while (true) {
+                                    size_t ci;
+                                    { lock_guard<decltype(pos_mx)> lock(pos_mx);// get work item here
+                                        if (pos < len)
+                                            ci = pos++;
+                                        else
+                                            break;
+                                    }
+                                    this->single_run(time_axis, start_step, n_steps, beg + ci, beg + ci + 1);// just for one cell
+                                }
+                            }
                         )
                     );
-                    beg = beg + n;
-                    i = i + n;
                 }
                 for(auto &f:calcs)
                     f.get();

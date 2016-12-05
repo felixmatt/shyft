@@ -225,7 +225,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	// Step 3: make a region model
 	cout << "3. creating a region model and run it for a short period" << endl;
 	region_model_t rm(cells, *global_parameter);
-	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "32");
+	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "8");
 	cout << " - ncore set to " << rm.ncore << endl;
 	auto cal = ec::calendar();
 	auto start = cal.time(ec::YMDhms(2010, 9, 1, 0, 0, 0));

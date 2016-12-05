@@ -162,15 +162,15 @@ namespace expose {
 				" env: RegionEnvironemnt\n"
 				"     contains the ref: region_environment type\n"
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+         .def("run_cells",&M::run_cells,(boost::python::arg("use_ncore")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
              "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
              "require that initialize(time_axis) or run_interpolation is done first\n"
              "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
              "notice that in any case, the current model state is used as a starting point\n"
              "Parameters\n"
              "----------\n"
-             "thread_cell_count : int\n"
-             "\t number of cells pr.worker thread, if 0 is passed, the the core-count is used to determine the count\n"
+             "use_ncore : int\n"
+             "\t number of worker threads, or cores to use, if 0 is passed, the the core-count is used to determine the count\n"
              "start_step : int\n"
              "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
              "n_steps :int\n"
