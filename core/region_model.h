@@ -306,7 +306,7 @@ namespace shyft {
                 if(cid_to_cix.find(cid)==cid_to_cix.end()) throw std::runtime_error(string("specified catchment id=") + std::to_string(cid)+string(" not found"));
                 if(routing::valid_routing_id(rid)) river_network.check_rid(rid);// verify it exists.
                 for(auto&c:*cells)
-                    if(c.geo.catchment_id()==cid) c.geo.routing.id=rid;
+                    if(int(c.geo.catchment_id())==cid) c.geo.routing.id=rid;
             }
 
             bool has_routing() const {
@@ -833,7 +833,7 @@ namespace shyft {
                 size_t pos = 0;
                 for (int i = 0;i < use_ncore;++i) { // using ncore = logical available core saturates cpu 100%
                     calcs.emplace_back(
-                        async(launch::async, 
+                        async(launch::async,
                             [this,&pos,&pos_mx,len,&time_axis,&beg,start_step,n_steps]() {
                                 while (true) {
                                     size_t ci;
