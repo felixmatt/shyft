@@ -101,6 +101,24 @@ namespace expose {
                         "0(=default) means detect by hardware probe"
                         )
          .def_readwrite("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
+         .def_readwrite("river_network",&M::river_network,
+                        "river network that when enabled do the routing part of the region-model\n"
+                        "See also RiverNetwork class for how to build a working river network\n"
+                        "Then use the connect_catchment_to_river(cid,rid) method\n"
+                        "to route cell discharge into the river-network\n")
+         .def("river_output_flow_m3s",&M::river_output_flow_m3s,args("rid"),"returns the routed output flow of the specified river id (rid))")
+         .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s,args("rid"),"returns the routed upstream inflow to the specified river id (rid))")
+         .def("river_local_inflow_m3s",&M::river_local_inflow_m3s,args("rid"),"returns the routed local inflow from connected cells to the specified river id (rid))")
+         .def("connect_catchment_to_river",&M::connect_catchment_to_river,args("cid","rid"),
+         "Connect routing of all the cells in the specified catchment id to the specified river id\n"
+         ""
+         "Parameters\n"
+         "----------\n"
+         " cid: int\n"
+         "\t catchment identifier\n"
+         " rid: int\n"
+         "\t river identifier, can be set to 0 to indicate disconnect from routing"
+         )
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
 		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
              "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"

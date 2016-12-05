@@ -8,6 +8,7 @@
 #include "pt_gs_k.h"
 #include "pt_hs_k.h"
 #include "geo_cell_data.h"
+#include "routing.h"
 
 /**
  * This file now contains mostly things to provide the PTxxK model,or
@@ -243,6 +244,7 @@ namespace shyft {
                 cid_to_cix=c.cid_to_cix;
                 initial_state = c.initial_state;
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
+                river_network=c.river_network;
                 set_region_parameter(*(c.region_parameter));
                 for(const auto& pair:c.catchment_parameters)
                     set_catchment_parameter(pair.first, *(pair.second));
@@ -292,10 +294,28 @@ namespace shyft {
 			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
             region_env_t region_env;///< the region environment (shallow-copy?) as passed to the interpolation/run_interpolation
             std::vector<state_t> initial_state; ///< the initial state, set explicit, or by the first call to .set_states(..) or run_cells()
-
+            routing::river_network river_network;///< the routing river_network, can be empty
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const { return cix_to_cid.size(); }
 
+            /** connect all cells in a catchment to a river
+             * \param cid catchment id for the cells to be connected to the specified river
+             * \param rid river id for the target river. Note it can be 0 to set no routing for the cells
+             */
+            void connect_catchment_to_river(int cid,int rid) {
+                if(cid_to_cix.find(cid)==cid_to_cix.end()) throw std::runtime_error(string("specified catchment id=") + std::to_string(cid)+string(" not found"));
+                if(routing::valid_routing_id(rid)) river_network.check_rid(rid);// verify it exists.
+                for(auto&c:*cells)
+                    c.geo.routing.id=rid;
+            }
+
+            bool has_routing() const {
+                for(auto&c:*cells) {
+                    if(routing::valid_routing_id(c.geo.routing.id))
+                        return true;
+                }
+                return false;
+            }
             /**\brief extracts the geo-cell data part out from the cells */
             std::vector<geo_cell_data> extract_geo_cell_data() const {
                 std::vector<geo_cell_data> r; r.reserve(cells->size());
@@ -696,13 +716,49 @@ namespace shyft {
              *
              * For all routing nodes,(maybe terminal routing nodes ?)
              * compute the routed discharge.
-             *
+             * \note if no routing, empty time-series is returned.
+             * \return time-series by ascending routing id order where the i'th entry correspond to sorted river idents asc.
              */
             template <class TSV>
             void routing_discharges( TSV& cr) const {
                 //typedef typename TSV::value_type ts_t;
-                //cr.clear();
-                //TODO: iterate over the routing model, return results
+                cr.clear();
+                if(has_routing()) {
+                    //TODO: iterate over the routing model, return results
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    std::vector<int> rids;
+                    for(auto r:river_network.rid_map)
+                        rids.push_back(r.first);
+                    std::sort(begin(rids),end(rids));// ascending order!
+                    for(auto rid:rids) {
+                        cr.emplace_back(rn.output_m3s(rid));
+                    }
+                }
+                return cr;
+            }
+            pts_t river_output_flow_m3s(int rid) const {
+                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=rn.output_m3s(rid);
+                }
+                return r;
+            }
+            pts_t river_upstream_inflow_m3s(int rid) const {
+                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=rn.upstream_inflow(rid);
+                }
+                return r;
+            }
+            pts_t river_local_inflow_m3s(int rid) const {
+                pts_t r(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=rn.local_inflow(rid);
+                }
+                return r;
             }
         protected:
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
@@ -776,6 +832,8 @@ namespace shyft {
                 //  d) consistency: if cids are used, and routing (and rids) are enabled, auto-extend the cids so that all connected cells(and corresponding cids)
                 //     are calculated (avoid partial calculation of something that goes into a routing network...
                 //     question: how much of this consistency/complexity should we put to the user setting the calculation filter
+                if(!has_routing())
+                    return;
 
             }
         };

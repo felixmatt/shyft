@@ -229,7 +229,7 @@ namespace shyft {
              *
              * \tparam C
              *  Cell type that should provide
-             *  -# C::ts_t the current core time-series representation, currently point_ts<fixed_dt>..
+             *  -# C::rc.avg_discharge the current core time-series representation, currently point_ts<fixed_dt>..
              *
              * \note implementation:
              *    technically we are currently flattening out the ts-expression tree by computing the full
@@ -251,7 +251,7 @@ namespace shyft {
 
             template<class C>
             struct model {
-                typedef typename C::ts_t rts_t; // the result computed in the cell.rc.avg_discharge [m3/s]
+                typedef ::shyft::timeseries::point_ts<::shyft::time_axis::fixed_dt> rts_t; // the result computed in the cell.rc.avg_discharge [m3/s]
                 //typedef typename C::output_m3s_t ots_t; // the output result from the cell, it's a convolution_w_ts<rts_t>..
                 //typedef typename shyft::timeseries::uniform_sum_ts<ots_t> sum_ts_t; // could be possible using api::apoint_ts
 
@@ -263,7 +263,9 @@ namespace shyft {
                 model(std::shared_ptr<river_network> rivers,
                       std::shared_ptr<std::vector<C>> cells,
                       const time_axis::fixed_dt& ta):rivers(rivers),cells(cells),ta(ta) {}
-
+                model(const river_network& rivers,// hmm. clumsy, the region model keeps no shared pointer, which is ok..
+                      std::shared_ptr<std::vector<C>> cells,
+                      const time_axis::fixed_dt& ta):rivers(std::make_shared<river_network>(rivers)),cells(cells),ta(ta) {}
                 // constructors etc.
                 model() = default;
                 model(const model&)=default;
@@ -293,9 +295,9 @@ namespace shyft {
                 }
 
                 std::vector<double> cell_uhg(const C& c, utctimespan dt) const {
-                    double steps = (c.geo.routing.distance / c.parameter->routing_uhg.velocity)/dt;// time = distance / velocity[s] // dt[s]
+                    double steps = (c.geo.routing.distance / c.parameter->routing.velocity)/dt;// time = distance / velocity[s] // dt[s]
                     int n_steps = int(steps + 0.5);
-                    return std::move(make_uhg_from_gamma(n_steps, c.parameter->routing_uhg.alpha, c.parameter->routing_uhg.beta));//std::vector<double>{0.1,0.5,0.2,0.1,0.05,0.030,0.020};
+                    return std::move(make_uhg_from_gamma(n_steps, c.parameter->routing.alpha, c.parameter->routing.beta));//std::vector<double>{0.1,0.5,0.2,0.1,0.05,0.030,0.020};
                 }
 
                 /** compute the cell_output, taking the cell-route to routing river into consideration
