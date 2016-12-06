@@ -55,7 +55,7 @@ namespace expose {
 				.def(init<hbv_snow::state, hbv_soil::state, hbv_tank::state>(args("snow", "soil", "tank"), "initializes state with hbv_snow, hbv_soil and hbv_tank"))
 				.def_readwrite("snow", &state::snow, "hbv_snow state")
 				.def_readwrite("soil", &state::soil, "soil state")
-				.def_readwrite("tank", &state::soil, "tank state")
+				.def_readwrite("tank", &state::tank, "tank state")
 				;
 
 			typedef std::vector<state> HbvStateVector;
