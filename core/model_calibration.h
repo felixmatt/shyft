@@ -180,18 +180,19 @@ namespace shyft {
                     : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {
                 }
                 target_specification(const target_specification& c)
-                    : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
+                    : ts(c.ts), catchment_indexes(c.catchment_indexes),river_id(c.river_id), scale_factor(c.scale_factor),
                     calc_mode(c.calc_mode), catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b), uid(c.uid) {
                 }
                 target_specification(target_specification&&c)
                     : ts(std::move(c.ts)),
-                    catchment_indexes(std::move(c.catchment_indexes)),
+                    catchment_indexes(std::move(c.catchment_indexes)),river_id(c.river_id),
                     scale_factor(c.scale_factor), calc_mode(c.calc_mode), catchment_property(c.catchment_property),
                     s_r(c.s_r), s_a(c.s_a), s_b(c.s_b), uid(c.uid) {
                 }
                 target_specification& operator=(target_specification&& c) {
                     ts = std::move(c.ts);
                     catchment_indexes = move(c.catchment_indexes);
+                    river_id = c.river_id;
                     scale_factor = c.scale_factor;
                     calc_mode = c.calc_mode;
                     catchment_property = c.catchment_property;
@@ -203,6 +204,7 @@ namespace shyft {
                     if (this == &c) return *this;
                     ts = c.ts;
                     catchment_indexes = c.catchment_indexes;
+                    river_id = c.river_id;
                     scale_factor = c.scale_factor;
                     calc_mode = c.calc_mode;
                     catchment_property = c.catchment_property;
@@ -211,7 +213,7 @@ namespace shyft {
                     return *this;
                 }
                 bool operator==(const target_specification& x) const {
-                    return catchment_indexes == x.catchment_indexes && catchment_property == x.catchment_property;
+                    return catchment_indexes == x.catchment_indexes && catchment_property == x.catchment_property && river_id==x.river_id;
                 }
                 /** \brief Constructs a target specification element for calibration, specifying all needed parameters
                  *
@@ -250,7 +252,7 @@ namespace shyft {
                 }
                 target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
                 std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
-                int river_id;///< in case of catchment_property = ROUTED_DISCHARGE, this identifies the river id to get discharge for
+                int river_id=0;///< in case of catchment_property = ROUTED_DISCHARGE, this identifies the river id to get discharge for
                 double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
                 target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
                 target_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT, ROUTED_DISCHARGE

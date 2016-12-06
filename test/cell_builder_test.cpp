@@ -304,6 +304,18 @@ void cell_builder_test::test_read_and_run_region_model(void) {
         cout << "Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST = TRUE; or win: set SHYFT_FULL_TEST = TRUE to enable calibration run of nea - nidelv in this test"<<endl;
         return;
     }
+    // To enable cell-to river calibration, introduce a routing-effect between the cells and the river.
+    // we do this by setting the routing distance in the cells, and then also adjust the parameter.routing.velocity
+    // 
+    double hydro_distance = 1000.0;//m
+    for (auto &c : *rm.get_cells()) {
+        c.geo.routing.distance = hydro_distance;// all set to 1000 meter
+    }
+    double n_timesteps_delay = 7.0;// make the uhg approx 7 time steps long (3hourx 7 ~ 21 hours)
+    rm.get_region_parameter().routing.velocity = hydro_distance / dt/ n_timesteps_delay;
+
+    // now we can pull out the routed flow (delayed and smoothed)
+    auto routed_flow = rm.river_output_flow_m3s(common_river_id);
 
 	rm.revert_to_initial_state();//set_states(s0);// get back initial state
 	cout << "Calibration/parameter optimization" << endl;
@@ -313,12 +325,14 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, DISCHARGE);
 	target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_COVERED_AREA);
 	target_specification_t snow_swe_target(*snow_swe2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_WATER_EQUIVALENT);
+    target_specification_t routed_target(*routed_flow, common_river_id, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0);
 
 	vector<target_specification_t> target_specs;
 	target_specs.push_back(discharge_target);
 	target_specs.push_back(snow_sca_target);
 	target_specs.push_back(snow_swe_target);
-
+    target_specs.push_back(routed_target);
+    *global_parameter = rm.get_region_parameter();//refresh the values to current
 	parameter_accessor_t& pa(*global_parameter);
 	// Define parameter ranges
 	const size_t n_params = pa.size();
@@ -326,7 +340,8 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	std::vector<double> upper; upper.reserve(n_params);
 
 	vector<bool> calibrate_parameter(n_params, false);
-	for (auto i : vector<int>{ 0,4,14,16 }) calibrate_parameter[i] = true;
+    // 25 is routing velocity
+	for (auto i : vector<int>{ 0,4,14,16,25 }) calibrate_parameter[i] = true;
 	for (size_t i = 0; i < n_params; ++i) {
 		double v = pa.get(i);
 		lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
