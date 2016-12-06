@@ -203,8 +203,9 @@ namespace shyft {
                 std::vector<int> all_upstreams_by_id(int rid) const {
                     check_rid(rid);
                     auto rids=upstreams_by_id(rid);
-                    for (auto id : rids) {
-                        auto xtra = all_upstreams_by_id(id);
+                    auto n =rids.size();//since we are going to extend it in loop below
+                    for (size_t i=0;i<n;++i) {
+                        auto xtra = all_upstreams_by_id(rids[i]);
                         for (auto x : xtra)
                             rids.push_back(x);
                     }
