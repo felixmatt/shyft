@@ -306,7 +306,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     }
     // To enable cell-to river calibration, introduce a routing-effect between the cells and the river.
     // we do this by setting the routing distance in the cells, and then also adjust the parameter.routing.velocity
-    // 
+    //
     double hydro_distance = 1000.0;//m
     for (auto &c : *rm.get_cells()) {
         c.geo.routing.distance = hydro_distance;// all set to 1000 meter
@@ -338,7 +338,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	const size_t n_params = pa.size();
 	std::vector<double> lower; lower.reserve(n_params);
 	std::vector<double> upper; upper.reserve(n_params);
-
+    auto orig_parameter= *global_parameter;
 	vector<bool> calibrate_parameter(n_params, false);
     // 25 is routing velocity
 	for (auto i : vector<int>{ 0,4,14,16,25 }) calibrate_parameter[i] = true;
@@ -372,7 +372,22 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
 		if(rm_opt.active_parameter(i) )
-            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) << endl;
+            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) <<
+            " (orig:"<<orig_parameter.get(i)<<")"<< endl;
 	}
 	cout << " done" << endl;
+	cout <<"Retry with sceua:\n";
+	tz=ec::utctime_now();
+	auto x_optimized2=rm_opt.optimize_sceua(x_optimized);
+	used= ec::utctime_now() - tz;
+
+	cout << "results: " << used << " seconds, nthreads = " << rm.ncore << endl;
+	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized2) << endl;
+	cout << " x-parameters before and after" << endl;
+	for (size_t i = 0; i < x.size(); ++i) {
+		if(rm_opt.active_parameter(i) )
+            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized2.get(i) <<
+            " (orig:"<<orig_parameter.get(i)<<")"<< endl;
+	}
+	cout<< "done"<<endl;
 }

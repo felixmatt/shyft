@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="timeseries_test test_api_ts_ref_binding" />
+				<Option parameters="routing_test test_build_valid_river_network" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -31,10 +31,12 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-fexpensive-optimizations" />
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
 				</Compiler>
 				<Linker>
+					<Add option="-O3" />
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>

@@ -101,7 +101,7 @@ namespace shyft {
              * \param x_eps stop when all x's changes less than x_eps(recall range 0..1), convergence in x
              * \param y_eps stop when last y-values (model goal functions) seems to have converged (no improvements)
              * \return the goal function of m value, and x is the corresponding parameter-set.
-             * \throw runtime_error with text sceua: max_iterations reached before convergence
+             * \throw runtime_error with text sceua: terminated before convergence or max iterations
              */
             template <class M>
             double min_sceua(M& model, vector<double>& x, size_t max_n_evaluations, double x_eps = 0.0001, double y_eps = 0.0001) {
@@ -121,8 +121,8 @@ namespace shyft {
                 for (size_t i = 0; i < x_s.size(); ++i) x_s[i] = xv[i];//copy from raw vector
                 // Convert back to real parameter range
                 x = model.from_scaled(x_s);
-                if (!(opt_state == shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state == shyft::core::optimizer::OptimizerState::FinishedXconvergence))
-                    throw runtime_error("sceua: max-iterations reached before convergence"); //FinishedMaxIterations)
+                if (!(opt_state == shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state == shyft::core::optimizer::OptimizerState::FinishedXconvergence || opt_state == shyft::core::optimizer::FinishedMaxIterations))
+                    throw runtime_error("sceua: terminated before convergence or max iterations"); //FinishedMaxIterations)
                 return y_result;
 
             }
