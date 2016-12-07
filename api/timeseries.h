@@ -197,6 +197,7 @@ namespace shyft {
                 static apoint_ts max(const apoint_ts& a, const apoint_ts& b);
                 static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
 				std::vector<apoint_ts> partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
+                apoint_ts convolve_w(const std::vector<double>& w, shyft::timeseries::convolve_policy conv_policy) const;
 
                 //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
                 //   we would like these to be working (exception if it's not possible,i.e. an expression)
@@ -602,6 +603,55 @@ namespace shyft {
                 x_serialize_decl();
 			};
 
+            /** \brief convolve_w is used for providing a convolution by weights ts
+            *
+            * The convolve_w_ts is particularly useful for implementing routing and model
+            * time-delays and shape-of hydro-response.
+            *
+            */
+            struct convolve_w_ts : ipoint_ts {
+                typedef vector<double> weights_t;
+                typedef shyft::timeseries::convolve_w_ts<apoint_ts> cnv_ts_t;
+                //std::shared_ptr<ipoint_ts> ts;
+                cnv_ts_t ts_impl;
+
+                convolve_w_ts(const apoint_ts& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(ats, w, conv_policy) {}
+                convolve_w_ts(apoint_ts&& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(move(ats), w, conv_policy) {}
+                // hmm: convolve_w_ts(const std::shared_ptr<ipoint_ts> &ats,const weights_t& w,convolve_policy conv_policy ):ts(ats),ts_impl(*ts,w,conv_policy) {}
+
+                // std.ct
+                convolve_w_ts() {}
+                convolve_w_ts(const convolve_w_ts& c) : ts_impl(c.ts_impl) {}
+                convolve_w_ts(convolve_w_ts&& c) : ts_impl(move(c.ts_impl)) {}
+                convolve_w_ts& operator=(const convolve_w_ts& c) {
+                    if (this != &c) {
+                        ts_impl = c.ts_impl;
+                    }
+                    return *this;
+                }
+                convolve_w_ts& operator=(convolve_w_ts&& c) {
+                    ts_impl = move(c.ts_impl);
+                    return *this;
+                }
+
+                // implement ipoint_ts contract
+                virtual point_interpretation_policy point_interpretation() const { return ts_impl.point_interpretation(); }
+                virtual void set_point_interpretation(point_interpretation_policy) { throw std::runtime_error("not implemented"); }
+                virtual const gta_t& time_axis() const { return ts_impl.time_axis(); }
+                virtual utcperiod total_period() const { return ts_impl.total_period(); }
+                virtual size_t index_of(utctime t) const { return ts_impl.index_of(t); }
+                virtual size_t size() const { return ts_impl.size(); }
+                virtual utctime time(size_t i) const { return ts_impl.time(i); }
+                virtual double value(size_t i) const { return ts_impl.value(i); }
+                virtual double value_at(utctime t) const { return value(index_of(t)); }
+                virtual vector<double> values() const {
+                    vector<double> r;r.reserve(size());
+                    for (size_t i = 0;i<size();++i)
+                        r.push_back(ts_impl.value(i));
+                    return std::move(r);
+                }
+                x_serialize_decl();
+            };
 
             /** The iop_t represent the basic 'binary' operation,
              *   a stateless function that takes two doubles and returns the binary operation.
@@ -890,4 +940,6 @@ x_serialize_export_key(shyft::api::abin_op_scalar_ts);
 x_serialize_export_key(shyft::api::abin_op_ts);
 x_serialize_export_key(shyft::api::abin_op_ts_scalar);
 x_serialize_export_key(shyft::api::aref_ts);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>); // oops need this from core
+x_serialize_export_key(shyft::api::convolve_w_ts);
 x_serialize_export_key(shyft::api::apoint_ts);

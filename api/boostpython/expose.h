@@ -101,6 +101,25 @@ namespace expose {
                         "0(=default) means detect by hardware probe"
                         )
          .def_readwrite("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
+         .def_readwrite("river_network",&M::river_network,
+                        "river network that when enabled do the routing part of the region-model\n"
+                        "See also RiverNetwork class for how to build a working river network\n"
+                        "Then use the connect_catchment_to_river(cid,rid) method\n"
+                        "to route cell discharge into the river-network\n")
+         .def("has_routing",&M::has_routing,"true if some cells routes to river-network")
+         .def("river_output_flow_m3s",&M::river_output_flow_m3s,args("rid"),"returns the routed output flow of the specified river id (rid))")
+         .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s,args("rid"),"returns the routed upstream inflow to the specified river id (rid))")
+         .def("river_local_inflow_m3s",&M::river_local_inflow_m3s,args("rid"),"returns the routed local inflow from connected cells to the specified river id (rid))")
+         .def("connect_catchment_to_river",&M::connect_catchment_to_river,args("cid","rid"),
+         "Connect routing of all the cells in the specified catchment id to the specified river id\n"
+         ""
+         "Parameters\n"
+         "----------\n"
+         " cid: int\n"
+         "\t catchment identifier\n"
+         " rid: int\n"
+         "\t river identifier, can be set to 0 to indicate disconnect from routing"
+         )
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
 		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
              "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"
@@ -143,15 +162,15 @@ namespace expose {
 				" env: RegionEnvironemnt\n"
 				"     contains the ref: region_environment type\n"
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+         .def("run_cells",&M::run_cells,(boost::python::arg("use_ncore")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
              "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
              "require that initialize(time_axis) or run_interpolation is done first\n"
              "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
              "notice that in any case, the current model state is used as a starting point\n"
              "Parameters\n"
              "----------\n"
-             "thread_cell_count : int\n"
-             "\t number of cells pr.worker thread, if 0 is passed, the the core-count is used to determine the count\n"
+             "use_ncore : int\n"
+             "\t number of worker threads, or cores to use, if 0 is passed, the the core-count is used to determine the count\n"
              "start_step : int\n"
              "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
              "n_steps :int\n"
@@ -195,7 +214,14 @@ namespace expose {
                     "set/reset the catchment based calculation filter. This affects what get simulate/calculated during\n"
                     "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
                     "\n"
-                    "param catchment_id_list is a (zero-based) catchment id vector\n"
+                    "param catchment_id_list is a catchment id vector\n"
+         )
+         .def("set_calculation_filter", &M::set_catchment_calculation_filter, args("catchment_id_list","river_id_list"),
+                 "set/reset the catchment *and* river based calculation filter. This affects what get simulate/calculated during\n"
+                 "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
+                 "\n"
+                 "param catchment_id_list is a catchment id vector\n"
+                "param river_id_list is a river id vector\n"
          )
          .def("is_calculated",&M::is_calculated,args("catchment_id"),"true if catchment id is calculated during runs, ref set_catchment_calculation_filter")
          .def("get_states",&M::get_states,args("end_states"),

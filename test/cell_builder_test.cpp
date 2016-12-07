@@ -166,10 +166,7 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 #include <boost/filesystem.hpp>
 
 void cell_builder_test::test_read_and_run_region_model(void) {
-	if (!getenv("SHYFT_FULL_TEST")) {
-		TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable real run of nea-nidelv in this test");
-		return;
-	}
+
 	//
 	// Arrange
 	//
@@ -185,9 +182,9 @@ void cell_builder_test::test_read_and_run_region_model(void) {
     auto cells = make_shared<vector<cell_t>>();
     auto global_parameter = make_shared<cell_t::parameter_t>();
 #ifdef _WIN32
-    const char *cell_path = "neanidelv/geo_cell_data.win.bin";
+    const char *cell_path = "neanidelv/geo_cell_data.v2.win.bin";
 #else
-    const char *cell_path = "neanidelv/geo_cell_data.bin";
+    const char *cell_path = "neanidelv/geo_cell_data.v2.bin";
 #endif
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
@@ -225,7 +222,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	// Step 3: make a region model
 	cout << "3. creating a region model and run it for a short period" << endl;
 	region_model_t rm(cells, *global_parameter);
-	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "32");
+	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "8");
 	cout << " - ncore set to " << rm.ncore << endl;
 	auto cal = ec::calendar();
 	auto start = cal.time(ec::YMDhms(2010, 9, 1, 0, 0, 0));
@@ -265,8 +262,24 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 
 	cout << endl << "5. now a run with just two catchments" << endl;
 	vector<int> catchment_ids{ 38, 87 };
+    auto sum_discharge2x = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
+    // also setup a river network for these two catchments
+    // so that they end up in a common river
 	rm.set_catchment_calculation_filter(catchment_ids);
-
+    int common_river_id = 1;
+    ec::routing::river sum_river_38_87(common_river_id, ec::routing_info(0, 0.0));// sum river of 38 and 87
+    ec::routing::river river_38(38, ec::routing_info(common_river_id, 0.0));// use river-id eq. catchment-id, but any value would do
+    ec::routing::river river_87(87, ec::routing_info(common_river_id, 0.0));
+    // add to region model:
+    rm.river_network.add(sum_river_38_87).add(river_38).add(river_87);
+    rm.connect_catchment_to_river(38, 38);// make the connections for the cells
+    rm.connect_catchment_to_river(87, 87);// currently, the effective routing is zero, should be equal:
+    // and both these river
+    auto sum_discharge_38_87 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
+    auto sum_river_discharge = rm.river_output_flow_m3s(common_river_id);// verify it's equal
+    for (size_t i = 0;i < sum_discharge_38_87->size();++i) {
+        TS_ASSERT_DELTA(sum_discharge_38_87->value(i), sum_river_discharge->value(i), 0.001);
+    }
 	cout << "5. b Done, now compute new sum" << endl;
 	rm.revert_to_initial_state();
 	rm.get_states(s0);// so that we start at same state.
@@ -275,7 +288,10 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	auto sum_discharge2 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
 	auto snow_sca2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
 	auto snow_swe2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
-
+    auto sum_river_discharge2 = rm.river_output_flow_m3s(common_river_id);
+    for (size_t i = 0;i < sum_discharge2->size();++i) { // should still be equal
+        TS_ASSERT_DELTA(sum_discharge2->value(i), sum_river_discharge2->value(i), 0.001);
+    }
 	cout << "7. Sum discharge for " << catchment_ids[0] << " and " << catchment_ids[1] << " is:" << endl;
 
 	cout << "discharge:" << endl; print(cout, *sum_discharge2, i0, n_steps);
@@ -283,6 +299,24 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << "snow_swe :" << endl; print(cout, *snow_swe2, i0, n_steps);
 
 	cout << endl << "Done test read and run region-model" << endl;
+    if (!getenv("SHYFT_FULL_TEST")) {
+        TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable calibration run of nea-nidelv in this test");
+        cout << "Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST = TRUE; or win: set SHYFT_FULL_TEST = TRUE to enable calibration run of nea - nidelv in this test"<<endl;
+        return;
+    }
+    // To enable cell-to river calibration, introduce a routing-effect between the cells and the river.
+    // we do this by setting the routing distance in the cells, and then also adjust the parameter.routing.velocity
+    //
+    double hydro_distance = 1000.0;//m
+    for (auto &c : *rm.get_cells()) {
+        c.geo.routing.distance = hydro_distance;// all set to 1000 meter
+    }
+    double n_timesteps_delay = 7.0;// make the uhg approx 7 time steps long (3hourx 7 ~ 21 hours)
+    rm.get_region_parameter().routing.velocity = hydro_distance / dt/ n_timesteps_delay;
+
+    // now we can pull out the routed flow (delayed and smoothed)
+    auto routed_flow = rm.river_output_flow_m3s(common_river_id);
+
 	rm.revert_to_initial_state();//set_states(s0);// get back initial state
 	cout << "Calibration/parameter optimization" << endl;
 	using namespace shyft::core::model_calibration;
@@ -291,20 +325,23 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, DISCHARGE);
 	target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_COVERED_AREA);
 	target_specification_t snow_swe_target(*snow_swe2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_WATER_EQUIVALENT);
+    target_specification_t routed_target(*routed_flow, common_river_id, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0);
 
 	vector<target_specification_t> target_specs;
 	target_specs.push_back(discharge_target);
 	target_specs.push_back(snow_sca_target);
 	target_specs.push_back(snow_swe_target);
-
+    target_specs.push_back(routed_target);
+    *global_parameter = rm.get_region_parameter();//refresh the values to current
 	parameter_accessor_t& pa(*global_parameter);
 	// Define parameter ranges
 	const size_t n_params = pa.size();
 	std::vector<double> lower; lower.reserve(n_params);
 	std::vector<double> upper; upper.reserve(n_params);
-
+    auto orig_parameter= *global_parameter;
 	vector<bool> calibrate_parameter(n_params, false);
-	for (auto i : vector<int>{ 0,4,14,16 }) calibrate_parameter[i] = true;
+    // 25 is routing velocity
+	for (auto i : vector<int>{ 0,4,14,16,25 }) calibrate_parameter[i] = true;
 	for (size_t i = 0; i < n_params; ++i) {
 		double v = pa.get(i);
 		lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
@@ -335,7 +372,22 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
 		if(rm_opt.active_parameter(i) )
-            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) << endl;
+            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized.get(i) <<
+            " (orig:"<<orig_parameter.get(i)<<")"<< endl;
 	}
 	cout << " done" << endl;
+	cout <<"Retry with sceua:\n";
+	tz=ec::utctime_now();
+	auto x_optimized2=rm_opt.optimize_sceua(x_optimized);
+	used= ec::utctime_now() - tz;
+
+	cout << "results: " << used << " seconds, nthreads = " << rm.ncore << endl;
+	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized2) << endl;
+	cout << " x-parameters before and after" << endl;
+	for (size_t i = 0; i < x.size(); ++i) {
+		if(rm_opt.active_parameter(i) )
+            cout<< "'" << pa.get_name(i) << "' = " << px.get(i) << " -> " << x_optimized2.get(i) <<
+            " (orig:"<<orig_parameter.get(i)<<")"<< endl;
+	}
+	cout<< "done"<<endl;
 }
