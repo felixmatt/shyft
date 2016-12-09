@@ -158,7 +158,6 @@
 			<Add library="boost_python3" />
 			<Add library="python3.5m" />
 			<Add library="boost_serialization" />
-			<Add library="shyftcore" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
@@ -226,6 +225,10 @@
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_region_environment.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_routing.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>

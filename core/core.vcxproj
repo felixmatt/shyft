@@ -141,6 +141,7 @@
     <ClInclude Include="pt_hs_k_cell_model.h" />
     <ClInclude Include="pt_ss_k.h" />
     <ClInclude Include="pt_ss_k_cell_model.h" />
+    <ClInclude Include="routing.h" />
     <ClInclude Include="sceua_optimizer.h" />
     <ClInclude Include="skaugen.h" />
     <ClInclude Include="timeseries.h" />

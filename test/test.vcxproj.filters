@@ -94,6 +94,9 @@
     <ClInclude Include="serialization_test.h">
       <Filter>serialization</Filter>
     </ClInclude>
+    <ClInclude Include="routing_test.h">
+      <Filter>routing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="actual_evapotranspiration_test.cpp">
@@ -192,6 +195,9 @@
     <ClCompile Include="serialization_test.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
+    <ClCompile Include="routing_test.cpp">
+      <Filter>routing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -220,6 +226,9 @@
     </Filter>
     <Filter Include="serialization">
       <UniqueIdentifier>{dd510b90-1bd0-410d-b22c-504d8e303e96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="routing">
+      <UniqueIdentifier>{b2995031-3646-4ed1-9f64-5bb11612f0a0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
