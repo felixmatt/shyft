@@ -324,8 +324,7 @@ static void  write_ts( api::apoint_ts ats,T& out) {
     out.write((const char*)blob.data(),sz);
 }
 
-class shyft_server : public server_iostream
-{
+class shyft_server : public server_iostream {
 
     void on_connect  (
         std::istream& in,
@@ -335,8 +334,7 @@ class shyft_server : public server_iostream
         unsigned short foreign_port,
         unsigned short local_port,
         uint64 connection_id
-    )
-    {
+    ) {
         // The details of the connection are contained in the last few arguments to
         // on_connect().  For more information, see the documentation for the
         // server_iostream.  However, the main arguments of interest are the two streams.
@@ -345,18 +343,21 @@ class shyft_server : public server_iostream
 
         // Loop until we hit the end of the stream.  This happens when the connection
         // terminates.
-        while (in.peek() != EOF)
-        {
-            // get the next character from the client
-            //char ch = in.get();
+        core::calendar utc;
+        time_axis::generic_dt ta(utc.time(2016,1,1),core::deltahours(1),365*24);
+        api::apoint_ts dummy_ts(ta,1.0,timeseries::POINT_AVERAGE_VALUE);
+        while (in.peek() != EOF) {
             auto ats= read_ts(in);
-
             // find stuff to bind, read and bind, then:
+            auto ts_refs=ats.find_ts_bind_info();
+            // read all tsr here, then:
+            for (auto&bind_info : ts_refs) {
+                cout<<"bind:"<<bind_info.reference<<endl;
+                bind_info.ts.bind(dummy_ts);
+            }
 
             api::apoint_ts r(ats.time_axis(),ats.values(),ats.point_interpretation());
-
-            write_ts(r,out);            // now echo it back to them
-            //out << (char)toupper(ch);
+            write_ts(r,out);
         }
     }
 
@@ -378,19 +379,20 @@ void serialization_test::test_dlib_server() {
         shyft_server our_server;
 
         // set up the server object we have made
-        our_server.set_listening_port(1234);
+        int port_no=1234;
+        our_server.set_listening_port(port_no);
         // Tell the server to begin accepting connections.
         our_server.start_async();
         {
-            cout << "sending a message:\n";
-            iosockstream s0("localhost:1234");
-            auto ts_a=mk_expression(4);
+            cout << "sending an expression ts:\n";
+            iosockstream s0(string("localhost:")+to_string(port_no));
+
+            auto ts_a=mk_expression(4)*api::apoint_ts("symbolic_reference_ts_to_be_read_server_side");
             write_ts(ts_a,s0);
             auto ts_b=read_ts(s0);
             cout<<"Got ts back, size= "<<ts_b.size()<<"\n";
         }
-        cout << "Press enter to end this program" << endl;
-        cin.get();
+
     }
     catch (exception& e)
     {
