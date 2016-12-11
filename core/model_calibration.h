@@ -295,7 +295,7 @@ namespace shyft {
                 pts_t ts; ///< ts representing the property for the area, e.g. sca, swe
                 area_ts(double area_m2, pts_t ts) :area(area_m2), ts(move(ts)) {}
                 area_ts() :area(0.0) {}                              // maybe we could drop this and rely on defaults ?
-                area_ts(area_ts&&c) :area(c.area), ts(move(ts)) {}
+                area_ts(area_ts&&c) :area(c.area), ts(move(c.ts)) {}
                 area_ts(const area_ts&c) :area(c.area), ts(c.ts) {}
                 area_ts& operator=(const area_ts&c) {
                     if (&c != this) {

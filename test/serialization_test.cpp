@@ -312,16 +312,36 @@ template<class T>
 static api::apoint_ts read_ts(T& in) {
     int sz;
     in.read((char*)&sz,sizeof(sz));
-    vector<char> blob(sz,0);
+    std::vector<char> blob(sz,0);
     in.read((char*)blob.data(),sz);
     return api::apoint_ts::deserialize_from_bytes(blob);
 }
+
 template <class T>
-static void  write_ts( api::apoint_ts ats,T& out) {
+static void  write_ts( const api::apoint_ts& ats,T& out) {
     auto blob= ats.serialize_to_bytes();
     int sz=blob.size();
     out.write((const char*)&sz,sizeof(sz));
     out.write((const char*)blob.data(),sz);
+}
+
+template <class T>
+static void write_ts_vector(const std::vector<api::apoint_ts> &ats,T & out) {
+    int sz=ats.size();
+    out.write((const char*)&sz,sizeof(sz));
+    for(const auto & ts:ats)
+        write_ts(ts,out);
+}
+
+template<class T>
+static std::vector<api::apoint_ts> read_ts_vector(T& in) {
+    int sz;
+    in.read((char*)&sz,sizeof(sz));
+    std::vector<api::apoint_ts> r;
+    r.reserve(sz);
+    for(int i=0;i<sz;++i)
+        r.push_back(read_ts(in));
+    return r;
 }
 
 class shyft_server : public server_iostream {
@@ -347,17 +367,21 @@ class shyft_server : public server_iostream {
         time_axis::generic_dt ta(utc.time(2016,1,1),core::deltahours(1),365*24);
         api::apoint_ts dummy_ts(ta,1.0,timeseries::POINT_AVERAGE_VALUE);
         while (in.peek() != EOF) {
-            auto ats= read_ts(in);
+            auto atsv= read_ts_vector(in);
             // find stuff to bind, read and bind, then:
-            auto ts_refs=ats.find_ts_bind_info();
-            // read all tsr here, then:
-            for (auto&bind_info : ts_refs) {
-                cout<<"bind:"<<bind_info.reference<<endl;
-                bind_info.ts.bind(dummy_ts);
+            for(auto& ats:atsv) {
+                auto ts_refs=ats.find_ts_bind_info();
+                // read all tsr here, then:
+                for (auto&bind_info : ts_refs) {
+                    cout<<"bind:"<<bind_info.reference<<endl;
+                    bind_info.ts.bind(dummy_ts);
+                }
             }
-
-            api::apoint_ts r(ats.time_axis(),ats.values(),ats.point_interpretation());
-            write_ts(r,out);
+            //-- evaluate, when all binding is done (vectorized calc.
+            std::vector<api::apoint_ts> evaluated_tsv;
+            for(auto &ats:atsv)
+                evaluated_tsv.emplace_back(ats.time_axis(),ats.values(),ats.point_interpretation());
+            write_ts_vector(evaluated_tsv,out);
         }
     }
 
@@ -365,7 +389,7 @@ class shyft_server : public server_iostream {
 api::apoint_ts mk_expression(int kb=1000) {
     calendar utc;
     size_t n = 1*kb*1000;// gives 8 Mb memory
-    vector<double> x;x.reserve(n);
+    std::vector<double> x;x.reserve(n);
     for (size_t i = 0;i < n;++i)
         x.push_back(-double(n)/2.0 + i);
     api::apoint_ts aa(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), x);
@@ -387,10 +411,15 @@ void serialization_test::test_dlib_server() {
             cout << "sending an expression ts:\n";
             iosockstream s0(string("localhost:")+to_string(port_no));
 
-            auto ts_a=mk_expression(4)*api::apoint_ts("symbolic_reference_ts_to_be_read_server_side");
-            write_ts(ts_a,s0);
-            auto ts_b=read_ts(s0);
-            cout<<"Got ts back, size= "<<ts_b.size()<<"\n";
+            std::vector<api::apoint_ts> tsl;
+            for(size_t kb=4;kb<16;kb+=2)
+                tsl.push_back(mk_expression(kb)*api::apoint_ts(string("netcdf://group/path/ts")+ std::to_string(kb)));
+            write_ts_vector(tsl,s0);
+            auto ts_b=read_ts_vector(s0);
+            cout<<"Got vector back, size= "<<ts_b.size()<<"\n";
+            for(const auto& ts:ts_b)
+                cout<<"\n\t ts.size()"<<ts.size();
+            cout<<"done"<<endl;
         }
 
     }

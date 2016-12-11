@@ -406,7 +406,7 @@ namespace shyft {
                     for(size_t i=0;i<ta.size();++i) {
                         r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
                     }
-                    return std::move(r);//needed ?
+                    return r;
                 }
                 // to help the average function, return the i'th point of the underlying timeseries
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
@@ -497,7 +497,7 @@ namespace shyft {
 					for (size_t i = 0;i<ta.size();++i) {                      // given sequential access
 						r.push_back(accumulate.value(i));                     // reuses acc.computation
 					}
-					return std::move(r);
+					return r;
 				}
 				// to help the average function, return the i'th point of the underlying timeseries
 				//point get(size_t i) const {return point(ts->time(i),ts->value(i));}
@@ -648,7 +648,7 @@ namespace shyft {
                     vector<double> r;r.reserve(size());
                     for (size_t i = 0;i<size();++i)
                         r.push_back(ts_impl.value(i));
-                    return std::move(r);
+                    return r;
                 }
                 x_serialize_decl();
             };

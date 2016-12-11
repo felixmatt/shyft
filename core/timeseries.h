@@ -645,7 +645,7 @@ namespace shyft{
 				v.reserve(ta.size());
 				for (size_t i=0; i<ta.size(); ++i)
 					v.emplace_back(value(i));
-				return std::move(v);
+				return v;
 			}
             x_serialize_decl();
 		};
@@ -981,7 +981,7 @@ namespace shyft{
             std::vector<double> values() const {
                 std::vector<double> r;r.reserve(size());
                 for (size_t i = 0;i < size();++i) r.push_back(value(i));
-                return std::move(r);
+                return r;
             }
         };
 

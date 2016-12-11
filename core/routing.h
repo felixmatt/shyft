@@ -101,7 +101,7 @@ namespace shyft {
                 std::vector<double> uhg(utctimespan dt) const {
                     double steps = (downstream.distance / parameter.velocity) / dt;// time = distance / velocity[s] // dt[s]
                     int n_steps = int(steps + 0.5);
-                    return std::move(make_uhg_from_gamma(n_steps, parameter.alpha, parameter.beta));
+                    return make_uhg_from_gamma(n_steps, parameter.alpha, parameter.beta);
                 }
             };
 
@@ -116,7 +116,7 @@ namespace shyft {
             inline std::vector<double> ts_values(const Ts& ts) {
                 std::vector<double> r; r.reserve(ts.size());
                 for (size_t i = 0;i < ts.size();++i) r.push_back(ts.value(i));
-                return std::move(r);
+                return r;
             }
 
             /** Provide a class that enable safe manipulation of rivers.
@@ -308,7 +308,7 @@ namespace shyft {
                 std::vector<double> cell_uhg(const C& c, utctimespan dt) const {
                     double steps = (c.geo.routing.distance / c.parameter->routing.velocity)/dt;// time = distance / velocity[s] // dt[s]
                     int n_steps = int(steps + 0.5);
-                    return std::move(make_uhg_from_gamma(n_steps, c.parameter->routing.alpha, c.parameter->routing.beta));//std::vector<double>{0.1,0.5,0.2,0.1,0.05,0.030,0.020};
+                    return make_uhg_from_gamma(n_steps, c.parameter->routing.alpha, c.parameter->routing.beta);//std::vector<double>{0.1,0.5,0.2,0.1,0.05,0.030,0.020};
                 }
 
                 /** compute the cell_output, taking the cell-route to routing river into consideration
@@ -316,7 +316,7 @@ namespace shyft {
                  */
                 timeseries::convolve_w_ts<rts_t> cell_output_m3s(const C&c ) const {
                     // return discharge, notice that this function assumes that time_axis() do have a uniform delta() (requirement)
-                    return std::move(timeseries::convolve_w_ts<rts_t>(c.rc.avg_discharge,cell_uhg(c,ta.delta()),timeseries::convolve_policy::USE_ZERO));
+                    return timeseries::convolve_w_ts<rts_t>(c.rc.avg_discharge,cell_uhg(c,ta.delta()),timeseries::convolve_policy::USE_ZERO);
                 }
 
 
@@ -332,7 +332,7 @@ namespace shyft {
                                 r.add(t, node_output_m3s.value(t));
                         }
                     }
-                    return std::move(r);
+                    return r;
                 }
 
                 /** Aggregate the upstream inflow that flows into this cell
@@ -348,7 +348,7 @@ namespace shyft {
                             r.add(t, flow_m3s.value(t));
 
                     }
-                    return std::move(r);
+                    return r;
                 }
 
                 /** Utilizing the local_inflow and upstream_inflow function,
@@ -361,7 +361,7 @@ namespace shyft {
                     std::vector<double> uhg_weights = rivers->river_by_id(node_id).uhg(dt);
                     auto sum_input_m3s = local_inflow(node_id)+ upstream_inflow(node_id);
                     auto response = timeseries::convolve_w_ts<decltype(sum_input_m3s)>(sum_input_m3s, uhg_weights, timeseries::convolve_policy::USE_ZERO);
-                    return std::move(rts_t(ta, ts_values(response), timeseries::POINT_AVERAGE_VALUE)); // flatten values
+                    return rts_t(ta, ts_values(response), timeseries::POINT_AVERAGE_VALUE); // flatten values
                 }
 
             };
@@ -392,7 +392,7 @@ namespace shyft {
                 }
                 for (auto& y : r) y /= s;
                 if (r.size() == 0) r.push_back(1.0);// at a minimum 1.0, no delay
-                return std::move(r);
+                return r;
             };
 
         }

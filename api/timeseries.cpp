@@ -62,7 +62,7 @@ namespace shyft{
             for(size_t i=0;i<time_axis().size();++i) {
                 r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
             }
-            return std::move(r);
+            return r;
         }
 
         // implement popular ct for apoint_ts to make it easy to expose & use

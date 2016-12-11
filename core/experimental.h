@@ -422,7 +422,7 @@ namespace shyft {
                     }
                 };
                 f_x(0,grid.n_x(),r);// invoke lambda for all cells
-                return std::move(r);//moved anyway?
+                return r;//moved anyway?
             }
             // for debug/diagnostics ,needed when working with real data, (sorry, a GIS db may contain errors!)
             mutable int area_errors;//< count number of errors during the .safe_area_of(..) function
@@ -666,7 +666,7 @@ namespace shyft {
              */
             class geo_located_ts_file_repository {
                 string path;
-                size_t n_cells;
+                //size_t n_cells;
               public:
                 geo_located_ts_file_repository(string path):path(path){}
                 /**\brief read from supplied path, geo-located ts, using the met-station id:position file to set geo-location
