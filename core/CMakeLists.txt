@@ -34,6 +34,21 @@ if(NOT rv EQUAL 0)
   return()
 endif()
 
+message(STATUS "Compiling DLIB library ...")
+execute_process(COMMAND ./build_dlib.sh ${SHYFT_DEPENDENCIES}/dlib
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  RESULT_VARIABLE dlib_rv
+  OUTPUT_VARIABLE output
+  ERROR_VARIABLE  error
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+if(NOT dlib_rv EQUAL 0)
+  message("dlib output:" ${output})
+  message("dlib error:" ${error})
+  message(FATAL_ERROR "Errors occurred.  Leaving now!")
+  return()
+endif()
 
 message(STATUS "Generating Makefile for the SHyFT static library...")
 
