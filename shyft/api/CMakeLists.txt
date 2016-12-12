@@ -71,7 +71,7 @@ set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}
 file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # Additional libraries
-set(LIBS "-lblas -llapack -lboost_python3 -lboost_serialization")
+set(LIBS "-lblas -llapack -lboost_python3 -lboost_serialization -ldlib")
 
 # Compile extensions api extension
 foreach(python_api_extension  "api" )

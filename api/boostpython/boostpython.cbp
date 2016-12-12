@@ -158,6 +158,7 @@
 			<Add library="boost_python3" />
 			<Add library="python3.5m" />
 			<Add library="boost_serialization" />
+			<Add library="dlib" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
@@ -169,6 +170,10 @@
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_cell_environment.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_dtss.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>

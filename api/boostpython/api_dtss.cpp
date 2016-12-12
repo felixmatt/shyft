@@ -39,8 +39,8 @@ namespace shyft {
             out.write((const char*)blob.data(), sz);
         }
 
-        template <class T>
-        static void write_ts_vector(const std::vector<api::apoint_ts> &ats, T & out) {
+        template <class TSV,class T>
+        static void write_ts_vector(TSV &&ats, T & out) {
             int sz = ats.size();
             out.write((const char*)&sz, sizeof(sz));
             for (const auto & ts : ats)
@@ -68,12 +68,12 @@ namespace shyft {
 
         class dtss_server : public dlib::server_iostream {
         public:
-
-            std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, std::vector<api::apoint_ts>& atsv) {
+            template<class TSV>
+            std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
                 //-- just for the testing create dummy-ts here.
                 // later: collect all bind_info.ref, collect by match into list, then invoke handler,
                 //        then invoke default handler for the remaining not matching a bind-handlers (like a regexpr ?)
-                // 
+                //
                 core::calendar utc;
                 time_axis::generic_dt ta(bind_period.start, core::deltahours(1), bind_period.timespan()/api::deltahours(1));
                 api::apoint_ts dummy_ts(ta, 1.0, timeseries::POINT_AVERAGE_VALUE);
@@ -92,7 +92,7 @@ namespace shyft {
             }
 
             static int msg_count ;
-            
+
             void on_connect(
                 std::istream& in,
                 std::ostream& out,
@@ -151,7 +151,7 @@ namespace expose {
 
     }
     static void dtss_client() {
-        def("dtss_evaluate", shyft::dtss::dtss_evaluate, args("host_port","ts_vector","utcperiod"), 
+        def("dtss_evaluate", shyft::dtss::dtss_evaluate, args("host_port","ts_vector","utcperiod"),
             "tbd"
             );
 
