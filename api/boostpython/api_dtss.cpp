@@ -68,6 +68,8 @@ namespace shyft {
 
         class dtss_server : public dlib::server_iostream {
         public:
+            boost::python::object cb;
+
             template<class TSV>
             std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
                 //-- just for the testing create dummy-ts here.
@@ -80,6 +82,7 @@ namespace shyft {
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
                     // read all tsr here, then:
+                    if(cb)
                     for (auto&bind_info : ts_refs) {
                         bind_info.ts.bind(dummy_ts);
                     }
@@ -147,6 +150,7 @@ namespace expose {
             .def("clear",&DtsServer::clear,"stop serving connections")
             .def("is_running",&DtsServer::is_running,"true if server is listening and running")
             .def("get_listening_port",&DtsServer::get_listening_port,"returns the port number it's listening at")
+            .def_readwrite("cb",&DtsServer::cb,"callback for binding")
             ;
 
     }
