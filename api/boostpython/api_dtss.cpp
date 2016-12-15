@@ -79,14 +79,29 @@ namespace shyft {
                 core::calendar utc;
                 time_axis::generic_dt ta(bind_period.start, core::deltahours(1), bind_period.timespan()/api::deltahours(1));
                 api::apoint_ts dummy_ts(ta, 1.0, timeseries::POINT_AVERAGE_VALUE);
+                std::map<std::string,api::ts_bind_info> ts_bind_map;
+                std::vector<std::string> ts_id_list;
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
                     // read all tsr here, then:
-                    if(cb)
-                    for (auto&bind_info : ts_refs) {
-                        bind_info.ts.bind(dummy_ts);
+                    //ts_bind_infos.insert(ts_bind_infos.begin(),begin(ts_refs),end(ts_refs));
+                    for(const auto& bi:ts_refs) {
+                        ts_id_list.push_back(bi.reference);
+                        ts_bind_map[bi.reference]=bi;
                     }
+
+                    //for (auto&bind_info : ts_refs) {
+                    //    bind_info.ts.bind(dummy_ts);
+                    //    if(cb)
+                    //        cb(bind_info.reference);
+                    //
+                    //}
                 }
+                auto bts=fire_cb(ts_id_list,bind_period);
+                if(bts.size()!=ts_id_list.size())
+                    throw std::runtime_error(std::string("failed to bind all of ")+std::to_string(bts.size())+std::string(" ts"));
+                for(size_t i=0;i<ts_id_list.size();++i)
+                    ts_bind_map[ts_id_list[i]].ts.bind(bts[i]);
                 //-- evaluate, when all binding is done (vectorized calc.
                 std::vector<api::apoint_ts> evaluated_tsv;
                 for (auto &ats : atsv)
@@ -95,6 +110,13 @@ namespace shyft {
             }
 
             static int msg_count ;
+
+            std::vector<api::apoint_ts> fire_cb(std::vector<std::string>ts_ids,core::utcperiod p) {
+                std::vector<api::apoint_ts> r;
+                if(cb)
+                    r= boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(),ts_ids,p);
+                return r;
+            }
 
             void on_connect(
                 std::istream& in,
@@ -151,6 +173,10 @@ namespace expose {
             .def("is_running",&DtsServer::is_running,"true if server is listening and running")
             .def("get_listening_port",&DtsServer::get_listening_port,"returns the port number it's listening at")
             .def_readwrite("cb",&DtsServer::cb,"callback for binding")
+            .def("fire_cb",&DtsServer::fire_cb,args("msg","rp"),"testing fire from c++")
+            //.add_static_property("msg_count",
+            //                     make_getter(&DtsServer::msg_count),
+            //                     make_setter(&DtsServer::msg_count),"total number of requests")
             ;
 
     }
