@@ -33,29 +33,29 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
 
         def _create_shyft_ts(self):
             b = 946684800 # 2000.01.01 00:00:00
-            h = 3600 #one hour in seconds
-            values = np.array([1.0, 2.0, 3.0])
-            shyft_ts_factory = api.TsFactory()
-            return shyft_ts_factory.create_point_ts(len(values), b, h, api.DoubleVector(values))
+            h = 3600 # One hour in seconds
+            v = np.array([1.0, 2.0, 3.0])
+            return api.TsFactory().create_point_ts(len(v), b, h, api.DoubleVector(v))
     
 
-        def test_make_ssa_ts_from_shyft_ts(self):
-            ts_name = u'/abc'          
+        def test_make_xts_from_shyft_ts(self):
             shyft_ts = self._create_shyft_ts()
-            r = SmGTsRepository._make_ssa_ts_from_shyft_ts(ts_name, shyft_ts)
-            self.assertEqual(r.Count, shyft_ts.size())
-            self.assertEqual(r.Name, ts_name)
-            [self.assertAlmostEqual(shyft_ts.value(i), r.Value(i).V) for i in range(shyft_ts.size())]
-            [self.assertAlmostEqual(0, r.Value(i).Q) for i in range(shyft_ts.size())]
-            [self.assertAlmostEqual(shyft_ts.time(i), r.Time(i).ToUnixTime()) for i in range(shyft_ts.size())]
+            ts_name = u'/make_xts'
+            xts = SmGTsRepository._make_xts_from_shyft_ts(ts_name, shyft_ts)
+            self.assertEqual(xts.Count, shyft_ts.size())
+            self.assertEqual(xts.Name, ts_name)
+            [self.assertAlmostEqual(xts.Value(i).V, shyft_ts.value(i)) for i in range(shyft_ts.size())]
+            [self.assertAlmostEqual(xts.Value(i).Q, 0) for i in range(shyft_ts.size())]
+            [self.assertAlmostEqual(xts.Time(i).ToUnixTime(), shyft_ts.time(i)) for i in range(shyft_ts.size())]
        
  
-        def test_make_shyft_ts_from_ssa_ts(self):
-            shyft_ts1=self._create_shyft_ts()
-            ssa_ts=SmGTsRepository._make_ssa_ts_from_shyft_ts(u'/just_a_test',shyft_ts1)
-            shyft_ts=SmGTsRepository._make_shyft_ts_from_ssa_ts(ssa_ts)
-            [self.assertAlmostEqual(shyft_ts.value(i),ssa_ts.Value(i).V) for i in range(shyft_ts.size())]
-            [self.assertAlmostEqual(shyft_ts.time(i),ssa_ts.Time(i).ToUnixTime()) for i in range(shyft_ts.size())]
+        def test_make_shyft_ts_from_xts(self):
+            shyft_ts = self._create_shyft_ts()
+            ts_name = u'/make_xts'
+            xts = SmGTsRepository._make_xts_from_shyft_ts(ts_name, shyft_ts)
+            test_ts = SmGTsRepository._make_shyft_ts_from_xts(xts)
+            [self.assertAlmostEqual(test_ts.value(i), xts.Value(i).V) for i in range(test_ts.size())]
+            [self.assertAlmostEqual(test_ts.time(i), xts.Time(i).ToUnixTime()) for i in range(test_ts.size())]
             
 
         def test_store(self):
