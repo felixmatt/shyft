@@ -35,6 +35,25 @@ namespace shyft {
             static const bool value = true;
         };
 
+		/** generic test if two different time-axis types resembles the same conceptual time-axis
+		*
+		* Given time-axis are of differnt types (point, versus period versus fixed_dt etc.)
+		* just compare and see if they produces the same number of periods, and that each
+		* period is equal.
+		*/
+		template<class A, class B>
+		bool equivalent_time_axis(const A& a, const B& b) {
+			if (a.size() != b.size())
+				return false;
+			for (size_t i = 0;i < a.size();++i) { if (a.period(i) != b.period(i)) return false; }
+			return true;
+		}
+		/** Specialization of the equivalent_time_axis given that they are of the same type.
+		*  In this case we forward the comparison to the type it self relying on the
+		*  fact that the time_axis it self knows how to fastest figure out if it's equal.
+		*/
+		template <class A>
+		bool equivalent_time_axis(const A& a, const A&b) { return a == b; }
 
         /**\brief a simple regular time-axis, starting at t, with n consecutive periods of fixed length dt
          *
@@ -48,7 +67,8 @@ namespace shyft {
             utctimespan delta() const {return dt;}//BW compat
             utctime start() const {return t;} //BW compat
             size_t size() const {return n;}
-
+			bool operator==(const fixed_dt& other) const {return t==other.t && dt== other.dt && n==other.n;}
+			bool operator!=(const fixed_dt& other) const { return !this->operator==(other); }
             utcperiod total_period() const {
                 return n == 0 ?
                        utcperiod( min_utctime, min_utctime ) :  // maybe just a non-valid period?
@@ -108,6 +128,9 @@ namespace shyft {
                 }
                 return *this;
             }
+			/** equality, notice that calendar is equal if they refer to exactly same calendar pointer */
+			bool operator==(const calendar_dt& other) const { return cal.get()== other.cal.get() && t == other.t && dt == other.dt && n == other.n; }
+			bool operator!=(const calendar_dt& other) const { return !this->operator==(other); }
 
             size_t size() const {return n;}
 
@@ -192,6 +215,8 @@ namespace shyft {
                 }
                 return *this;
             }
+            bool operator==(const point_dt &other)const {return t == other.t && t_end == other.t_end;}
+			bool operator!=(const point_dt& other) const { return !this->operator==(other); }
             size_t size() const {return t.size();}
 
             utcperiod total_period() const {
@@ -293,7 +318,18 @@ namespace shyft {
                 }
                 return *this;
             }
-
+			bool operator==(const generic_dt& other) const {
+				if (gt != other.gt) {// they are represented differently:
+					switch (gt) {
+					default:
+					case FIXED: return equivalent_time_axis(f, other);
+					case CALENDAR: return equivalent_time_axis(c, other);
+					case POINT: return equivalent_time_axis(p, other);
+					}
+				} // else they have same-representation, use equality directly
+				switch (gt) { default: case FIXED: return f == other.f; case CALENDAR: return c==other.c; case POINT: return p == other.p; }
+			}
+			bool operator!=(const generic_dt& other) const { return !this->operator==(other); }
             //--
             bool is_fixed_dt() const {return gt != POINT;}
 
@@ -370,7 +406,8 @@ namespace shyft {
                 }
                 return *this;
             }
-
+			bool operator==(const calendar_dt_p& other)const { return p==other.p && cta== other.cta;}
+			bool operator!=(const calendar_dt_p& other) const { return !this->operator==(other); }
             size_t size() const { return cta.size() * ( p.size() ? p.size() : 1 );}
 
             utcperiod total_period() const {
@@ -448,6 +485,8 @@ namespace shyft {
                     r.p.push_back( ta.period( i ) );
                 return r;
             }
+            bool operator==(const period_list& other) const {return p == other.p;}
+			bool operator!=(const period_list& other) const { return !this->operator==(other); }
             size_t size() const {return p.size();}
 
             utcperiod total_period() const {

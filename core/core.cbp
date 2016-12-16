@@ -49,6 +49,7 @@
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#dlib.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
@@ -98,6 +99,7 @@
 		<Unit filename="pt_ss_k.h" />
 		<Unit filename="pt_ss_k_cell_model.h" />
 		<Unit filename="region_model.h" />
+		<Unit filename="routing.h" />
 		<Unit filename="sceua_optimizer.cpp" />
 		<Unit filename="sceua_optimizer.h" />
 		<Unit filename="skaugen.h" />
