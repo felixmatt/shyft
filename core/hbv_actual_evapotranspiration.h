@@ -36,7 +36,7 @@ namespace shyft {
 				const utctime dt) {
 				//double actevap;
 
-				return soil_moisture < lp ? pot_evapo*(soil_moisture / lp)*(1.0 - snow_fraction):pot_evapo;
+				return (1.0 - snow_fraction)*(soil_moisture < lp ? pot_evapo*(soil_moisture / lp):pot_evapo);
 				}
 		};
 	};

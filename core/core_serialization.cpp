@@ -188,6 +188,18 @@ void shyft::timeseries::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, con
     & make_nvp("fx_policy", fx_policy)
     ;
 }
+
+template <class Ts>
+template <class Archive>
+void shyft::timeseries::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
+    ar
+    & make_nvp("ts", ts)
+    & make_nvp("fx_policy", fx_policy)
+    & make_nvp("w", w)
+    & make_nvp("convolve_policy",policy)
+    ;
+}
+
 template <class A, class B, class O, class TA>
 template<class Archive>
 void shyft::timeseries::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsigned int version) {
@@ -209,6 +221,7 @@ void shyft::core::geo_point::serialize(Archive& ar, const unsigned int version) 
     & make_nvp("z",z)
     ;
 }
+
 template <class Archive>
 void shyft::core::land_type_fractions::serialize(Archive& ar, const unsigned int version) {
     ar
@@ -219,6 +232,14 @@ void shyft::core::land_type_fractions::serialize(Archive& ar, const unsigned int
     ;
 }
 template <class Archive>
+void shyft::core::routing_info::serialize(Archive& ar, const unsigned int version) {
+    ar
+    & make_nvp("id", id)
+    & make_nvp("distance", distance)
+    ;
+}
+
+template <class Archive>
 void shyft::core::geo_cell_data::serialize(Archive& ar, const unsigned int version) {
     ar
     & make_nvp("mid_point_",mid_point_)
@@ -226,12 +247,14 @@ void shyft::core::geo_cell_data::serialize(Archive& ar, const unsigned int versi
     & make_nvp("catchment_id_",catchment_id_)
     & make_nvp("radiation_slope_factor_",radiation_slope_factor_)
     & make_nvp("fractions",fractions)
+    & make_nvp("routing",routing)
     ;
 }
 
 //-- export geo stuff
 x_serialize_implement(shyft::core::geo_point);
 x_serialize_implement(shyft::core::land_type_fractions);
+x_serialize_implement(shyft::core::routing_info);
 x_serialize_implement(shyft::core::geo_cell_data);
 
 //-- export utctime_utilities
@@ -263,6 +286,11 @@ x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::fixe
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::calendar_dt>);
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::point_dt>);
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::generic_dt>);
+
+x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
+
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::fixed_dt>);
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::calendar_dt>);
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::point_dt>);
@@ -291,6 +319,9 @@ x_arch(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
 x_arch(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
 x_arch(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
 
+x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>>);
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>);
@@ -308,4 +339,5 @@ x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::generic_dt>);
 
 x_arch(shyft::core::geo_point);
 x_arch(shyft::core::land_type_fractions);
+x_arch(shyft::core::routing_info);
 x_arch(shyft::core::geo_cell_data);

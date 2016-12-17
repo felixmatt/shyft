@@ -27,6 +27,7 @@ namespace expose {
 	extern void hbv_tank();
 	extern void hbv_actual_evapotranspiration();
 	extern void glacier_melt();
+	extern void routing();
 
     void api() {
         calendar_and_time();
@@ -51,6 +52,7 @@ namespace expose {
 		hbv_tank();
 		hbv_actual_evapotranspiration();
 		glacier_melt();
+		routing();
     }
 }
 

@@ -32,7 +32,7 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTGSK assembly\n"
                               "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter, optional<glacier_melt::parameter>>(args("pt","gs","ae","k","p_corr","gm"),"create object with specified parameters"))
+                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter, optional<glacier_melt::parameter,routing::uhg_parameter>>(args("pt","gs","ae","k","p_corr","gm","routing"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
                 .def_readwrite("gs",&parameter::gs,"gamma-snow parameter")
@@ -40,6 +40,7 @@ namespace expose {
 				.def_readwrite("ae",&parameter::ae,"actual evapotranspiration parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
+                .def_readwrite("routing",&parameter::routing,"routing cell-to-river catchment specific parameters")
                 .def("size",&parameter::size,"returns total number of calibration parameters")
                 .def("set",&parameter::set,args("p"),"set parameters from vector/list of float, ordered as by get_name(i)")
                 .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")

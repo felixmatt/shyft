@@ -130,6 +130,7 @@
       <Filter>method-stacks</Filter>
     </ClInclude>
     <ClInclude Include="unit_conversion.h" />
+    <ClInclude Include="routing.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
