@@ -446,8 +446,8 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                 print(pure_arr[:,0:3,0])
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
                     print(pure_arr.max(), pure_arr.min(), pure_arr.mean())
-                    pure_arr = pure_arr.filled(0.)
-                    print(pure_arr.max(), pure_arr.min(), pure_arr.mean())
+                    pure_arr = pure_arr.filled(np.nan)
+                    print(pure_arr[:, 0:3, 0])
                 if nb_extra_intervals > 0:
                     data_slice[dims.index("time")] = [time_slice.stop - 1]
                     data_slice[dims.index("lead_time")] = slice(data_lead_time_slice.stop,
