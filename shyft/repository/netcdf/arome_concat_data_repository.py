@@ -513,7 +513,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             # dr = r[1:] - r[:-1]
             # return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
             dr = r[:, 1:, :] - r[:, :-1, :]
-            return fcn(np.clip(dr / (time[1] - time[0]), 0.0, 5000.0))
+            return fcn(np.clip(dr / (lead_time[1] - lead_time[0]), 0.0, 5000.0))
 
         # Unit- and aggregation-dependent conversions go here
         if concat:
