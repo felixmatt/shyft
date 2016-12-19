@@ -42,7 +42,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(SHYFT_DEPENDENCIES)\cxxtest</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SHYFT_DEPENDENCIES)\blaslapack;$(SHYFT_DEPENDENCIES)\dlib\build\dlib\Release;</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(SHYFT_DEPENDENCIES)\blaslapack;$(SHYFT_DEPENDENCIES)\dlib\build\dlib\Debug;</LibraryPath>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>

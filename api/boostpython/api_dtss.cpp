@@ -18,6 +18,63 @@
 //#include "core/timeseries.h"
 #include "api/timeseries.h"
 
+// from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
+namespace boost {
+    namespace python {
+
+        struct release_gil_policy {
+            // Ownership of this argument tuple will ultimately be adopted by
+            // the caller.
+            template <class ArgumentPackage>
+            static bool precall(ArgumentPackage const&) {
+                // Release GIL and save PyThreadState for this thread here
+
+                return true;
+            }
+
+            // Pass the result through
+            template <class ArgumentPackage>
+            static PyObject* postcall(ArgumentPackage const&, PyObject* result) {
+                // Reacquire GIL using PyThreadState for this thread here
+
+                return result;
+            }
+
+            typedef default_result_converter result_converter;
+            typedef PyObject* argument_package;
+
+            template <class Sig>
+            struct extract_return_type : mpl::front<Sig> {
+            };
+
+        private:
+            // Retain pointer to PyThreadState on a per-thread basis here
+
+        };
+    }
+}
+
+struct scoped_gil_release {
+    scoped_gil_release() noexcept {
+        py_thread_state = PyEval_SaveThread();
+    }
+    ~scoped_gil_release() noexcept {
+        PyEval_RestoreThread(py_thread_state);
+    }
+private:
+    PyThreadState * py_thread_state;
+};
+
+struct scoped_gil_aquire {
+    scoped_gil_aquire() noexcept {
+        py_state = PyGILState_Ensure();
+    }
+    ~scoped_gil_aquire() noexcept {
+        PyGILState_Release(py_state);
+    }
+private:
+    PyGILState_STATE   py_state;
+};
 
 namespace shyft {
     namespace dtss {
@@ -83,19 +140,12 @@ namespace shyft {
                 std::vector<std::string> ts_id_list;
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
-                    // read all tsr here, then:
-                    //ts_bind_infos.insert(ts_bind_infos.begin(),begin(ts_refs),end(ts_refs));
                     for(const auto& bi:ts_refs) {
-                        ts_id_list.push_back(bi.reference);
-                        ts_bind_map[bi.reference]=bi;
+                        if (ts_bind_map.find(bi.reference) != ts_bind_map.end()) { // maintain unique set
+                            ts_id_list.push_back(bi.reference);
+                            ts_bind_map[bi.reference] = bi;
+                        }
                     }
-
-                    //for (auto&bind_info : ts_refs) {
-                    //    bind_info.ts.bind(dummy_ts);
-                    //    if(cb)
-                    //        cb(bind_info.reference);
-                    //
-                    //}
                 }
                 auto bts=fire_cb(ts_id_list,bind_period);
                 if(bts.size()!=ts_id_list.size())
@@ -113,9 +163,28 @@ namespace shyft {
 
             std::vector<api::apoint_ts> fire_cb(std::vector<std::string>ts_ids,core::utcperiod p) {
                 std::vector<api::apoint_ts> r;
-                if(cb)
-                    r= boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(),ts_ids,p);
+                if (cb) {
+                    // acquire GIL here
+                    //PyEval_RestoreThread(state); //acquire
+                    // create pr. thread
+                    //thread_local PyGILState_STATE m_state = PyThreadState_New(m_interpreterState);
+                    //PyEval_RestoreThread(m_state); // then aquire
+                    scoped_gil_aquire gil;
+                    //thread_local PyGILState_STATE gstate;
+                    //gstate = PyGILState_Ensure();
+                    r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
+                    // Release GIL here
+                    //PyGILState_Release(gstate);
+                    // or
+                    // PyThreadState* state = PyEval_SaveThread(); // release
+                    
+                }
                 return r;
+            }
+            void process_messages(int msec) {
+                scoped_gil_release gil;
+                //start_async();
+                std::this_thread::sleep_for(std::chrono::milliseconds(msec));
             }
 
             void on_connect(
@@ -145,6 +214,7 @@ namespace shyft {
         };
         int dtss::dtss_server::msg_count = 0;
         std::vector<api::apoint_ts> dtss_evaluate(std::string host_port,const std::vector<api::apoint_ts>& tsv, core::utcperiod p) {
+            scoped_gil_release gil;
             dlib::iosockstream io(host_port);
             int msg_type = EVALUATE_TS_VECTOR;
             io.write((const char*) &msg_type, sizeof(msg_type));
@@ -174,6 +244,7 @@ namespace expose {
             .def("get_listening_port",&DtsServer::get_listening_port,"returns the port number it's listening at")
             .def_readwrite("cb",&DtsServer::cb,"callback for binding")
             .def("fire_cb",&DtsServer::fire_cb,args("msg","rp"),"testing fire from c++")
+            .def("process_messages",&DtsServer::process_messages,args("msec"),"wait and process messages for specified number of msec before returning")
             //.add_static_property("msg_count",
             //                     make_getter(&DtsServer::msg_count),
             //                     make_setter(&DtsServer::msg_count),"total number of requests")
