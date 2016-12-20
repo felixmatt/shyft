@@ -109,46 +109,44 @@ class SmGTsRepository(TsRepository):
 
 
     def store(self, ts_dict):
-        """ Input the list of Enki result ts_dict,
+        """ Input the list of Shyft result ts_dict,
             where the keys are the wanted SmG ts-path names
-            and the values are Enki result api.shyft_timeseries_double, time-series.
+            and the values are Shyft result api.shyft_timeseries_double, time-series.
             If the named time-series does not exist, create it.
             Then store time-series data to the named entities.
             
         """
-        # 0. Get the list of ts identities that tsr uses
-        tsIdentities = self._namelist_to_ListOf_TsIdentities(ts_dict.keys())
+        # Create list of TS identities used by repository
+        tsIds = self._namelist_to_ListOf_TsIdentities(ts_dict.keys())
         res = False
         with TimeSeriesRepositorySmg(self.env) as tsr:
-            # 1. Check if any of the tsnames are missing
-            exists_kv_pairs = tsr.repo.Exists(tsIdentities)
-            missing_list = List[MetaInfo]([])
-            # 2. Create those missing
-            for e in exists_kv_pairs:
-                if e.Value == False:
-                    tsid = e.Key
-                    mi = MetaInfo()
-                    mi.Identity = tsid
-                    mi.Description = 'Automatically created by shyft'
-                    mi.Type = 9000 # General time-series
-                    # Here we might fill in some properties to the created timeseries
-                    # e.g. unit, if we could figure out that
-                    missing_list.Add(mi)
-            if missing_list.Count > 0:
-                created_list = tsr.repo.Create(missing_list, True)
-                # TODO: verify they have been created
-            tsIdentities = tsr.repo.GetIdentities(tsr.repo.FindMetaInfo(tsIdentities))
-            ts_names = {x.Name: x for x in tsIdentities}
-            # 3. Store the datapoints (identity period, then time, value)
-            ssaTimeSeries = List[TimeSeriesPointSegments]([]) # This is what tsr Xts eats
+            self._create_missing_ts(tsr, tsIds)
+            tsIds = tsr.repo.GetIdentities(tsr.repo.FindMetaInfo(tsIds))
+            ts_names = {x.Name: x for x in tsIds}
+            # Create list of TS used by repository
+            tsList = List[TimeSeriesPointSegments]([])
             for name, shyft_ts in iter(ts_dict.items()):
                 xts = self._make_ssa_tsps_from_shyft_ts(ts_names[name], shyft_ts)
-                ssaTimeSeries.Add(xts)
-            errors = tsr.repo.Write(ssaTimeSeries, False) # Write into SmG
-            if errors is None: 
-                res = True
+                tsList.Add(xts)
+            errors = tsr.repo.Write(tsList, False)
+            res = errors is None
         return res
 
+
+    @staticmethod
+    def _create_missing_ts(tsr, tsIds):
+        missingList = List[MetaInfo]([])
+        tsExists = tsr.repo.Exists(tsIds)
+        for e in tsExists:
+            if not e.Value:
+                mi = MetaInfo()
+                mi.Identity = e.Key
+                mi.Description = 'Automatically created by shyft'
+                mi.Type = 9000 # General time-series
+                missingList.Add(mi)
+        if missingList.Count > 0:
+            tsr.repo.Create(missingList, True)
+        
 
     @staticmethod
     def _namelist_to_ListOf_TsIdentities(names):
