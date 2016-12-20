@@ -9,8 +9,10 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
     from shyft.repository.service.ssa_smg_db import SmGTsRepository
     import numpy as np
     from math import fabs
-
+    from System.Collections.Generic import List
+    from Statkraft.XTimeSeries import TimeSeriesPointSegments
     
+
     class TestSmgRepository(unittest.TestCase):
         """
         NOTICE: This test is for testing and internal(but important) part
@@ -70,7 +72,7 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
             shyft_catchment_result[nl[0]] = shyft_result_ts
             shyft_catchment_result[nl[1]] = shyft_result_ts
             shyft_catchment_result[nl[2]] = shyft_result_ts
-            r = ds.store(shyft_catchment_result) 
+            r = ds.store(shyft_catchment_result, is_forecast=True)
             self.assertEqual(r, True)
             # Read back the ts.. and verify it's there
             read_period = api.UtcPeriod(t0, t0 + 3*dt)
@@ -78,7 +80,7 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
             self.assertIsNotNone(rts_list)
             c2 = rts_list[nl[-1]]
             [self.assertAlmostEqual(c2.value(i), values[i]) for i in range(len(values))]
-    
+            
 
         def test_read_forecast(self):
             utc = api.Calendar()
