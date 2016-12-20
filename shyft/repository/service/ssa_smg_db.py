@@ -108,7 +108,7 @@ class SmGTsRepository(TsRepository):
         return fc_series
 
 
-    def store(self, ts_dict):
+    def store(self, ts_dict, is_forecast=False):
         """ Input the list of Shyft result ts_dict,
             where the keys are the wanted SmG ts-path names
             and the values are Shyft result api.shyft_timeseries_double, time-series.
@@ -120,7 +120,7 @@ class SmGTsRepository(TsRepository):
         tsIds = self._namelist_to_ListOf_TsIdentities(ts_dict.keys())
         res = False
         with TimeSeriesRepositorySmg(self.env) as tsr:
-            self._create_missing_ts(tsr, tsIds)
+            self._create_missing_ts(tsr, tsIds, is_forecast)
             tsIds = tsr.repo.GetIdentities(tsr.repo.FindMetaInfo(tsIds))
             ts_names = {x.Name: x for x in tsIds}
             # Create list of TS used by repository
@@ -134,7 +134,7 @@ class SmGTsRepository(TsRepository):
 
 
     @staticmethod
-    def _create_missing_ts(tsr, tsIds):
+    def _create_missing_ts(tsr, tsIds, is_forecast):
         missingList = List[MetaInfo]([])
         tsExists = tsr.repo.Exists(tsIds)
         for e in tsExists:
@@ -143,6 +143,8 @@ class SmGTsRepository(TsRepository):
                 mi.Identity = e.Key
                 mi.Description = 'Automatically created by shyft'
                 mi.Type = 9000 # General time-series
+                if is_forecast:
+                    mi.TimeSeriesValueHistoryMode = True
                 missingList.Add(mi)
         if missingList.Count > 0:
             tsr.repo.Create(missingList, True)
