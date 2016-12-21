@@ -126,7 +126,8 @@ class SmGTsRepository(TsRepository):
             # Create list of TS used by repository
             tsList = List[TimeSeriesPointSegments]([])
             for name, shyft_ts in iter(ts_dict.items()):
-                xts = self._make_ssa_tsps_from_shyft_ts(ts_names[name], shyft_ts)
+                ts_1h = self._resample_1h(shyft_ts)
+                xts = self._make_ssa_tsps_from_shyft_ts(ts_names[name], ts_1h)
                 tsList.Add(xts)
             errors = tsr.repo.Write(tsList, False)
             res = errors is None
@@ -139,16 +140,25 @@ class SmGTsRepository(TsRepository):
         tsExists = tsr.repo.Exists(tsIds)
         for e in tsExists:
             if not e.Value:
+                # Specific for ShopIn
                 mi = MetaInfo()
                 mi.Identity = e.Key
                 mi.Description = 'Automatically created by shyft'
                 mi.Type = 9000 # General time-series
-                if is_forecast:
-                    mi.TimeSeriesValueHistoryMode = True
+                mi.TimeStepConstraint = PointTimeStepConstraint.Hour 
+                mi.TimeSeriesValueHistoryMode = is_forecast
                 missingList.Add(mi)
         if missingList.Count > 0:
             tsr.repo.Create(missingList, True)
         
+
+    @staticmethod
+    def _resample_1h(ts):
+        period = ts.time_axis.total_period()
+        n = period.timespan() // api.deltahours(1)
+        ta = api.Timeaxis2(period.start, api.deltahours(1), n)
+        return ts.average(ta)
+
 
     @staticmethod
     def _namelist_to_ListOf_TsIdentities(names):
