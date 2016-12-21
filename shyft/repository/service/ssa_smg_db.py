@@ -156,8 +156,7 @@ class SmGTsRepository(TsRepository):
     def _resample_1h(ts):
         period = ts.time_axis.total_period()
         n = period.timespan() // api.deltahours(1)
-        ta = api.Timeaxis2(period.start, api.deltahours(1), n)
-        return ts.average(ta)
+        return api.TsTransform().to_average(period.start, api.deltahours(1), n, ts)
 
 
     @staticmethod
