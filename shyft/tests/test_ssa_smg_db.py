@@ -9,8 +9,6 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
     from shyft.repository.service.ssa_smg_db import SmGTsRepository
     import numpy as np
     from math import fabs
-    from System.Collections.Generic import List
-    from Statkraft.XTimeSeries import TimeSeriesPointSegments
     
 
     class TestSmgRepository(unittest.TestCase):
@@ -67,7 +65,7 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
             dt = 3600 # One hour in seconds
             values = np.array([1.0, 2.0, 3.0])
             shyft_ts_factory = api.TsFactory()
-            shyft_result_ts = shyft_ts_factory.create_point_ts(len(values), t0, dt, api.DoubleVector(values))
+            shyft_result_ts = shyft_ts_factory.create_point_ts(len(values), t0, dt, api.DoubleVector(values), api.POINT_AVERAGE_VALUE)
             shyft_catchment_result = dict()
             shyft_catchment_result[nl[0]] = shyft_result_ts
             shyft_catchment_result[nl[1]] = shyft_result_ts
