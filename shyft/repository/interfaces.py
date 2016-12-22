@@ -449,7 +449,7 @@ class TimeseriesStore(object):
         self.tss = tss
         self.ts_item_list = ts_item_list
 
-    def store_ts(self, region_model):
+    def store_ts(self, region_model, is_forecast=False):
         """
         Extracts time-series from the region_model, according to
         the ts_item_list (ref. to constructor description and TsStoreItem)
@@ -466,4 +466,4 @@ class TimeseriesStore(object):
         True if storing all ts went well, otherwise False
         """
         tsid_ts_map = {tsi.destination_id: tsi.extract_method(region_model) for tsi in self.ts_item_list}
-        return self.tss.store(tsid_ts_map)
+        return self.tss.store(tsid_ts_map, is_forecast)
