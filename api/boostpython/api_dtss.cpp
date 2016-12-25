@@ -123,8 +123,7 @@ namespace shyft {
 
 
 
-        class dtss_server : public dlib::server_iostream {
-        public:
+        struct dtss_server : dlib::server_iostream {
             boost::python::object cb;
 
             template<class TSV>
@@ -164,20 +163,8 @@ namespace shyft {
             std::vector<api::apoint_ts> fire_cb(std::vector<std::string>ts_ids,core::utcperiod p) {
                 std::vector<api::apoint_ts> r;
                 if (cb) {
-                    // acquire GIL here
-                    //PyEval_RestoreThread(state); //acquire
-                    // create pr. thread
-                    //thread_local PyGILState_STATE m_state = PyThreadState_New(m_interpreterState);
-                    //PyEval_RestoreThread(m_state); // then aquire
                     scoped_gil_aquire gil;
-                    //thread_local PyGILState_STATE gstate;
-                    //gstate = PyGILState_Ensure();
                     r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
-                    // Release GIL here
-                    //PyGILState_Release(gstate);
-                    // or
-                    // PyThreadState* state = PyEval_SaveThread(); // release
-                    
                 }
                 return r;
             }
