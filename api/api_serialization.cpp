@@ -10,7 +10,7 @@
 #include "core/timeseries.h"
 
 #include "timeseries.h"
-
+#include "api_state.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
 #include <boost/serialization/vector.hpp>
@@ -147,6 +147,16 @@ void shyft::api::apoint_ts::serialize(Archive & ar, const unsigned int version) 
     ;
 }
 
+template<class Archive>
+void shyft::api::cell_state_id::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & make_nvp("cid", cid)
+    & make_nvp("x", x)
+    & make_nvp("y", y)
+    & make_nvp("a", area)
+    ;
+}
+
 //
 // 3. force impl. of pointers etc.
 //
@@ -163,7 +173,7 @@ x_serialize_implement(shyft::api::abin_op_scalar_ts);
 x_serialize_implement(shyft::api::abin_op_ts);
 x_serialize_implement(shyft::api::abin_op_ts_scalar);
 x_serialize_implement(shyft::api::apoint_ts);
-
+x_serialize_implement(shyft::api::cell_state_id);
 //
 // 4. Then include the archive supported
 //
@@ -186,6 +196,7 @@ x_arch(shyft::api::abin_op_scalar_ts);
 x_arch(shyft::api::abin_op_ts);
 x_arch(shyft::api::abin_op_ts_scalar);
 x_arch(shyft::api::apoint_ts);
+x_arch(shyft::api::cell_state_id);
 
 std::string shyft::api::apoint_ts::serialize() const {
     using namespace std;

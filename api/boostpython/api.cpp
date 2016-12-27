@@ -28,6 +28,7 @@ namespace expose {
 	extern void hbv_actual_evapotranspiration();
 	extern void glacier_melt();
 	extern void routing();
+    extern void api_cell_state_id();
 
     void api() {
         calendar_and_time();
@@ -53,6 +54,7 @@ namespace expose {
 		hbv_actual_evapotranspiration();
 		glacier_melt();
 		routing();
+        api_cell_state_id();
     }
 }
 
