@@ -156,7 +156,14 @@ void shyft::api::cell_state_id::serialize(Archive & ar, const unsigned int file_
     & make_nvp("a", area)
     ;
 }
-
+template <class CS>
+template <class Archive>
+void shyft::api::cell_state_with_id<CS>::serialize(Archive&ar, const unsigned int file_version) {
+    ar
+    & make_nvp("id", id)
+    & make_nvp("state", state)
+    ;
+}
 //
 // 3. force impl. of pointers etc.
 //
@@ -174,6 +181,11 @@ x_serialize_implement(shyft::api::abin_op_ts);
 x_serialize_implement(shyft::api::abin_op_ts_scalar);
 x_serialize_implement(shyft::api::apoint_ts);
 x_serialize_implement(shyft::api::cell_state_id);
+x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::hbv_stack::state>);
+x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_gs_k::state>);
+x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_ss_k::state>);
+x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_hs_k::state>);
+
 //
 // 4. Then include the archive supported
 //
@@ -197,6 +209,11 @@ x_arch(shyft::api::abin_op_ts);
 x_arch(shyft::api::abin_op_ts_scalar);
 x_arch(shyft::api::apoint_ts);
 x_arch(shyft::api::cell_state_id);
+x_arch(shyft::api::cell_state_with_id<shyft::core::hbv_stack::state>);
+x_arch(shyft::api::cell_state_with_id<shyft::core::pt_gs_k::state>);
+x_arch(shyft::api::cell_state_with_id<shyft::core::pt_ss_k::state>);
+x_arch(shyft::api::cell_state_with_id<shyft::core::pt_hs_k::state>);
+
 
 std::string shyft::api::apoint_ts::serialize() const {
     using namespace std;

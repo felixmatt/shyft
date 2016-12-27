@@ -41,12 +41,13 @@ namespace expose {
     
     template<class C>
     static void cell_state_etc(const char *stack_name) {
-        typedef shyft::api::cell_state_with_id<C> CellState;
+        typedef typename C::state_t cstate_t;
+        typedef typename shyft::api::cell_state_with_id<cstate_t> CellState;
         char cs_name[200];sprintf(cs_name, "%sStateWithId", stack_name);
         class_<CellState>(cs_name, "Keep the cell id and cell state")
-            .def_readwrite("id", &CellState::id, "the cell identifer for the state")
+            .def_readwrite("id", &CellState::id, "the cell identifier for the state")
             .def_readwrite("state", &CellState::state, "the cell state")
-            .def("cell_state", &shyft::api::cell_state_id_of<C>, args("cell"), "create a cell state with id for the supplied cell")
+            .def("cell_state", &shyft::api::cell_state_id_of, args("geo_cell_data"), "create a cell state with id for the supplied cell.geo")
             .staticmethod("cell_state")
             ;
         char csv_name[200];sprintf(csv_name, "%sVector", cs_name);

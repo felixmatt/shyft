@@ -161,12 +161,12 @@ void api_test::test_state_with_id_functionality() {
     auto s0 = xh.extract_state(vector<int>());
     TS_ASSERT_EQUALS(s0->size(), cv->size());
     for (size_t i = 0;i < cv->size();++i)
-        TS_ASSERT_EQUALS((*s0)[i].id, cell_state_id_of((*cv)[i]));// ensure we got correct id's out.
+        TS_ASSERT_EQUALS((*s0)[i].id, cell_state_id_of((*cv)[i].geo));// ensure we got correct id's out.
 
     auto s1 = xh.extract_state(vector<int>{2}); // ok, now specify cids, 2, only two cells match
     TS_ASSERT_EQUALS(s1->size(), 2);
     for (size_t i = 0;i < s1->size();++i)
-        TS_ASSERT_EQUALS((*s1)[i].id, cell_state_id_of((*cv)[i+2]));// ensure we got correct id's out.
+        TS_ASSERT_EQUALS((*s1)[i].id, cell_state_id_of((*cv)[i+2].geo));// ensure we got correct id's out.
 
     auto s_missing = xh.extract_state(vector<int>{3});
     TS_ASSERT_EQUALS(s_missing->size(), 0);
