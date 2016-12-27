@@ -138,6 +138,7 @@ namespace shyft {
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
             bool operator==(const state& x) const {return kirchner==x.kirchner && snow==x.snow;}
+            x_serialize_decl();
         };
 
 
@@ -230,3 +231,5 @@ namespace shyft {
     }
   }
 }
+//-- serialization support shyft
+x_serialize_export_key(shyft::core::pt_ss_k::state);

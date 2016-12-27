@@ -128,6 +128,8 @@ namespace expose {
               expose::statistics::actual_evapotranspiration<PTGSKCellAll>("PTGSKCell");
               expose::statistics::priestley_taylor<PTGSKCellAll>("PTGSKCell");
               expose::statistics::kirchner<PTGSKCellAll>("PTGSKCell");
+              expose::cell_state_etc<PTGSKCellAll>("PTGSK");// just one expose of state
+
         }
 
         static void
@@ -147,6 +149,10 @@ namespace expose {
         static void
         model_calibrator() {
             expose::model_calibrator<shyft::core::region_model<pt_gs_k::cell_discharge_response_t,shyft::api::a_region_environment>>("PTGSKOptimizer");
+        }
+        static void
+            state_with_id() {
+            //todo
         }
 
     }

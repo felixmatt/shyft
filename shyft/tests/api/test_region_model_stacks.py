@@ -19,7 +19,7 @@ class RegionModel(unittest.TestCase):
             gp = api.GeoPoint(*loc)
             cid = 0
             if num_catchments > 1:
-                cid = random.randint(1, num_catchments)
+                cid = random.randint(1, num_catchments+1)
             geo_cell_data = api.GeoCellData(gp, cell_area, cid, 0.9, api.LandTypeFractions(0.01, 0.05, 0.19, 0.3, 0.45))
             geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
             gcds.append(geo_cell_data)
@@ -90,23 +90,33 @@ class RegionModel(unittest.TestCase):
         self.assertEqual(len(re.radiation), 1)
         self.assertAlmostEqual(re.radiation[0].ts.value(0), 300.0)
 
+    def verify_state_handler(self,model):
+        cids_unspecified=api.IntVector()
+        states = model.state.extract_state(cids_unspecified)
+        self.assertEqual(len(states),model.size())
+        unapplied_list=model.state.apply_state(states,cids_unspecified)
+        self.assertEqual(len(unapplied_list),0)
+
     def test_pt_ss_k_model_init(self):
         num_cells = 20
         model_type = pt_ss_k.PTSSKModel
         model = self.build_model(model_type, pt_ss_k.PTSSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_pt_hs_k_model_init(self):
         num_cells = 20
         model_type = pt_hs_k.PTHSKModel
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_hbv_stack_model_init(self):
         num_cells = 20
         model_type = hbv_stack.HbvModel
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_extract_geo_cell_data_vector(self):
         num_cells = 20
@@ -138,6 +148,7 @@ class RegionModel(unittest.TestCase):
         model_type = pt_gs_k.PTGSKModel
         model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
         # demo of feature for threads
         self.assertGreaterEqual(model.ncore,1)  # defaults to hardware concurrency
         model.ncore = 4  # set it to 4, and
@@ -468,6 +479,43 @@ class RegionModel(unittest.TestCase):
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().z, cell_vector2[i].mid_point().z)
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().x, cell_vector2[i].mid_point().x)
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().y, cell_vector2[i].mid_point().y)
+
+    def test_state_with_id_handler(self):
+        num_cells = 20
+        model_type = pt_gs_k.PTGSKModel
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells,2)
+        cids_unspecified=api.IntVector()
+        cids_1=api.IntVector([1])
+        cids_2=api.IntVector([2])
+
+        model_state_12=model.state.extract_state(cids_unspecified)
+        model_state_1 = model.state.extract_state(cids_1)
+        model_state_2 = model.state.extract_state(cids_2)
+        self.assertEqual(len(model_state_1)+len(model_state_2),len(model_state_12))
+        self.assertGreater(len(model_state_1),0)
+        self.assertGreater(len(model_state_2),0)
+        for i in range(len(model_state_1)):  # verify selective extract catchment 1
+            self.assertEqual(model_state_1[i].id.cid,1)
+        for i in range(len(model_state_2)): # verify selective extract catchment 2
+            self.assertEqual(model_state_2[i].id.cid,2)
+        for i in range(len(model_state_12)):
+            model_state_12[i].state.kirchner.q = 100 + i
+        model.state.apply_state(model_state_12,cids_unspecified)
+        ms_12 = model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            self.assertAlmostEqual(ms_12[i].state.kirchner.q,100+i)
+        for i in range(len(model_state_2)):
+            model_state_2[i].state.kirchner.q=200+i
+        unapplied = model.state.apply_state(model_state_2,cids_unspecified)
+        self.assertEqual(len(unapplied),0)
+        ms_12=model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            if ms_12[i].id.cid == 1:
+                self.assertAlmostEqual(ms_12[i].state.kirchner.q,100+i)
+
+        ms_2=model.state.extract_state(cids_2)
+        for i in range(len(ms_2)):
+            self.assertAlmostEqual(ms_2[i].state.kirchner.q, 200 + i)
 
 
 if __name__ == "__main__":

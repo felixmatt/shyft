@@ -25,6 +25,7 @@ namespace expose {
             .def_readwrite("x", &cell_state_id::x, "x position in [m]")
             .def_readwrite("y", &cell_state_id::y, "y position in [m]")
             .def_readwrite("area", &cell_state_id::area, "area in [m^2]")
+            .def(self==self)
             ;
 
     }

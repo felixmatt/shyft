@@ -1,6 +1,8 @@
 #pragma once
 #include "expose_statistics.h"
 #include "api/api.h"
+#include "api/api_state.h"
+
 namespace expose {
     using namespace boost::python;
     using namespace std;
@@ -36,7 +38,49 @@ namespace expose {
         }
         return move(r);
     }
+    
+    template<class C>
+    static void cell_state_etc(const char *stack_name) {
+        typedef shyft::api::cell_state_with_id<C> CellState;
+        char cs_name[200];sprintf(cs_name, "%sStateWithId", stack_name);
+        class_<CellState>(cs_name, "Keep the cell id and cell state")
+            .def_readwrite("id", &CellState::id, "the cell identifer for the state")
+            .def_readwrite("state", &CellState::state, "the cell state")
+            .def("cell_state", &shyft::api::cell_state_id_of<C>, args("cell"), "create a cell state with id for the supplied cell")
+            .staticmethod("cell_state")
+            ;
+        char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
+        class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
+            .def(vector_indexing_suite<std::vector<CellState>>())
+            ;
+    }
 
+    template <class C>
+    static void cell_state_io(const char *cell_name) {
+        
+        char csh_name[200];sprintf(csh_name, "%sStateHandler", cell_name);
+        typedef shyft::api::state_io_handler<C> CellStateHandler;
+        class_<CellStateHandler>(csh_name, "Provides functionality to extract and restore state from cells")
+            .def(init<std::shared_ptr<std::vector<C>> >(args("cells"),"construct a cell state handler for the supplied cells"))
+            .def("extract_state", &CellStateHandler::extract_state, args("cids"),
+                "Extract cell state for the optionaly specified catchment ids, cids\n"
+                "Return\n"
+                "------\n"
+                " CellStateIdVector: the state for the cells\n"
+            )
+            .def("apply_state", &CellStateHandler::apply_state,args("cell_id_state_vector","cids"),
+                "apply the supplied cell-identified state to the cells,\n"
+                "limited to the optionally supplied catchment id's\n"
+                "If no catchment-id's specifed, it applies to all cells\n"
+                "Return\n"
+                "------\n"
+                "IntVector: a list of indices into cell_id_state_vector that did not match any cells\n"
+                "\t taken into account the optionally catchment-id specification\n"
+            )
+        ;
+
+
+    }
 
     template <class T>
     static void cell(const char *cell_name,const char* cell_doc) {
@@ -70,6 +114,7 @@ namespace expose {
 
         ;
       expose::statistics::basic_cell<T>(cell_name);//common for all type of cells, so expose it here
+      cell_state_io<T>(cell_name);
     }
 
 

@@ -50,6 +50,10 @@ namespace shyft {
             typedef typename C::state_t cell_state_t;
             cell_state_id id;
             cell_state_t state;
+            cell_state_with_id() {};
+            bool operator==(const cell_state_with_id o) const {
+                return id == o.id; // only id equality, for vector support in boost python
+            }
             /** do the magic given a cell, create the id, stash away the id:state*/
             cell_state_with_id(const C& c) :id(cell_state_id_of(c)), state(c.state) {}
         };
@@ -68,7 +72,7 @@ namespace shyft {
 
             state_io_handler() {}
             /** construct a handler for the cells provided*/
-            state_io_handler(std::shared_ptr<std::vector<C>>&cellx) :cells(cellx) {}
+            state_io_handler(std::shared_ptr<std::vector<C>> cellx) :cells(cellx) {}
 
             /** Extract cell identified state
             *\return the state for the cells, optionally filtered by the supplied catchment ids (cids)
