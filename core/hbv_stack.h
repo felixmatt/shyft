@@ -165,7 +165,8 @@ namespace shyft {
 				soil_state_t soil;
 				tank_state_t tank;
 				bool operator==(const state& x) const { return snow == x.snow && tank == x.tank && soil == x.soil; }
-			};
+                x_serialize_decl();
+            };
 
 
 			/** \brief Simple response struct for the hbv_stack method stack
@@ -322,3 +323,5 @@ namespace shyft {
 		} // hbv_stack
 	} // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_stack::state);

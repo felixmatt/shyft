@@ -110,6 +110,7 @@ namespace shyft {
                         && fabs(temp_swe - x.temp_swe)<eps;
 
                 }
+                x_serialize_decl();
             };
 
 
@@ -477,3 +478,5 @@ namespace shyft {
         }
     } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::gamma_snow::state);

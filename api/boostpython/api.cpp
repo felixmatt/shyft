@@ -28,7 +28,36 @@ namespace expose {
 	extern void hbv_actual_evapotranspiration();
 	extern void glacier_melt();
 	extern void routing();
-    extern void dtss();
+	extern void dtss();
+    extern void api_cell_state_id();
+
+    
+    static std::vector<char> byte_vector_from_file(std::string path) {
+        using namespace std;
+        ostringstream buf;
+        ifstream input;
+        input.open(path.c_str(),ios::in|ios::binary);
+        if (input.is_open()) {
+            buf << input.rdbuf();
+            auto s = buf.str();
+            return std::vector<char>(begin(s), end(s));
+        } else
+            throw runtime_error(string("failed to open file for read:") + path);
+    }
+
+    static void byte_vector_to_file(std::string path, const std::vector<char>&bytes) {
+        using namespace std;
+        ofstream out;
+        out.open(path, ios::out | ios::binary | ios::trunc);
+        if (out.is_open()) {
+            out.write(bytes.data(), bytes.size());
+            out.flush();
+            out.close();
+        } else {
+            throw runtime_error(string("failed to open file for write:") + path);
+        }
+    }
+
     void api() {
         calendar_and_time();
         vectors();
@@ -53,6 +82,10 @@ namespace expose {
 		hbv_actual_evapotranspiration();
 		glacier_melt();
 		routing();
+        api_cell_state_id();
+        using namespace boost::python;
+        def("byte_vector_from_file", byte_vector_from_file, (arg("path")), "reads specified file and returns its contents as a ByteVector");
+        def("byte_vector_to_file", byte_vector_to_file, (arg("path"), arg("byte_vector")), "write the supplied ByteVector to file as specified by path");
         dtss();
     }
 }

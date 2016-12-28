@@ -183,6 +183,7 @@ namespace shyft {
             gs_state_t gs;
             kirchner_state_t kirchner;
             bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}
+            x_serialize_decl();
         };
 
 
@@ -336,3 +337,5 @@ namespace shyft {
     } // pt_gs_k
   } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::pt_gs_k::state);

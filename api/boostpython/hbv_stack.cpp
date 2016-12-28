@@ -123,6 +123,7 @@ namespace expose {
 			expose::statistics::hbv_actual_evapotranspiration<HbvCellAll>("HbvCell");
 			expose::statistics::hbv_soil<HbvCellAll>("HbvCell");
 			expose::statistics::hbv_tank<HbvCellAll>("HbvCell");
+            expose::cell_state_etc<HbvCellAll>("Hbv");// just one expose of state
 		}
 
 		static void
