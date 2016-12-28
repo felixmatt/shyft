@@ -31,3 +31,18 @@ PTSSKCellOpt.vector_t = PTSSKCellOptVector
 PTSSKState.vector_t = PTSSKStateVector
 PTSSKState.serializer_t= PTSSKStateIo
 PTSSKStateVector.push_back = lambda self, x: self.append(x)
+
+#decorate StateWithId for serialization support
+def serialize_to_bytes(state_with_id_vector):
+    if not isinstance(state_with_id_vector,PTSSKStateWithIdVector):
+        raise RuntimeError("supplied argument must be of type PTSSKStateWithIdVector")
+    return serialize(state_with_id_vector)
+
+PTSSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+
+def deserialize_from_bytes(bytes):
+    if not isinstance(bytes,ByteVector):
+        raise RuntimeError("Supplied type must be a ByteVector, as created from serialize_to_bytes")
+    states=PTSSKStateWithIdVector()
+    deserialize(bytes,states)
+    return states

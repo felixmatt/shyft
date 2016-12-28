@@ -53,7 +53,10 @@ namespace expose {
         char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
         class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
             .def(vector_indexing_suite<std::vector<CellState>>())
+            
             ;
+        def("serialize", shyft::api::serialize_to_bytes<CellState>, args("states"), "make a blob out of the states");
+        def("deserialize", shyft::api::deserialize_from_bytes<CellState>, args("bytes", "states"), "from a blob, fill in states");
     }
 
     template <class C>

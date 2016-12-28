@@ -162,7 +162,16 @@ void api_test::test_state_with_id_functionality() {
     TS_ASSERT_EQUALS(s0->size(), cv->size());
     for (size_t i = 0;i < cv->size();++i)
         TS_ASSERT_EQUALS((*s0)[i].id, cell_state_id_of((*cv)[i].geo));// ensure we got correct id's out.
-
+    //-- while at it, also verify serialization support
+    auto bytes = serialize_to_bytes(s0);
+    TS_ASSERT(bytes.size()> 10);
+    shared_ptr<vector<cell_state_with_id<xcell_t::state_t>>> s0_x;
+    deserialize_from_bytes(bytes, s0_x);
+    TS_ASSERT_EQUALS(s0_x->size(), s0->size());
+    for (size_t i = 0;i < s0->size();++i) {
+        TS_ASSERT_EQUALS((*s0_x)[i].id, (*s0)[i].id);//equality by identity only check
+        TS_ASSERT_DELTA( (*s0_x)[i].state.kirchner.q, (*s0)[i].state.kirchner.q, 0.01);
+    }
     auto s1 = xh.extract_state(vector<int>{2}); // ok, now specify cids, 2, only two cells match
     TS_ASSERT_EQUALS(s1->size(), 2);
     for (size_t i = 0;i < s1->size();++i)

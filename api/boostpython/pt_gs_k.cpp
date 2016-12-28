@@ -150,11 +150,6 @@ namespace expose {
         model_calibrator() {
             expose::model_calibrator<shyft::core::region_model<pt_gs_k::cell_discharge_response_t,shyft::api::a_region_environment>>("PTGSKOptimizer");
         }
-        static void
-            state_with_id() {
-            //todo
-        }
-
     }
 }
 

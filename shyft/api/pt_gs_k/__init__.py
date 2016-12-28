@@ -1,4 +1,5 @@
 from ._pt_gs_k import *
+from .. import ByteVector
 # Fix up types that we need attached to the model
 PTGSKStateVector.push_back = lambda self, x: self.append(x)
 PTGSKStateVector.size = lambda self: len(self)
@@ -31,3 +32,18 @@ PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
 PTGSKState.serializer_t= PTGSKStateIo
+
+#decorate StateWithId for serialization support
+def serialize_to_bytes(state_with_id_vector):
+    if not isinstance(state_with_id_vector,PTGSKStateWithIdVector):
+        raise RuntimeError("supplied argument must be of type PTGSKStateWithIdVector")
+    return serialize(state_with_id_vector)
+
+PTGSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+
+def deserialize_from_bytes(bytes):
+    if not isinstance(bytes,ByteVector):
+        raise RuntimeError("Supplied type must be a ByteVector, as created from serialize_to_bytes")
+    states=PTGSKStateWithIdVector()
+    deserialize(bytes,states)
+    return states
