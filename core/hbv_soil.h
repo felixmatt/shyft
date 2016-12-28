@@ -22,6 +22,7 @@ namespace shyft {
 					const double eps = 1e-6;
 					return fabs(sm - x.sm)<eps;
 				}
+                x_serialize_decl();
 			};
 
 			struct response {
@@ -52,3 +53,5 @@ namespace shyft {
 		}
 	} // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_soil::state);
