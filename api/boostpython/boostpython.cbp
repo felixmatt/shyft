@@ -236,6 +236,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_state.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_target_specification.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
