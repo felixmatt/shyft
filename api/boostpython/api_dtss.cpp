@@ -125,7 +125,9 @@ namespace shyft {
 
         struct dtss_server : dlib::server_iostream {
             boost::python::object cb;
-
+            dtss_server() {
+                PyEval_InitThreads();// ensure threads-is enabled
+            }
             template<class TSV>
             std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
                 //-- just for the testing create dummy-ts here.
@@ -140,7 +142,7 @@ namespace shyft {
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
                     for(const auto& bi:ts_refs) {
-                        if (ts_bind_map.find(bi.reference) != ts_bind_map.end()) { // maintain unique set
+                        if (ts_bind_map.find(bi.reference) == ts_bind_map.end()) { // maintain unique set
                             ts_id_list.push_back(bi.reference);
                             ts_bind_map[bi.reference] = bi;
                         }
@@ -149,12 +151,25 @@ namespace shyft {
                 auto bts=fire_cb(ts_id_list,bind_period);
                 if(bts.size()!=ts_id_list.size())
                     throw std::runtime_error(std::string("failed to bind all of ")+std::to_string(bts.size())+std::string(" ts"));
-                for(size_t i=0;i<ts_id_list.size();++i)
-                    ts_bind_map[ts_id_list[i]].ts.bind(bts[i]);
+                for(size_t i=0;i<ts_id_list.size();++i) {
+                    try {
+                        //std::cout<<"bind "<<i<<": "<<ts_id_list[i]<<":"<<bts[i].size()<<"\n";
+                        ts_bind_map[ts_id_list[i]].ts.bind(bts[i]);
+                    } catch(const std::runtime_error&re) {
+                        std::cout<<"failed to bind "<<ts_id_list[i]<<re.what()<<"\n";
+                    }
+                }
                 //-- evaluate, when all binding is done (vectorized calc.
                 std::vector<api::apoint_ts> evaluated_tsv;
-                for (auto &ats : atsv)
-                    evaluated_tsv.emplace_back(ats.time_axis(), ats.values(), ats.point_interpretation());
+                int i=0;
+                for (auto &ats : atsv) {
+                    try {
+                        evaluated_tsv.emplace_back(ats.time_axis(), ats.values(), ats.point_interpretation());
+                    } catch(const std::runtime_error&re) {
+                        std::cout<<"failed to evalutate ts:"<<i<<"::"<<re.what()<<"\n";
+                    }
+                    i++;
+                }
                 return evaluated_tsv;
             }
 
@@ -162,7 +177,7 @@ namespace shyft {
 
             std::vector<api::apoint_ts> fire_cb(std::vector<std::string>ts_ids,core::utcperiod p) {
                 std::vector<api::apoint_ts> r;
-                if (cb) {
+                if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
                     r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
                 }
