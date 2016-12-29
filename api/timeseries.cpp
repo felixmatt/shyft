@@ -285,7 +285,7 @@ namespace shyft{
           deferred_bind();
           std::vector<double> r(lhs.values());
           for(auto& v:r)
-            v=do_op(rhs,op,v);
+            v=do_op(v,op,rhs);
           return r;
         }
 

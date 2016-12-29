@@ -161,6 +161,8 @@ class TimeSeries(unittest.TestCase):
         a = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.Timeseries(ta=ta, fill_value=1.0)
         b.fill(2.0)  # demo how to fill a point ts
+        self.assertAlmostEquals((1.0-b).values.to_numpy().max(), -1.0)
+        self.assertAlmostEquals((b -1.0).values.to_numpy().max(), 1.0)
         c = a + b * 3.0 - a / 2.0  # operator + * - /
         d = -a  # unary minus
         e = a.average(ta)  # average
