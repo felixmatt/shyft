@@ -17,8 +17,7 @@ class RegionModel(unittest.TestCase):
         region_parameter = parameter_t()
         gcds = api.GeoCellDataVector()  # creating models from geo_cell-data is easier and more flexible
         for i in range(model_size):
-            loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
-            gp = api.GeoPoint(*loc)
+            gp = api.GeoPoint(500+ 1000.0*i,500.0, 500.0*i/model_size)
             cid = 0
             if num_catchments > 1:
                 cid = random.randint(1, num_catchments + 1)
