@@ -61,6 +61,9 @@ struct scoped_gil_release {
     ~scoped_gil_release() noexcept {
         PyEval_RestoreThread(py_thread_state);
     }
+    scoped_gil_release(const scoped_gil_release&) = delete;
+    scoped_gil_release(scoped_gil_release&&) = delete;
+    scoped_gil_release& operator=(const scoped_gil_release&) = delete;
 private:
     PyThreadState * py_thread_state;
 };
@@ -72,6 +75,9 @@ struct scoped_gil_aquire {
     ~scoped_gil_aquire() noexcept {
         PyGILState_Release(py_state);
     }
+    scoped_gil_aquire(const scoped_gil_aquire&) = delete;
+    scoped_gil_aquire(scoped_gil_aquire&&) = delete;
+    scoped_gil_aquire& operator=(const scoped_gil_aquire&) = delete;
 private:
     PyGILState_STATE   py_state;
 };
@@ -130,22 +136,16 @@ namespace shyft {
             }
             template<class TSV>
             std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
-                //-- just for the testing create dummy-ts here.
-                // later: collect all bind_info.ref, collect by match into list, then invoke handler,
-                //        then invoke default handler for the remaining not matching a bind-handlers (like a regexpr ?)
-                //
-                core::calendar utc;
-                time_axis::generic_dt ta(bind_period.start, core::deltahours(1), bind_period.timespan()/api::deltahours(1));
-                api::apoint_ts dummy_ts(ta, 1.0, timeseries::POINT_AVERAGE_VALUE);
-                std::map<std::string,api::ts_bind_info> ts_bind_map;
+                std::map<std::string,std::vector<api::ts_bind_info>> ts_bind_map;
                 std::vector<std::string> ts_id_list;
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
                     for(const auto& bi:ts_refs) {
                         if (ts_bind_map.find(bi.reference) == ts_bind_map.end()) { // maintain unique set
-                            ts_id_list.push_back(bi.reference);
-                            ts_bind_map[bi.reference] = bi;
+                            ts_id_list.push_back( bi.reference );
+                            ts_bind_map[bi.reference] = std::vector<api::ts_bind_info>();
                         }
+                        ts_bind_map[bi.reference].push_back(bi);
                     }
                 }
                 auto bts=fire_cb(ts_id_list,bind_period);
@@ -154,7 +154,8 @@ namespace shyft {
                 for(size_t i=0;i<ts_id_list.size();++i) {
                     try {
                         //std::cout<<"bind "<<i<<": "<<ts_id_list[i]<<":"<<bts[i].size()<<"\n";
-                        ts_bind_map[ts_id_list[i]].ts.bind(bts[i]);
+                        for(auto &bi:ts_bind_map[ts_id_list[i]])
+                            bi.ts.bind(bts[i]);
                     } catch(const std::runtime_error&re) {
                         std::cout<<"failed to bind "<<ts_id_list[i]<<re.what()<<"\n";
                     }
@@ -185,7 +186,7 @@ namespace shyft {
             }
             void process_messages(int msec) {
                 scoped_gil_release gil;
-                //start_async();
+                if(!is_running()) start_async();
                 std::this_thread::sleep_for(std::chrono::milliseconds(msec));
             }
 
@@ -226,6 +227,17 @@ namespace shyft {
         }
     }
 }
+// experiment with python doc standard macro helpers
+#define doc_intro(intro) intro ## "\n"
+#define doc_parameters() "\nParameters\n----------\n"
+#define doc_parameter(name_str,type_str,descr_str) name_str ## " : " ## type_str ## "\n\t" ## descr_str ## "\n"
+#define doc_paramcont(doc_str) "\t" ## doc_str ## "\n"
+#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n" ## name_str ## " : " ## type_str ## "\n"
+#define doc_notes() "\nNotes\n-----\n"
+#define doc_note(note_str) note_str ## "\n"
+#define doc_see_also(ref) "\nSee Also\n--------\n"##ref ## "\n"
+#define doc_ind(doc_str) "\t" ## doc_str
+
 namespace expose {
     //using namespace shyft::core;
     using namespace boost::python;
@@ -236,17 +248,80 @@ namespace expose {
     static void dtss_server() {
         typedef shyft::dtss::dtss_server DtsServer;
         //bases<>,std::shared_ptr<DtsServer>
-        class_<DtsServer, boost::noncopyable >("DtsServer")
-            .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"), "tbd")
-            .def("start_async",&DtsServer::start_async)
-            .def("set_max_connections",&DtsServer::set_max_connections,args("max_connect"),"tbd")
+        class_<DtsServer, boost::noncopyable >("DtsServer",
+            doc_intro("A distributed time-series server object")
+            doc_intro("Capable of processing time-series messages and responding accordingly")
+            doc_intro("The user can setup callback to python to handle unbound symbolic time-series references")
+            doc_intro("- that typically involve reading time-series from a service or storage for the specified period")
+            doc_intro("The server object will then compute the resulting time-series vector,")
+            doc_intro("and respond back to clients with the results")
+            doc_see_also("shyft.api.dtss_evalutate(port_host,ts_array,utc_period)")
+            )
+            .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"), 
+                doc_intro("set the listening port for the service")
+                doc_parameters()
+                doc_parameter("port_no","int","a valid and available tcp-ip port number to listen on.")
+                doc_paramcont("typically it could be 20000 (avoid using official reserved numbers)")
+                doc_returns("nothing","None","")
+            )
+            .def("start_async",&DtsServer::start_async,
+                doc_intro("start server listening in background, and processing messages")
+                doc_see_also("set_listening_port(port_no),is_running,cb,process_messages(msec)")
+                doc_notes()
+                doc_note("you should have setup up the callback, cb before calling start_async")
+                doc_note("Also notice that processing will acquire the GIL\n -so you need to release the GIL to allow for processing messages")
+                doc_see_also("process_messages(msec)")
+            )
+            .def("set_max_connections",&DtsServer::set_max_connections,args("max_connect"),
+                doc_intro("limits simultaneous connections to the server (it's multithreaded!)")
+                doc_parameters()
+                doc_parameter("max_connect","int","maximum number of connections before denying more connections")
+                doc_see_also("get_max_connections()")
+            )
             .def("get_max_connections",&DtsServer::get_max_connections,"tbd")
-            .def("clear",&DtsServer::clear,"stop serving connections")
-            .def("is_running",&DtsServer::is_running,"true if server is listening and running")
+            .def("clear",&DtsServer::clear,
+                doc_intro("stop serving connections, gracefully.")
+                doc_see_also("cb, process_messages(msec),start_async()")
+            )
+            .def("is_running",&DtsServer::is_running,
+                doc_intro("true if server is listening and running")
+                doc_see_also("start_async(),process_messages(msec)")
+            )
             .def("get_listening_port",&DtsServer::get_listening_port,"returns the port number it's listening at")
-            .def_readwrite("cb",&DtsServer::cb,"callback for binding")
+            .def_readwrite("cb",&DtsServer::cb,
+                doc_intro("callback for binding unresolved time-series references to concrete time-series.")
+                doc_intro("Called *if* the incoming messages contains unbound time-series.")
+                doc_intro("The signature of the callback function should be TsVector cb(StringVector,utcperiod)")
+                doc_intro("\nExamples\n--------\n")
+                doc_intro(
+                    "from shyft import api as sa\n\n"
+                    "def resolve_and_read_ts(ts_ids,read_period):\n"
+                    "    print('ts_ids:', len(ts_ids), ', read period=', str(read_period))\n"
+                    "    ta = sa.Timeaxis2(read_period.start, sa.deltahours(1), read_period.timespan()//sa.deltahours(1))\n"
+                    "    x_value = 1.0\n"
+                    "    r = sa.TsVector()\n"
+                    "    for ts_id in ts_ids :\n"
+                    "        r.append(sa.Timeseries(ta, fill_value = x_value))\n"
+                    "        x_value = x_value + 1\n"
+                    "    return r\n"
+                    "# and then bind the function to the callback\n"
+                    "dtss=sa.DtsServer()\n"
+                    "dtss.cb=resolve_and_read_ts\n"
+                    "dtss.set_listening_port(20000)\n"
+                    "dtss.process_messages(60000)\n"
+                )
+            )
             .def("fire_cb",&DtsServer::fire_cb,args("msg","rp"),"testing fire from c++")
-            .def("process_messages",&DtsServer::process_messages,args("msec"),"wait and process messages for specified number of msec before returning")
+            .def("process_messages",&DtsServer::process_messages,args("msec"),
+                doc_intro("wait and process messages for specified number of msec before returning")
+                doc_intro("the dtss-server is started if not already running")
+                doc_parameters()
+                doc_parameter("msec","int","number of millisecond to process messages")
+                doc_notes()
+                doc_note("this method releases GIL so that callbacks are not blocked when the\n" 
+                    "dtss-threads perform the callback ")
+                doc_see_also("cb,start_async(),is_running,clear()")
+            )
             //.add_static_property("msg_count",
             //                     make_getter(&DtsServer::msg_count),
             //                     make_setter(&DtsServer::msg_count),"total number of requests")
@@ -255,7 +330,16 @@ namespace expose {
     }
     static void dtss_client() {
         def("dtss_evaluate", shyft::dtss::dtss_evaluate, args("host_port","ts_vector","utcperiod"),
-            "tbd"
+            doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
+            doc_intro("If the expression includes unbound symbolic references to time-series,")
+            doc_intro("these time-series will be passed to the binding service callback")
+            doc_intro("on the serverside.")
+            doc_parameters()
+            doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
+            doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
+            doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+            doc_returns("tsvector","TsVector","an evaluated list of point timeseries in the same order as the input list")
+            doc_see_also("DtsServer,DtsServer.cb")
             );
 
     }
