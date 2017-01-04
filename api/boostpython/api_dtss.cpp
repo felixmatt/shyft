@@ -132,7 +132,14 @@ namespace shyft {
         struct dtss_server : dlib::server_iostream {
             boost::python::object cb;
             dtss_server() {
-                PyEval_InitThreads();// ensure threads-is enabled
+                if (!PyEval_ThreadsInitialized()) {
+                    std::cout << "InitThreads needed\n";
+                    PyEval_InitThreads();// ensure threads-is enabled
+                }
+            }
+            ~dtss_server() {
+                std::cout << "~dtss()\n";
+                cb = boost::python::object();
             }
             template<class TSV>
             std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
