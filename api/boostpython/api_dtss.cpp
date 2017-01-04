@@ -228,15 +228,15 @@ namespace shyft {
     }
 }
 // experiment with python doc standard macro helpers
-#define doc_intro(intro) intro ## "\n"
+#define doc_intro(intro) intro  "\n"
 #define doc_parameters() "\nParameters\n----------\n"
-#define doc_parameter(name_str,type_str,descr_str) name_str ## " : " ## type_str ## "\n\t" ## descr_str ## "\n"
-#define doc_paramcont(doc_str) "\t" ## doc_str ## "\n"
-#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n" ## name_str ## " : " ## type_str ## "\n"
+#define doc_parameter(name_str,type_str,descr_str) name_str  " : "  type_str  "\n\t"  descr_str  "\n"
+#define doc_paramcont(doc_str) "\t"  doc_str  "\n"
+#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n"  name_str  " : "  type_str  "\n"
 #define doc_notes() "\nNotes\n-----\n"
-#define doc_note(note_str) note_str ## "\n"
-#define doc_see_also(ref) "\nSee Also\n--------\n"##ref ## "\n"
-#define doc_ind(doc_str) "\t" ## doc_str
+#define doc_note(note_str) note_str  "\n"
+#define doc_see_also(ref) "\nSee Also\n--------\n" ref  "\n"
+#define doc_ind(doc_str) "\t"  doc_str
 
 namespace expose {
     //using namespace shyft::core;
@@ -257,7 +257,7 @@ namespace expose {
             doc_intro("and respond back to clients with the results")
             doc_see_also("shyft.api.dtss_evalutate(port_host,ts_array,utc_period)")
             )
-            .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"), 
+            .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"),
                 doc_intro("set the listening port for the service")
                 doc_parameters()
                 doc_parameter("port_no","int","a valid and available tcp-ip port number to listen on.")
@@ -318,7 +318,7 @@ namespace expose {
                 doc_parameters()
                 doc_parameter("msec","int","number of millisecond to process messages")
                 doc_notes()
-                doc_note("this method releases GIL so that callbacks are not blocked when the\n" 
+                doc_note("this method releases GIL so that callbacks are not blocked when the\n"
                     "dtss-threads perform the callback ")
                 doc_see_also("cb,start_async(),is_running,clear()")
             )
