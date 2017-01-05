@@ -126,6 +126,7 @@ namespace expose {
               expose::statistics::actual_evapotranspiration<PTSSKCellAll>("PTSSKCell");
               expose::statistics::priestley_taylor<PTSSKCellAll>("PTSSKCell");
               expose::statistics::kirchner<PTSSKCellAll>("PTSSKCell");
+              expose::cell_state_etc<PTSSKCellAll>("PTSSK");// just one expose of state
         }
 
         static void
