@@ -421,7 +421,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             y_wind, _ = raw_data.pop("y_wind")
             raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), "wind_speed"
 
-        extracted_data = self._transform_raw(raw_data, time_ext, lead_times_in_sec[lead_time_slice], concat, issubset=issubset)
+        extracted_data = self._transform_raw(raw_data, time_ext, lead_times_in_sec[lead_time_slice], concat)
         return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data, concat), pts)
 
     def _transform_raw(self, data, time, lead_time, concat):

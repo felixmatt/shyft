@@ -451,7 +451,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                 sfc_t, _ = raw_data["temperature"]
             raw_data["relative_humidity"] = self.calc_RH(sfc_t, dpt_t, sfc_p), "relative_humidity"
         data_lead_time_slice = slice(lead_time_slice.start, lead_time_slice.stop + 1)
-        extracted_data = self._transform_raw(raw_data, time_ext, lead_times_in_sec[data_lead_time_slice], concat, issubset=issubset)
+        extracted_data = self._transform_raw(raw_data, time_ext, lead_times_in_sec[data_lead_time_slice], concat)
         #self.extracted_data = extracted_data
         return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data, concat), pts)
 
