@@ -15,44 +15,9 @@
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
 
-//#include "core/timeseries.h"
 #include "api/timeseries.h"
 
-// from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
-namespace boost {
-    namespace python {
-
-        struct release_gil_policy {
-            // Ownership of this argument tuple will ultimately be adopted by
-            // the caller.
-            template <class ArgumentPackage>
-            static bool precall(ArgumentPackage const&) {
-                // Release GIL and save PyThreadState for this thread here
-
-                return true;
-            }
-
-            // Pass the result through
-            template <class ArgumentPackage>
-            static PyObject* postcall(ArgumentPackage const&, PyObject* result) {
-                // Reacquire GIL using PyThreadState for this thread here
-
-                return result;
-            }
-
-            typedef default_result_converter result_converter;
-            typedef PyObject* argument_package;
-
-            template <class Sig>
-            struct extract_return_type : mpl::front<Sig> {
-            };
-
-        private:
-            // Retain pointer to PyThreadState on a per-thread basis here
-
-        };
-    }
-}
+// also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
 struct scoped_gil_release {
     scoped_gil_release() noexcept {
