@@ -476,7 +476,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                     t_padded = np.zeros((t.shape[0],t.shape[1]+nb_pads), dtype=t.dtype)
                     t_padded[:,:-nb_pads] = t[:,:]
                     t_add = t[0,-1] - t[0,-nb_pads-1]
-                    print('t_add:',t_add)
+                    # print('t_add:',t_add)
                     t_padded[:,-nb_pads:] = t[:,-nb_pads:] + t_add
 
                     v_padded = np.zeros((v.shape[0],t.shape[1]+nb_pads,v.shape[2]), dtype=t.dtype)
@@ -503,13 +503,10 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
             return fcn(T - 273.15)
 
         def prec_acc_conv(p, fcn):
-            print(lead_time.shape)
             f = 1000. * api.deltahours(1) / (lead_time[1:]-lead_time[:-1]) # conversion from m/delta_t to mm/1hour
-            print(p.max(), p.min(), p.mean())
             return fcn(np.clip((p[:, 1:, :] - p[:, :-1, :])*f[np.newaxis,:,np.newaxis], 0.0, 1000.0))
 
         def rad_conv(r, fcn):
-            print(lead_time.shape)
             dr = r[:, 1:, :] - r[:, :-1, :]
             return fcn(np.clip(dr / (lead_time[1:]-lead_time[:-1])[np.newaxis,:,np.newaxis], 0.0, 5000.0))
 
@@ -532,14 +529,12 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                            "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, forecast_v), forecast_t(t, True))}
         res = {}
         for k, (v, ak) in data.items():
-            print(k)
             res[k] = pad(*convert_map[ak](v, time))
         return res
 
     def _geo_ts_to_vec(self, data, pts):
         res = {}
         for name, ts in data.items():
-            print(name)
             tpe = self.source_type_map[name]
             tpe_v = tpe.vector_t()
             for idx in np.ndindex(pts.shape[:-1]):
