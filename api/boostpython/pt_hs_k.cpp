@@ -31,7 +31,7 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTHSK assembly\n"
                               "priestley_taylor,hbv_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&,optional<glacier_melt::parameter>>(args("pt","snow","ae","k","p_corr","gm"),"create object with specified parameters"))
+                .def(init<const priestley_taylor::parameter&,const hbv_snow::parameter&,const actual_evapotranspiration::parameter&,const kirchner::parameter&,const precipitation_correction::parameter&,optional<glacier_melt::parameter,routing::uhg_parameter>>(args("pt","snow","ae","k","p_corr","gm","routing"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
 				.def_readwrite("ae", &parameter::ae, "actual evapotranspiration parameter")
@@ -39,6 +39,7 @@ namespace expose {
                 .def_readwrite("gm",&parameter::gm,"glacier melt parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
+                .def_readwrite("routing",&parameter::routing,"routing cell-to-river catchment specific parameters")
                 .def("size",&parameter::size,"returns total number of calibration parameters")
                 .def("set",&parameter::set,args("p"),"set parameters from vector/list of float, ordered as by get_name(i)")
                 .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
@@ -117,6 +118,7 @@ namespace expose {
               expose::statistics::actual_evapotranspiration<PTHSKCellAll>("PTHSKCell");
               expose::statistics::priestley_taylor<PTHSKCellAll>("PTHSKCell");
               expose::statistics::kirchner<PTHSKCellAll>("PTHSKCell");
+              expose::cell_state_etc<PTHSKCellAll>("PTHSK");// just one expose of state
         }
 
         static void

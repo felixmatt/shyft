@@ -16,6 +16,9 @@
     <ClCompile Include="core_pch.cpp">
       <Filter>compiler_etc</Filter>
     </ClCompile>
+    <ClCompile Include="core_serialization.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="model_calibration.h" />
@@ -127,6 +130,7 @@
       <Filter>method-stacks</Filter>
     </ClInclude>
     <ClInclude Include="unit_conversion.h" />
+    <ClInclude Include="routing.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -155,6 +159,9 @@
     </Filter>
     <Filter Include="geo">
       <UniqueIdentifier>{dcc1d8e5-0b48-465d-b917-e9b18bb97373}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="serialization">
+      <UniqueIdentifier>{8c1c0ee1-88a9-4160-9892-7527d60172b0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

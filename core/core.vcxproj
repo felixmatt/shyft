@@ -103,6 +103,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="core_serialization.cpp" />
     <ClCompile Include="dream_optimizer.cpp" />
     <ClCompile Include="experimental.cpp" />
     <ClCompile Include="sceua_optimizer.cpp" />
@@ -140,6 +141,7 @@
     <ClInclude Include="pt_hs_k_cell_model.h" />
     <ClInclude Include="pt_ss_k.h" />
     <ClInclude Include="pt_ss_k_cell_model.h" />
+    <ClInclude Include="routing.h" />
     <ClInclude Include="sceua_optimizer.h" />
     <ClInclude Include="skaugen.h" />
     <ClInclude Include="timeseries.h" />

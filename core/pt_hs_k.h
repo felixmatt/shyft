@@ -7,6 +7,7 @@
 #include "actual_evapotranspiration.h"
 #include "precipitation_correction.h"
 #include "unit_conversion.h"
+#include "routing.h"
 namespace shyft {
   namespace core {
     namespace pt_hs_k {
@@ -19,6 +20,7 @@ namespace shyft {
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
             typedef glacier_melt::parameter glacier_parameter_t;
+            typedef routing::uhg_parameter routing_parameter_t;
 
             pt_parameter_t pt;
             snow_parameter_t hs;
@@ -26,30 +28,25 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
             glacier_parameter_t gm;
-
+            routing_parameter_t routing;
 
             parameter(const pt_parameter_t& pt,
                         const snow_parameter_t& snow,
                         const ae_parameter_t& ae,
                         const kirchner_parameter_t& kirchner,
                         const precipitation_correction_parameter_t& p_corr,
-                        glacier_parameter_t gm = glacier_parameter_t()) // for backwards compatibility pass default glacier parameter
-             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr), gm(gm) { /* Do nothing */ }
-             			parameter(const parameter &c) : pt(c.pt), hs(c.hs), ae(c.ae), kirchner(c.kirchner), p_corr(c.p_corr), gm(c.gm) {}
-			parameter(){}
-			parameter& operator=(const parameter &c) {
-                if(&c != this) {
-                    pt = c.pt;
-                    hs = c.hs;
-                    gm = c.gm;
-                    ae = c.ae;
-                    kirchner = c.kirchner;
-                    p_corr = c.p_corr;
-                }
-                return *this;
-			}
+                        glacier_parameter_t gm = glacier_parameter_t(),
+                        routing_parameter_t routing=routing_parameter_t()
+                      ) // for backwards compatibility pass default glacier parameter
+             : pt(pt), hs(snow), ae(ae), kirchner(kirchner), p_corr(p_corr), gm(gm),routing(routing) { /* Do nothing */ }
+
+			parameter()=default;
+			parameter(const parameter&)=default;
+			parameter(parameter&&)=default;
+			parameter& operator=(const parameter &c)=default;
+			parameter& operator=(parameter&&c)=default;
             ///< Calibration support, size is the total number of calibration parameters
-            size_t size() const { return 13; }
+            size_t size() const { return 16; }
 
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -68,6 +65,9 @@ namespace shyft {
                 p_corr.scale_factor = p[i++];
 				pt.albedo = p[i++];
 				pt.alpha = p[i++];
+                routing.velocity = p[i++];
+                routing.alpha = p[i++];
+                routing.beta  = p[i++];
             }
             //
             ///< calibration support, get the value of i'th parameter
@@ -86,6 +86,10 @@ namespace shyft {
                     case 10:return p_corr.scale_factor;
 					case 11:return pt.albedo;
 					case 12:return pt.alpha;
+                    case 13:return routing.velocity;
+                    case 14:return routing.alpha;
+                    case 15:return routing.beta;
+
                 default:
                     throw runtime_error("pt_hs_k parameter accessor:.get(i) Out of range.");
                 }
@@ -107,7 +111,10 @@ namespace shyft {
                     "gm.dtf",
                     "p_corr.scale_factor",
                     "pt.albedo",
-                    "pt.alpha"
+                    "pt.alpha",
+                    "routing.velocity",
+                    "routing.alpha",
+                    "routing.beta"
 				};
                 if (i >= size())
                     throw runtime_error("pt_hs_k parameter accessor:.get_name(i) Out of range.");
@@ -128,6 +135,7 @@ namespace shyft {
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
             bool operator==(const state& x) const {return snow==x.snow && kirchner==x.kirchner;}
+            x_serialize_decl();
         };
 
         struct response {
@@ -197,12 +205,12 @@ namespace shyft {
                 hbv_snow.step(state.snow, response.snow, period.start, period.end, parameter.hs, prec, temp); // outputs mm/h, interpreted as over the entire area
 
                 response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf,temp,geo_cell_data.area()*state.snow.sca,glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
-                
+
                 response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR;// mm/s -> mm/h, interpreted as over the entire area(!)
-                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration, 
-                                    parameter.ae.ae_scale_factor,std::max(state.snow.sca,glacier_fraction),  // a evap only on non-snow/non-glac area 
+                response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration,
+                                    parameter.ae.ae_scale_factor,std::max(state.snow.sca,glacier_fraction),  // a evap only on non-snow/non-glac area
                                     period.timespan());
-                
+
                 kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); //all units mm/h over 'same' area
 
                 response.total_discharge = prec*total_lake_fraction
@@ -221,3 +229,5 @@ namespace shyft {
     }
   } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::pt_hs_k::state);

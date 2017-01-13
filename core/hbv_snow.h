@@ -102,6 +102,7 @@ namespace shyft {
                     const double eps=1e-6;
                     return fabs(swe-x.swe)<eps && fabs(sca-x.sca)<eps;
                 }
+                x_serialize_decl();
             };
             struct response {
                 double outflow = 0.0;
@@ -293,3 +294,5 @@ namespace shyft {
         }
     } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_snow::state);

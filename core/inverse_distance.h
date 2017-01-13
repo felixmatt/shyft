@@ -494,8 +494,9 @@ namespace shyft {
 				idw_timeaxis<TimeAxis> idw_ta(ta);
 				///    - and figure out a suitable ncore number. Using single cpu 4..8 core shows we can have more threads than cores, and gain speed.
                 if (ncore < 0) {
-                    ncore = (int) thread::hardware_concurrency();//in case of not available, default to 4,
-                    if (ncore == 0) ncore = 4;
+                    //ncore = (int) thread::hardware_concurrency();//in case of not available, default to 4,
+                    //if (ncore < 2) ncore = 4;
+                    ncore = 1; // we got unstable interpolation with ncore=auto and ncells=10 -> disable auto detection, and run one thread pr. interpolation
                 }
                 if (ncore < 2) {
                     run_interpolation<IDWModel>(begin(src), end(src), begin(cells), end(cells), idw_ta, parameters, result_setter);

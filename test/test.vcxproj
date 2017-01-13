@@ -128,6 +128,7 @@
     <ClInclude Include="kalman_test.h" />
     <ClInclude Include="kriging_test.h" />
     <ClInclude Include="pt_ss_k_test.h" />
+    <ClInclude Include="routing_test.h" />
     <ClInclude Include="sceua_test.h" />
     <ClInclude Include="test_pch.h" />
     <ClInclude Include="gamma_snow_test.h" />
@@ -144,20 +145,12 @@
     <ClInclude Include="timeseries_test.h" />
     <ClInclude Include="time_axis_test.h" />
     <ClInclude Include="utctime_utilities_test.h" />
+    <ClInclude Include="serialization_test.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="actual_evapotranspiration_test.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="bayesian_kriging_test.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="calibration_test.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="actual_evapotranspiration_test.cpp" />
+    <ClCompile Include="bayesian_kriging_test.cpp" />
+    <ClCompile Include="calibration_test.cpp" />
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
     <ClCompile Include="glacier_melt_test.cpp" />
@@ -168,6 +161,7 @@
     <ClCompile Include="hbv_tank_test.cpp" />
     <ClCompile Include="kalman_test.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
+    <ClCompile Include="routing_test.cpp" />
     <ClCompile Include="sceua_test.cpp" />
     <ClCompile Include="test_pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -185,10 +179,7 @@
     <ClCompile Include="mocks.cpp" />
     <ClCompile Include="priestley_taylor_test.cpp" />
     <ClCompile Include="pt_gs_k_test.cpp" />
-    <ClCompile Include="pt_hs_k_test.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="pt_hs_k_test.cpp" />
     <ClCompile Include="region_model_test.cpp" />
     <ClCompile Include="runner.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -197,10 +188,8 @@
     <ClCompile Include="skaugen_test.cpp" />
     <ClCompile Include="timeseries_test.cpp" />
     <ClCompile Include="time_axis_test.cpp" />
-    <ClCompile Include="utctime_utilities_test.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="utctime_utilities_test.cpp" />
+    <ClCompile Include="serialization_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Makefile.testupdate" />

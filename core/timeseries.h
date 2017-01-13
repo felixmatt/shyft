@@ -67,6 +67,10 @@ namespace shyft{
         template<typename T> struct is_shared_ptr {static const bool value=false;};
         template<typename T> struct is_shared_ptr<shared_ptr<T>> {static const bool value=true;};
 
+        /** is_ts<T> is a place holder to support specific dispatch for time-series types
+         * default is false
+         */
+        template<class T> struct is_ts {static const bool value=false;};
 
 
         /** \brief d_ref function to d_ref object or shared_ptr
@@ -75,6 +79,8 @@ namespace shyft{
          */
         template<class U> const U& d_ref(const std::shared_ptr<U>& p) { return *p; }
         template<class U> const U& d_ref(const U& u) { return u; }
+        template<class U> U& d_ref(std::shared_ptr<U>& p) { return *p; }
+        template<class U> U& d_ref(U& u) { return u; }
 
 
         ///< \brief d_ref_t template to rip out T of shared_ptr<T> or T if T specified
@@ -327,7 +333,7 @@ namespace shyft{
             void fill(double value) { std::fill(begin(v), end(v), value); }
             void fill_range(double value, int start_step, int n_steps) { if (n_steps == 0)fill(value); else std::fill(begin(v) + start_step, begin(v) + start_step + n_steps, value); }
 			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
-
+            x_serialize_decl();
         };
 
         /** \brief time_shift ts do a time-shift dt on the supplied ts
@@ -354,6 +360,8 @@ namespace shyft{
             ta_t ta;
             point_interpretation_policy fx_policy; // inherited from ts
             utctimespan dt;// despite ta time-axis, we need it
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             //-- default stuff, ct/copy etc goes here
             time_shift_ts():fx_policy(POINT_AVERAGE_VALUE),dt(0) {}
@@ -386,8 +394,6 @@ namespace shyft{
                  dt(dt) {}
 
             const ta_t& time_axis() const { return ta;}
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             point get(size_t i) const {return point(ta.time(i),ts.value(i));}
 
@@ -400,6 +406,7 @@ namespace shyft{
             //--
             double value(size_t i) const { return ts.value(i);}
             double operator()(utctime t) const { return ts(t-dt);} ///< just here we needed the dt
+            x_serialize_decl();
         };
 
         /**\brief average_ts, average time-series
@@ -416,7 +423,9 @@ namespace shyft{
             TS ts;
             point_interpretation_policy fx_policy;
             const TA& time_axis() const {return ta;}
-
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            average_ts(){} // allow default construct
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts)
             ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
@@ -438,6 +447,7 @@ namespace shyft{
                     return nan;
                 return value(i);
             }
+            x_serialize_decl();
         };
 
 		/**\brief accumulate_ts, accumulate time-series
@@ -461,7 +471,10 @@ namespace shyft{
 			TS ts;
 			point_interpretation_policy fx_policy;
 			const TA& time_axis() const { return ta; }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
+            accumulate_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){} // support default construct
 			accumulate_ts(const TS&ts, const TA& ta)
 				:ta(ta), ts(ts)
 				, fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE) {
@@ -470,6 +483,7 @@ namespace shyft{
 			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
 			size_t size() const { return ta.size(); }
 			size_t index_of(utctime t) const { return ta.index_of(t); }
+			utcperiod total_period()const {return ta.total_period();}
 			//--
 			double value(size_t i) const {
 				if (i >= ta.size())
@@ -491,6 +505,7 @@ namespace shyft{
 				size_t ix_hint = 0;
 				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
 			}
+            x_serialize_decl();
 		};
 
 		/**\brief A simple profile description defined by start-time and a equidistance by delta-t value-profile.
@@ -523,6 +538,7 @@ namespace shyft{
 					return profile[i];
 				return nan;
 			}
+            x_serialize_decl();
 		};
 
 		/** \brief profile accessor that enables use of average_value etc.
@@ -591,6 +607,8 @@ namespace shyft{
 			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
 			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
 			size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
+			x_serialize_decl();
+
 		};
 
 		/**\brief periodic_ts, periodic pattern time-series
@@ -599,12 +617,16 @@ namespace shyft{
 		 * - either the instant value of a periodic profile
 		 * - or the average interpolated between two values of the periodic profile
 		 */
-		template<class PD, class TA>
+		template<class TA>
 		struct periodic_ts {
 			TA ta;
 			profile_accessor<TA> pa;
 			point_interpretation_policy fx_policy;
+			const TA& time_axis() const {return ta;}
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
+            template <class PD>
 			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
 				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
@@ -615,6 +637,7 @@ namespace shyft{
 			periodic_ts() {}
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }
+            utcperiod total_period() const {return ta.total_period();}
 			size_t index_of(utctime t) const { return ta.index_of(t); }
 			double value(size_t i) const { return pa.value(i); }
 			std::vector<double> values() const {
@@ -624,6 +647,7 @@ namespace shyft{
 					v.emplace_back(value(i));
 				return std::move(v);
 			}
+            x_serialize_decl();
 		};
 
         /**\brief glacier melt ts
@@ -647,6 +671,8 @@ namespace shyft{
 			double dtf;
 			point_interpretation_policy fx_policy;
 			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
 			/** construct a glacier_melt_ts
 			 * \param temperature in [deg.C]
@@ -665,6 +691,7 @@ namespace shyft{
 			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
 			size_t size() const { return time_axis().size(); }
 			size_t index_of(utctime t) const { return time_axis().index_of(t); }
+			utcperiod total_period() const {return time_axis().total_period();}
 			//--
 			double value(size_t i) const {
 				if (i >= time_axis().size())
@@ -681,10 +708,282 @@ namespace shyft{
 					return nan;
                 return value(i);
 			}
+            x_serialize_decl();
 		};
 
+        /**\brief a symbolic reference ts
+         *
+         * A ref_ts is a time-series that have a ref, a uid, to some underlying
+         * time-series data store.
+         * It can be bound, or unbound.
+         * If it's bound, then it behaves like the underlying time-series ts class, typically
+         * a point_ts<ta> time-series, with a time-axis and some values associated.
+         * If it's unbound, then any attempt to use it will cause runtime_error exception
+         * to be thrown.
+         *
+         * The purpose of the ref_ts is to provide means of (unbound) time-series expressions
+         * to be transferred to a node, where the binding process can be performed, and the resulting
+         * values of the expression can be computed.
+         * The result can then be transferred back to the origin (client) for further processing/presentation.
+         *
+         * This allow for execution of ts-expressions that reduces data
+         *  to be executed at nodes close to data.
+         *
+         * Note that the mechanism is also useful, even for local evaluation of expressions, since it allow
+         * analysis and binding to happen before the final evaluation of the values of the expression.
+         *
+         */
+        template <class TS>
+        struct ref_ts {
+            typedef typename TS::ta_t ta_t;
+            string ref;///< reference to time-series supporting storage
+            fx_policy_t fx_policy;
+            shared_ptr<TS> ts;
+            TS& bts() {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            const TS& bts() const {
+                if(ts==nullptr)
+                    throw runtime_error("unbound access to ref_ts attempted");
+                return *ts;
+            }
+            point_interpretation_policy point_interpretation() const {
+                return bts().point_interpretation();
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                bts().set_point_interpretation(point_interpretation);
+            }
+            // std. ct/dt etc.
+            ref_ts(){}
+            ref_ts(const ref_ts &c):ref(c.ref),fx_policy(c.fx_policy),ts(c.ts) {}
+            ref_ts(ref_ts&&c):ref(std::move(c.ref)),fx_policy(c.fx_policy),ts(std::move(c.ts)) {}
+            ref_ts& operator=(const ref_ts& c) {
+                if(this != &c ) {
+                    ref=c.ref;
+                    fx_policy=c.fx_policy;
+                    ts=c.ts;
+                }
+                return *this;
+            }
+            ref_ts& operator=(ref_ts&& c) {
+                ref=std::move(c.ref);
+                fx_policy=c.fx_policy;
+                ts=std::move(c.ts);
+                return *this;
+            }
+
+            // useful constructors goes here:
+            ref_ts(string sym_ref):ref(sym_ref) {}
+            const ta_t& time_axis() const {return bts().time_axis();}
+            /**\brief the function value f(t) at time t, fx_policy taken into account */
+            double operator()(utctime t) const {
+                return bts()(t);
+            }
+
+            /**\brief value of the i'th interval fx_policy taken into account,
+             * Hmm. is that policy ever useful in this context ?
+             */
+            double value(size_t i) const  {
+                return bts().value(i);
+            }
+            // BW compatiblity ?
+            size_t size() const { return bts().size();}
+            size_t index_of(utctime t) const {return bts().index_of(t);}
+            utcperiod total_period() const {return bts().total_period();}
+            utctime time(size_t i ) const {return bts().time(i);}
+
+            // to help average_value method for now!
+            point get(size_t i) const {return bts().get(i);}
+
+            // Additional write/modify interface to operate directly on the values in the time-series
+            void set(size_t i,double x) {bts().set(i,x);}
+            void add(size_t i, double value) { bts().add(i,value); }
+            void add(const point_ts<ta_t>& other) {
+                bts().add(other);
+            }
+            void add_scale(const point_ts<ta_t>&other,double scale) {
+                bts().add_scale(other,scale);
+            }
+            void fill(double value) { bts().fill(value); }
+            void fill_range(double value, int start_step, int n_steps) {
+                bts().fill_range(value,start_step,n_steps);
+            }
+ 			void scale_by(double value) {
+ 			    bts().scale_by(value);
+            }
+            x_serialize_decl();
+
+        };
 
 
+        /** The convolve_policy determines how the convolve_w_ts functions deals with the
+        *  initial boundary condition, i.e. when trying to convolve with values before
+        *  the first value, value(0)
+        * \sa convolve_w_ts
+        */
+        enum convolve_policy {
+            USE_FIRST, ///< ts.value(0) is used for all values before value(0): 'mass preserving'
+            USE_ZERO, ///< fill in zero for all values before value(0):shape preserving
+            USE_NAN ///< nan filled in for the first length of the filter
+        };
+        /** \brief convolve_w convolves a time-series with weights w
+        *
+        * The resulting time-series value(i) is the result of convolution (ts*w)|w.size()
+        *  value(i) => ts(i-k)*w(k), k is [0..w.size()>
+        *
+        * the convolve_policy determines how to resolve start-condition-zone
+        * where i < w.size(), \ref convolve_policy
+        *
+        * \tparam Ts any time-series
+        *  maybe \tparam W any container with .size() and [i] operator
+        */
+        template<class Ts>
+        struct convolve_w_ts {
+            typedef typename Ts::ta_t ta_t;
+            typedef std::vector<double> W;
+            Ts ts;
+            point_interpretation_policy fx_policy; // inherited from ts
+            W w;
+            convolve_policy policy = convolve_policy::USE_FIRST;
+            //-- default stuff, ct/copy etc goes here
+            convolve_w_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
+            convolve_w_ts(const convolve_w_ts& c) :ts(c.ts), fx_policy(c.fx_policy), w(c.w), policy(c.policy) {}
+            convolve_w_ts(convolve_w_ts&&c) :ts(std::move(c.ts)), fx_policy(c.fx_policy), w(std::move(c.w)), policy(c.policy) {}
+
+            convolve_w_ts& operator=(const convolve_w_ts& o) {
+                if (this != &o) {
+                    ts = o.ts;
+                    fx_policy = o.fx_policy;
+                    w = o.w;
+                    policy = o.policy;
+                }
+                return *this;
+            }
+
+            convolve_w_ts& operator=(convolve_w_ts&& o) {
+                ts = std::move(o.ts);
+                fx_policy = o.fx_policy;
+                w = o.w;
+                policy = o.policy;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_, class W_>
+            convolve_w_ts(A_ && ts, W_ && w, convolve_policy policy = convolve_policy::USE_FIRST)
+                :ts(std::forward<A_>(ts)),
+                fx_policy(POINT_AVERAGE_VALUE),//TODO: resolve issue apoint_ts method vs. property in core::ts
+                w(std::forward<W_>(w)),
+                policy(policy)                     {
+            }
+
+            const ta_t& time_axis() const { return ts.time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+
+            point get(size_t i) const { return point(ts.time(i), value(i)); }
+
+            size_t size() const { return ts.size(); }
+            size_t index_of(utctime t) const { return ts.index_of(t); }
+            utcperiod total_period() const { return ts.total_period(); }
+            utctime time(size_t i) const { return ts.time(i); }
+
+            //--
+            double value(size_t i) const {
+                double v = 0.0;
+                for (size_t j = 0;j<w.size();++j)
+                    v += j <= i ?
+                    w[j] * ts.value(i - j)
+                    :
+                    (policy == convolve_policy::USE_FIRST ? w[j] * ts.value(0) :
+                    (policy == convolve_policy::USE_ZERO ? 0.0 : shyft::nan)); // or nan ? policy based ?
+                return  v;
+            }
+            double operator()(utctime t) const {
+                return value(ts.index_of(t));
+            }
+            x_serialize_decl();
+        };
+
+        /** \brief a sum_ts computes the sum ts  of vector<ts>
+        *
+        * Enforces all ts do have at least same number of elements in time-dimension
+        * Require number of ts >0
+        * computes .value(i) so that it is the sum of all tsv.value(i)
+        * time-axis equal to tsv[0].time_axis
+        * time-axis should be equal, notice that only .size() is equal is ensured in the constructor
+        *
+        * \note The current approach only works for ts of same type, enforced by the compiler
+        *  The runtime enforces that each time-axis are equal as well, and throws exception
+        *  if not (in the non-default constructor), - if user later modifies the tsv
+        *  it could break this assumption.
+        */
+        template<class T>
+        struct uniform_sum_ts {
+            typedef typename T::ta_t ta_t;
+        private:
+            std::vector<T> tsv; ///< need this private to ensure consistency after creation
+        public:
+            point_interpretation_policy fx_policy; // inherited from ts
+            uniform_sum_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
+            uniform_sum_ts(const uniform_sum_ts& c) :tsv(c.tsv), fx_policy(c.fx_policy) {}
+            uniform_sum_ts(uniform_sum_ts&&c) :tsv(std::move(c.tsv)), fx_policy(c.fx_policy) {}
+
+            uniform_sum_ts& operator=(const uniform_sum_ts& o) {
+                if (this != &o) {
+                    tsv = o.tsv;
+                    fx_policy = o.fx_policy;
+                }
+                return *this;
+            }
+
+            uniform_sum_ts& operator=(uniform_sum_ts&& o) {
+                tsv = std::move(o.tsv);
+                fx_policy = o.fx_policy;
+                return *this;
+            }
+
+            //-- useful ct goes here
+            template<class A_>
+            uniform_sum_ts(A_ && tsv)
+                :tsv(std::forward<A_>(tsv)),
+                fx_policy(tsv.size() ? tsv[0].point_interpretation() : shyft::timeseries::POINT_AVERAGE_VALUE) {
+                if (tsv.size() == 0)
+                    throw std::runtime_error("vector<ts> size should be > 0");
+                for (size_t i = 1;i < tsv.size();++i)
+                    if (!(tsv[i].time_axis() == tsv[i - 1].time_axis())) // todo: a more extensive test needed, @ to high cost.. so  maybe provide a ta, and do true-average ?
+                        throw std::runtime_error("vector<ts> timeaxis should be aligned in sizes and numbers");
+            }
+
+            const ta_t& time_axis() const { return tsv[0].time_axis(); }
+            point_interpretation_policy point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+
+            point get(size_t i) const { return point(tsv[0].time(i), value(i)); }
+
+            size_t size() const { return tsv.size() ? tsv[0].size() : 0; }
+            size_t index_of(utctime t) const { return tsv.size() ? tsv[0].index_of(t) : std::string::npos; }
+            utcperiod total_period() const { return tsv.size() ? tsv[0].total_period() : utcperiod(); }
+            utctime time(size_t i) const { if (tsv.size()) return tsv[0].time(i); throw std::runtime_error("uniform_sum_ts:empty sum"); }
+
+            //--
+            double value(size_t i) const {
+                if (tsv.size() == 0 || i == std::string::npos) return shyft::nan;
+                double v = tsv[0].value(i);
+                for (size_t j = 1;j < tsv.size();++j) v += tsv[j].value(i);
+                return  v;
+            }
+            double operator()(utctime t) const {
+                return value(index_of(t));
+            }
+            std::vector<double> values() const {
+                std::vector<double> r;r.reserve(size());
+                for (size_t i = 0;i < size();++i) r.push_back(value(i));
+                return std::move(r);
+            }
+        };
 
         /** \brief Basic math operators
          *
@@ -701,21 +1000,39 @@ namespace shyft{
             A lhs;
             B rhs;
             TA ta;
+            bin_op(){}
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
+                    ((bin_op*)this)->fx_policy=result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+                }
+            }
+            const TA& time_axis() const {
+                deferred_bind();
+                return ta;
+            }
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                fx_policy=point_interpretation;
+            }
+
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
-                ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
-                fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+                //ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
+                //fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
             }
             double operator()(utctime t) const {
-                if(!ta.total_period().contains(t))
+                if(!time_axis().total_period().contains(t))
                     return nan;
                 return op(d_ref(lhs)(t),d_ref(rhs)(t));
             }
             double value(size_t i) const {
-                if(i==string::npos || i>=ta.size() )
+                if(i==string::npos || i>=time_axis().size() )
                     return nan;
                 if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
                     return (*this)(ta.time(i));
@@ -725,7 +1042,12 @@ namespace shyft{
                 if(isfinite(v1)) return 0.5*(v0 + v1);
                 return v0;
             }
-        };
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
+            x_serialize_decl();
+       };
 
         /** specialize for double bin_op ts */
         template<class B,class O,class TA>
@@ -736,15 +1058,35 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            bin_op(){}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=d_ref(rhs).time_axis();
+                    ((bin_op*)this)->fx_policy=d_ref(rhs).fx_policy;
+                }
+            }
+            const TA& time_axis() const {deferred_bind();return ta;}
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                deferred_bind();//ensure it's done
+                fx_policy=point_interpretation;
+            }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(rhs).time_axis();
-                fx_policy = d_ref(rhs).fx_policy;
+                //ta=d_ref(rhs).time_axis();
+                //fx_policy = d_ref(rhs).fx_policy;
             }
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
             double value(size_t i) const {return op(lhs,d_ref(rhs).value(i));}
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
+            x_serialize_decl();
         };
 
         /** specialize for ts bin_op double */
@@ -756,14 +1098,34 @@ namespace shyft{
             O op;
             TA ta;
             point_interpretation_policy fx_policy;
-            const TA& time_axis() const {return ta;}
+            bin_op(){}
+            void deferred_bind() const {
+                if(ta.size()==0) {
+                    ((bin_op*)this)->ta=d_ref(lhs).time_axis();
+                    ((bin_op*)this)->fx_policy=d_ref(lhs).fx_policy;
+                }
+            }
+            const TA& time_axis() const {deferred_bind();return ta;}
+            point_interpretation_policy point_interpretation() const {
+                deferred_bind();
+                return fx_policy;
+            }
+            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+                deferred_bind();//ensure it's done
+                fx_policy=point_interpretation;
+            }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                ta=d_ref(lhs).time_axis();
-                fx_policy = d_ref(lhs).fx_policy;
+                //ta=d_ref(lhs).time_axis();
+                //fx_policy = d_ref(lhs).fx_policy;
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
+            size_t size() const {
+                deferred_bind();
+                return ta.size();
+            }
+            x_serialize_decl();
         };
 
 
@@ -793,11 +1155,14 @@ namespace shyft{
         /** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
          * otherwise the operators will interfere with other libraries doing the same.
          */
-        template<class T> struct is_ts {static const bool value=false;};
         template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
         template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
+        template<class T> struct is_ts<uniform_sum_ts<T>> { static const bool value = true; };
+        template<class T> struct is_ts<shared_ptr<uniform_sum_ts<T>>> { static const bool value = true; };
+        template<class TS> struct is_ts<convolve_w_ts<TS>> { static const bool value = true; };
+        template<class TS> struct is_ts<shared_ptr<convolve_w_ts<TS>>> { static const bool value = true; };
 		// This is to allow this ts to participate in ts-math expressions
 		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
@@ -805,6 +1170,9 @@ namespace shyft{
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
         template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
         template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+        template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
+        template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
 
 
         /** time_shift function, to ease syntax and usability */
@@ -1048,7 +1416,7 @@ namespace shyft{
             bool linear_between_points;
           public:
             average_accessor(const S& source, const TA& time_axis)
-              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), 
+              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE){ /* Do nothing */ }
             average_accessor(std::shared_ptr<S> source,const TA& time_axis)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
@@ -1442,5 +1810,58 @@ namespace shyft{
 				r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
 			return std::move(r);
 		}
+
+        /**bind ref_ts
+         * default impl. does nothing (nothing to bind)
+         */
+        template <class Ts, class Fbind>
+        void bind_ref_ts(Ts& ts,Fbind && f_bind ) {
+        }
+
+        template<class Ts,class Fbind>
+        void bind_ref_ts( ref_ts<Ts>& ts,Fbind&& f_bind) {
+            f_bind(ts);
+        }
+        template<class A, class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class B, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
+            //bind_ref_ts(d_ref(ts.lhs),f_bind);
+            bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template<class A, class O, class TA,class Fbind>
+        void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(ts.lhs),f_bind);
+            //bind_ref_ts(d_ref(ts.rhs),f_bind);
+        }
+        template <class Ts,class Fbind>
+        void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(time_shift.ts,f_bind));
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
+            bind_ref_ts(d_ref(avg.ts),f_bind);
+        }
+        template <class Ts,class Ta,class Fbind>
+        void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(acc.ts),f_bind);
+        }
+        template <class TS_A,class TS_B,class Fbind>
+        void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
+            bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
+            bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
+        }
     } // timeseries
 } // shyft
+//-- serialization support
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
+x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
+

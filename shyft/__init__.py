@@ -2,8 +2,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
-import os.path
+from os import path
 
+os.environ['PATH'] = path.join(path.dirname(__file__), 'lib') + ';' + os.environ['PATH']
 
 this_dir = __path__[0]
 __version__ = "development"
@@ -16,9 +17,8 @@ if "SHYFTDATA" in os.environ:
     shyftdata_dir = os.environ["SHYFTDATA"]
 else:
     # If SHYFTDATA environment variable is not here, then use a decent guess
-    shyftdata_dir = os.path.join(os.path.dirname(__file__), os.path.pardir,
-                                 os.path.pardir, "shyft-data")
-shyftdata_dir = os.path.normpath(shyftdata_dir)
+    shyftdata_dir = path.join(path.dirname(__file__), path.pardir, path.pardir, "shyft-data")
+shyftdata_dir = path.normpath(shyftdata_dir)
 
 def print_versions():
     """Print all the versions for packages that SHyFT relies on."""

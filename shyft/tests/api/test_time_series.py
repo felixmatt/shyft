@@ -161,6 +161,8 @@ class TimeSeries(unittest.TestCase):
         a = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.Timeseries(ta=ta, fill_value=1.0)
         b.fill(2.0)  # demo how to fill a point ts
+        self.assertAlmostEquals((1.0-b).values.to_numpy().max(), -1.0)
+        self.assertAlmostEquals((b -1.0).values.to_numpy().max(), 1.0)
         c = a + b * 3.0 - a / 2.0  # operator + * - /
         d = -a  # unary minus
         e = a.average(ta)  # average
@@ -358,6 +360,42 @@ class TimeSeries(unittest.TestCase):
         ta_percentiles = api.Timeaxis2(partition_t0, api.deltahours(24), 365)
         percentiles = api.percentiles(ts_partitions,ta_percentiles,wanted_percentiles)
         self.assertEqual(len(percentiles), len(wanted_percentiles))
+
+    def test_ts_reference_and_bind(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 9, 1)
+        dt = api.deltahours(1)
+        n = c.diff_units(t0, c.time(2017, 9, 1), dt)
+
+        ta = api.Timeaxis2(t0, dt, n)
+        pattern_values = api.DoubleVector.from_numpy(np.arange(len(ta))) # increasing values
+
+        a = api.Timeseries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        b_id = "netcdf://path_to_file/path_to_ts"
+        b = api.Timeseries(b_id)
+        c = (a + b)*4.0  # make an expression, with a ts-reference, not yet bound
+        c_blob = c.serialize()  # converts the entire stuff into a blob
+        bind_info= c.find_ts_bind_info()
+
+        self.assertEqual(len(bind_info), 1,"should find just one ts to bind")
+        self.assertEqual(bind_info[0].id, b_id,"the id to bind should be equal to b_id")
+        try:
+            c.value(0)  # verify touching a unbound ts raises exception
+            self.assertFalse(True, "should not reach here!")
+        except RuntimeError:
+            pass
+
+        # verify we can bind a ts
+        bind_info[0].ts.bind(a)  # it's ok to bind same series multiple times, it takes a copy of a values
+
+        # and now we can use c expression as pr. usual, evaluate etc.
+        self.assertAlmostEqual(c.value(10), a.value(10)*2*4.0, 3)
+
+        c_resurrected = api.Timeseries.deserialize(c_blob)
+
+        bi = c_resurrected.find_ts_bind_info()
+        bi[0].ts.bind(a)
+        self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2*4.0, 3)
 
 if __name__ == "__main__":
     unittest.main()

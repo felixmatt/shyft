@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 #ifdef ENKI_HAS_GRF
 class gaussian_random_field_test: public CxxTest::TestSuite {

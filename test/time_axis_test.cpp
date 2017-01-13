@@ -37,7 +37,13 @@ static bool test_if_equal( const TA& e, const TB& t ) {
         if( ei != ti )
             return false;
     }
-    return true;
+
+	if (!equivalent_time_axis(e, t)) // verify e and t produces the same periods
+		return false;
+	// now create a time-axis different from e and t, just to verify that equivalent_time_axis states it's false
+	time_axis::fixed_dt u(utctime(1234), deltahours(1), 21);
+
+	return !equivalent_time_axis(u,e) && !equivalent_time_axis(u,t);
 }
 
 void time_axis_test::test_all() {
@@ -157,10 +163,6 @@ void time_axis_test::test_all() {
 
 }
 
-namespace shyft {
-    namespace time_axis {
-    }
-}
 
 void time_axis_test::test_time_shift() {
     calendar utc;

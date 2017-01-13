@@ -7,6 +7,7 @@
 #include "precipitation_correction.h"
 #include "glacier_melt.h"
 #include "unit_conversion.h"
+#include "routing.h"
 namespace shyft {
   namespace core {
     namespace pt_gs_k {
@@ -30,16 +31,21 @@ namespace shyft {
             typedef kirchner::parameter kirchner_parameter_t;
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
             typedef glacier_melt::parameter glacier_melt_parameter_t;
+            typedef routing::uhg_parameter routing_parameter_t;
             parameter(pt_parameter_t pt,
                       gs_parameter_t gs,
                       ae_parameter_t ae,
                       kirchner_parameter_t k,
-                      precipitation_correction_parameter_t p_corr,glacier_melt_parameter_t gm=glacier_melt_parameter_t())
-             : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) ,gm(gm){ /*Do nothing */ }
-            parameter() {}
-            parameter(const parameter& other)
-             : pt(other.pt), gs(other.gs), ae(other.ae),
-               kirchner(other.kirchner), p_corr(other.p_corr),gm(other.gm) { /*Do nothing */ }
+                      precipitation_correction_parameter_t p_corr,
+                      glacier_melt_parameter_t gm=glacier_melt_parameter_t(),
+                      routing_parameter_t routing=routing_parameter_t())
+             : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) ,gm(gm),routing(routing){ /*Do nothing */ }
+			parameter()=default;
+			parameter(const parameter&)=default;
+			parameter(parameter&&)=default;
+			parameter& operator=(const parameter &c)=default;
+			parameter& operator=(parameter&&c)=default;
+
 
             pt_parameter_t pt;
             gs_parameter_t gs;
@@ -47,8 +53,9 @@ namespace shyft {
             kirchner_parameter_t  kirchner;
             precipitation_correction_parameter_t p_corr;
             glacier_melt_parameter_t gm;
+            routing_parameter_t routing;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 25; }
+            size_t size() const { return 28; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -79,6 +86,9 @@ namespace shyft {
 				gs.winter_end_day_of_year = size_t(p[i++]);
 				gs.calculate_iso_pot_energy = p[i++] != 0.0 ? true : false;
                 gm.dtf = p[i++];
+                routing.velocity = p[i++];
+                routing.alpha = p[i++];
+                routing.beta  = p[i++];
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -109,6 +119,9 @@ namespace shyft {
 					case 22:return (double)gs.winter_end_day_of_year;
 					case 23:return gs.calculate_iso_pot_energy ? 1.0 : 0.0;
                     case 24:return gm.dtf;
+                    case 25:return routing.velocity;
+                    case 26:return routing.alpha;
+                    case 27:return routing.beta;
 
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
@@ -143,7 +156,10 @@ namespace shyft {
 					"gs.initial_bare_ground_fraction",
 					"gs.winter_end_day_of_year",
 					"gs.calculate_iso_pot_energy",
-                    "gm.dtf"
+                    "gm.dtf",
+                    "routing.velocity",
+                    "routing.alpha",
+                    "routing.beta"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");
@@ -167,6 +183,7 @@ namespace shyft {
             gs_state_t gs;
             kirchner_state_t kirchner;
             bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}
+            x_serialize_decl();
         };
 
 
@@ -295,7 +312,7 @@ namespace shyft {
                 double rel_hum = rel_hum_accessor.value(i);
                 double prec = p_corr.calc(prec_accessor.value(i));
                 state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
-                                
+
                 gs.step(state.gs, response.gs, period.start, period.timespan(), parameter.gs,
                         temp, rad, prec, wind_speed_accessor.value(i), rel_hum,forest_fraction,altitude);
                 response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf, temp, geo_cell_data.area()*response.gs.sca, glacier_area_m2);
@@ -304,9 +321,9 @@ namespace shyft {
                                   parameter.ae.ae_scale_factor, std::max(response.gs.sca,glacier_fraction), // a evap only on non-snow/non-glac area
                                   period.timespan());
                 kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.gs.outflow, response.ae.ae); // all units mm/h over 'same' area
-                
-                response.total_discharge = 
-                      prec*total_lake_fraction 
+
+                response.total_discharge =
+                      prec*total_lake_fraction
                     + shyft::m3s_to_mmh(response.gm_melt_m3s,geo_cell_data.area())
                     + response.kirchner.q_avg*kirchner_fraction;
 
@@ -320,3 +337,5 @@ namespace shyft {
     } // pt_gs_k
   } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::pt_gs_k::state);

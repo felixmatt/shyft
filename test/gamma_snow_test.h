@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 class gamma_snow_test: public CxxTest::TestSuite {
   public:

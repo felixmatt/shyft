@@ -155,7 +155,9 @@
     <ClCompile Include="..\boostpython\api_precipitation_correction.cpp" />
     <ClCompile Include="..\boostpython\api_priestley_taylor.cpp" />
     <ClCompile Include="..\boostpython\api_region_environment.cpp" />
+    <ClCompile Include="..\boostpython\api_routing.cpp" />
     <ClCompile Include="..\boostpython\api_skaugen.cpp" />
+    <ClCompile Include="..\boostpython\api_state.cpp" />
     <ClCompile Include="..\boostpython\api_target_specification.cpp" />
     <ClCompile Include="..\boostpython\api_time_axis.cpp" />
     <ClCompile Include="..\boostpython\api_time_series.cpp" />

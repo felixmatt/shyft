@@ -10,7 +10,7 @@ namespace expose {
 	void hbv_actual_evapotranspiration() {
 		class_<parameter>("HbvActualEvapotranspirationParameter")
 			.def(init<optional<double>>(args("lp"), "a new object with specified parameters"))
-			.def_readwrite("soil_moisture_threshold", &parameter::lp, "typical value 150")
+			.def_readwrite("lp", &parameter::lp, "typical value 150")
 			;
 		class_<response>("HbvActualEvapotranspirationResponse")
 			.def_readwrite("ae", &response::ae)

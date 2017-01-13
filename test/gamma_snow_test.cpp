@@ -87,7 +87,12 @@ void gamma_snow_test::test_correct_lwc() {
 
     const double result = gs.corr_lwc(z1, a1, b1, z2, a2, b2);
 // as a result of using lower resolution, less accuracy
-    TS_ASSERT_DELTA(result, 3.8417594715,10000* shyfttest::EPS);
+    TS_ASSERT_DELTA(result, 3.8411,0.0001);
+    // would throw in previous versions
+    gs.corr_lwc(1.0, 6.25, 0.005358, 0.5, 6.25, 0.005358);
+
+    gs.corr_lwc(0.0, a1, b1, z2, a2, b2);
+    gs.corr_lwc(z1, a1, b1, 0.0, a2, b2);
 
 }
 

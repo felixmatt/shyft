@@ -1,5 +1,4 @@
 #pragma once
-#include <cxxtest/TestSuite.h>
 
 class kirchner_test: public CxxTest::TestSuite {
   public:

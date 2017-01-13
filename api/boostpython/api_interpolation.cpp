@@ -205,7 +205,7 @@ namespace expose {
             "\t the parameters to be used during interpolation\n\n"
             "Returns\n"
             "-------\n"
-            "TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
+            "TemperatureSourceVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
             );
     }
 
@@ -269,7 +269,7 @@ namespace expose {
 			"\t the parameters to be used during interpolation\n\n"
 			"Returns\n"
 			"-------\n"
-			"TemperatureSourveVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
+			"TemperatureSourceVector, -with filled in temperatures according to their position, the idw_parameters and time_axis\n"
 		);
 		def("idw_precipitation", idw_precipitation,
 			"Runs inverse distance interpolation to project precipitation sources out to the destination geo-timeseries\n"
@@ -286,7 +286,7 @@ namespace expose {
 			"\t the parameters to be used during interpolation\n\n"
 			"Returns\n"
 			"-------\n"
-			"PrecipitationSourveVector, -with filled in precipitations according to their position, the idw_parameters and time_axis\n"
+			"PrecipitationSourceVector, -with filled in precipitations according to their position, the idw_parameters and time_axis\n"
 		);
         typedef shyft::core::inverse_distance::temperature_parameter IDWTemperatureParameter;
         class_<IDWTemperatureParameter,bases<IDWParameter>> ("IDWTemperatureParameter",

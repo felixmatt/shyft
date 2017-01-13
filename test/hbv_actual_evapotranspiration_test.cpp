@@ -32,6 +32,17 @@ void hbv_actual_evapotranspiration_test::test_snow() {
 
 	TS_ASSERT(act_evap_no_snow > act_evap_some_snow);
 }
+void hbv_actual_evapotranspiration_test::test_evap_from_non_snow_only() {
+    const double soil_moisture = 200.0;
+    const double pot_evap = 5.0; // [mm/h]
+    const double lp = 150.0;
+    const utctime dt = deltahours(1);
+    double act_evap_no_snow = calculate_step(soil_moisture, pot_evap, lp, 0.0, dt);
+    double act_evap_some_snow = calculate_step(soil_moisture, pot_evap, lp, 0.1, dt);
+
+    TS_ASSERT(act_evap_no_snow > act_evap_some_snow);
+
+}
 
 void hbv_actual_evapotranspiration_test::test_soil_moisture_threshold() {
 	const double sca = 0.0;

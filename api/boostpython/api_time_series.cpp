@@ -49,6 +49,7 @@ namespace expose {
             .def("create_time_point_ts",&shyft::api::TsFactory::create_time_point_ts,time_point_ts_overloads())//args("period","times","values","interpretation"),"return a point ts from specified arguments")
             ;
     }
+ 
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -62,6 +63,23 @@ namespace expose {
         self_ts_t  min_ts_f =&pts_t::min;
         self_dbl_t max_double_f=&pts_t::max;
         self_ts_t  max_ts_f =&pts_t::max;
+        typedef shyft::api::ts_bind_info TsBindInfo;
+        class_<TsBindInfo>("TsBindInfo",
+            "TsBindInfo gives information about the time-series and it's binding\n"
+            "represented by encoded string reference\n"
+            "Given that you have a concrete ts,\n"
+            "you can bind that the bind_info.ts\n"
+            "using bind_info.ts.bind()\n"
+            "see also Timeseries.find_ts_bind_info() and Timeseries.bind()\n"
+            )
+            .def_readwrite("id", &shyft::api::ts_bind_info::reference, "a unique id/url that identifies a time-series in a ts-database/file-store/service")
+            .def_readwrite("ts", &shyft::api::ts_bind_info::ts,"the ts, provides .bind(another_ts) to set the concrete values")
+            ;
+
+        typedef vector<TsBindInfo> TsBindInfoVector;
+        class_<TsBindInfoVector>("TsBindInfoVector", "A vector of TsBindInfo\nsee also TsBindInfo")
+            .def(vector_indexing_suite<TsBindInfoVector>())
+            ;
 
 
 		class_<shyft::api::apoint_ts>("Timeseries", "A timeseries providing mathematical and statistical operations and functionality")
@@ -79,6 +97,14 @@ namespace expose {
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
 			.def(init<const vector<double>&, utctimespan,utctime, const time_axis::generic_dt&>(args("pattern", "dt","t0", "ta"), "construct a timeseries given a equally spaced dt pattern, starting at t0, and a timeaxis ta"))
+            .def(init<std::string>(args("id"),
+                "constructs a bind-able ts,\n"
+                "providing a symbolic possibly unique id that at a later time\n"
+                "can be bound, using the .bind(ts) method to concrete values\n"
+                "if the ts is used as ts, like size(),.value(),time() before it\n"
+                "is bound, then a runtime-exception is raised\n"
+                )
+            )
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 			.def("get_time_axis", &shyft::api::apoint_ts::time_axis, "returns the time-axis", return_internal_reference<>())
@@ -115,6 +141,17 @@ namespace expose {
 				"-------\n"
 				"a new time-series, time-shifted version of self\n"
 			)
+            .def("convolve_w", &shyft::api::apoint_ts::convolve_w, args("weights", "policy"),
+                "create a new ts that is the convolved ts with the supporteds weights list"
+                "Parameters\n"
+                "----------\n"
+                "weights : DoubleVector\n"
+                "\t the weights profile, use DoubleVector.from_numpy(...) to create these.\n"
+                "\t it's the callers responsibility to ensure the sum of weights are 1.0\n"
+                "policy : convolve_policy(.USE_FIRST|USE_ZERO|USE_NAN)\n"
+                "\t Specifies how to handle initial weight.size()-1 values\n"
+                "\t  see also ConvolvePolicy\n"
+            )
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
@@ -140,6 +177,33 @@ namespace expose {
 				"-------\n"
 				"TsVector with len n_partitions"
 				)
+            .def("bind",&shyft::api::apoint_ts::bind,args("bts"),
+                "given that this ts is a bind-able ts (aref_ts)\n"
+                "and that bts is a gpoint_ts, make\n"
+                "a *copy* of gpoint_ts and use it as representation\n"
+                "for the values of this ts\n\n"
+                "Parameters\n"
+                "----------\n"
+                "bts : Timeseries\n"
+                "\t a point ts, with time-axis and values\n\n"
+                "Throws\n"
+                "------\n"
+                "runtime_error if any of preconditions is not true.\n"
+            )
+            .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,
+                "recursive search through the expression that this ts represents,\n"
+                "and return a list of TsBindInfo that can be used to\n"
+                "inspect and possibly 'bind' to ts-values \ref bind.\n"
+                "Return\n"
+                "------\n"
+                "TsBindInfoVector, a list of TsBindInfo\n"
+            )
+            .def("serialize",&shyft::api::apoint_ts::serialize_to_bytes,
+                "convert ts (expression) into a binary blob\n"
+            )
+            .def("deserialize",&shyft::api::apoint_ts::deserialize_from_bytes,args("blob"),
+               "convert a blob, as returned by .serialize() into a Timeseries"
+            ).staticmethod("deserialize")
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
@@ -289,6 +353,18 @@ namespace expose {
         enum_<timeseries::point_interpretation_policy>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",timeseries::POINT_INSTANT_VALUE)
             .value("POINT_AVERAGE_VALUE",timeseries::POINT_AVERAGE_VALUE)
+            .export_values()
+            ;
+        enum_<timeseries::convolve_policy>(
+            "convolve_policy",
+            "Ref Timeseries.convolve_w function, this policy determinte how to handle initial conditions\n"
+            "USE_FIRST: value(0) is used for all values before value(0), 'mass preserving'\n"
+            "USE_ZERO : fill in zero for all values before value(0):shape preserving\n"
+            "USE_NAN  : nan filled in for the first length-1 values of the filter\n"
+            )
+            .value("USE_FIRST", timeseries::convolve_policy::USE_FIRST)
+            .value("USE_ZERO", timeseries::convolve_policy::USE_ZERO)
+            .value("USE_NAN", timeseries::convolve_policy::USE_NAN)
             .export_values()
             ;
         class_<timeseries::point> ("Point", "A timeseries point specifying utctime t and value v")

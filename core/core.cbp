@@ -49,6 +49,7 @@
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#dlib.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
@@ -67,6 +68,7 @@
 			<Option compile="1" />
 			<Option weight="0" />
 		</Unit>
+		<Unit filename="core_serialization.cpp" />
 		<Unit filename="dream_optimizer.cpp" />
 		<Unit filename="dream_optimizer.h" />
 		<Unit filename="experimental.cpp" />
@@ -76,6 +78,7 @@
 		<Unit filename="geo_cell_data.h" />
 		<Unit filename="geo_point.h" />
 		<Unit filename="glacier_melt.h" />
+		<Unit filename="hbv_actual_evapotranspiration.h" />
 		<Unit filename="hbv_snow.h" />
 		<Unit filename="hbv_soil.h" />
 		<Unit filename="hbv_stack.h" />
@@ -96,6 +99,7 @@
 		<Unit filename="pt_ss_k.h" />
 		<Unit filename="pt_ss_k_cell_model.h" />
 		<Unit filename="region_model.h" />
+		<Unit filename="routing.h" />
 		<Unit filename="sceua_optimizer.cpp" />
 		<Unit filename="sceua_optimizer.h" />
 		<Unit filename="skaugen.h" />

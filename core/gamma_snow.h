@@ -110,6 +110,7 @@ namespace shyft {
                         && fabs(temp_swe - x.temp_swe)<eps;
 
                 }
+                x_serialize_decl();
             };
 
 
@@ -195,49 +196,20 @@ namespace shyft {
                 }
 
                 double corr_lwc(const double z1, const double a1, const double b1,
-                                double z2, const double a2, const double b2) const {
-                    double zmax = z1;
-                    double zmin = 0.0;
-                    double dz = fabs(zmax - zmin);
-                    double dz_old = dz;
-                    const double rtol = 1.0e-4;
+                    double z2, const double a2, const double b2) const {
+                    using boost::math::tools::brent_find_minima;
+                    uintmax_t iterations = 60;
+                    auto digits = 12;// accurate enough,std::numeric_limits<double>::digits;
+                    double Q1 = calc_q(a1, b1, z1);
+                    auto result = brent_find_minima(
+                        [Q1, a2, b2, this](const double&z)->double {
+                            double f = this->calc_q(a2, b2, z) - Q1;
+                            return f*f;
+                        },
+                        0.0, z1, digits, iterations);
+                    return result.first;
+                }
 
-                    const double Q1 = calc_q(a1, b1, z1);
-                    const double precision = Q1*rtol;
-                    double Q2 = calc_q(a2, b2, z2);
-                    double f = Q2 - Q1;
-
-                    double df = calc_df(a2, b2, z2);
-
-                    size_t i;
-                    size_t max_iter = 30;
-                    for (i=0; i < max_iter; ++i) {
-                        if (((z2 - zmax)*df - f)*((z2 - zmin)*df - f) > 0.0 || fabs(2.0*f) > fabs(dz_old*df)) {
-                            dz_old = dz;
-                            dz = (zmax - zmin)*0.5;
-                            z2 = zmin + dz;
-                        } else {
-                            dz_old = dz;
-                            dz = f/df;
-                            z2 -= dz;
-                        }
-                        if (fabs(dz) < precision)
-                            break;
-                        // Prepare next iteration
-                        Q2 = calc_q(a2, b2, z2);
-                        f = Q2 - Q1;
-                        df = calc_df(a2, b2, z2);
-                        if (f < 0.0) zmin = z2;
-                        else zmax = z2;
-                    }
-    #ifdef __UNIT_TEST__
-    #if VERBOSE>0
-                    std::cout << "Num iter in corr_lwc = " << i << std::endl;
-    #endif
-    #endif
-                    if (i < max_iter) return z2;
-                    else throw std::runtime_error("corr_lwc did not converge"); // No convergence in max_iter iterations!
-                  }
 
                   void calc_snow_state(const double shape, const double scale, const double y0, const double lambda,
                                        const double lwd, const double max_water_frac, const double temp_swe,
@@ -437,7 +409,9 @@ namespace shyft {
                                 double z1 = lwc/p.max_water;
                                 double z1_guess = z1*(1.0 - sdc_snow/sdc_melt_mean);
                                 //double z1_guess = z1*0.5; // Alternative, simple initial guess
-                                z1 = corr_lwc(z1, alpha_prev, sdc_scale_prev, z1_guess, alpha, sdc_scale);
+                                if (z1_guess < gamma_snow::tol)
+                                    z1_guess = z1*0.5;
+                                z1 = corr_lwc(z1, alpha_prev, sdc_scale_prev>0.0?sdc_scale_prev:sdc_scale, z1_guess, alpha, sdc_scale);
                                 lwc = z1*p.max_water;
                                 calc_snow_state(alpha, sdc_scale, p.initial_bare_ground_fraction,
                                                 acc_melt, lwc, p.max_water, temp_swe, storage, sca);
@@ -504,3 +478,5 @@ namespace shyft {
         }
     } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::gamma_snow::state);

@@ -1,5 +1,7 @@
 ﻿from numpy import random
 import unittest
+import tempfile
+from os import path
 
 from shyft import api
 from shyft.api import pt_gs_k
@@ -15,11 +17,10 @@ class RegionModel(unittest.TestCase):
         region_parameter = parameter_t()
         gcds = api.GeoCellDataVector()  # creating models from geo_cell-data is easier and more flexible
         for i in range(model_size):
-            loc = (10000 * random.random(2)).tolist() + (500 * random.random(1)).tolist()
-            gp = api.GeoPoint(*loc)
+            gp = api.GeoPoint(500+ 1000.0*i,500.0, 500.0*i/model_size)
             cid = 0
             if num_catchments > 1:
-                cid = random.randint(1, num_catchments)
+                cid = random.randint(1, num_catchments + 1)
             geo_cell_data = api.GeoCellData(gp, cell_area, cid, 0.9, api.LandTypeFractions(0.01, 0.05, 0.19, 0.3, 0.45))
             geo_cell_data.land_type_fractions_info().set_fractions(glacier=0.01, lake=0.05, reservoir=0.19, forest=0.3)
             gcds.append(geo_cell_data)
@@ -90,23 +91,33 @@ class RegionModel(unittest.TestCase):
         self.assertEqual(len(re.radiation), 1)
         self.assertAlmostEqual(re.radiation[0].ts.value(0), 300.0)
 
+    def verify_state_handler(self, model):
+        cids_unspecified = api.IntVector()
+        states = model.state.extract_state(cids_unspecified)
+        self.assertEqual(len(states), model.size())
+        unapplied_list = model.state.apply_state(states, cids_unspecified)
+        self.assertEqual(len(unapplied_list), 0)
+
     def test_pt_ss_k_model_init(self):
         num_cells = 20
         model_type = pt_ss_k.PTSSKModel
         model = self.build_model(model_type, pt_ss_k.PTSSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_pt_hs_k_model_init(self):
         num_cells = 20
         model_type = pt_hs_k.PTHSKModel
         model = self.build_model(model_type, pt_hs_k.PTHSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_hbv_stack_model_init(self):
         num_cells = 20
         model_type = hbv_stack.HbvModel
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
 
     def test_extract_geo_cell_data_vector(self):
         num_cells = 20
@@ -114,7 +125,7 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         gcdv = model.extract_geo_cell_data()
-        self.assertEqual(len(gcdv),num_cells)
+        self.assertEqual(len(gcdv), num_cells)
 
     def test_model_area_functions(self):
         num_cells = 20
@@ -138,8 +149,9 @@ class RegionModel(unittest.TestCase):
         model_type = pt_gs_k.PTGSKModel
         model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
         # demo of feature for threads
-        self.assertGreaterEqual(model.ncore,1)  # defaults to hardware concurrency*4
+        self.assertGreaterEqual(model.ncore, 1)  # defaults to hardware concurrency
         model.ncore = 4  # set it to 4, and
         self.assertEqual(model.ncore, 4)  # verify it works
 
@@ -193,18 +205,22 @@ class RegionModel(unittest.TestCase):
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
         self.assertGreaterEqual(sum_discharge_value, 130.0)
+
+        #
+        # check values
+        #
         self.assertIsNotNone(sum_discharge)
         # now, re-run the process in 24-hours steps x 10
         model.set_states(s0)  # restore state s0
-        self.assertEqual(s0.size(),model.initial_state.size())
+        self.assertEqual(s0.size(), model.initial_state.size())
         for section in range(10):
-            model2.run_cells(thread_cell_count=0, start_step=section*24, n_steps=24)
+            model2.run_cells(use_ncore=0, start_step=section * 24, n_steps=24)
             section_discharge = model2.statistics.discharge(cids)
-            self.assertEqual(section_discharge.size(),sum_discharge.size()) # notice here that the values after current step are 0.0
+            self.assertEqual(section_discharge.size(), sum_discharge.size())  # notice here that the values after current step are 0.0
         stepwise_sum_discharge = model2.statistics.discharge(cids)
         # assert stepwise_sum_discharge == sum_discharge
-        diff_ts = sum_discharge.values.to_numpy()-stepwise_sum_discharge.values.to_numpy()
-        self.assertAlmostEqual((diff_ts*diff_ts).max(),0.0,4)
+        diff_ts = sum_discharge.values.to_numpy() - stepwise_sum_discharge.values.to_numpy()
+        self.assertAlmostEqual((diff_ts * diff_ts).max(), 0.0, 4)
         # Verify that if we pass in illegal cids, then it raises exception(with first failing
         try:
             illegal_cids = api.IntVector([0, 4, 5])
@@ -231,6 +247,27 @@ class RegionModel(unittest.TestCase):
         copy_region_model = model.__class__(model)
         self.assertIsNotNone(copy_region_model)
         copy_region_model.run_cells()  # just to verify we can copy and run the new model
+        #
+        # Play with routing and river-network
+        #
+        # 1st: add a river, with 36.000 meter hydro length, a UHGParameter with 1m/hour speed, alpha/beta suitable
+        model.river_network.add(
+            api.River(1, api.RoutingInfo(0, 3000.0), api.UHGParameter(1 / 3.60, 1.0, 0.7)))  # river id =1
+        # 2nd: let cells route to the river
+        model.connect_catchment_to_river(0, 1)  # now all cells in catchment 0 routes to river with id 1.
+        self.assertTrue(model.has_routing())
+        # 3rd: now we can have a look at water coming in and out
+        river_out_m3s = model.river_output_flow_m3s(1)  # should be delayed and reshaped
+        river_local_m3s = model.river_local_inflow_m3s(
+            1)  # should be equal to cell outputs (no routing stuff from cell to river)
+        river_upstream_inflow_m3s = model.river_upstream_inflow_m3s(
+            1)  # should be 0.0 in this case, since we do not have a routing network
+        self.assertIsNotNone(river_out_m3s)
+        self.assertAlmostEqual(river_out_m3s.value(0), 87.4, 0)
+        self.assertIsNotNone(river_local_m3s)
+        self.assertIsNotNone(river_upstream_inflow_m3s)
+        model.connect_catchment_to_river(0, 0)
+        self.assertFalse(model.has_routing())
 
     def test_optimization_model(self):
         num_cells = 20
@@ -279,9 +316,9 @@ class RegionModel(unittest.TestCase):
 
         optimizer.set_target_specification(target_spec, lower_bound, upper_bound)
         # Not needed, it will automatically get one.
-        #optimizer.establish_initial_state_from_model()
-        #s0_0 = optimizer.get_initial_state(0)
-        #optimizer.set_verbose_level(1000)
+        # optimizer.establish_initial_state_from_model()
+        # s0_0 = optimizer.get_initial_state(0)
+        # optimizer.set_verbose_level(1000)
         p0 = model_type.parameter_t(model.get_region_parameter())
         orig_c1 = p0.kirchner.c1
         orig_c2 = p0.kirchner.c2
@@ -293,12 +330,11 @@ class RegionModel(unittest.TestCase):
         goal_fx = optimizer.calculate_goal_function(opt_param)
         p0.kirchner.c1 = -2.4
         p0.kirchner.c2 = 0.91
-        #goal_fx1 = optimizer.calculate_goal_function(p0)
+        # goal_fx1 = optimizer.calculate_goal_function(p0)
 
         self.assertLessEqual(goal_fx, 10.0)
         self.assertAlmostEqual(orig_c1, opt_param.kirchner.c1, 4)
         self.assertAlmostEqual(orig_c2, opt_param.kirchner.c2, 4)
-
 
     def test_hbv_model_initialize_and_run(self):
         num_cells = 20
@@ -443,6 +479,56 @@ class RegionModel(unittest.TestCase):
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().z, cell_vector2[i].mid_point().z)
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().x, cell_vector2[i].mid_point().x)
             self.assertAlmostEqual(cell_vector[i].geo.mid_point().y, cell_vector2[i].mid_point().y)
+
+    def test_state_with_id_handler(self):
+        num_cells = 20
+        model_type = pt_gs_k.PTGSKModel
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells, 2)
+        cids_unspecified = api.IntVector()
+        cids_1 = api.IntVector([1])
+        cids_2 = api.IntVector([2])
+
+        model_state_12 = model.state.extract_state(cids_unspecified)  # this is how to get all states from model
+        model_state_1 = model.state.extract_state(cids_1)  # this is how to get only specified states from model
+        model_state_2 = model.state.extract_state(cids_2)
+        self.assertEqual(len(model_state_1) + len(model_state_2), len(model_state_12))
+        self.assertGreater(len(model_state_1), 0)
+        self.assertGreater(len(model_state_2), 0)
+        for i in range(len(model_state_1)):  # verify selective extract catchment 1
+            self.assertEqual(model_state_1[i].id.cid, 1)
+        for i in range(len(model_state_2)):  # verify selective extract catchment 2
+            self.assertEqual(model_state_2[i].id.cid, 2)
+        for i in range(len(model_state_12)):
+            model_state_12[i].state.kirchner.q = 100 + i
+        model.state.apply_state(model_state_12, cids_unspecified)  # this is how to put all states into  model
+        ms_12 = model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            self.assertAlmostEqual(ms_12[i].state.kirchner.q, 100 + i)
+        for i in range(len(model_state_2)):
+            model_state_2[i].state.kirchner.q = 200 + i
+        unapplied = model.state.apply_state(model_state_2, cids_2)  # this is how to put a limited set of state into model
+        self.assertEqual(len(unapplied), 0)
+        ms_12 = model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            if ms_12[i].id.cid == 1:
+                self.assertAlmostEqual(ms_12[i].state.kirchner.q, 100 + i)
+
+        ms_2 = model.state.extract_state(cids_2)
+        for i in range(len(ms_2)):
+            self.assertAlmostEqual(ms_2[i].state.kirchner.q, 200 + i)
+
+        # serialization support, to and from bytes
+
+        bytes = ms_2.serialize_to_bytes()  # first make some bytes out of the state
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_path = str(path.join(tmpdirname, "pt_gs_k_state_test.bin"))
+            api.byte_vector_to_file(file_path, bytes)  # stash it into a file
+            bytes = api.byte_vector_from_file(file_path)  # get it back from the file and into ByteVector
+        ms_2x = pt_gs_k.deserialize_from_bytes(bytes)  # then restore it from bytes to a StateWithIdVector
+
+        self.assertIsNotNone(ms_2x)
+        for i in range(len(ms_2x)):
+            self.assertAlmostEqual(ms_2x[i].state.kirchner.q, 200 + i)
 
 
 if __name__ == "__main__":

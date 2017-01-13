@@ -9,8 +9,8 @@ namespace shyft {
 		namespace hbv_actual_evapotranspiration {
 			/**<  keeps the parameters (potential calibration/localization) for the AE */
 			struct parameter {
-				double lp = 2.0; ///<default value is 2.0
-				parameter(double lp = 2.0) : lp(lp) {}
+				double lp = 150.0; ///<default value is 150.0
+				parameter(double lp = 150.0) : lp(lp) {}
 			};
 
 			/**<  keeps the formal response of the AE method */
@@ -36,7 +36,7 @@ namespace shyft {
 				const utctime dt) {
 				//double actevap;
 
-				return soil_moisture < lp ? pot_evapo*(soil_moisture / lp)*(1.0 - snow_fraction):pot_evapo;
+				return (1.0 - snow_fraction)*(soil_moisture < lp ? pot_evapo*(soil_moisture / lp):pot_evapo);
 				}
 		};
 	};

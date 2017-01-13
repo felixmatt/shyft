@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{3e3b8f45-003f-4f88-bf3f-400e7af8cb1f}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_grid_pp.py</StartupFile>
+    <StartupFile>test_interpolation.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -19,12 +19,13 @@
     <Name>test.python</Name>
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments />
+    <CommandLineArguments>-v</CommandLineArguments>
     <InterpreterPath>
     </InterpreterPath>
-    <InterpreterArguments />
+    <InterpreterArguments>
+    </InterpreterArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>PYTHONPATH=%PYTHONPATH%;$(SolutionDir)</Environment>
+    <Environment>PYTHONPATH=$(SolutionDir);$(PYTHONPATH)</Environment>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />

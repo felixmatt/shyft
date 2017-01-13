@@ -120,6 +120,7 @@ namespace shyft {
 
 
                 }
+                x_serialize_decl();
             };
 
 
@@ -378,3 +379,5 @@ namespace shyft {
        } // skaugen
     } // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::skaugen::state);

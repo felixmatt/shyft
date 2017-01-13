@@ -153,10 +153,11 @@
 			<Add option="-pthread" />
 			<Add library="blas" />
 			<Add library="lapack" />
-			<Add library="shyftcore" />
 			<Add library="shyftapi" />
+			<Add library="shyftcore" />
 			<Add library="boost_python3" />
 			<Add library="python3.5m" />
+			<Add library="boost_serialization" />
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
@@ -227,7 +228,15 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
+		<Unit filename="api_routing.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
 		<Unit filename="api_skaugen.cpp">
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_state.cpp">
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
