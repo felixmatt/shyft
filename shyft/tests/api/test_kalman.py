@@ -150,6 +150,42 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         for i in range(len(bias_pattern)):
             self.assertLess(abs(bias_pattern[i] - 2.0), 0.2)  # bias should iterate to approx 2.0 degC now.
 
+    def test_compute_running_bias(self):
+        """
+        Verify that if we feed forecast[n] and observation into the bias-predictor
+        it will create the estimated bias offsets
+        """
+        f = api.KalmanFilter()
+        bp = api.KalmanBiasPredictor(f)
+        self.assertIsNotNone(bp)
+        self.assertEqual(bp.filter.parameter.n_daily_observations, 8)
+
+        n_fc = 1
+        utc = api.Calendar()
+        t0 = utc.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n_fc_steps = 24 * 10  # 10 days history
+        fc_dt = api.deltahours(6)
+        fc_fx = lambda time_axis: self._create_fc_values(time_axis, 2.0)  # just return a constant 2.0 deg C for now
+
+        n_obs = n_fc_steps
+        obs_ta = api.Timeaxis2(t0, dt, n_obs)
+        obs_ts = api.Timeseries(obs_ta, fill_value=0.0)
+        kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
+        kalman_ta = api.Timeaxis2(t0, kalman_dt, n_obs // 3)
+        fc_ts = self._create_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)[0]
+        bias_ts = bp.compute_running_bias(fc_ts, obs_ts, kalman_ta)  # also verify we can feed in a pure TsVector
+        bias_pattern = bp.state.x  # the bp.state.x is now the best estimates fo the bias between fc and observation
+        self.assertEqual(len(bias_pattern), 8)
+        for i in range(len(bias_pattern)):
+            self.assertLess(abs(bias_pattern[i] - 2.0), 0.2)  # bias should iterate to approx 2.0 degC now.
+        # and...:
+        for i in range(8):
+            self.assertAlmostEqual(bias_ts.value(i), 0.0)  # expect 0.0 for the first day
+
+        for i in range(8):
+            self.assertLess(abs(bias_ts.value(bias_ts.size() - i-1) - 2.0), 0.2)  # last part should be 2.0 deg.C
+
 
 if __name__ == "__main__":
     unittest.main()
