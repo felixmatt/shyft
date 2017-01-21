@@ -39,13 +39,13 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         # Field names and mappings netcdf_name: shyft_name
         self._arome_shyft_map = {"relative_humidity_2m": "relative_humidity",
                                  "air_temperature_2m": "temperature",
-                                 #"precipitation_amount": "precipitation",
+                                 "precipitation_amount": "precipitation",
                                  "precipitation_amount_acc": "precipitation",
                                  "x_wind_10m": "x_wind",
                                  "y_wind_10m": "y_wind",
                                  "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
 
-        self._shift_fields = ("precipitation_amount_acc",
+        self._shift_fields = ("precipitation_amount_acc","precipitation_amount",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
 
         self.source_type_map = {"relative_humidity": api.RelHumSource,
@@ -450,6 +450,9 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         def air_temp_conv(T, fcn):
             return fcn(T - 273.15)
 
+        def prec_conv(p):
+            return p[:, 1:, :]
+
         def prec_acc_conv(p, fcn):
             return fcn(np.clip(p[:, 1:, :] - p[:, :-1, :], 0.0, 1000.0))
 
@@ -464,14 +467,16 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
                            "air_temperature_2m": lambda x, t: (air_temp_conv(x, concat_v), concat_t(t)),
                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
                                lambda x, t: (rad_conv(x, concat_v), concat_t(t)),
-                           "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, concat_v), concat_t(t))}
+                           "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, concat_v), concat_t(t)),
+                           "precipitation_amount": lambda x, t: (prec_conv(x, concat_v), concat_t(t))}
         else:
             convert_map = {"wind_speed": lambda x, t: (forecast_v(x), forecast_t(t)),
                            "relative_humidity_2m": lambda x, t: (forecast_v(x), forecast_t(t)),
                            "air_temperature_2m": lambda x, t: (air_temp_conv(x, forecast_v), forecast_t(t)),
                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
                                lambda x, t: (rad_conv(x, forecast_v), forecast_t(t, True)),
-                           "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, forecast_v), forecast_t(t, True))}
+                           "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, forecast_v), forecast_t(t, True)),
+                           "precipitation_amount": lambda x, t: (prec_conv(x, forecast_v), forecast_t(t, True))}
         res = {}
         for k, (v, ak) in data.items():
             res[k] = convert_map[ak](v, time)
