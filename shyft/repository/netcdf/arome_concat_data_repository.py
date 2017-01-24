@@ -43,6 +43,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
                                  "precipitation_amount_acc": "precipitation",
                                  "x_wind_10m": "x_wind",
                                  "y_wind_10m": "y_wind",
+                                 "windspeed_10m": "wind_speed",
                                  "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
 
         self._shift_fields = ("precipitation_amount_acc","precipitation_amount",
@@ -326,7 +327,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             ts_id_key = [k for (k, v) in dataset.variables.items() if getattr(v, 'cf_role', None) == 'timeseries_id'][0]
             ts_id = dataset.variables[ts_id_key][:]
 
-        if "wind_speed" in input_source_types:
+        if "wind_speed" in input_source_types and "x_wind_10m" in dataset.variables:
             input_source_types = list(input_source_types)  # We change input list, so take a copy
             input_source_types.remove("wind_speed")
             input_source_types.append("x_wind")
@@ -354,7 +355,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             self._make_time_slice(time, lead_time, lead_times_in_sec,fc_selection_criteria_v, concat)
 
         time_ext = time[time_slice]
-        # print('nb_extra_intervals:',nb_extra_intervals)
+        print('nb_extra_intervals:',nb_extra_intervals)
         if nb_extra_intervals > 0:
             time_extra = time_ext[-1]+np.arange(1, nb_extra_intervals+1)*self.fc_len_to_concat*self.fc_time_res
             time_ext = np.concatenate((time_ext, time_extra))
@@ -378,7 +379,9 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
                 data_slice[dims.index("lead_time")] = data_lead_time_slice
                 data_slice[dims.index("time")] = time_slice # data_time_slice
                 new_slice = [m_xy[xy_slice] if dim==dim_nb_series else slice(None) for dim in dims ]
+                print('Reading', k)
                 pure_arr = data[data_slice][new_slice]
+                print('Finished reading', k)
                 # To check equality of the two extraction methods
                 # data_slice[dims.index(dim_nb_series)] = m_xy
                 # print('Diff:', np.sum(data[data_slice]-pure_arr)) # This should be 0.0
@@ -419,7 +422,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         if set(("x_wind", "y_wind")).issubset(raw_data):
             x_wind, _ = raw_data.pop("x_wind")
             y_wind, _ = raw_data.pop("y_wind")
-            raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), "wind_speed"
+            raw_data["wind_speed"] = np.sqrt(np.square(x_wind) + np.square(y_wind)), "windspeed_10m"
 
         extracted_data = self._transform_raw(raw_data, time_ext, lead_times_in_sec[lead_time_slice], concat)
         return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data, concat), pts)
@@ -450,8 +453,8 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         def air_temp_conv(T, fcn):
             return fcn(T - 273.15)
 
-        def prec_conv(p):
-            return p[:, 1:, :]
+        def prec_conv(p, fcn):
+            return fcn(p[:, 1:, :])
 
         def prec_acc_conv(p, fcn):
             return fcn(np.clip(p[:, 1:, :] - p[:, :-1, :], 0.0, 1000.0))
@@ -462,7 +465,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
 
         # Unit- and aggregation-dependent conversions go here
         if concat:
-            convert_map = {"wind_speed": lambda x, t: (concat_v(x), concat_t(t)),
+            convert_map = {"windspeed_10m": lambda x, t: (concat_v(x), concat_t(t)),
                            "relative_humidity_2m": lambda x, t: (concat_v(x), concat_t(t)),
                            "air_temperature_2m": lambda x, t: (air_temp_conv(x, concat_v), concat_t(t)),
                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
@@ -470,7 +473,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
                            "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x, concat_v), concat_t(t)),
                            "precipitation_amount": lambda x, t: (prec_conv(x, concat_v), concat_t(t))}
         else:
-            convert_map = {"wind_speed": lambda x, t: (forecast_v(x), forecast_t(t)),
+            convert_map = {"windspeed_10m": lambda x, t: (forecast_v(x), forecast_t(t)),
                            "relative_humidity_2m": lambda x, t: (forecast_v(x), forecast_t(t)),
                            "air_temperature_2m": lambda x, t: (air_temp_conv(x, forecast_v), forecast_t(t)),
                            "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
