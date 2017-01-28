@@ -292,7 +292,7 @@ void serialization_test::test_serialization_performance() {
     auto xmls = a.serialize();
     auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
     if(verbose)cout << "\nserialization took " << ms << "ms\n";
-    TS_ASSERT_LESS_THAN(ms, 200.0); // i7 ~ 10 ms
+    TS_ASSERT_LESS_THAN(ms, 1200.0); // i7 ~ 10 ms
     t0 = clock();
     auto b = api::apoint_ts::deserialize(xmls);
     ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
