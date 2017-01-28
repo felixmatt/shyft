@@ -16,7 +16,7 @@ class TimeAxis(unittest.TestCase):
         self.n = 24
         # self.t= self.c.trim(api.utctime_now(),self.d)
         self.t = self.c.trim(self.c.time(api.YMDhms(1969, 12, 31, 0, 0, 0)), self.d)
-        self.ta = api.Timeaxis2(self.t, self.d, self.n)
+        self.ta = api.TimeAxis(self.t, self.d, self.n)
 
     def tearDown(self):
         pass
@@ -64,11 +64,11 @@ class TimeAxis(unittest.TestCase):
         n = 240
         t0 = c.time(2016, 4, 10)
 
-        tag1 = api.Timeaxis2(t0, dt, n)
+        tag1 = api.TimeAxis(t0, dt, n)
         self.assertEqual(len(tag1), n)
         self.assertEqual(tag1.time(0), t0)
 
-        tag2 = api.Timeaxis2(c, t0, dt, n)
+        tag2 = api.TimeAxis(c, t0, dt, n)
         self.assertEqual(len(tag2), n)
         self.assertEqual(tag2.time(0), t0)
 

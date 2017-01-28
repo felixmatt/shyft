@@ -75,16 +75,17 @@ GeoCellData.__str__ = lambda self: StrGeoCellData(self)
 # Fix up UtcPeriod
 UtcPeriod.to_string = lambda self: str(self)
 
+
 # Fix up Timeaxis
 Timeaxis.__str__ = lambda self: "Timeaxis({0},{1},{2})".format(Calendar().to_string(self.start), self.delta_t, self.n)
 Timeaxis.__len__ = lambda self: self.size()
 Timeaxis.__call__ = lambda self, i: self.period(i)
 
-Timeaxis2.__len__ = lambda self: self.size()
-Timeaxis2.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type,
+TimeAxis.__len__ = lambda self: self.size()
+TimeAxis.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type,
                                                                       Calendar().to_string(self.total_period()),
                                                                       self.size())
-Timeaxis2.__call__ = lambda self, i: self.period(i)
+TimeAxis.__call__ = lambda self, i: self.period(i)
 
 # fix up property on timeseries
 Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
@@ -158,8 +159,8 @@ def ta_next(ta):
 Timeaxis.__iter__ = lambda self: ta_iter(self)
 Timeaxis.__next__ = lambda self: ta_next(self)
 
-Timeaxis2.__iter__ = lambda self: ta_iter(self)
-Timeaxis2.__next__ = lambda self: ta_next(self)
+TimeAxis.__iter__ = lambda self: ta_iter(self)
+TimeAxis.__next__ = lambda self: ta_next(self)
 
 # Fix up PointTimeaxis
 PointTimeaxis.__str__ = lambda self: "PointTimeaxis(total_period={0}, n={1} )".format(str(self.total_period()),
@@ -261,3 +262,6 @@ def KalmanBiasPredictor_compute_running_bias(bp, fc_ts, obs_ts, time_axis):
 
 KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast
 KalmanBiasPredictor.compute_running_bias = KalmanBiasPredictor_compute_running_bias
+
+
+Timeaxis2=TimeAxis  #  todo: deprecate it

@@ -488,7 +488,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                     v_padded = v
                 dt_last = t_padded[0, -1] - t_padded[0, -2]
                 return (v_padded,
-                        [api.Timeaxis2(api.UtcTimeVector.FromNdArray(t_one), int(t_one[-1] + dt_last)) for t_one in
+                        [api.TimeAxis(api.UtcTimeVector.from_numpy(t_one), int(t_one[-1] + dt_last)) for t_one in
                          t_padded])
             else:
                 return (v, t)

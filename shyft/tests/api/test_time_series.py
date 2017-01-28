@@ -156,7 +156,7 @@ class TimeSeries(unittest.TestCase):
         t0 = api.utctime_now()
         dt = api.deltahours(1)
         n = 240
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
 
         a = api.Timeseries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.Timeseries(ta=ta, fill_value=1.0)
@@ -226,7 +226,7 @@ class TimeSeries(unittest.TestCase):
 
         wanted_percentiles = api.IntVector([0, 10, 50, -1, 70, 100])
         ta_day = api.Timeaxis(t0, dt * 24, n // 24)
-        ta_day2 = api.Timeaxis2(t0, dt * 24, n // 24)
+        ta_day2 = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
         percentiles2 = timeseries.percentiles(ta_day2, wanted_percentiles)  # just to verify it works with alt. syntax
 
@@ -262,7 +262,7 @@ class TimeSeries(unittest.TestCase):
         t0 = c.time(2016, 1, 1)
         dt = api.deltahours(1)
         n = 240
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         ts0 = api.Timeseries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         ts1 = ts0.accumulate(ts0.get_time_axis())  # ok, maybe we should make method that does time-axis implicit ?
         ts1_values = ts1.values
@@ -284,7 +284,7 @@ class TimeSeries(unittest.TestCase):
         t0 = c.time(2016, 1, 1)
         dt = api.deltahours(1)
         n = 240
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         from math import sin, pi
         rad_max = 10 * 2 * pi
         obs_values = api.DoubleVector.from_numpy(np.array([sin(i * rad_max / n) for i in range(n)]))
@@ -311,7 +311,7 @@ class TimeSeries(unittest.TestCase):
         t0 = c.time(2016, 1, 1)
         dt = api.deltahours(1)
         n = 240
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         pattern_values = api.DoubleVector.from_numpy(np.arange(8))
         pattern_dt = api.deltahours(3)
         pattern_t0 = c.time(2015,6,1)
@@ -334,7 +334,7 @@ class TimeSeries(unittest.TestCase):
         dt = api.deltahours(1)
         n = c.diff_units(t0, c.time(2016, 9, 1), dt)
 
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         pattern_values = api.DoubleVector.from_numpy(np.arange(len(ta))) # increasing values
 
         src_ts = api.Timeseries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
@@ -357,7 +357,7 @@ class TimeSeries(unittest.TestCase):
 
         # Now finally, try percentiles on the partitions
         wanted_percentiles = [0, 10, 25, -1, 50, 75, 90, 100]
-        ta_percentiles = api.Timeaxis2(partition_t0, api.deltahours(24), 365)
+        ta_percentiles = api.TimeAxis(partition_t0, api.deltahours(24), 365)
         percentiles = api.percentiles(ts_partitions,ta_percentiles,wanted_percentiles)
         self.assertEqual(len(percentiles), len(wanted_percentiles))
 
@@ -367,7 +367,7 @@ class TimeSeries(unittest.TestCase):
         dt = api.deltahours(1)
         n = c.diff_units(t0, c.time(2017, 9, 1), dt)
 
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         pattern_values = api.DoubleVector.from_numpy(np.arange(len(ta))) # increasing values
 
         a = api.Timeseries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)

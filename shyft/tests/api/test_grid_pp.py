@@ -14,7 +14,7 @@ class GridPP(unittest.TestCase):
         self.dt = api.deltahours(1)
         self.nt = 24*10
         self.t0 = self.cal.time(2016, 1, 1)
-        self.ta = api.Timeaxis2(self.t0, self.dt, self.nt)
+        self.ta = api.TimeAxis(self.t0, self.dt, self.nt)
         self.ta1 = api.Timeaxis(self.t0, self.dt, self.nt)
 
         self.geo_points = api.GeoPointVector()
@@ -48,7 +48,7 @@ class GridPP(unittest.TestCase):
         bias_set = api.TemperatureSourceVector()
         kf = api.KalmanFilter()
         kbp = api.KalmanBiasPredictor(kf)
-        kta = api.Timeaxis2(self.t0, api.deltahours(3), 8)
+        kta = api.TimeAxis(self.t0, api.deltahours(3), 8)
         for obs in obs_set:
             kbp.update_with_forecast(fc_set, obs.ts, kta)
             pattern = api.KalmanState.get_x(kbp.state)

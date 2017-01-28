@@ -51,7 +51,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         t0 = utc.time(2015, 1, 1)
         dt = api.deltahours(3)
         n = 8
-        ta = api.Timeaxis2(t0, dt, n)
+        ta = api.TimeAxis(t0, dt, n)
         for i in range(ta.size()):
             f.update(2.0, ta.time(i), s)
         x = s.x
@@ -82,7 +82,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_set = api.TemperatureSourceVector()
         geo_point = api.GeoPoint(0.0, 0.0, 0.0)  # any point will do, we just reuse the geo-ts
         for i in range(n_fc):
-            ta = api.Timeaxis2(t0 + i * dt_fc, dt, n_steps)
+            ta = api.TimeAxis(t0 + i * dt_fc, dt, n_steps)
             ts = api.Timeseries(ta=ta, values=fx(ta),
                                 point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
             geo_ts = api.TemperatureSource(geo_point, ts)
@@ -108,7 +108,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         """
         fc_set = api.TsVector()
         for i in range(n_fc):
-            ta = api.Timeaxis2(t0 + i * dt_fc, dt, n_steps)
+            ta = api.TimeAxis(t0 + i * dt_fc, dt, n_steps)
             ts = api.Timeseries(ta=ta, values=fx(ta),
                                 point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
             fc_set.append(ts)
@@ -138,10 +138,10 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_fx = lambda time_axis: self._create_fc_values(time_axis, 2.0)  # just return a constant 2.0 deg C for now
         fc_set = self._create_geo_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)
         n_obs = 24
-        obs_ta = api.Timeaxis2(t0, dt, n_obs)
+        obs_ta = api.TimeAxis(t0, dt, n_obs)
         obs_ts = api.Timeseries(obs_ta, fill_value=0.0)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
-        kalman_ta = api.Timeaxis2(t0, kalman_dt, 8)
+        kalman_ta = api.TimeAxis(t0, kalman_dt, 8)
         bp.update_with_forecast(fc_set, obs_ts, kalman_ta)  # here we feed in forecast-set and observation into kalman
         fc_setv = self._create_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)
         bp.update_with_forecast(fc_setv, obs_ts, kalman_ta)  # also verify we can feed in a pure TsVector
@@ -169,10 +169,10 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_fx = lambda time_axis: self._create_fc_values(time_axis, 2.0)  # just return a constant 2.0 deg C for now
 
         n_obs = n_fc_steps
-        obs_ta = api.Timeaxis2(t0, dt, n_obs)
+        obs_ta = api.TimeAxis(t0, dt, n_obs)
         obs_ts = api.Timeseries(obs_ta, fill_value=0.0)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
-        kalman_ta = api.Timeaxis2(t0, kalman_dt, n_obs // 3)
+        kalman_ta = api.TimeAxis(t0, kalman_dt, n_obs // 3)
         fc_ts = self._create_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)[0]
         bias_ts = bp.compute_running_bias(fc_ts, obs_ts, kalman_ta)  # also verify we can feed in a pure TsVector
         bias_pattern = bp.state.x  # the bp.state.x is now the best estimates fo the bias between fc and observation

@@ -49,7 +49,7 @@ def convert_ta(shyft_ta):
     elif isinstance(shyft_ta, api.PointTimeaxis):
         # Point TA
         ta = create_point_ta(shyft_ta)
-    elif isinstance(shyft_ta, api.Timeaxis2):
+    elif isinstance(shyft_ta, api.TimeAxis):
         # Generic TA: either Calendar | Fixed | Point
         if shyft_ta.timeaxis_type == api.TimeaxisType.FIXED:
             ta = TimeAxis(Calendar.Utc, UtcTime.CreateFromUnixTime(shyft_ta.fixed_dt.start), TimeSpan.FromSeconds(shyft_ta.fixed_dt.delta_t), shyft_ta.fixed_dt.n)

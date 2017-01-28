@@ -20,7 +20,7 @@ class BayesianKriging(unittest.TestCase):
         self.d = api.deltahours(1)
         self.n = 24
         self.t = self.c.trim(self.c.time(2016, 9, 1), self.d)
-        self.ta = api.Timeaxis2(self.t, self.d, self.n)
+        self.ta = api.TimeAxis(self.t, self.d, self.n)
         self.dx_arome = 2500
         self.dx_model = 1000
         self.nx = 2
@@ -130,7 +130,7 @@ class BayesianKriging(unittest.TestCase):
 
         # assert 1:
         self.assertEqual(len(grid_1km_1ts), self.mnx * self.mny)
-        expected_grid_1ts_values = ts_site_1.average(api.Timeaxis2(ta_grid)).values.to_numpy()
+        expected_grid_1ts_values = ts_site_1.average(api.TimeAxis(ta_grid)).values.to_numpy()
 
         for gts in grid_1km_1ts:
             self.assertEqual(gts.ts.size(), ta_grid.size())
@@ -178,7 +178,7 @@ class BayesianKriging(unittest.TestCase):
 
         # assert 1:
         self.assertEqual(len(grid_1km_1ts), self.mnx * self.mny)
-        expected_grid_1ts_values = ts_site_1.average(api.Timeaxis2(ta_grid)).values.to_numpy()
+        expected_grid_1ts_values = ts_site_1.average(api.TimeAxis(ta_grid)).values.to_numpy()
 
         for gts in grid_1km_1ts:
             self.assertEqual(gts.ts.size(), ta_grid.size())
