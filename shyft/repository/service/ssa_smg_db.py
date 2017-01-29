@@ -51,12 +51,12 @@ def convert_ta(shyft_ta):
         ta = create_point_ta(shyft_ta)
     elif isinstance(shyft_ta, api.TimeAxis):
         # Generic TA: either Calendar | Fixed | Point
-        if shyft_ta.timeaxis_type == api.TimeaxisType.FIXED:
+        if shyft_ta.timeaxis_type == api.TimeAxisType.FIXED:
             ta = TimeAxis(Calendar.Utc, UtcTime.CreateFromUnixTime(shyft_ta.fixed_dt.start), TimeSpan.FromSeconds(shyft_ta.fixed_dt.delta_t), shyft_ta.fixed_dt.n)
-        elif shyft_ta.timeaxis_type == api.TimeaxisType.CALENDAR:
+        elif shyft_ta.timeaxis_type == api.TimeAxisType.CALENDAR:
             cal = Calendar(shyft_ta.calendar_dt.calendar.tz_info.name)
             ta = TimeAxis(cal, UtcTime.CreateFromUnixTime(shyft_ta.calendar_dt.start), TimeSpan.FromSeconds(shyft_ta.calendar_dt.delta_t), shyft_ta.calendar_dt.n)
-        elif shyft_ta.timeaxis_type == api.TimeaxisType.POINT:
+        elif shyft_ta.timeaxis_type == api.TimeAxisType.POINT:
             ta = create_point_ta(shyft_ta.point_dt)
     if ta is None:
         raise SmgDataError('Unsupported shyft time-axis: ' + str(shyft_ta))

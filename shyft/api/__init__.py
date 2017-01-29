@@ -320,3 +320,5 @@ class PointTimeaxis(TimeAxisByPoints):
     @deprecated("please start using TimeAxisByPoints")
     def __init__(self, *args, **kwargs):
         super(PointTimeaxis, self).__init__(*args, **kwargs)
+
+TimeaxisType = TimeAxisType  #  todo: deprecate it
