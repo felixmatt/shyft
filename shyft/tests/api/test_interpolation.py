@@ -54,7 +54,7 @@ class BayesianKriging(unittest.TestCase):
         for i in range(nx):
             for j in range(ny):
                 z = self.max_elevation * (i + j) / (nx + ny)
-                ts = api.Timeseries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+                ts = api.TimeSeries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
                 geo_ts = api.TemperatureSource(api.GeoPoint(i * dx, j * dx, z), ts)
                 arome_grid.append(geo_ts)
         return arome_grid
@@ -64,7 +64,7 @@ class BayesianKriging(unittest.TestCase):
         for i in range(nx):
             for j in range(ny):
                 z = self.max_elevation * (i + j) / (nx + ny)
-                ts = api.Timeseries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+                ts = api.TimeSeries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
                 geo_ts = api.PrecipitationSource(api.GeoPoint(i * dx, j * dx, z), ts)
                 arome_grid.append(geo_ts)
         return arome_grid
@@ -88,7 +88,7 @@ class BayesianKriging(unittest.TestCase):
         fx = lambda z: api.DoubleVector.from_numpy((20.0 - 0.6 * z / 100) + 3.0 * np.sin(np.arange(start=0, stop=self.n, step=1) * 2 * np.pi / 24.0 - np.pi / 2.0))
         arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
         destination_grid = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
-        ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         # act, - run the bayesian_kriging_temperature algoritm.
         r = api.bayesian_kriging_temperature(arome_grid, destination_grid, ta, btk_parameter)
         # assert
@@ -113,14 +113,14 @@ class BayesianKriging(unittest.TestCase):
         grid_1km_3 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
 
         observation_sites = api.TemperatureSourceVector()
-        ta_obs = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
-        ta_grid = api.Timeaxis(self.t, self.d, self.n)
+        ta_obs = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
+        ta_grid = api.TimeAxisFixedDeltaT(self.t, self.d, self.n)
 
-        ts_site_1 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_1 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (20.0 - 0.6 * 5.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
-        ts_site_2 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_2 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (20.0 - 0.6 * 500.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
-        ts_site_3 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_3 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (20.0 - 0.6 * 1050.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
 
         observation_sites.append(api.TemperatureSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
@@ -161,14 +161,14 @@ class BayesianKriging(unittest.TestCase):
         grid_1km_3 = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
 
         observation_sites = api.GeoPointSourceVector()
-        ta_obs = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
-        ta_grid = api.Timeaxis(self.t, self.d, self.n)
+        ta_obs = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
+        ta_grid = api.TimeAxisFixedDeltaT(self.t, self.d, self.n)
 
-        ts_site_1 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_1 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (1.0) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
-        ts_site_2 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_2 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (0.8) + 0.2 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
-        ts_site_3 = api.Timeseries(ta_obs, values=api.DoubleVector.from_numpy(
+        ts_site_3 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
             (1.2) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
 
         observation_sites.append(api.GeoPointSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
@@ -207,7 +207,7 @@ class BayesianKriging(unittest.TestCase):
         fx = lambda z : [15 for x in range(self.n)]
         arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
         dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
-        ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         dest_grid = api.idw_temperature(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
         self.assertEqual(len(dest_grid), self.mnx * self.mny)
@@ -223,7 +223,7 @@ class BayesianKriging(unittest.TestCase):
         fx = lambda z : [15 for x in range(self.n)]
         arome_grid = self._create_geo_precipitation_grid(self.nx, self.ny, self.dx_arome, fx)
         dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
-        ta = api.Timeaxis(self.t, self.d * 3, int(self.n / 3))
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         dest_grid = api.idw_precipitation(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
         self.assertEqual(len(dest_grid), self.mnx * self.mny)

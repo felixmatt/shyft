@@ -5,7 +5,7 @@ try:
     from os import path
     from shyft import api
     from shyft import shyftdata_dir
-    from shyft.api import Calendar, YMDhms, Timeaxis, deltahours
+    from shyft.api import Calendar, YMDhms, TimeAxisFixedDeltaT, deltahours
     from shyft.api import pt_gs_k
     from shyft.api import pt_ss_k
     from shyft.repository.default_state_repository import DefaultStateRepository
@@ -93,8 +93,8 @@ try:
 
             """
             utc = Calendar()  # No offset gives Utc
-            time_axis = Timeaxis(utc.time(YMDhms(2015, 9, 1, 0)), deltahours(1), 30 * 24)
-            fc_time_axis = Timeaxis(utc.time(YMDhms(2015, 10, 1, 0)), deltahours(1), 65)
+            time_axis = TimeAxisFixedDeltaT(utc.time(YMDhms(2015, 9, 1, 0)), deltahours(1), 30 * 24)
+            fc_time_axis = TimeAxisFixedDeltaT(utc.time(YMDhms(2015, 10, 1, 0)), deltahours(1), 65)
 
             interpolation_id = 0
             ptgsk = DefaultSimulator("Tistel-ptgsk",

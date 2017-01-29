@@ -49,7 +49,7 @@ namespace expose {
             .def("create_time_point_ts",&shyft::api::TsFactory::create_time_point_ts,time_point_ts_overloads())//args("period","times","values","interpretation"),"return a point ts from specified arguments")
             ;
     }
- 
+
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -82,7 +82,7 @@ namespace expose {
             ;
 
 
-		class_<shyft::api::apoint_ts>("Timeseries", "A timeseries providing mathematical and statistical operations and functionality")
+		class_<shyft::api::apoint_ts>("TimeSeries", "A time-series providing mathematical and statistical operations and functionality")
 			.def(init<const time_axis::generic_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
 			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 

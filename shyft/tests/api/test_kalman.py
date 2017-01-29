@@ -83,7 +83,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         geo_point = api.GeoPoint(0.0, 0.0, 0.0)  # any point will do, we just reuse the geo-ts
         for i in range(n_fc):
             ta = api.TimeAxis(t0 + i * dt_fc, dt, n_steps)
-            ts = api.Timeseries(ta=ta, values=fx(ta),
+            ts = api.TimeSeries(ta=ta, values=fx(ta),
                                 point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
             geo_ts = api.TemperatureSource(geo_point, ts)
             fc_set.append(geo_ts)
@@ -109,7 +109,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_set = api.TsVector()
         for i in range(n_fc):
             ta = api.TimeAxis(t0 + i * dt_fc, dt, n_steps)
-            ts = api.Timeseries(ta=ta, values=fx(ta),
+            ts = api.TimeSeries(ta=ta, values=fx(ta),
                                 point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
             fc_set.append(ts)
         return fc_set
@@ -139,7 +139,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_set = self._create_geo_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)
         n_obs = 24
         obs_ta = api.TimeAxis(t0, dt, n_obs)
-        obs_ts = api.Timeseries(obs_ta, fill_value=0.0)
+        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
         kalman_ta = api.TimeAxis(t0, kalman_dt, 8)
         bp.update_with_forecast(fc_set, obs_ts, kalman_ta)  # here we feed in forecast-set and observation into kalman
@@ -170,7 +170,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
 
         n_obs = n_fc_steps
         obs_ta = api.TimeAxis(t0, dt, n_obs)
-        obs_ts = api.Timeseries(obs_ta, fill_value=0.0)
+        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
         kalman_ta = api.TimeAxis(t0, kalman_dt, n_obs // 3)
         fc_ts = self._create_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)[0]

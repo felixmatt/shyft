@@ -12,7 +12,7 @@ namespace expose {
 
         static void e_fixed_dt() {
             using namespace shyft::time_axis;
-            class_<fixed_dt>("Timeaxis","timeaxis doc")
+            class_<fixed_dt>("TimeAxisFixedDeltaT","timeaxis doc")
                 .def(init<utctime,utctimespan,long>(args("start","delta_t","n"),"creates a timeaxis with n intervals, fixed delta_t, starting at start"))
                 //.def(init<npy_int64,npy_int64,npy_int64>(args("start","delta_t","n"),"creates a timeaxis with n intervals, fixed delta_t, starting at start"))
                 .def("size",&fixed_dt::size,"returns number of intervals")
@@ -29,7 +29,7 @@ namespace expose {
         }
         static void e_point_dt() {
             using namespace shyft::time_axis;
-            class_<point_dt>("PointTimeaxis","timeaxis doc")
+            class_<point_dt>("TimeAxisByPoints","timeaxis doc")
                 .def(init<const vector<utctime>&,utctime>(args("time_points","t_end"),"creates a time-axis with n intervals using time-points plus the end-points"))
                 .def(init<const vector<utctime>& >(args("time_points"),"create a time-axis supplying n+1 points to define n intervals"))
                 .def("size",&point_dt::size,"returns number of intervals")
@@ -47,7 +47,7 @@ namespace expose {
 
         static void e_calendar_dt() {
             using namespace shyft::time_axis;
-            class_<calendar_dt>("CalendarTimeaxis","timeaxis doc")
+            class_<calendar_dt>("TimeAxisCalendarDeltaT","timeaxis doc")
                 .def(init<shared_ptr<const calendar>,utctime,utctimespan,long>(args("calendar","start","delta_t","n"),"creates a calendar timeaxis with n intervals, fixed calendar delta_t, starting at start"))
                 .def("size",&calendar_dt::size,"returns number of intervals")
                 .def_readonly("n",&calendar_dt::n,"number of periods")

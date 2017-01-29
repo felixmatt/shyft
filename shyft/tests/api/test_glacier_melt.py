@@ -5,7 +5,7 @@ from shyft.api import deltahours
 from shyft.api import Calendar
 
 from shyft.api import TimeAxis
-from shyft.api import Timeseries
+from shyft.api import TimeSeries
 from shyft.api import point_interpretation_policy as fx_policy
 from shyft.api import create_glacier_melt_ts_m3s
 from shyft.api import DoubleVector as dv
@@ -40,9 +40,9 @@ class GlacierMelt(unittest.TestCase):
         n = 240
         ta = TimeAxis(t0, dt, n)
         area_m2 = 487*1000*1000  # Jostedalsbreen, largest i Europe
-        temperature = Timeseries(ta=ta, fill_value=10.0, point_fx=fx_policy.POINT_AVERAGE_VALUE)
+        temperature = TimeSeries(ta=ta, fill_value=10.0, point_fx=fx_policy.POINT_AVERAGE_VALUE)
         sca_values = dv.from_numpy(np.linspace(area_m2*1.0,0.0,num=n))
-        sca = Timeseries(ta=ta, values=sca_values, point_fx=fx_policy.POINT_AVERAGE_VALUE)
+        sca = TimeSeries(ta=ta, values=sca_values, point_fx=fx_policy.POINT_AVERAGE_VALUE)
         gf = 1.0 *area_m2
         dtf = 6.0
         melt_m3s = create_glacier_melt_ts_m3s(temperature, sca, gf, dtf) # Here we get back a melt_ts, that we can do ts-stuff with

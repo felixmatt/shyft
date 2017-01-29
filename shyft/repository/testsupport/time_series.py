@@ -42,7 +42,7 @@ def create_mock_time_series_data(type_, time_axis, **kwargs):
 
 
 def create_mock_station_data(t0, dt, n_steps, **kwargs):
-    time_axis = api.Timeaxis(t0, dt, n_steps)
+    time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_steps)
     return {"temperature": create_mock_time_series_data("temperature", time_axis, **kwargs),
             "precipitation": create_mock_time_series_data("precipitation", time_axis, **kwargs),
             "relative_humidity": create_mock_time_series_data("relative_humidity", time_axis, **kwargs),
