@@ -20,5 +20,5 @@ class NetCdfTimeTestCase(unittest.TestCase):
         utc = api.Calendar()
         t_num = np.arange(-24, 24, 1, dtype=np.float64)  # we use both before and after epoch to ensure sign is ok
         t_converted = convert_netcdf_time('hours since 1970-01-01 00:00:00', t_num)
-        t_axis = api.Timeaxis(utc.time(api.YMDhms(1969, 12, 31, 0, 0, 0)), api.deltahours(1), 2 * 24)
+        t_axis = api.TimeAxisFixedDeltaT(utc.time(api.YMDhms(1969, 12, 31, 0, 0, 0)), api.deltahours(1), 2 * 24)
         [self.assertEqual(t_converted[i], t_axis(i).start) for i in range(t_axis.size())]

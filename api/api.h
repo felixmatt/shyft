@@ -966,7 +966,7 @@ namespace shyft {
         static vector<double> to_vector(const geo_cell_data& gcd) {
             vector<double> v;v.reserve(11);
             push_to_vector(v,gcd);
-            return std::move(v);
+            return v;
         }
         static geo_cell_data from_raw_vector(const double *v) {
             land_type_fractions ltf; ltf.set_fractions(v[6],v[7],v[8],v[9]);

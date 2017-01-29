@@ -5,7 +5,7 @@ import unittest
 
 
 class TimeAxis(unittest.TestCase):
-    """Verify and illustrate Timeaxis
+    """Verify and illustrate TimeAxis
        defined as n periods non-overlapping ascending
         
      """
@@ -16,7 +16,7 @@ class TimeAxis(unittest.TestCase):
         self.n = 24
         # self.t= self.c.trim(api.utctime_now(),self.d)
         self.t = self.c.trim(self.c.time(api.YMDhms(1969, 12, 31, 0, 0, 0)), self.d)
-        self.ta = api.Timeaxis2(self.t, self.d, self.n)
+        self.ta = api.TimeAxis(self.t, self.d, self.n)
 
     def tearDown(self):
         pass
@@ -29,9 +29,7 @@ class TimeAxis(unittest.TestCase):
         self.assertEqual(self.ta(1).start, self.t + self.d)
         self.assertEqual(self.ta.total_period().start, self.t)
         va = np.array([86400, 3600, 3], dtype=np.int64)
-        xta = api.Timeaxis(int(va[0]), int(va[1]), int(va[2]))
-        # xta = api.Timeaxis(va[0], va[1], va[2])# TODO: boost.python require this to be int, needs overload for np.int64 types..
-        # xta = api.Timeaxis(86400,3600,3)
+        xta = api.TimeAxisFixedDeltaT(int(va[0]), int(va[1]), int(va[2]))
         self.assertEqual(xta.size(), 3)
 
     def test_iterate_timeaxis(self):
@@ -64,11 +62,11 @@ class TimeAxis(unittest.TestCase):
         n = 240
         t0 = c.time(2016, 4, 10)
 
-        tag1 = api.Timeaxis2(t0, dt, n)
+        tag1 = api.TimeAxis(t0, dt, n)
         self.assertEqual(len(tag1), n)
         self.assertEqual(tag1.time(0), t0)
 
-        tag2 = api.Timeaxis2(c, t0, dt, n)
+        tag2 = api.TimeAxis(c, t0, dt, n)
         self.assertEqual(len(tag2), n)
         self.assertEqual(tag2.time(0), t0)
 

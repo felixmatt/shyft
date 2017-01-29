@@ -26,3 +26,14 @@
 
 
 #include "core/core_pch.h"
+
+// experiment with python doc standard macro helpers
+#define doc_intro(intro) intro  "\n"
+#define doc_parameters() "\nParameters\n----------\n"
+#define doc_parameter(name_str,type_str,descr_str) name_str  " : "  type_str  "\n\t"  descr_str  "\n"
+#define doc_paramcont(doc_str) "\t"  doc_str  "\n"
+#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n"  name_str  " : "  type_str  "\n\t" descr_str "\n"
+#define doc_notes() "\nNotes\n-----\n"
+#define doc_note(note_str) note_str  "\n"
+#define doc_see_also(ref) "\nSee Also\n--------\n" ref  "\n"
+#define doc_ind(doc_str) "\t"  doc_str

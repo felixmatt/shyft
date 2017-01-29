@@ -15,7 +15,7 @@ from shyft.api import IntVector
 from shyft.api import Calendar
 from shyft.api import deltahours
 from shyft.api import YMDhms
-from shyft.api import Timeaxis
+from shyft.api import TimeAxisFixedDeltaT
 from shyft.api import TargetSpecificationPts
 from shyft.api import TargetSpecificationVector
 from shyft.api import KLING_GUPTA
@@ -590,7 +590,7 @@ def simple_run_demo():
     normal_calendar = Calendar(3600) # we need UTC+1, since day-boundaries in day series in SmG is at UTC+1
     t_start = normal_calendar.time(2010, 9, 1) # we start at
     t_end   = normal_calendar.add(t_start,Calendar.YEAR,5) # 5 years period for simulation
-    time_axis = Timeaxis(t_start, model_dt, normal_calendar.diff_units(t_start,t_end,model_dt))
+    time_axis = TimeAxisFixedDeltaT(t_start, model_dt, normal_calendar.diff_units(t_start,t_end,model_dt))
 
     # 2. Create the shyft model from the HBV model-repository
     shyft_model = create_kjela_model(PTHSKModel, kjela.geo_ts_repository)
@@ -600,7 +600,7 @@ def simple_run_demo():
     #      *and* the observed discharge at the start time t_start
     #
     t_burnin = normal_calendar.add(t_start,Calendar.YEAR,1) # use one year to get distribution between hbvzones
-    burnin_time_axis = Timeaxis(t_start, model_dt, normal_calendar.diff_units(t_start, t_burnin, model_dt))
+    burnin_time_axis = TimeAxisFixedDeltaT(t_start, model_dt, normal_calendar.diff_units(t_start, t_burnin, model_dt))
     q_obs_m3s_ts = observed_kjela_discharge(time_axis.total_period()) # get out the observation ts
     q_obs_m3s_at_t_start= q_obs_m3s_ts(t_start) # get the m3/s at t_start
     initial_state = burn_in_state(shyft_model,burnin_time_axis, q_obs_m3s_at_t_start)

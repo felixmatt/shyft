@@ -66,7 +66,7 @@ class RegionModel(unittest.TestCase):
 
     def test_source_uid(self):
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
         mid_point = api.GeoPoint(1000, 1000, 100)
         precip_source = self._create_constant_geo_ts(api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0)
         self.assertIsNotNone(precip_source.uid)
@@ -85,7 +85,7 @@ class RegionModel(unittest.TestCase):
 
     def test_create_region_environment(self):
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
         re = self.create_dummy_region_environment(time_axis, api.GeoPoint(1000, 1000, 100))
         self.assertIsNotNone(re)
         self.assertEqual(len(re.radiation), 1)
@@ -165,7 +165,7 @@ class RegionModel(unittest.TestCase):
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
         self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         model_interpolation_parameter = api.InterpolationParameter()
         # degC/m, so -0.5 degC/100m
         model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
@@ -277,7 +277,7 @@ class RegionModel(unittest.TestCase):
         t0 = cal.time(2015, 1, 1, 0, 0, 0)
         dt = api.deltahours(1)
         n = 240
-        time_axis = api.Timeaxis(t0, dt, n)
+        time_axis = api.TimeAxisFixedDeltaT(t0, dt, n)
         model_interpolation_parameter = api.InterpolationParameter()
         model.initialize_cell_environment(time_axis)  # just show how we can split the run_interpolation into two calls(second one optional)
         model.interpolate(
@@ -351,7 +351,7 @@ class RegionModel(unittest.TestCase):
         # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
         # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
         cal = api.Calendar()
-        time_axis = api.Timeaxis(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         model_interpolation_parameter = api.InterpolationParameter()
         # degC/m, so -0.5 degC/100m
         model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005

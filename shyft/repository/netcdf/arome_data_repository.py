@@ -441,12 +441,12 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         def noop_time(t):
             t0 = int(t[0])
             t1 = int(t[1])
-            return api.Timeaxis(t0, t1 - t0, len(t))
+            return api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t))
 
         def dacc_time(t):
             t0 = int(t[0])
             t1 = int(t[1])
-            return noop_time(t) if issubset else api.Timeaxis(t0, t1 - t0, len(t) - 1)
+            return noop_time(t) if issubset else api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t) - 1)
 
         def noop_space(x):
             return x

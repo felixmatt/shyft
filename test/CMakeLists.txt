@@ -37,10 +37,10 @@ set(target "test_shyft")
 
 # Flags
 add_definitions("-D__UNIT_TEST__ -DVERBOSE=0 -DCXXTEST_HAVE_EH -DCXXTEST_HAVE_STD")
-
+find_package(PNG REQUIRED)
 add_executable(${target} ${sources})
 # Additional libraries
-target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system boost_serialization)
+target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system boost_serialization dlib ${PNG_LIBRARY} )
 
 # This can be made more specific, but we would need the list of tests.
 #add_test(${target} ${target})

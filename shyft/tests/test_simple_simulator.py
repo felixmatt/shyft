@@ -49,7 +49,7 @@ class SimulationTestCase(unittest.TestCase):
         dt = api.deltahours(1)
         utc = api.Calendar()  # No offset gives Utc
         t0 = utc.time(dt0)
-        time_axis = api.Timeaxis(t0, dt, n_hours)
+        time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_hours)
 
         # Some dummy ids not needed for the netcdf based repositories
         region_id = 0
@@ -211,7 +211,7 @@ class SimulationTestCase(unittest.TestCase):
         n_steps = 400
         utc = api.Calendar()  # No offset gives Utc
         t0 = utc.time(api.YMDhms(year, month, day, hour))
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_steps)
 
         # Some fake ids
         region_id = 0
@@ -279,7 +279,7 @@ class SimulationTestCase(unittest.TestCase):
         n_steps = 400
         utc = api.Calendar()  # No offset gives Utc
         t0 = utc.time(2010, 9, 1, 0)
-        time_axis = api.Timeaxis(t0, dt, n_steps)
+        time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_steps)
 
         # Some fake ids
         region_id = 0
@@ -330,7 +330,7 @@ class SimulationTestCase(unittest.TestCase):
         kirchner_param_max.kirchner.c2 *= 1.2
         kirchner_param_max.kirchner.c3 *= 1.2
         # kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
-        # kirchner_time_axis = api.Timeaxis(kirchner_t_start, dt, 150)
+        # kirchner_time_axis = api.TimeAxisFixedDeltaT(kirchner_t_start, dt, 150)
         kirchner_time_axis = time_axis
 
         # Construct gamma snow parameters (realistic tx and max_lwc)
@@ -341,7 +341,7 @@ class SimulationTestCase(unittest.TestCase):
         gamma_snow_param_max.gs.tx = 1.0
         gamma_snow_param_max.gs.max_water = 0.25  # Max 35% max water content, or we get too little melt
         gs_t_start = utc.time(2010, 11, 1, 0)
-        gs_time_axis = api.Timeaxis(gs_t_start, dt, 250)
+        gs_time_axis = api.TimeAxisFixedDeltaT(gs_t_start, dt, 250)
         # gs_time_axis = time_axis
 
         # Find parameters
@@ -397,7 +397,7 @@ class SimulationTestCase(unittest.TestCase):
         t0 = utc.time( 2015, 7, 26, 0)
         n_hours = 30
         dt = api.deltahours(1)
-        time_axis = api.Timeaxis(t0, dt, n_hours)
+        time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_hours)
 
         # Some dummy ids not needed for the netcdf based repositories
         region_id = 0

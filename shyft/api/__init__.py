@@ -1,6 +1,37 @@
+import inspect
+import traceback
+import warnings
+import functools
+
 from ._api import *
 import numpy as np
 from math import sqrt
+
+
+def deprecated(message: str = ''):
+    """
+    This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used first time and filter is set for show DeprecationWarning.
+    """
+
+    def decorator_wrapper(func):
+        @functools.wraps(func)
+        def function_wrapper(*args, **kwargs):
+            current_call_source = '|'.join(traceback.format_stack(inspect.currentframe()))
+            if current_call_source not in function_wrapper.last_call_source:
+                warnings.warn("Class.method {} is now deprecated! {}".format(func, message),
+                              category=DeprecationWarning, stacklevel=2)
+                function_wrapper.last_call_source.add(current_call_source)
+
+            return func(*args, **kwargs)
+
+        function_wrapper.last_call_source = set()
+
+        return function_wrapper
+
+    return decorator_wrapper
+
 
 # Fix up vector types
 
@@ -56,11 +87,11 @@ GeoPoint_xy_distance = lambda a, b: GeoPoint.xy_distance(a, b)
 # Fix up LandTypeFractions
 
 LandTypeFractions.__str__ = lambda \
-    self: "LandTypeFractions(glacier={0},lake={1},reservoir={2},forest={3},unspecified={4})".format(self.glacier(),
-                                                                                                    self.lake(),
-                                                                                                    self.reservoir(),
-                                                                                                    self.forest(),
-                                                                                                    self.unspecified())
+        self: "LandTypeFractions(glacier={0},lake={1},reservoir={2},forest={3},unspecified={4})".format(self.glacier(),
+                                                                                                        self.lake(),
+                                                                                                        self.reservoir(),
+                                                                                                        self.forest(),
+                                                                                                        self.unspecified())
 
 
 # Fix up GeoCellData
@@ -75,27 +106,53 @@ GeoCellData.__str__ = lambda self: StrGeoCellData(self)
 # Fix up UtcPeriod
 UtcPeriod.to_string = lambda self: str(self)
 
-# Fix up Timeaxis
-Timeaxis.__str__ = lambda self: "Timeaxis({0},{1},{2})".format(Calendar().to_string(self.start), self.delta_t, self.n)
-Timeaxis.__len__ = lambda self: self.size()
-Timeaxis.__call__ = lambda self, i: self.period(i)
+# Fix up TimeAxis
 
-Timeaxis2.__len__ = lambda self: self.size()
-Timeaxis2.__str__ = lambda self: "GenericTimeaxis {0} {1} {2}".format(self.timeaxis_type,
-                                                                      Calendar().to_string(self.total_period()),
-                                                                      self.size())
-Timeaxis2.__call__ = lambda self, i: self.period(i)
+def ta_iter(x):
+    x.counter = 0
+    return x
+
+
+def ta_next(ta):
+    if ta.counter >= len(ta):
+        del ta.counter
+        raise StopIteration
+    ta.counter += 1
+    return ta(ta.counter - 1)
+
+TimeAxisFixedDeltaT.__str__ = lambda self: "TimeAxisFixedDeltaT({0},{1},{2})".format(Calendar().to_string(self.start), self.delta_t, self.n)
+TimeAxisFixedDeltaT.__len__ = lambda self: self.size()
+TimeAxisFixedDeltaT.__call__ = lambda self, i: self.period(i)
+TimeAxisFixedDeltaT.__iter__ = lambda self: ta_iter(self)
+TimeAxisFixedDeltaT.__next__ = lambda self: ta_next(self)
+
+TimeAxisCalendarDeltaT.__str__ = lambda self: "TimeAxisCalendarDeltaT({0},{1},{2})".format(Calendar().to_string(self.start), self.delta_t, self.n)
+TimeAxisCalendarDeltaT.__len__ = lambda self: self.size()
+TimeAxisCalendarDeltaT.__call__ = lambda self, i: self.period(i)
+TimeAxisCalendarDeltaT.__iter__ = lambda self: ta_iter(self)
+TimeAxisCalendarDeltaT.__next__ = lambda self: ta_next(self)
+
+TimeAxisByPoints.__str__ = lambda self: "TimeAxisByPoints(total_period={0}, n={1} )".format(str(self.total_period()),len(self))
+TimeAxisByPoints.__len__ = lambda self: self.size()
+TimeAxisByPoints.__call__ = lambda self, i: self.period(i)
+TimeAxisByPoints.__iter__ = lambda self: ta_iter(self)
+TimeAxisByPoints.__next__ = lambda self: ta_next(self)
+
+TimeAxis.__str__ = lambda self: "TimeAxis {0} {1} {2}".format(self.timeaxis_type, Calendar().to_string(self.total_period()), self.size())
+TimeAxis.__len__ = lambda self: self.size()
+TimeAxis.__call__ = lambda self, i: self.period(i)
+TimeAxis.__iter__ = lambda self: ta_iter(self)
+TimeAxis.__next__ = lambda self: ta_next(self)
 
 # fix up property on timeseries
-Timeseries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
+TimeSeries.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
+TimeSeries.__len__ = lambda self: self.size()
+TimeSeries.v = property(lambda self: self.values, doc="returns the point-values of timeseries, alias for .values")
 
-Timeseries.__len__ = lambda self: self.size()
-Timeseries.v = property(lambda self: self.values, doc="returns the point-values of timeseries, alias for .values")
-
-Timeseries.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self, other_ts,
+TimeSeries.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self, other_ts,
                                                                                        self.get_time_axis(), s_r, s_a,
                                                                                        s_b)
-Timeseries.kling_gupta.__doc__ = \
+TimeSeries.kling_gupta.__doc__ = \
     """
     computes the kling_gupta correlation using self as observation, and self.time_axis as
     the comparison time-axis
@@ -117,8 +174,8 @@ Timeseries.kling_gupta.__doc__ = \
 
     """
 
-Timeseries.nash_sutcliffe = lambda self, other_ts: nash_sutcliffe(self, other_ts, self.get_time_axis())
-Timeseries.nash_sutcliffe.__doc__ = \
+TimeSeries.nash_sutcliffe = lambda self, other_ts: nash_sutcliffe(self, other_ts, self.get_time_axis())
+TimeSeries.nash_sutcliffe.__doc__ = \
     """
     Computes the Nash-Sutcliffe model effiency coefficient (n.s)
     for the two time-series over the specified time_axis
@@ -142,32 +199,7 @@ TsPoint.values = property(lambda self: self.v, doc="returns the point values, .v
 TsPoint.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
 
-def ta_iter(x):
-    x.counter = 0
-    return x
 
-
-def ta_next(ta):
-    if ta.counter >= len(ta):
-        del ta.counter
-        raise StopIteration
-    ta.counter += 1
-    return ta(ta.counter - 1)
-
-
-Timeaxis.__iter__ = lambda self: ta_iter(self)
-Timeaxis.__next__ = lambda self: ta_next(self)
-
-Timeaxis2.__iter__ = lambda self: ta_iter(self)
-Timeaxis2.__next__ = lambda self: ta_next(self)
-
-# Fix up PointTimeaxis
-PointTimeaxis.__str__ = lambda self: "PointTimeaxis(total_period={0}, n={1} )".format(str(self.total_period()),
-                                                                                      len(self))
-PointTimeaxis.__len__ = lambda self: self.size()
-PointTimeaxis.__call__ = lambda self, i: self.period(i)
-PointTimeaxis.__iter__ = lambda self: ta_iter(self)
-PointTimeaxis.__next__ = lambda self: ta_next(self)
 
 # Fix up ARegionEnvironment
 TemperatureSource.vector_t = TemperatureSourceVector
@@ -261,3 +293,32 @@ def KalmanBiasPredictor_compute_running_bias(bp, fc_ts, obs_ts, time_axis):
 
 KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast
 KalmanBiasPredictor.compute_running_bias = KalmanBiasPredictor_compute_running_bias
+
+
+
+class Timeseries(TimeSeries):
+    @deprecated("please use the TimeSeries class instead")
+    def __init__(self, *args, **kwargs):
+        super(Timeseries, self).__init__(*args, **kwargs)
+
+class Timeaxis2(TimeAxis):
+    @deprecated("please use the TimeAxis class instead")
+    def __init__(self, *args, **kwargs):
+        super(Timeaxis2, self).__init__(*args, **kwargs)
+
+class Timeaxis(TimeAxisFixedDeltaT):
+    @deprecated("please start using TimeAxisFixedDeltaT")
+    def __init__(self, *args, **kwargs):
+        super(Timeaxis, self).__init__(*args, **kwargs)
+
+class CalendarTimeaxis(TimeAxisCalendarDeltaT):
+    @deprecated("please start using TimeAxisCalendarDeltaT")
+    def __init__(self, *args, **kwargs):
+        super(CalendarTimeaxis, self).__init__(*args, **kwargs)
+
+class PointTimeaxis(TimeAxisByPoints):
+    @deprecated("please start using TimeAxisByPoints")
+    def __init__(self, *args, **kwargs):
+        super(PointTimeaxis, self).__init__(*args, **kwargs)
+
+TimeaxisType = TimeAxisType  #  todo: deprecate it

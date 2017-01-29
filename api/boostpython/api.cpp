@@ -28,7 +28,9 @@ namespace expose {
 	extern void hbv_actual_evapotranspiration();
 	extern void glacier_melt();
 	extern void routing();
+	extern void dtss();
     extern void api_cell_state_id();
+
     
     static std::vector<char> byte_vector_from_file(std::string path) {
         using namespace std;
@@ -84,6 +86,7 @@ namespace expose {
         using namespace boost::python;
         def("byte_vector_from_file", byte_vector_from_file, (arg("path")), "reads specified file and returns its contents as a ByteVector");
         def("byte_vector_to_file", byte_vector_to_file, (arg("path"), arg("byte_vector")), "write the supplied ByteVector to file as specified by path");
+        dtss();
     }
 }
 
