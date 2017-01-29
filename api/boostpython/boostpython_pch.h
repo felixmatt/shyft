@@ -32,7 +32,7 @@
 #define doc_parameters() "\nParameters\n----------\n"
 #define doc_parameter(name_str,type_str,descr_str) name_str  " : "  type_str  "\n\t"  descr_str  "\n"
 #define doc_paramcont(doc_str) "\t"  doc_str  "\n"
-#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n"  name_str  " : "  type_str  "\n"
+#define doc_returns(name_str,type_str,descr_str) "\nReturns\n-------\n"  name_str  " : "  type_str  "\n\t" descr_str "\n"
 #define doc_notes() "\nNotes\n-----\n"
 #define doc_note(note_str) note_str  "\n"
 #define doc_see_also(ref) "\nSee Also\n--------\n" ref  "\n"
