@@ -384,15 +384,15 @@ void inverse_distance_test::test_performance() {
 #ifdef _DEBUG
     int n = 4;// just speed up test.
 #else
-    int n = 24 * 365; // number of timesteps
+    int n = 24 * 3 * 1;//365; // number of timesteps
 #endif
     int n_core = 1;
     if (getenv("SHYFT_NCORE")) {
         sscanf(getenv("SHYFT_NCORE"), "%d", &n_core);
     }
-    const int n_xy = 20; // number for xy-squares for sources
-    const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
-    const int ny = 3 * n_xy;
+    const int n_xy = 70; // number for xy-squares for sources
+    const int nx = 55; // 3 times more for grid-cells, typical arome -> cell
+    const int ny = 55;
     const int s_nx = n_xy;
     const int s_ny = n_xy;
     const int n_sources = s_nx * s_ny;

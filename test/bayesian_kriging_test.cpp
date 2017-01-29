@@ -271,3 +271,38 @@ void bayesian_kriging_test::test_interpolation() {
 	}
 }
 
+void bayesian_kriging_test::test_performance() {
+    Parameter params;
+    SourceList sources;
+    DestinationList destinations;
+    using namespace shyft::timeseries;
+    using namespace shyft::core;
+    using namespace shyfttest;
+    size_t n_s = 5;//(int)sqrt(5100);
+    size_t n_d = 12;//(int)sqrt(3100);
+    size_t n_times = 24;
+    shyft::timeseries::utctime dt = 3600;
+    vector<utctime> times; times.reserve(n_times);
+    for (size_t i = 0; i < n_times; ++i)
+        times.emplace_back(dt*i);
+    bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
+    if(verbose) cout << "start building interpolation " << n_s << " sources to " << n_d << "destination cells, timesteps is "<<n_times<<endl;
+    const point_timeaxis time_axis(times);
+    build_sources_and_dests(n_s, n_s, n_d, n_d, n_times, dt, time_axis, true, sources, destinations);
+    if (verbose) cout << "done building, running real-case now:" << endl;
+    const std::clock_t start = std::clock();
+
+    btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
+    const std::clock_t total = std::clock() - start;
+
+    
+    if (verbose) std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+     {
+        if (verbose) std::cout << "\taltitude\tmax\tmin\n ";
+        for (auto d : destinations) {
+            if (verbose) std::cout << std::setprecision(3) << "\t " << d.mid_point().z << "\t "
+                << *std::max_element(d.temperatures.begin(), d.temperatures.end()) << "\t "
+                << *std::min_element(d.temperatures.begin(), d.temperatures.end()) << std::endl;
+        }
+    }
+}
