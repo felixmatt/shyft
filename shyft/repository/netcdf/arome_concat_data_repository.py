@@ -23,7 +23,8 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
 
     def __init__(self, epsg, filename, nb_fc_to_drop=None, nb_fc_interval_to_concat=None, selection_criteria=None, padding=5000.):
         self.selection_criteria = selection_criteria
-        filename = filename.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
+        #filename = filename.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
+        filename = os.path.expandvars(filename)
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
             filename = path.join(shyftdata_dir, filename)
