@@ -70,6 +70,17 @@ class TimeSeries(unittest.TestCase):
         ts_ta = tsfixed.time_axis  # a TsFixed do have .time_axis and .values
         self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
 
+        # verify some simple core-ts to TimeSeries interoperability
+        full_ts = tsfixed.TimeSeries  # returns a new TimeSeries as clone from tsfixed
+        self.assertEqual(full_ts.size(),tsfixed.size())
+        for i in range(tsfixed.size()):
+            self.assertEqual(full_ts.time(i),tsfixed.time(i))
+            self.assertAlmostEqual(full_ts.value(i),tsfixed.value(i),5)
+        ns = tsfixed.nash_sutcliffe(full_ts)
+        self.assertAlmostEqual(ns,1.0,4)
+        kg = tsfixed.kling_gupta(full_ts,1.0,1.0,1.0)
+        self.assertAlmostEqual(kg,1.0,4)
+
         # self.assertAlmostEqual(v,vv)
         # some reference testing:
         ref_v = tsfixed.v
@@ -92,6 +103,18 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(tspoint.get(0).v, v[0])
         self.assertAlmostEqual(tspoint.values[0], v[0])  # just to verfy compat .values works
         self.assertEqual(tspoint.get(0).t, ta(0).start)
+        # verify some simple core-ts to TimeSeries interoperability
+        full_ts = tspoint.TimeSeries  # returns a new TimeSeries as clone from tsfixed
+        self.assertEqual(full_ts.size(),tspoint.size())
+        for i in range(tspoint.size()):
+            self.assertEqual(full_ts.time(i),tspoint.time(i))
+            self.assertAlmostEqual(full_ts.value(i),tspoint.value(i),5)
+        ns = tspoint.nash_sutcliffe(full_ts)
+        self.assertAlmostEqual(ns,1.0,4)
+        kg = tspoint.kling_gupta(full_ts,1.0,1.0,1.0)
+        self.assertAlmostEqual(kg,1.0,4)
+
+
 
     def test_ts_factory(self):
         dv = np.arange(self.ta.size())
