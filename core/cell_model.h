@@ -188,16 +188,18 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 				verify_cids_exist(cells, catchment_indexes);
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0,point_interpretation_policy::POINT_AVERAGE_VALUE);
+                shared_ptr<pts_t> r;
 				double sum_area = 0.0;
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
                     if (match_all) {
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
                         r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                         sum_area += c.geo.area();
                     } else {
                         for (auto cid : catchment_indexes) {
                             if ( c.geo.catchment_id() == (size_t) cid) { // criteria
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
                                 r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 sum_area += c.geo.area();
                                 break;
@@ -264,15 +266,17 @@ namespace shyft {
                 if (cells.size() == 0)
                     throw runtime_error("no cells to make statistics on");
 				verify_cids_exist(cells, catchment_indexes);
-				auto r = make_shared<pts_t>(cell_ts(cells[0]).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                shared_ptr<pts_t> r;
 				bool match_all = catchment_indexes.size() == 0;
 
 				for (const auto& c : cells) {
                     if (match_all) {
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
                         r->add(cell_ts(c));
                     } else {
                         for (auto cid : catchment_indexes) {
                             if (c.geo.catchment_id() == (size_t)cid) { //criteria
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
                                 r->add(cell_ts(c));  //c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 break;
                             }

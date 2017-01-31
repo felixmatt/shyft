@@ -182,11 +182,11 @@ TimeSeries.nash_sutcliffe.__doc__ = \
     Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient
     Parameters
     ----------
-    observed_ts : Timeseries
+    observed_ts : TimeSeries
      the observed time-series
-    model_ts : Timeseries
+    model_ts : TimeSeries
      the time-series that is the model simulated / calculated ts
-    time_axis : Timeaxis2
+    time_axis : TimeAxis
      the time-axis that is used for the computation
     Return
     ------
@@ -198,6 +198,18 @@ TsFixed.time_axis = property(lambda self: self.get_time_axis(), doc="returns the
 TsPoint.values = property(lambda self: self.v, doc="returns the point values, .v of the timeseries")
 TsPoint.time_axis = property(lambda self: self.get_time_axis(), doc="returns the time_axis of the timeseries")
 
+# some minor fixup to ease work with core-time-series vs TimeSeries
+TsFixed.TimeSeries = property(lambda self: TimeSeries(self),doc="return a fully featured TimeSeries from the core TsFixed ")
+TsFixed.nash_sutcliffe = lambda self, other_ts: nash_sutcliffe(self.TimeSeries, other_ts, TimeAxis(self.get_time_axis()))
+TsFixed.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self.TimeSeries, other_ts,
+                                                                                       TimeAxis(self.get_time_axis()), s_r, s_a,
+                                                                                       s_b)
+
+TsPoint.TimeSeries = property(lambda self: TimeSeries(self.get_time_axis(),self.v,self.point_interpretation()),doc="return a fully featured TimeSeries from the core TsPoint")
+TsPoint.nash_sutcliffe = lambda self, other_ts: nash_sutcliffe(self.TimeSeries, other_ts, TimeAxis(self.get_time_axis()))
+TsPoint.kling_gupta = lambda self, other_ts, s_r=1.0, s_a=1.0, s_b=1.0: kling_gupta(self.TimeSeries, other_ts,
+                                                                                       TimeAxis(self.get_time_axis()), s_r, s_a,
+                                                                                       s_b)
 
 
 
