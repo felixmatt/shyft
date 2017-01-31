@@ -24,6 +24,8 @@ HbvOptModel.state_with_id_t=HbvStateWithId
 HbvOptModel.state = property(lambda self:HbvCellOptStateHandler(self.get_cells()))
 HbvOptModel.statistics = property(lambda self:HbvCellOptStatistics(self.get_cells()))
 HbvOptModel.optimizer_t = HbvOptimizer
+HbvOptModel.full_model_t =HbvModel
+HbvModel.opt_model_t =HbvOptModel
 
 HbvCellAll.vector_t = HbvCellAllVector
 HbvCellOpt.vector_t = HbvCellOptVector

@@ -25,6 +25,10 @@ PTHSKOptModel.state = property(lambda self:PTHSKCellOptStateHandler(self.get_cel
 PTHSKOptModel.statistics = property(lambda self:PTHSKCellOptStatistics(self.get_cells()))
 
 PTHSKOptModel.optimizer_t = PTHSKOptimizer
+
+PTHSKOptModel.full_model_t =PTHSKModel
+PTHSKModel.opt_model_t =PTHSKOptModel
+
 PTHSKCellAll.vector_t = PTHSKCellAllVector
 PTHSKCellOpt.vector_t = PTHSKCellOptVector
 PTHSKState.vector_t = PTHSKStateVector
