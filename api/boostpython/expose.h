@@ -38,7 +38,7 @@ namespace expose {
         }
         return move(r);
     }
-    
+
     template<class C>
     static void cell_state_etc(const char *stack_name) {
         typedef typename C::state_t cstate_t;
@@ -53,7 +53,7 @@ namespace expose {
         char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
         class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
             .def(vector_indexing_suite<std::vector<CellState>>())
-            
+
             ;
         def("serialize", shyft::api::serialize_to_bytes<CellState>, args("states"), "make a blob out of the states");
         def("deserialize", shyft::api::deserialize_from_bytes<CellState>, args("bytes", "states"), "from a blob, fill in states");
@@ -61,7 +61,7 @@ namespace expose {
 
     template <class C>
     static void cell_state_io(const char *cell_name) {
-        
+
         char csh_name[200];sprintf(csh_name, "%sStateHandler", cell_name);
         typedef shyft::api::state_io_handler<C> CellStateHandler;
         class_<CellStateHandler>(csh_name, "Provides functionality to extract and restore state from cells")
@@ -325,9 +325,12 @@ namespace expose {
         return o;
     }
 
-    template <class F, class O>
+    template <typename F, typename O>
     void def_clone_to_opt_model(const char *func_name) {
-        O(*pfi)(typename F const&) = &clone_to_opt_impl< typename F, typename O>;
+        //typedef typename F F_;
+        //typedef typename O O_;
+        //O(*pfi)(F_ const&) = &clone_to_opt_impl< F_, O_>;
+        auto pfi = &clone_to_opt_impl< F, O>;
         def(func_name, pfi, args("full_model"),
             doc_intro("Clone a full model to a high speed opt model suitable for the optimizer")
             doc_intro("The entire state except catchment-specific parameters, filter and result-series are cloned")
