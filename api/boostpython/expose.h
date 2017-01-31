@@ -307,6 +307,39 @@ namespace expose {
         .add_property("cells",&M::get_cells,"cells of the model")
          ;
     }
+
+    template <class F, class O>
+    O clone_to_opt_impl(F const& f) {
+        O o(f.extract_geo_cell_data(), f.get_region_parameter());
+        o.time_axis = f.time_axis;
+        o.ip_parameter = f.ip_parameter;
+        o.region_env = f.region_env;
+        o.initial_state = f.initial_state;
+        o.river_network = f.river_network;
+        auto fc = f.get_cells();
+        auto oc = o.get_cells();
+        for (size_t i = 0;i < f.size();++i) {
+            (*oc)[i].env_ts = (*fc)[i].env_ts;
+            (*oc)[i].state = (*fc)[i].state;
+        }
+        return o;
+    }
+
+    template <class F, class O>
+    void def_clone_to_opt_model(const char *func_name) {
+        O(*pfi)(typename F const&) = &clone_to_opt_impl< typename F, typename O>;
+        def(func_name, pfi, args("full_model"),
+            doc_intro("Clone a full model to a high speed opt model suitable for the optimizer")
+            doc_intro("The entire state except catchment-specific parameters, filter and result-series are cloned")
+            doc_intro("The returned model is ready to run_cells(), state and interpolated enviroment is identical to the clone source")
+            doc_parameters()
+            doc_parameter("full_model","XXXXModel","A full featured model, with state interpolation done, etc")
+            doc_returns("opt_model","XXXXOptModel","opt_model ready to run_cells, or to put into the calibrator/optimizer")
+        );
+    }
+
+
+
     template<class RegionModel>
     static void
     model_calibrator(const char *optimizer_name) {

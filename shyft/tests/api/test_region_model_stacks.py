@@ -200,11 +200,17 @@ class RegionModel(unittest.TestCase):
         model.set_states(s0)
         model.set_state_collection(-1, True)  # enable state collection for all cells
         model2 = model_type(model)  # make a copy, so that we in the stepwise run below get a clean copy with all values zero.
+        opt_model = pt_gs_k.create_opt_model_clone(model)  # this is how to make a model suitable for optimizer
         model.run_cells()  # the default arguments applies: thread_cell_count=0,start_step=0,n_steps=0)
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
+        opt_model.run_cells()  # starting out with the same state, same interpolated values, and region-parameters, we should get same results
+        sum_discharge_opt_value= opt_model.statistics.discharge_value(cids, 0)
+        self.assertAlmostEqual(sum_discharge_opt_value,sum_discharge_value,3)  # verify the opt_model clone gives same value
         self.assertGreaterEqual(sum_discharge_value, 130.0)
+        opt_model.region_env.temperature[0].ts.set(0,23.2)  # verify that region-env is different (no aliasing, a true copy is required)
+        self.assertFalse( abs( model.region_env.temperature[0].ts.value(0)-opt_model.region_env.temperature[0].ts.value(0)) >0.5)
 
         #
         # check values
@@ -341,6 +347,8 @@ class RegionModel(unittest.TestCase):
         model_type = hbv_stack.HbvModel
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
+        opt_model = model.create_opt_model_clone()
+        self.assertIsNotNone(opt_model)
         # now modify snow_cv forest_factor to 0.1
         region_parameter = model.get_region_parameter()
         # region_parameter.gs.snow_cv_forest_factor = 0.1

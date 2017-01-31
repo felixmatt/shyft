@@ -28,6 +28,8 @@ PTHSKOptModel.optimizer_t = PTHSKOptimizer
 
 PTHSKOptModel.full_model_t =PTHSKModel
 PTHSKModel.opt_model_t =PTHSKOptModel
+PTHSKModel.create_opt_model_clone = lambda self: create_opt_model_clone(self)
+PTHSKModel.create_opt_model_clone.__doc__ = create_opt_model_clone.__doc__
 
 PTHSKCellAll.vector_t = PTHSKCellAllVector
 PTHSKCellOpt.vector_t = PTHSKCellOptVector
