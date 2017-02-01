@@ -16,6 +16,8 @@ HbvModel.priestley_taylor_response = property(lambda self: HbvCellPriestleyTaylo
 HbvModel.hbv_actual_evaptranspiration_response=property(lambda self: HbvCellHbvActualEvapotranspirationResponseStatistics(self.get_cells()))
 HbvModel.soil_state = property(lambda self: HbvCellSoilStateStatistics(self.get_cells()))
 HbvModel.tank_state = property(lambda self: HbvCellTankStateStatistics(self.get_cells()))
+HbvModel.create_opt_model_clone = lambda self: create_opt_model_clone(self)
+HbvModel.create_opt_model_clone.__doc__ = create_opt_model_clone.__doc__
 
 HbvOptModel.cell_t = HbvCellOpt
 HbvOptModel.parameter_t = HbvParameter

@@ -138,6 +138,7 @@ namespace expose {
             typedef shyft::core::region_model<pt_gs_k::cell_complete_response_t, shyft::api::a_region_environment> PTGSKModel;
             expose::model<PTGSKModel>("PTGSKModel","PTGSK");
             expose::model<PTGSKOptModel>("PTGSKOptModel","PTGSK");
+            def_clone_to_opt_model<PTGSKModel, PTGSKOptModel>("create_opt_model_clone");
         }
 
         static void
