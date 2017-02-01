@@ -132,7 +132,8 @@ namespace expose {
 			typedef shyft::core::region_model<hbv_stack::cell_complete_response_t, shyft::api::a_region_environment> HbvModel;
 			expose::model<HbvModel>("HbvModel", "Hbv_stack");
 			expose::model<HbvOptModel>("HbvOptModel", "Hbv_stack");
-            def_clone_to_opt_model<HbvModel, HbvOptModel>("create_opt_model_clone");
+            def_clone_to_similar_model<HbvModel, HbvOptModel>("create_opt_model_clone");
+            def_clone_to_similar_model<HbvOptModel, HbvModel>("create_full_model_clone");
 		}
 
 		static void

@@ -31,6 +31,8 @@ PTGSKOptModel.full_model_t =PTGSKModel
 PTGSKModel.opt_model_t =PTGSKOptModel
 PTGSKModel.create_opt_model_clone = lambda self: create_opt_model_clone(self)
 PTGSKModel.create_opt_model_clone.__doc__ = create_opt_model_clone.__doc__
+PTGSKOptModel.create_full_model_clone = lambda self: create_full_model_clone(self)
+PTGSKOptModel.create_full_model_clone.__doc__ = create_full_model_clone.__doc__
 
 
 PTGSKCellAll.vector_t = PTGSKCellAllVector

@@ -18,6 +18,8 @@ HbvModel.soil_state = property(lambda self: HbvCellSoilStateStatistics(self.get_
 HbvModel.tank_state = property(lambda self: HbvCellTankStateStatistics(self.get_cells()))
 HbvModel.create_opt_model_clone = lambda self: create_opt_model_clone(self)
 HbvModel.create_opt_model_clone.__doc__ = create_opt_model_clone.__doc__
+HbvOptModel.create_full_model_clone = lambda self: create_full_model_clone(self)
+HbvOptModel.create_full_model_clone.__doc__ = create_full_model_clone.__doc__
 
 HbvOptModel.cell_t = HbvCellOpt
 HbvOptModel.parameter_t = HbvParameter

@@ -326,18 +326,15 @@ namespace expose {
     }
 
     template <typename F, typename O>
-    void def_clone_to_opt_model(const char *func_name) {
-        //typedef typename F F_;
-        //typedef typename O O_;
-        //O(*pfi)(F_ const&) = &clone_to_opt_impl< F_, O_>;
+    void def_clone_to_similar_model(const char *func_name) {
         auto pfi = &clone_to_opt_impl< F, O>;
-        def(func_name, pfi, args("full_model"),
-            doc_intro("Clone a full model to a high speed opt model suitable for the optimizer")
+        def(func_name, pfi, args("src_model"),
+            doc_intro("Clone a model to a another similar type model, full to opt-model or vice-versa")
             doc_intro("The entire state except catchment-specific parameters, filter and result-series are cloned")
             doc_intro("The returned model is ready to run_cells(), state and interpolated enviroment is identical to the clone source")
             doc_parameters()
-            doc_parameter("full_model","XXXXModel","A full featured model, with state interpolation done, etc")
-            doc_returns("opt_model","XXXXOptModel","opt_model ready to run_cells, or to put into the calibrator/optimizer")
+            doc_parameter("src_model","XXXX?Model","The model to be cloned, with state interpolation done, etc")
+            doc_returns("new_model","XXXX?Model","new_model ready to run_cells, or to put into the calibrator/optimizer")
         );
     }
 
