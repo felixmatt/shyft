@@ -49,7 +49,7 @@ namespace expose {
             .def("create_time_point_ts",&shyft::api::TsFactory::create_time_point_ts,time_point_ts_overloads())//args("period","times","values","interpretation"),"return a point ts from specified arguments")
             ;
     }
- 
+
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -82,7 +82,42 @@ namespace expose {
             ;
 
 
-		class_<shyft::api::apoint_ts>("Timeseries", "A timeseries providing mathematical and statistical operations and functionality")
+		class_<shyft::api::apoint_ts>("TimeSeries",
+                doc_intro("A time-series providing mathematical and statistical operations and functionality.")
+                doc_intro("")
+                doc_intro("A time-series can be an expression, or a concrete point time-series.")
+                doc_intro("All time-series do have a time-axis, values, and a point fx policy.")
+                doc_intro("")
+                doc_intro("The time-series can provide a value for all the intervals, and the point_fx policy")
+                doc_intro("defines how the values should be interpreted:")
+                doc_intro("POINT_INSTANT_VALUE:")
+                doc_intro("    the point value is valid at the start of the period, linear between points")
+                doc_intro("    -extend flat from last point to +oo, nan before first value")
+                doc_intro("    typical for state-variables, like water-level, temperature measured at 12:00 etc.")
+                doc_intro("POINT_AVERAGE_VALUE:")
+                doc_intro("    the point represents an average or constant value over the period")
+                doc_intro("    typical for model-input and results, precipitation mm/h, discharge m^3/s")
+                doc_intro("")
+                doc_intro("Example:")
+                doc_intro("import numpy as np")
+                doc_intro("from shyft.api import Calendar,deltahours,TimeAxis,TimeSeries,POINT_AVERAGE_VALUE as fx_avg,DoubleVector as dv")
+                doc_intro("")
+                doc_intro("utc = Calendar()  # ensure easy consistent explicit handling of calendar and time")
+                doc_intro("ta = TimeAxis(utc.time(2016, 9, 1, 8, 0, 0), deltahours(1), 10)  # create a time-axis to use")
+                doc_intro("a = TimeSeries(ta, dv.from_numpy(np.linspace(0, 10, num=len(ta))), fx_avg)")
+                doc_intro("b = TimeSeries(ta, dv.from_numpy(np.linspace(0,  1, num=len(ta))), fx_avg)")
+                doc_intro("c = a + b*3.0  # c is now an expression, time-axis is the overlap of a and b, lazy evaluation")
+                doc_intro("c_values = c.values.to_numpy()  # compute and extract the values, as numpy array")
+                doc_intro("")
+                doc_intro("The TimeSeries functionality includes ")
+                doc_intro(" resampling:average,accumulate,time_shift")
+                doc_intro(" statistics: min/max,correlation by nash-sutcliffe, kling-gupta")
+                doc_intro(" filtering: convolution,average")
+                doc_intro(" partitioning and percentiles ")
+                doc_intro("Please check notebooks, examples and api-tests for usage.")
+                doc_see_also("TimeAxis,DoubleVector,Calendar,point_interpretation_policy")
+
+            )
 			.def(init<const time_axis::generic_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
 			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
@@ -127,30 +162,40 @@ namespace expose {
 			.def(self - double())
 
 			.def(-self)
-			.def("average", &shyft::api::apoint_ts::average, args("ta"), "create a new ts that is the true average of self\n over the specified time-axis ta")
-			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"), "create a new ts that is\n the integral f(t) *dt, t0..ti,\n the specified time-axis ta")
+			.def("average", &shyft::api::apoint_ts::average, args("ta"),
+                doc_intro("create a new ts that is the true average of self")
+                doc_intro("over the specified time-axis ta.")
+                doc_parameters()
+                doc_parameter("ta","TimeAxis","time-axis that specifies the periods where true-average is applied")
+                doc_returns("ts","TimeSeries","a new time-series expression, that will provide the true-average when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the true average")
+			)
+			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"),
+                doc_intro("create a new ts where each i'th value is the ")
+                doc_intro("    integral f(t) *dt, from t0..ti,")
+                doc_intro("given the specified time-axis ta")
+                doc_parameters()
+                doc_parameter("ta","TimeAxis","time-axis that specifies the periods where accumulated integral is applied")
+                doc_returns("ts","TimeSeries","a new time-series expression, that will provide the accumulated values when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the accumulated values")
+            )
 			.def("time_shift", &shyft::api::apoint_ts::time_shift,args("delta_t"),
-				"create a new ts that is a the time-shift'ed  version of self\n"
-				"Parameters\n"
-				"----------\n"
-				"delta_t : number\n"
-				"\t number of seconds to time-shift\n"
-				"\t e.g. to move a time-series from 2015 to 2016,\n"
-				"\t dt should be number of seconds in 2015\n"
-				"Returns\n"
-				"-------\n"
-				"a new time-series, time-shifted version of self\n"
+				doc_intro("create a new ts that is a the time-shift'ed  version of self")
+				doc_parameters()
+                doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
+				doc_returns("ts","TimeSeries",	"a new time-series, that appears as time-shifted version of self")
 			)
             .def("convolve_w", &shyft::api::apoint_ts::convolve_w, args("weights", "policy"),
-                "create a new ts that is the convolved ts with the supporteds weights list"
-                "Parameters\n"
-                "----------\n"
-                "weights : DoubleVector\n"
-                "\t the weights profile, use DoubleVector.from_numpy(...) to create these.\n"
-                "\t it's the callers responsibility to ensure the sum of weights are 1.0\n"
-                "policy : convolve_policy(.USE_FIRST|USE_ZERO|USE_NAN)\n"
-                "\t Specifies how to handle initial weight.size()-1 values\n"
-                "\t  see also ConvolvePolicy\n"
+                doc_intro("create a new ts that is the convolved ts with the given weights list")
+                doc_parameters()
+                doc_parameter("weights","DoubleVector","the weights profile, use DoubleVector.from_numpy(...) to create these.\n"
+                                "\t it's the callers responsibility to ensure the sum of weights are 1.0\n")
+                doc_parameter("policy","convolve_policy","(.USE_FIRST|USE_ZERO|USE_NAN)\n"
+                "\t Specifies how to handle initial weight.size()-1 values\n")
+                doc_returns("ts","TimeSeries","a new time-series that is evaluated on request to the convolution of self")
+                doc_see_also("ConvolvePolicy")
             )
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
@@ -158,45 +203,37 @@ namespace expose {
             .def("max",max_ts_f,args("ts_other"),"create a new ts that contains the max of self and ts_other")
             .def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
             .def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
-			.def("partition_by",&shyft::api::apoint_ts::partition_by,args("calendar","t", "partition_interval", "n_partitions","common_t0"),
-				"convert ts to a list of n_partitions partition-ts\n"
-				"each partition covers partition_interval, starting from utctime t\n"
-				"Parameters\n"
-				"----------\n"
-				"cal : Calendar\n"
-				"\t The calendar to use, typically utc\n"
-				"t : utctime\n"
-				"\tspecifies where to pick the first partition\n"
-				"partition_interval : utctimespan\n"
-				"\tthe length of each partition, Calendar.YEAR,Calendar.DAY etc.\n"
-				"n_partitions : int\n"
-				"\tnumber of partitions\n"
-				"common_t0 : utctime\n"
-				"\tspecifies the time to correlate all the partitions\n"
-				"Returns\n"
-				"-------\n"
-				"TsVector with len n_partitions"
+			.def("partition_by",&shyft::api::apoint_ts::partition_by,
+                args("calendar","t", "partition_interval", "n_partitions","common_t0"),
+				doc_intro("convert ts to a list of n_partitions partition-ts.")
+				doc_intro("each partition covers partition_interval, starting from utctime t")
+				doc_parameters()
+				doc_parameter("cal","Calendar","The calendar to use, typically utc")
+				doc_parameter("t","utctime","specifies where to pick the first partition")
+				doc_parameter("partition_interval","utctimespan","the length of each partition, Calendar.YEAR,Calendar.DAY etc.")
+				doc_parameter("n_partitions","int","number of partitions")
+				doc_parameter("common_t0","utctime","specifies the time to correlate all the partitions")
+				doc_returns("ts-partitions","TsVector","with length n_partitions, each ts is time-shifted and averaged expressions")
+                doc_see_also("time_shift,average,TsVector")
 				)
             .def("bind",&shyft::api::apoint_ts::bind,args("bts"),
-                "given that this ts is a bind-able ts (aref_ts)\n"
-                "and that bts is a gpoint_ts, make\n"
-                "a *copy* of gpoint_ts and use it as representation\n"
-                "for the values of this ts\n\n"
-                "Parameters\n"
-                "----------\n"
-                "bts : Timeseries\n"
-                "\t a point ts, with time-axis and values\n\n"
-                "Throws\n"
-                "------\n"
-                "runtime_error if any of preconditions is not true.\n"
+                doc_intro("given that this ts,self, is a bind-able ts (aref_ts)")
+                doc_intro("and that bts is a concrete point TimeSeries, make")
+                doc_intro("a *copy* of bts and use it as representation")
+                doc_intro("for the values of this ts")
+                doc_parameters()
+                doc_parameter("bts","TimeSeries","a concrete point ts, with time-axis and values")
+                doc_notes()
+                doc_note("raises runtime_error if any of preconditions is not true")
+                doc_see_also("find_ts_bind_info,TimeSeries('a-ref-string')")
             )
             .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,
-                "recursive search through the expression that this ts represents,\n"
-                "and return a list of TsBindInfo that can be used to\n"
-                "inspect and possibly 'bind' to ts-values \ref bind.\n"
-                "Return\n"
-                "------\n"
-                "TsBindInfoVector, a list of TsBindInfo\n"
+                doc_intro("recursive search through the expression that this ts represents,\n")
+                doc_intro("and return a list of TsBindInfo that can be used to\n")
+                doc_intro("inspect and possibly 'bind' to ts-values \ref bind.\n")
+                doc_returns("bind_info","TsBindInfoVector","A list of BindInfo where each entry contains a symbolic-ref and a ts that needs binding")
+                doc_see_also("bind() method")
+
             )
             .def("serialize",&shyft::api::apoint_ts::serialize_to_bytes,
                 "convert ts (expression) into a binary blob\n"
@@ -372,8 +409,8 @@ namespace expose {
             .def_readwrite("t",&timeseries::point::t)
             .def_readwrite("v",&timeseries::point::v)
             ;
-        point_ts<time_axis::fixed_dt>("TsFixed","A time-series with a fixed delta t time-axis");
-        point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis");
+        point_ts<time_axis::fixed_dt>("TsFixed","A time-series with a fixed delta t time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
+        point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
         TsFactory();
         expose_apoint_ts();
 		expose_periodic_ts();

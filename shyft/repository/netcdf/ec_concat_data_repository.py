@@ -152,7 +152,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
             Time series arrays keyed by type
         """
         tsf = api.TsFactory().create_point_ts
-        tsc = api.Timeseries
+        tsc = api.TimeSeries
         time_series = {}
         if concat:
             for key, (data, ta) in data.items():
@@ -462,7 +462,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
 
         def concat_t(t):
             t_stretch = np.ravel(np.repeat(t, self.fc_len_to_concat).reshape(len(t), self.fc_len_to_concat) + lead_time[0:self.fc_len_to_concat])
-            return api.Timeaxis(int(t_stretch[0]), int(t_stretch[1]) - int(t_stretch[0]), len(t_stretch))
+            return api.TimeAxisFixedDeltaT(int(t_stretch[0]), int(t_stretch[1]) - int(t_stretch[0]), len(t_stretch))
 
         def forecast_t(t, daccumulated_var=False):
             nb_ext_lead_times = self.fc_len_to_concat - 1 if daccumulated_var else self.fc_len_to_concat
@@ -488,7 +488,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                     v_padded = v
                 dt_last = t_padded[0, -1] - t_padded[0, -2]
                 return (v_padded,
-                        [api.Timeaxis2(api.UtcTimeVector.FromNdArray(t_one), int(t_one[-1] + dt_last)) for t_one in
+                        [api.TimeAxis(api.UtcTimeVector.from_numpy(t_one), int(t_one[-1] + dt_last)) for t_one in
                          t_padded])
             else:
                 return (v, t)

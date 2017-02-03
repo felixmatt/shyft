@@ -173,7 +173,7 @@ class YAMLSimConfig(object):
 
     @property
     def time_axis(self):
-        return api.Timeaxis(utctime_from_datetime(self.start_datetime), self.run_time_step, self.number_of_steps)
+        return api.TimeAxisFixedDeltaT(utctime_from_datetime(self.start_datetime), self.run_time_step, self.number_of_steps)
 
     def get_geots_repo(self):
         return self.construct_geots_repo(self.datasets_config, self.region_config.domain()["EPSG"])
@@ -189,7 +189,7 @@ class YAMLSimConfig(object):
             return []
         dst_repo = [{'repository': target_repo_constructor(repo['repository'], repo['params']), '1D_timeseries': [dst for dst in repo['1D_timeseries']]} for repo in self.datasets_config.destinations]
         [dst.update({'time_axis': self.time_axis}) if dst['time_axis'] is None
-         else dst.update({'time_axis': api.Timeaxis(utctime_from_datetime(dst['time_axis']['start_datetime']),
+         else dst.update({'time_axis': api.TimeAxisFixedDeltaT(utctime_from_datetime(dst['time_axis']['start_datetime']),
                                                     dst['time_axis']['time_step_length'],
                                                     dst['time_axis']['number_of_steps'])}) for repo in dst_repo for dst in repo['1D_timeseries']]
         return dst_repo

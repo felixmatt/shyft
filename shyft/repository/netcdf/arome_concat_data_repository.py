@@ -436,14 +436,14 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         def concat_t(t):
             t_stretch = np.ravel(np.repeat(t, self.fc_len_to_concat).reshape(len(t), self.fc_len_to_concat) + lead_time[
                                                                                                               0:self.fc_len_to_concat])
-            return api.Timeaxis(int(t_stretch[0]), int(t_stretch[1]) - int(t_stretch[0]), len(t_stretch))
+            return api.TimeAxisFixedDeltaT(int(t_stretch[0]), int(t_stretch[1]) - int(t_stretch[0]), len(t_stretch))
 
         def forecast_t(t, daccumulated_var=False):
             nb_ext_lead_times = self.fc_len_to_concat - 1 if daccumulated_var else self.fc_len_to_concat
             t_all = np.repeat(t, nb_ext_lead_times).reshape(len(t), nb_ext_lead_times) + lead_time[0:nb_ext_lead_times]
             dt = lead_time[1] - lead_time[0]  # or self.fc_time_res
             t_one_len = nb_ext_lead_times
-            return [api.Timeaxis(int(t_one[0]), int(dt), t_one_len) for t_one in t_all]
+            return [api.TimeAxisFixedDeltaT(int(t_one[0]), int(dt), t_one_len) for t_one in t_all]
 
         def concat_v(x):
             return x.reshape(-1, x.shape[-1])  # shape = (nb_forecasts*nb_lead_times, nb_points)

@@ -16,6 +16,10 @@ HbvModel.priestley_taylor_response = property(lambda self: HbvCellPriestleyTaylo
 HbvModel.hbv_actual_evaptranspiration_response=property(lambda self: HbvCellHbvActualEvapotranspirationResponseStatistics(self.get_cells()))
 HbvModel.soil_state = property(lambda self: HbvCellSoilStateStatistics(self.get_cells()))
 HbvModel.tank_state = property(lambda self: HbvCellTankStateStatistics(self.get_cells()))
+HbvModel.create_opt_model_clone = lambda self: create_opt_model_clone(self)
+HbvModel.create_opt_model_clone.__doc__ = create_opt_model_clone.__doc__
+HbvOptModel.create_full_model_clone = lambda self: create_full_model_clone(self)
+HbvOptModel.create_full_model_clone.__doc__ = create_full_model_clone.__doc__
 
 HbvOptModel.cell_t = HbvCellOpt
 HbvOptModel.parameter_t = HbvParameter
@@ -24,6 +28,8 @@ HbvOptModel.state_with_id_t=HbvStateWithId
 HbvOptModel.state = property(lambda self:HbvCellOptStateHandler(self.get_cells()))
 HbvOptModel.statistics = property(lambda self:HbvCellOptStatistics(self.get_cells()))
 HbvOptModel.optimizer_t = HbvOptimizer
+HbvOptModel.full_model_t =HbvModel
+HbvModel.opt_model_t =HbvOptModel
 
 HbvCellAll.vector_t = HbvCellAllVector
 HbvCellOpt.vector_t = HbvCellOptVector

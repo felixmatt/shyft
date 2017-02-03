@@ -199,7 +199,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
     def _transform_raw(self, data, time):
 
         #def noop_time(t):
-        #    return api.Timeaxis(api.utctime(t[0]), api.timespan(t[1] - t[0]), len(t))
+        #    return api.TimeAxisFixedDeltaT(api.utctime(t[0]), api.timespan(t[1] - t[0]), len(t))
 
         def noop_space(x):
             return x
@@ -216,7 +216,7 @@ class GFSDataRepository(interfaces.GeoTsRepository):
                        "precipitation": lambda x, ta: (prec_conv(x), ta),
                        "relative_humidity": lambda x, ta: (noop_space(x), ta)}
 
-        ta = api.Timeaxis(int(time[0]), int(time[1] - time[0]), len(time))
+        ta = api.TimeAxisFixedDeltaT(int(time[0]), int(time[1] - time[0]), len(time))
         res = {}
         for k, v in data.items():
             res[k] = convert_map[k](v, ta)

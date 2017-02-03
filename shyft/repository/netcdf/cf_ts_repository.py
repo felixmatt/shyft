@@ -57,7 +57,7 @@ class CFTsRepository(TsRepository):
             return self._get_data_from_dataset(dataset, period, list_of_ts_id)
 
     def _convert_to_timeseries(self, data, t, ts_id):
-        ta = api.Timeaxis(int(t[0]), int(t[1]) - int(t[0]),  len(t))
+        ta = api.TimeAxisFixedDeltaT(int(t[0]), int(t[1]) - int(t[0]),  len(t))
         tsc = api.TsFactory().create_point_ts
         def construct(d):
             return tsc(ta.size(), ta.start, ta.delta_t,

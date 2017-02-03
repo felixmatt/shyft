@@ -38,7 +38,7 @@ namespace expose {
         }
         return move(r);
     }
-    
+
     template<class C>
     static void cell_state_etc(const char *stack_name) {
         typedef typename C::state_t cstate_t;
@@ -53,7 +53,7 @@ namespace expose {
         char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
         class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
             .def(vector_indexing_suite<std::vector<CellState>>())
-            
+
             ;
         def("serialize", shyft::api::serialize_to_bytes<CellState>, args("states"), "make a blob out of the states");
         def("deserialize", shyft::api::deserialize_from_bytes<CellState>, args("bytes", "states"), "from a blob, fill in states");
@@ -61,7 +61,7 @@ namespace expose {
 
     template <class C>
     static void cell_state_io(const char *cell_name) {
-        
+
         char csh_name[200];sprintf(csh_name, "%sStateHandler", cell_name);
         typedef shyft::api::state_io_handler<C> CellStateHandler;
         class_<CellStateHandler>(csh_name, "Provides functionality to extract and restore state from cells")
@@ -307,6 +307,39 @@ namespace expose {
         .add_property("cells",&M::get_cells,"cells of the model")
          ;
     }
+
+    template <class F, class O>
+    O clone_to_opt_impl(F const& f) {
+        O o(f.extract_geo_cell_data(), f.get_region_parameter());
+        o.time_axis = f.time_axis;
+        o.ip_parameter = f.ip_parameter;
+        o.region_env = f.region_env;
+        o.initial_state = f.initial_state;
+        o.river_network = f.river_network;
+        auto fc = f.get_cells();
+        auto oc = o.get_cells();
+        for (size_t i = 0;i < f.size();++i) {
+            (*oc)[i].env_ts = (*fc)[i].env_ts;
+            (*oc)[i].state = (*fc)[i].state;
+        }
+        return o;
+    }
+
+    template <typename F, typename O>
+    void def_clone_to_similar_model(const char *func_name) {
+        auto pfi = &clone_to_opt_impl< F, O>;
+        def(func_name, pfi, args("src_model"),
+            doc_intro("Clone a model to a another similar type model, full to opt-model or vice-versa")
+            doc_intro("The entire state except catchment-specific parameters, filter and result-series are cloned")
+            doc_intro("The returned model is ready to run_cells(), state and interpolated enviroment is identical to the clone source")
+            doc_parameters()
+            doc_parameter("src_model","XXXX?Model","The model to be cloned, with state interpolation done, etc")
+            doc_returns("new_model","XXXX?Model","new_model ready to run_cells, or to put into the calibrator/optimizer")
+        );
+    }
+
+
+
     template<class RegionModel>
     static void
     model_calibrator(const char *optimizer_name) {

@@ -186,6 +186,7 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 #else
     const char *cell_path = "neanidelv/geo_cell_data.v2.bin";
 #endif
+    bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
         cout << "-> bin file missing,   regenerating xml file (could take some time)" << endl;
@@ -252,52 +253,71 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	auto sum_discharge = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
 	auto snow_sca = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
 	auto snow_swe = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
-
-	cout << "4. Print results" << endl;
-	size_t i0 = 8 * 30;
-	size_t n_steps = 8 * 30;
-	cout << "discharge:" << endl; print(cout, *sum_discharge, i0, n_steps);
-	cout << "snow_sca :" << endl; print(cout, *snow_sca, i0, n_steps);
-	cout << "snow_swe :" << endl; print(cout, *snow_swe, i0, n_steps);
-
+    size_t i0 = 8 * 30;
+    size_t n_steps = 8 * 30;
+    if (verbose) {
+        cout << "4. Print results" << endl;
+        cout << "discharge:" << endl; print(cout, *sum_discharge, i0, n_steps);
+        cout << "snow_sca :" << endl; print(cout, *snow_sca, i0, n_steps);
+        cout << "snow_swe :" << endl; print(cout, *snow_swe, i0, n_steps);
+    }
+    vector<int> catchment_ids{ 87,115 };
+    auto sum_dischargex = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
+    auto snow_scax = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
+    auto snow_swex = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
+    if (verbose) {
+        cout << "discharge:" << endl; print(cout, *sum_dischargex, i0, n_steps);
+        cout << "snow_sca :" << endl; print(cout, *snow_scax, i0, n_steps);
+        cout << "snow_swe :" << endl; print(cout, *snow_swex, i0, n_steps);
+    }
 	cout << endl << "5. now a run with just two catchments" << endl;
-	vector<int> catchment_ids{ 38, 87 };
+
     auto sum_discharge2x = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
     // also setup a river network for these two catchments
     // so that they end up in a common river
 	rm.set_catchment_calculation_filter(catchment_ids);
     int common_river_id = 1;
-    ec::routing::river sum_river_38_87(common_river_id, ec::routing_info(0, 0.0));// sum river of 38 and 87
-    ec::routing::river river_38(38, ec::routing_info(common_river_id, 0.0));// use river-id eq. catchment-id, but any value would do
+    ec::routing::river sum_river_115_87(common_river_id, ec::routing_info(0, 0.0));// sum river of 38 and 87
+    ec::routing::river river_115(115, ec::routing_info(common_river_id, 0.0));// use river-id eq. catchment-id, but any value would do
     ec::routing::river river_87(87, ec::routing_info(common_river_id, 0.0));
     // add to region model:
-    rm.river_network.add(sum_river_38_87).add(river_38).add(river_87);
-    rm.connect_catchment_to_river(38, 38);// make the connections for the cells
+    rm.river_network.add(sum_river_115_87).add(river_115).add(river_87);
+    rm.connect_catchment_to_river(115, 115);// make the connections for the cells
     rm.connect_catchment_to_river(87, 87);// currently, the effective routing is zero, should be equal:
     // and both these river
-    auto sum_discharge_38_87 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
+    auto sum_discharge_115_87 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
     auto sum_river_discharge = rm.river_output_flow_m3s(common_river_id);// verify it's equal
-    for (size_t i = 0;i < sum_discharge_38_87->size();++i) {
-        TS_ASSERT_DELTA(sum_discharge_38_87->value(i), sum_river_discharge->value(i), 0.001);
+    for (size_t i = 0;i < sum_discharge_115_87->size();++i) {
+        TS_ASSERT_DELTA(sum_discharge_115_87->value(i), sum_river_discharge->value(i), 0.001);
     }
 	cout << "5. b Done, now compute new sum" << endl;
 	rm.revert_to_initial_state();
 	rm.get_states(s0);// so that we start at same state.
+    rm.set_catchment_calculation_filter(catchment_ids);
+    ec::timeaxis tax = rm.time_axis; tax.n = 0; // force zero length time-axis for non calc cells.
+    for (auto&c : *rm.get_cells())
+        c.begin_run(tax, 0, 0);
+    rm.set_snow_sca_swe_collection(-1, true);
 	rm.run_cells();// this time only two catchments
 	cout << "6. Done, now compute new sum" << endl;
 	auto sum_discharge2 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
 	auto snow_sca2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
 	auto snow_swe2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
     auto sum_river_discharge2 = rm.river_output_flow_m3s(common_river_id);
+    TS_ASSERT_EQUALS(sum_discharge2->size(), ta.size());// ensure we get complete results when running with catch.calc filter
+    TS_ASSERT_EQUALS(snow_swex->size(), snow_swe2->size());
     for (size_t i = 0;i < sum_discharge2->size();++i) { // should still be equal
         TS_ASSERT_DELTA(sum_discharge2->value(i), sum_river_discharge2->value(i), 0.001);
+        TS_ASSERT_DELTA(sum_discharge_115_87->value(i), sum_discharge2->value(i), 0.001);// the two runs are equal
+        TS_ASSERT_DELTA(snow_swex->value(i), snow_swe2->value(i), 0.001);
     }
-	cout << "7. Sum discharge for " << catchment_ids[0] << " and " << catchment_ids[1] << " is:" << endl;
+    if (verbose) {
+        cout << "7. Sum discharge for " << catchment_ids[2] << " and " << catchment_ids[1] << " is:" << endl;
 
-	cout << "discharge:" << endl; print(cout, *sum_discharge2, i0, n_steps);
-	cout << "snow_sca :" << endl; print(cout, *snow_sca2, i0, n_steps);
-	cout << "snow_swe :" << endl; print(cout, *snow_swe2, i0, n_steps);
-
+        cout << "discharge:" << endl; print(cout, *sum_discharge2, i0, n_steps);
+        cout << "snow_sca :" << endl; print(cout, *snow_sca2, i0, n_steps);
+        cout << "snow_swe :" << endl; print(cout, *snow_swe2, i0, n_steps);
+    }
 	cout << endl << "Done test read and run region-model" << endl;
     if (!getenv("SHYFT_FULL_TEST")) {
         TS_TRACE("Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST=TRUE; or win: set SHYFT_FULL_TEST=TRUE to enable calibration run of nea-nidelv in this test");

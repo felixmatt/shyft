@@ -15,7 +15,7 @@ from shyft.api import IntVector
 from shyft.api import Calendar
 from shyft.api import deltahours
 from shyft.api import YMDhms
-from shyft.api import Timeaxis
+from shyft.api import TimeAxisFixedDeltaT
 from shyft.api import TargetSpecificationPts
 from shyft.api import TargetSpecificationVector
 from shyft.api import KLING_GUPTA
@@ -54,7 +54,7 @@ def observed_tistel_discharge(period):
 def burn_in_state(simulator, t_start, t_stop, q_obs_m3s_ts):
     dt = deltahours(1)
     n = int(round((t_stop - t_start)/dt))
-    time_axis = Timeaxis(t_start, dt, n)
+    time_axis = TimeAxisFixedDeltaT(t_start, dt, n)
     n_cells = simulator.region_model.size()
     state_repos = DefaultStateRepository(simulator.region_model.__class__, n_cells)
     simulator.run(time_axis, state_repos.get_state(0))
@@ -159,9 +159,9 @@ def forecast_demo():
     dt = deltahours(1)
     n_obs = int(round((t_fc_start - t_start)/dt))
     n_fc = 65
-    obs_time_axis = Timeaxis(t_start, dt, n_obs)
-    fc_time_axis = Timeaxis(t_fc_start, dt, n_fc)
-    total_time_axis = Timeaxis(t_start, dt, n_obs + n_fc)
+    obs_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs)
+    fc_time_axis = TimeAxisFixedDeltaT(t_fc_start, dt, n_fc)
+    total_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs + n_fc)
     q_obs_m3s_ts = observed_tistel_discharge(total_time_axis.total_period())
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
     initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
@@ -189,9 +189,9 @@ def ensemble_demo():
     n_fc_ens = 30
     n_disp = int(round(t_fc_ens_start - disp_start)/dt) + n_fc_ens + 24*7
 
-    obs_time_axis = Timeaxis(t_start, dt, n_obs + 1)
-    fc_ens_time_axis = Timeaxis(t_fc_ens_start, dt, n_fc_ens)
-    display_time_axis = Timeaxis(disp_start, dt, n_disp)
+    obs_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs + 1)
+    fc_ens_time_axis = TimeAxisFixedDeltaT(t_fc_ens_start, dt, n_fc_ens)
+    display_time_axis = TimeAxisFixedDeltaT(disp_start, dt, n_disp)
 
     q_obs_m3s_ts = observed_tistel_discharge(obs_time_axis.total_period())
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
@@ -218,7 +218,7 @@ def continuous_calibration():
     t_fc_start = utc.time(YMDhms(2015, 10, 1))
     dt = deltahours(1)
     n_obs = int(round((t_fc_start - t_start)/dt))
-    obs_time_axis = Timeaxis(t_start, dt, n_obs + 1)
+    obs_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs + 1)
     q_obs_m3s_ts = observed_tistel_discharge(obs_time_axis.total_period())
 
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
@@ -231,7 +231,7 @@ def continuous_calibration():
     state = initial_state
     opt_states = {t: state}
     while t < recal_start:
-        ptgsk.run(Timeaxis(t, dt, 24), state)
+        ptgsk.run(TimeAxisFixedDeltaT(t, dt, 24), state)
         t += deltahours(24)
         state = ptgsk.reg_model_state
         opt_states[t] = state
@@ -252,11 +252,11 @@ def continuous_calibration():
         opt_start = curr_time - deltahours(24*num_opt_days)
         opt_state = opt_states.pop(opt_start)
         p = ptgsk.region_model.get_region_parameter()
-        p_opt = ptgsk.optimize(Timeaxis(opt_start, dt, 24*num_opt_days), opt_state, target_spec_vec,
+        p_opt = ptgsk.optimize(TimeAxisFixedDeltaT(opt_start, dt, 24*num_opt_days), opt_state, target_spec_vec,
                                p, p_min, p_max, tr_stop=1.0e-5)
         ptgsk.region_model.set_region_parameter(p_opt)
         corr_state = adjust_simulator_state(ptgsk, curr_time, q_obs_m3s_ts)
-        ptgsk.run(Timeaxis(curr_time, dt, 24), corr_state)
+        ptgsk.run(TimeAxisFixedDeltaT(curr_time, dt, 24), corr_state)
         curr_time += deltahours(24)
         opt_states[curr_time] = ptgsk.reg_model_state
         discharge = ptgsk.region_model.statistics.discharge([0])
