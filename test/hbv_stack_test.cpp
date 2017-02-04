@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "hbv_stack_test.h"
 #include "core/hbv_stack.h"
 #include "core/hbv_stack_cell_model.h"
 #include "mocks.h"
@@ -37,8 +36,8 @@ namespace shyfttest {
 		}
 	};
 }; // End namespace shyfttest
-
-void hbv_stack_test::test_call_stack() {
+TEST_SUITE("hbv_stack");
+TEST_CASE("test_call_stack") {
 	xpts_t temp;
 	xpts_t prec;
 	xpts_t rel_hum;
@@ -91,3 +90,4 @@ void hbv_stack_test::test_call_stack() {
 	for (size_t i = 0; i < snow_swe.size(); ++i)
 		TS_ASSERT(std::isfinite(snow_swe.get(i).v) && snow_swe.get(i).v >= 0);
 }
+TEST_SUITE_END();

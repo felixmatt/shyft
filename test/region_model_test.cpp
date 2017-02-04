@@ -1,6 +1,4 @@
 #include "test_pch.h"
-#include "region_model_test.h"
-
 
 
 // from core pull in the basic templated algorithms
@@ -27,9 +25,8 @@
 
 // define namespace shorthands
 using namespace std;
-namespace ec = shyft::core;
-namespace et = shyft::timeseries;
-namespace em = shyft::core;
+namespace sc = shyft::core;
+namespace st = shyft::timeseries;
 namespace pt = shyft::core::priestley_taylor;
 namespace pc = shyft::core::precipitation_correction;
 namespace gs = shyft::core::gamma_snow;
@@ -38,16 +35,16 @@ namespace kr = shyft::core::kirchner;
 namespace pt_gs_k = shyft::core::pt_gs_k;
 
 // and typedefs for commonly used types in this test
-typedef et::point_ts<et::timeaxis> pts_t;
-typedef et::constant_timeseries<et::timeaxis> cts_t;
-typedef et::timeaxis ta_t;
-
-void region_model_test::test_build(void) {
+typedef st::point_ts<st::timeaxis> pts_t;
+typedef st::constant_timeseries<st::timeaxis> cts_t;
+typedef st::timeaxis ta_t;
+TEST_SUITE("region_model");
+TEST_CASE("test_build") {
 
     // arrange
-    ec::calendar cal;
-    auto start = cal.time(ec::YMDhms(2015, 1, 1, 12, 00, 00));
-    auto dt = ec::deltahours(1);
+    sc::calendar cal;
+    auto start = cal.time(sc::YMDhms(2015, 1, 1, 12, 00, 00));
+    auto dt = sc::deltahours(1);
     size_t n = 24*10;
 
     ta_t ta(start, dt, n);
@@ -58,15 +55,15 @@ void region_model_test::test_build(void) {
     pts_t windspd(ta, 2.0);
     pts_t rhum(ta, 60.0);
     cts_t chum(ta, 60.0);
-    auto env = em::create_cell_environment<ta_t>(x, temp, rad, windspd, rhum);
+    auto env = sc::create_cell_environment<ta_t>(x, temp, rad, windspd, rhum);
     env.init(ta);
     TS_ASSERT_EQUALS(env.temperature.size(), n);
 
     // create one cell..
 
     // GeoCell, easy to understand
-    ec::geo_cell_data gc1(ec::geo_point(100.0, 100.0, 10.0), 1000.0*1000.0, 0);
-    ec::geo_cell_data gc2(ec::geo_point(100.0, 100.0, 10.0), 1000.0*1000.0, 1);
+    sc::geo_cell_data gc1(sc::geo_point(100.0, 100.0, 10.0), 1000.0*1000.0, 0);
+    sc::geo_cell_data gc2(sc::geo_point(100.0, 100.0, 10.0), 1000.0*1000.0, 1);
     // The model stack needs its parameters:
     pt::parameter pt;
     gs::parameter gs;
@@ -109,18 +106,18 @@ void region_model_test::test_build(void) {
     TS_ASSERT_EQUALS(c1.rc.snow_swe.size(), ta.size());
 
     // now build region environment
-    typedef em::geo_point_ts<pts_t> gpts_t;
-    typedef em::geo_point_ts<cts_t> gcts_t;
+    typedef sc::geo_point_ts<pts_t> gpts_t;
+    typedef sc::geo_point_ts<cts_t> gcts_t;
 
-    ec::geo_point s1(2000.0, 2000.0, 10.0);
-    ec::geo_point s2(250.0, 1500.0, 200.0);
+    sc::geo_point s1(2000.0, 2000.0, 10.0);
+    sc::geo_point s2(250.0, 1500.0, 200.0);
     gpts_t gprec{s1, prec};
     gpts_t gtemp {s1, temp};
     pts_t temp2 = temp;
     temp2.fill(3.0);
     gpts_t gtemp2{s2, temp2};
     //<class PS,class TS,class RS,class HS,class WS>
-    typedef em::region_environment<gpts_t, gpts_t, gpts_t, gcts_t, gcts_t> test_env_t;
+    typedef sc::region_environment<gpts_t, gpts_t, gpts_t, gcts_t, gcts_t> test_env_t;
     test_env_t testenv;
     testenv.temperature = make_shared<vector<gpts_t>>();
     testenv.temperature->push_back(gtemp);
@@ -129,7 +126,7 @@ void region_model_test::test_build(void) {
     testenv.precipitation->push_back(gtemp);
     testenv.precipitation->push_back(gtemp2);
 
-    typedef em::region_model<pt_gs_k::cell_complete_response_t, test_env_t> ptgsk_region_model_t;
+    typedef sc::region_model<pt_gs_k::cell_complete_response_t, test_env_t> ptgsk_region_model_t;
     auto ptgsk_cells = make_shared<std::vector<pt_gs_k::cell_complete_response_t>> ();//ptgsk_cells;
     auto c1b = c1;
     c1b.geo.set_catchment_id(1);
@@ -145,7 +142,7 @@ void region_model_test::test_build(void) {
     auto &c1pr = rm.get_catchment_parameter(1);
     TS_ASSERT_DELTA(c1pr.kirchner.c1, -2.5, 0.0001);
 
-    ec::interpolation_parameter ip;
+    sc::interpolation_parameter ip;
     rm.run_interpolation(ip, ta, testenv);
     auto tsz1 = c1.env_ts.temperature.size();
     rm.run_cells();
@@ -162,9 +159,9 @@ void region_model_test::test_build(void) {
 
 }
 
-void region_model_test::test_region_vs_catchment_parameters(void) {
+TEST_CASE("test_region_vs_catchment_parameters") {
     using cell_t=pt_gs_k::cell_complete_response_t;
-    using region_model_t=em::region_model<cell_t>;
+    using region_model_t=sc::region_model<cell_t>;
     using parameter_t=cell_t::parameter_t;
 
     // The model stack needs its parameters:
@@ -176,8 +173,8 @@ void region_model_test::test_region_vs_catchment_parameters(void) {
     pt_gs_k::state_t state{gss, ks};
 
     // most important, there is cells, that are geo-located, have area, mid-point,catchment-id
-    ec::geo_cell_data gc1(ec::geo_point(500.0,  50.0,   10.0), 1000.0* 100.0, 0);
-    ec::geo_cell_data gc2(ec::geo_point(1500.0, 500.0, 100.0), 1000.0*1000.0, 1);
+    sc::geo_cell_data gc1(sc::geo_point(500.0,  50.0,   10.0), 1000.0* 100.0, 0);
+    sc::geo_cell_data gc2(sc::geo_point(1500.0, 500.0, 100.0), 1000.0*1000.0, 1);
 
     cell_t c1,c2;
     c1.geo=gc1;
@@ -211,3 +208,4 @@ void region_model_test::test_region_vs_catchment_parameters(void) {
 
 
 }
+TEST_SUITE_END();

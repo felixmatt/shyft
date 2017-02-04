@@ -1,15 +1,13 @@
 #include "test_pch.h"
-#include "hbv_snow_test.h"
 #include "core/hbv_snow.h"
-//#include "core/region_model.h"
 
 using namespace shyft::core;
 using namespace shyft::core::hbv_snow;
 using namespace std;
 
 using SnowModel = calculator<parameter, state>;
-
-void hbv_snow_test::test_integral_calculations() {
+TEST_SUITE("hbv_snow");
+TEST_CASE("test_integral_calculations") {
     vector<double> f = {0.0, 0.5, 1.0};
     vector<double> x = {0.0, 0.5, 1.0};
 
@@ -25,7 +23,7 @@ void hbv_snow_test::test_integral_calculations() {
 
 }
 
-void hbv_snow_test::test_mass_balance_at_snowpack_reset() {
+TEST_CASE("test_mass_balance_at_snowpack_reset") {
     vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0};
     vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
     parameter p(s, a);
@@ -46,7 +44,7 @@ void hbv_snow_test::test_mass_balance_at_snowpack_reset() {
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
 }
 
-void hbv_snow_test::test_mass_balance_at_snowpack_buildup() {
+TEST_CASE("test_mass_balance_at_snowpack_buildup") {
     vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0};
     vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
     parameter p(s, a);
@@ -75,7 +73,7 @@ void hbv_snow_test::test_mass_balance_at_snowpack_buildup() {
 
 }
 
-void hbv_snow_test::test_mass_balance_rain_no_snow() {
+TEST_CASE("test_mass_balance_rain_no_snow") {
     vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0};
     vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
     parameter p(s, a);
@@ -99,7 +97,7 @@ void hbv_snow_test::test_mass_balance_rain_no_snow() {
     TS_ASSERT_DELTA(state.swe, 0.0, 1.0e-8);
 }
 
-void hbv_snow_test::test_mass_balance_melt_no_precip() {
+TEST_CASE("test_mass_balance_melt_no_precip") {
     vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0};
     vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
     parameter p(s, a);
@@ -122,5 +120,5 @@ void hbv_snow_test::test_mass_balance_melt_no_precip() {
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
 }
 
-
+TEST_SUITE_END();
 /* vim: set filetype=cpp: */

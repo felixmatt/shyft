@@ -1,6 +1,5 @@
 #include "test_pch.h"
 #include "mocks.h"
-#include "calibration_test.h"
 #include "core/region_model.h"
 #include "core/pt_gs_k.h"
 #include "core/pt_gs_k_cell_model.h"
@@ -291,8 +290,8 @@ namespace shyfttest {
 
 } //  shyfttest
 
-
-void calibration_test::test_dummy() {
+TEST_SUITE("calibration");
+TEST_CASE("test_dummy") {
     std::vector<double> target = {-5.0,1.0,1.0,1.0};
     std::vector<double> lower = {-10, 0, 0, 0};
     std::vector<double> upper = {-4, 2, 2, 2};
@@ -324,7 +323,7 @@ void calibration_test::test_dummy() {
 }
 
 
-void calibration_test::test_simple() {
+TEST_CASE("test_simple") {
     using namespace shyft::core::model_calibration;
     // Make a simple model setup
     calendar cal;
@@ -435,7 +434,7 @@ void calibration_test::test_simple() {
 	}
 
 }
-void calibration_test::test_nash_sutcliffe_goal_function() {
+TEST_CASE("test_nash_sutcliffe_goal_function") {
 	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
@@ -466,7 +465,7 @@ void calibration_test::test_nash_sutcliffe_goal_function() {
 		((1.0 - 5.5)*(1.0 - 5.5) + (10.0 - 5.5)*(10.0 - 5.5)), 0.00001);
 
 }
-void calibration_test::test_kling_gupta_goal_function() {
+TEST_CASE("test_kling_gupta_goal_function") {
     	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
@@ -494,3 +493,4 @@ void calibration_test::test_kling_gupta_goal_function() {
 
 	TS_ASSERT_DELTA(nsg1,1.5666, 0.0001);
 }
+TEST_SUITE_END();

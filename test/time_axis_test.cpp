@@ -1,12 +1,11 @@
 #include "test_pch.h"
-#include "time_axis_test.h"
 #include "core/time_axis.h"
 
 using namespace shyft;
 using namespace shyft::core;
 using namespace std;
 
-/** \brief Utilty function to verify one time-axis are conceptually equal to another */
+/** \brief Utility function to verify one time-axis are conceptually equal to another */
 template <class TA, class TB>
 static bool test_if_equal( const TA& e, const TB& t ) {
     using namespace std;
@@ -45,8 +44,8 @@ static bool test_if_equal( const TA& e, const TB& t ) {
 
 	return !equivalent_time_axis(u,e) && !equivalent_time_axis(u,t);
 }
-
-void time_axis_test::test_all() {
+TEST_SUITE("time_axis");
+TEST_CASE("test_all") {
     // Verify that if all types of time-axis are setup up to have the same periods
     // they all have the same properties.
     // test-strategy: Have one fixed time-axis that the other should equal
@@ -164,7 +163,7 @@ void time_axis_test::test_all() {
 }
 
 
-void time_axis_test::test_time_shift() {
+TEST_CASE("test_time_shift") {
     calendar utc;
     utctime t0=utc.time(2015,1,1);
     utctime t1=utc.time(2016,1,1);
@@ -175,3 +174,4 @@ void time_axis_test::test_time_shift() {
     TS_ASSERT( test_if_equal( time_axis::fixed_dt(t1,dt, n), ta1 ) );
 
 }
+TEST_SUITE_END();

@@ -74,7 +74,6 @@
 		<Unit filename="experimental.cpp" />
 		<Unit filename="experimental.h" />
 		<Unit filename="gamma_snow.h" />
-		<Unit filename="gaussian_random_field.h" />
 		<Unit filename="geo_cell_data.h" />
 		<Unit filename="geo_point.h" />
 		<Unit filename="glacier_melt.h" />

@@ -1,11 +1,13 @@
 #include "test_pch.h"
 #include "core/utctime_utilities.h"
-#include "utctime_utilities_test.h"
+
 using namespace std;
 using namespace shyft;
 using namespace shyft::core;
 
-void utctime_utilities_test::test_utctime() {
+TEST_SUITE("utctime_utilities");
+
+TEST_CASE("test_utctime") {
     calendar c(0);
     YMDhms unixEra(1970,01,01,00,00,00);
     YMDhms y_null;
@@ -19,7 +21,7 @@ void utctime_utilities_test::test_utctime() {
     YMDhms r=c.calendar_units(utctime(0L));
     TS_ASSERT_EQUALS(r,unixEra);
 }
-void utctime_utilities_test::test_utcperiod() {
+TEST_CASE("test_utcperiod") {
     calendar utc;
     utctime t0=utc.time(2015,1,1);
     utctime t1=utc.time(2015,2,1);
@@ -42,7 +44,7 @@ void utctime_utilities_test::test_utcperiod() {
 
 
 }
-void utctime_utilities_test::test_calendar_trim() {
+TEST_CASE("test_calendar_trim") {
     // simple trim test
     calendar cet(deltahours(1));
     utctime t=cet.time(YMDhms(2012,3,8,12,16,44));
@@ -61,13 +63,13 @@ void utctime_utilities_test::test_calendar_trim() {
 }
 
 
-void utctime_utilities_test::test_calendar_timezone() {
+TEST_CASE("test_calendar_timezone") {
     YMDhms unixEra(1970,01,01,00,00,00);
     calendar cet(deltahours(1));
     TS_ASSERT_EQUALS(deltahours(-1),cet.time(unixEra));
 }
 
-void utctime_utilities_test::test_calendar_to_string() {
+TEST_CASE("test_calendar_to_string") {
     calendar utc;
     calendar osl(deltahours(1));
     calendar cet("Europe/Oslo");
@@ -79,7 +81,7 @@ void utctime_utilities_test::test_calendar_to_string() {
     TS_ASSERT_EQUALS(xxx.to_string(t),string("2012-05-08T09:46:44-02:30"));
 }
 
-void utctime_utilities_test::test_calendar_day_of_year() {
+TEST_CASE("test_calendar_day_of_year") {
     calendar cet(deltahours(1));
     TS_ASSERT_EQUALS(1,cet.day_of_year(cet.time(YMDhms(2012,1,1,10,11,12))));
     TS_ASSERT_EQUALS(2,cet.day_of_year(cet.time(YMDhms(2012,1,2,0,0,0))));
@@ -87,7 +89,7 @@ void utctime_utilities_test::test_calendar_day_of_year() {
 
 
 }
-void utctime_utilities_test::test_calendar_month() {
+TEST_CASE("test_calendar_month") {
     calendar cet(deltahours(1));
     TS_ASSERT_EQUALS( 1,cet.month(cet.time(YMDhms(2012,1,1,10,11,12))));
     TS_ASSERT_EQUALS( 2,cet.month(cet.time(YMDhms(2012,2,2,0,0,0))));
@@ -95,7 +97,7 @@ void utctime_utilities_test::test_calendar_month() {
 
 }
 
-void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
+TEST_CASE("test_YMDhms_reasonable_calendar_coordinates") {
 	TS_ASSERT_THROWS_ANYTHING(YMDhms(10000, 1, 1, 0, 0, 0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(-10000,1,1,0,0,0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,0,1,0,0,0));
@@ -109,7 +111,7 @@ void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,-1));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,60));
 }
-void utctime_utilities_test::test_calendar_add_and_diff_units() {
+TEST_CASE("test_calendar_add_and_diff_units") {
 	calendar cet(deltahours(1));
 	int n_units = 3;
 	utctimespan dts[] = { calendar::HOUR, calendar::DAY, calendar::WEEK, calendar::MONTH,calendar::YEAR };
@@ -123,14 +125,14 @@ void utctime_utilities_test::test_calendar_add_and_diff_units() {
 		TS_ASSERT_EQUALS(t3, t1);// verify subtraction gives back original result
 	}
 }
-void utctime_utilities_test::test_calendar_day_of_week() {
+TEST_CASE("test_calendar_day_of_week") {
 	calendar cet(deltahours(1));
 	for (int i = 0; i < 7;++i)
 		TS_ASSERT_EQUALS(i, cet.day_of_week(cet.time(YMDhms(2015, 8, 9+i, 10, 11, 12))));
 
 }
 
-void utctime_utilities_test::test_tz_info_db() {
+TEST_CASE("test_tz_info_db") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -154,7 +156,7 @@ void utctime_utilities_test::test_tz_info_db() {
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016,10,30, 1, 0, 0))),false);// exactly at shift into winter
 
 }
-void utctime_utilities_test::test_add_over_dst_transitions() {
+TEST_CASE("test_add_over_dst_transitions") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -181,7 +183,7 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
     TS_ASSERT_EQUALS(t1_2,t0+deltahours(1));
     TS_ASSERT_EQUALS(YMDhms(2016,3,27,1),cet.calendar_units(t1_2));
     TS_ASSERT_EQUALS(t1_3,t0+deltahours(2));
-	TS_ASSERT_EQUALS(1,cet.diff_units(t0,t1_3,deltahours(3)))
+    TS_ASSERT_EQUALS(1, cet.diff_units(t0, t1_3, deltahours(3)));
     /// case 2: 25 hour, summer->winter
     t0 = cet.time(YMDhms(2016,10,30));
     t1 = cet.add(t0,calendar::DAY,1);
@@ -207,7 +209,7 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
 
 }
 
-void utctime_utilities_test::test_calendar_trim_with_dst() {
+TEST_CASE("test_calendar_trim_with_dst") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -233,7 +235,7 @@ void utctime_utilities_test::test_calendar_trim_with_dst() {
 
 
 }
-void utctime_utilities_test::test_add_months() {
+TEST_CASE("test_add_months") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -274,3 +276,4 @@ void utctime_utilities_test::test_add_months() {
     }
 
 }
+TEST_SUITE_END();

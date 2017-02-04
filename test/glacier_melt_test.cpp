@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "glacier_melt_test.h"
 #include "core/glacier_melt.h"
 #include "core/timeseries.h"
 
@@ -9,8 +8,8 @@ namespace glacier_test_constant {
 
 using namespace shyft::core;
 
-
-void glacier_melt_test::test_melt() {
+TEST_SUITE("glacier_melt");
+TEST_CASE("test_melt") {
     // Model parameters
     const double dtf = 6.0;
     glacier_melt::parameter p(dtf);
@@ -31,8 +30,8 @@ void glacier_melt_test::test_melt() {
                     TS_ASSERT_DELTA(melt, 0.0, glacier_test_constant::EPS);
                 if (sca >= gf)
                     TS_ASSERT_DELTA(melt, 0.0, glacier_test_constant::EPS);
-                if ((temp > 0.0) && (gf>sca))
-                    TS_ASSERT(melt > 0.0)
+                if ((temp > 0.0) && (gf > sca))
+                    TS_ASSERT(melt > 0.0);
                 temp += 2.0;
             }
             gf += 0.2;
@@ -46,11 +45,11 @@ void glacier_melt_test::test_melt() {
     double gf = 1.0;
 
     const double melt_m3s =  glacier_melt::step(p.dtf, temp, sca, gf);
-    TS_ASSERT_DELTA(melt_m3s, dtf*(gf-sca)*temp*0.001/86400.0, glacier_test_constant::EPS)
+    TS_ASSERT_DELTA(melt_m3s, dtf*(gf - sca)*temp*0.001 / 86400.0, glacier_test_constant::EPS);
 
 }
 
-void glacier_melt_test::test_melt_ts(){
+TEST_CASE("test_melt_ts") {
     using namespace shyft::core;
     using namespace shyft::timeseries;
     using namespace shyft::time_axis;
@@ -75,3 +74,4 @@ void glacier_melt_test::test_melt_ts(){
     auto a= melt*3.0 + sca_m2; // if this compiles, then it works like we want
     auto b = a*3.0;
 }
+TEST_SUITE_END();

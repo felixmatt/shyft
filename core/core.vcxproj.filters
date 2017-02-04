@@ -90,9 +90,6 @@
     <ClInclude Include="bayesian_kriging.h">
       <Filter>interpolation</Filter>
     </ClInclude>
-    <ClInclude Include="gaussian_random_field.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
     <ClInclude Include="kriging.h">
       <Filter>interpolation</Filter>
     </ClInclude>

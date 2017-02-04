@@ -1,10 +1,10 @@
 #include "test_pch.h"
-#include "priestley_taylor_test.h"
 #include "core/priestley_taylor.h"
 
 using namespace shyft::core;
 namespace pt = shyft::core::priestley_taylor;
-void priestley_taylor_test::test_regression() {
+TEST_SUITE("priestley_taylor");
+TEST_CASE("priestley_taylor_test::test_regression") {
     pt::calculator pt(0.2, 1.26);
     TS_ASSERT_DELTA(pt.potential_evapotranspiration(20.5, 445, 64/100.0)*24.0*3600 , 11.0 , 1.0); //TODO: verify some more numbers
     TS_ASSERT_DELTA(pt.potential_evapotranspiration(-20, 200, 30/100.0)*24*3600,0.0, .5);// at very low temperature, expect 0.0
@@ -20,3 +20,4 @@ void priestley_taylor_test::test_regression() {
     for(double r=10.0; r < 900.0; r += 50.0)
         TS_ASSERT(pt.potential_evapotranspiration(15, r, 60)<pt.potential_evapotranspiration(15, r + 50.0, 60));
 }
+TEST_SUITE_END();
