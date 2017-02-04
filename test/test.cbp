@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft  serialization_test" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  --test-suite=serialization" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft serialization_test" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  --test-suite=serialization" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -74,15 +74,12 @@
 			<Add directory="/usr/local/lib64" />
 			<Add directory="/usr/local/lib" />
 		</Linker>
-		<ExtraCommands>
-		</ExtraCommands>
 		<Unit filename="actual_evapotranspiration_test.cpp" />
 		<Unit filename="api_test.cpp" />
 		<Unit filename="bayesian_kriging_test.cpp" />
 		<Unit filename="calibration_test.cpp" />
 		<Unit filename="cell_builder_test.cpp" />
 		<Unit filename="gamma_snow_test.cpp" />
-		<Unit filename="gaussian_random_field_test.cpp" />
 		<Unit filename="glacier_melt_test.cpp" />
 		<Unit filename="gridpp_test.cpp" />
 		<Unit filename="hbv_actual_evapotranspiration_test.cpp" />
