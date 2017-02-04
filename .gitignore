@@ -20,7 +20,6 @@ shyft/tests/api/state_test.yaml
 Debug
 x64
 Release
-runner.cpp
 api_wrap.cpp
 *.suo
 *.sdf
