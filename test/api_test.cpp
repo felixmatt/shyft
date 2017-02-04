@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "api_test.h"
 
 // from core
 #include "core/utctime_utilities.h"
@@ -19,8 +18,8 @@ using namespace shyft::timeseries;
 
 using namespace shyft::api;
 
-
-void api_test::test_ptgsk_state_io() {
+TEST_SUITE("api");
+TEST_CASE("test_ptgsk_state_io") {
 	using namespace shyft::api;
 	pt_gs_k_state_t s;
 	s.gs.albedo = 0.5;
@@ -53,7 +52,7 @@ void api_test::test_ptgsk_state_io() {
 	}
 
 }
-void api_test::test_ptssk_state_io() {
+TEST_CASE("test_ptssk_state_io") {
 	using namespace shyft::api;
 	pt_ss_k_state_t s;
 	s.snow.nu = 5;
@@ -87,7 +86,7 @@ void api_test::test_ptssk_state_io() {
 
 }
 
-void api_test::test_pthsk_state_io() {
+TEST_CASE("test_pthsk_state_io") {
 	using namespace shyft::api;
 	pt_hs_k_state_t s;
 	s.snow.sca = 12.2;
@@ -115,7 +114,7 @@ void api_test::test_pthsk_state_io() {
 
 }
 
-void api_test::test_geo_cell_data_io() {
+TEST_CASE("test_geo_cell_data_io") {
     geo_cell_data gcd(geo_point(1,2,3),4,5,0.6,land_type_fractions(2,4,6,8,10));
 
     auto gcd_s=geo_cell_data_io::to_vector(gcd);
@@ -136,7 +135,7 @@ void api_test::test_geo_cell_data_io() {
 
 
 /** Here we try to build a test-story from start to end that covers state-io-extract-restore*/
-void api_test::test_state_with_id_functionality() {
+TEST_CASE("test_state_with_id_functionality") {
     typedef shyft::core::pt_gs_k::cell_discharge_response_t xcell_t;
     cell_state_id a{ 1,2,3,10 };
     cell_state_id b{ 1,2,4,20 };
@@ -190,3 +189,4 @@ void api_test::test_state_with_id_functionality() {
     TS_ASSERT_EQUALS(m0_y.size(), 1);
     TS_ASSERT_EQUALS(m0_y[0], 0);
 }
+TEST_SUITE_END();

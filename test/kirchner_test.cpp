@@ -1,6 +1,4 @@
 #include "test_pch.h"
-
-#include "kirchner_test.h"
 #include "mocks.h"
 #include "core/kirchner.h"
 
@@ -10,8 +8,8 @@ namespace shyfttest {
 
 }
 using namespace shyft::core::kirchner;
-void kirchner_test::test_single_solve()
-{
+TEST_SUITE("kirchner");
+TEST_CASE("test_single_solve") {
     using namespace shyft::core;
     parameter p;
     calculator<kirchner::trapezoidal_average, parameter> k(p);
@@ -26,7 +24,7 @@ void kirchner_test::test_single_solve()
     TS_ASSERT_DELTA(q1, q2, shyfttest::EPS);
     TS_ASSERT_DELTA(qa1, qa2, shyfttest::EPS);
 }
-void kirchner_test::test_solve_from_zero_q() {
+TEST_CASE("test_solve_from_zero_q") {
     using namespace shyft::core;
     parameter p;
     calculator<kirchner::trapezoidal_average, parameter> k(p);
@@ -45,8 +43,7 @@ void kirchner_test::test_solve_from_zero_q() {
 
 }
 
-void kirchner_test::test_hard_case()
-{
+TEST_CASE("test_hard_case") {
     using namespace shyft::core;
     parameter p;
     const double P = 5.93591;
@@ -63,11 +60,10 @@ void kirchner_test::test_hard_case()
         atol /= 2.0;
         rtol /= 2.0;
     }
-    TS_ASSERT(q < 100.0)
+    TS_ASSERT(q < 100.0);
 }
 
-void kirchner_test::test_simple_average_loads()
-{
+TEST_CASE("test_simple_average_loads") {
     using namespace shyft::core;
     parameter p;
     calculator<kirchner::trapezoidal_average, parameter> k(1.0e-6, 1.0e-5, p);
@@ -91,8 +87,7 @@ void kirchner_test::test_simple_average_loads()
     }
 }
 using namespace std;
-void kirchner_test::test_composite_average_loads()
-{
+TEST_CASE("test_composite_average_loads") {
     using namespace shyft::core;
     parameter p;
     calculator<kirchner::composite_trapezoidal_average, parameter> k(1.0e-6, 1.0e-5, p);
@@ -116,3 +111,5 @@ void kirchner_test::test_composite_average_loads()
         std::cout << "Stepping composite avg Kirchner model " << n_x*n_y << " times took " << 1000*(total)/(double)(CLOCKS_PER_SEC) << " ms" << std::endl;
     }
 }
+
+TEST_SUITE_END();

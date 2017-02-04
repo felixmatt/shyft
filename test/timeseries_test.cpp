@@ -1,6 +1,5 @@
 #include "test_pch.h"
 #define _USE_MATH_DEFINES
-#include "timeseries_test.h"
 #include "mocks.h"
 #include "core/timeseries.h"
 #include "core/time_axis.h"
@@ -71,7 +70,8 @@ using namespace shyfttest;
 
 typedef point_ts<point_timeaxis> xts_t;
 
-void timeseries_test::test_point_timeaxis() {
+TEST_SUITE("time_series");
+TEST_CASE("test_point_timeaxis") {
     point_timeaxis ts0; //zero points
     TS_ASSERT_EQUALS(ts0.size(),0);
     TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
@@ -98,7 +98,7 @@ void timeseries_test::test_point_timeaxis() {
 
 }
 
-void timeseries_test::test_timeaxis() {
+TEST_CASE("test_timeaxis") {
     auto t0=calendar().time(YMDhms(2000,1,1,0,0,0));
     auto dt=deltahours(1);
     size_t n=3;
@@ -116,7 +116,7 @@ void timeseries_test::test_timeaxis() {
 
 }
 
-void timeseries_test::test_point_source_with_timeaxis() {
+TEST_CASE("test_point_source_with_timeaxis") {
     calendar utc;
     auto t=utc.time(YMDhms(2015,5,1,0,0,0));
     auto d=deltahours(1);
@@ -158,7 +158,7 @@ void timeseries_test::test_point_source_with_timeaxis() {
 
 }
 
-void timeseries_test::test_point_source_scale_by_value() {
+TEST_CASE("test_point_source_scale_by_value") {
     calendar utc;
     auto t=utc.time(YMDhms(2015,5,1,0,0,0));
     auto d=deltahours(1);
@@ -215,7 +215,7 @@ namespace shyfttest {
             }
         };
 };
-void timeseries_test::test_hint_based_bsearch() {
+TEST_CASE("test_hint_based_bsearch") {
     calendar utc;
     auto t=utc.time(YMDhms(2015,5,1,0,0,0));
     auto d=deltahours(1);
@@ -261,7 +261,7 @@ void timeseries_test::test_hint_based_bsearch() {
 
 }
 
-void timeseries_test::test_average_value_staircase() {
+TEST_CASE("test_average_value_staircase") {
     auto t0=calendar().time(YMDhms(2000,1,1,0,0,0));
     auto dt=deltahours(1);
     size_t n=3;
@@ -351,7 +351,7 @@ void timeseries_test::test_average_value_staircase() {
     TS_ASSERT_EQUALS(ps.index_of_count,0);
 }
 
-void timeseries_test::test_average_value_linear_between_points() {
+TEST_CASE("test_average_value_linear_between_points") {
 	auto t0 = calendar().time(YMDhms(2000, 1, 1, 0, 0, 0));
 	auto dt = deltahours(1);
 	size_t n = 3;
@@ -522,7 +522,7 @@ public:
 	size_t size() const { return time_axis.size(); }
 };
 
-void timeseries_test::test_TxFxSource() {
+TEST_CASE("test_TxFxSource") {
     utctime t0 = calendar().time(YMDhms(1940, 1, 1, 0,0, 0));
     utctimespan dt = deltahours(1);
 	size_t n = 4*100*24*365;
@@ -551,7 +551,7 @@ void timeseries_test::test_TxFxSource() {
 	//cout << "    T fast    : " << msec2 << " (" << s2 << ")" << endl;
 }
 
-void timeseries_test::test_point_timeseries_with_point_timeaxis() {
+TEST_CASE("test_point_timeseries_with_point_timeaxis") {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
     point_ts<point_timeaxis> ps(point_timeaxis(times),points);
@@ -561,7 +561,7 @@ void timeseries_test::test_point_timeseries_with_point_timeaxis() {
     }
 }
 
-void timeseries_test::test_time_series_difference() {
+TEST_CASE("test_time_series_difference") {
     using namespace shyfttest::mock;
     const size_t n = 10;
     vector<utctime> ta_times(n);
@@ -573,7 +573,7 @@ void timeseries_test::test_time_series_difference() {
 
 }
 
-void timeseries_test::test_ts_weighted_average(void) {
+TEST_CASE("test_ts_weighted_average") {
     using pts_t=point_ts<timeaxis>;
 	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
@@ -598,7 +598,7 @@ void timeseries_test::test_ts_weighted_average(void) {
 	}
 }
 
-void timeseries_test::test_sin_fx_ts() {
+TEST_CASE("test_sin_fx_ts") {
 	sin_fx fx(10.0, 0.0, 10.0, 10.0, 0, deltahours(24));
 	TS_ASSERT_DELTA(fx(0), 10.0, 0.000001);
 	TS_ASSERT_DELTA(fx(deltahours(24)), 10.0, 0.000001);
@@ -663,7 +663,7 @@ static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value
 
 }
 
-void timeseries_test::test_binary_operator() {
+TEST_CASE("test_binary_operator") {
     /** Test strategy here is to ensure that
        a) it compiles
        b) it gives the expected results for all combinations
@@ -727,7 +727,7 @@ void timeseries_test::test_binary_operator() {
     }
 }
 
-void timeseries_test::test_api_ts() {
+TEST_CASE("test_api_ts") {
     using namespace shyft::api;
     calendar utc;
     utctime start = utc.time(YMDhms(2016,3,8));
@@ -780,7 +780,7 @@ std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
 }
 
 /** just verify that it calculate the right things */
-void timeseries_test::test_ts_statistics_calculations() {
+TEST_CASE("test_ts_statistics_calculations") {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
     auto fx_1 = [t0](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
@@ -802,7 +802,7 @@ void timeseries_test::test_ts_statistics_calculations() {
 }
 
 /** just verify that it calculate at full speed */
-void timeseries_test::test_ts_statistics_speed() {
+TEST_CASE("test_ts_statistics_speed") {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
 
@@ -829,7 +829,7 @@ void timeseries_test::test_ts_statistics_speed() {
     //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;
 }
 
-void timeseries_test::test_timeshift_ts() {
+TEST_CASE("test_timeshift_ts") {
     using namespace shyft;
     using namespace shyft::core;
     using namespace shyft::timeseries;
@@ -855,7 +855,7 @@ void timeseries_test::test_timeshift_ts() {
     auto c = time_shift(4.0*ts1-ts0,t0-t1); // if it compiles!, then ts-operators are working ok.
 }
 
-void timeseries_test::test_periodic_ts_t() {
+TEST_CASE("test_periodic_ts_t") {
 	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
@@ -868,7 +868,7 @@ void timeseries_test::test_periodic_ts_t() {
 	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
 }
 
-void timeseries_test::test_periodic_ts_over_sampled() {
+TEST_CASE("test_periodic_ts_over_sampled") {
 	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
@@ -885,7 +885,7 @@ void timeseries_test::test_periodic_ts_over_sampled() {
 	TS_ASSERT_EQUALS(pts.value(3), v[1]);
 }
 
-void timeseries_test::test_periodic_ts_concept() {
+TEST_CASE("test_periodic_ts_concept") {
 	// Periodic profile having 8 samples spaced by 3 h
 	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
@@ -931,7 +931,7 @@ void timeseries_test::test_periodic_ts_concept() {
 	TS_ASSERT_DELTA(fun(t0 - dt/2), profile[0], 1e-9);
 }
 
-void timeseries_test::test_periodic_template_ts() {
+TEST_CASE("test_periodic_template_ts") {
 	std::vector<double> pv = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
 	calendar utc;
@@ -941,7 +941,7 @@ void timeseries_test::test_periodic_template_ts() {
 	profile_description pd(t0, dt, pv);
 
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
-	TS_ASSERT_DELTA(pd.size(), pv.size(), 1e-9);
+	TS_ASSERT_EQUALS(pd.size(), pv.size());
 
 	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
@@ -974,7 +974,7 @@ void timeseries_test::test_periodic_template_ts() {
 		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
 }
 
-void timeseries_test::test_periodic_ts_values() {
+TEST_CASE("test_periodic_ts_values") {
 	std::vector<double> pv = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
 	calendar utc;
@@ -991,7 +991,7 @@ void timeseries_test::test_periodic_ts_values() {
 	TS_ASSERT_EQUALS(v[2], 4.0);
 }
 
-void timeseries_test::test_accumulate_value() {
+TEST_CASE("test_accumulate_value") {
 	calendar utc;
 	auto t = utc.time(2015, 5, 1, 0, 0, 0);
 	auto d = deltahours(1);
@@ -1016,7 +1016,7 @@ void timeseries_test::test_accumulate_value() {
 	// besides, since average_value and friends uses accumulate_value, this function is pretty well tested from those tests.
 }
 
-void timeseries_test::test_accumulate_ts_and_accessor() {
+TEST_CASE("test_accumulate_ts_and_accessor") {
 	calendar utc;
 	auto t = utc.time(2015, 5, 1, 0, 0, 0);
 	auto d = deltahours(1);
@@ -1038,7 +1038,7 @@ void timeseries_test::test_accumulate_ts_and_accessor() {
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
 
-void timeseries_test::test_partition_by() {
+TEST_CASE("test_partition_by") {
 	calendar utc;
 	auto t = utc.time(1930, 9, 1, 0, 0, 0);
 	auto d = deltahours(1);
@@ -1103,14 +1103,14 @@ void timeseries_test::test_partition_by() {
 	}
 
 }
-void timeseries_test::test_unit_conversion() {
+TEST_CASE("test_unit_conversion") {
     double area_m2 =1000;
     double q_m3s = 1;
     TS_ASSERT_DELTA(shyft::m3s_to_mmh(q_m3s,area_m2),q_m3s/area_m2*(1000.0*3600.0),1e-10);
     TS_ASSERT_DELTA(shyft::mmh_to_m3s(shyft::m3s_to_mmh(q_m3s,area_m2),area_m2),q_m3s,1e-10);
 }
 
-void timeseries_test::test_ts_ref() {
+TEST_CASE("test_ts_ref") {
     using ta_t=shyft::time_axis::fixed_dt;
     using ts_t=shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>;
     using rts_t=shyft::timeseries::ref_ts<ts_t>;
@@ -1153,7 +1153,7 @@ void timeseries_test::test_ts_ref() {
 
 }
 
-void timeseries_test::test_convolution_w() {
+TEST_CASE("test_convolution_w") {
    using namespace shyft::core;
     using namespace shyft;
     calendar utc;
@@ -1201,7 +1201,7 @@ void timeseries_test::test_convolution_w() {
 
 }
 
-void timeseries_test::test_uniform_sum_ts() {
+TEST_CASE("test_uniform_sum_ts") {
 	using namespace shyft::core;
 	using namespace shyft;
 	// arrange the stuff, a vector of n ts, - with values equal to the rank in the vector
@@ -1237,3 +1237,4 @@ void timeseries_test::test_uniform_sum_ts() {
 		TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
 	}
 }
+TEST_SUITE_END();

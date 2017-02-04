@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "cell_builder_test.h"
 #include "core/experimental.h"
 #include "core/model_calibration.h"
 
@@ -30,7 +29,7 @@ namespace shyfttest {
 		shared_ptr<vector<geo_xts_t>> radiations; ///< geo located radiations,  [W/m^2]
 		shared_ptr<vector<geo_xts_t>> discharges;///< geo|id located discharges from catchments,  [m3/s] .. not really geo located, it's catchment id associated.. but for test/mock that is ok for now
 
-		region_environment_t get_region_environment() {
+		region_environment_t get_region_environment()  {
 			region_environment_t re;
 			re.temperature = temperatures;
 			re.precipitation = precipitations;
@@ -41,7 +40,7 @@ namespace shyfttest {
 
 	};
 
-	region_test_data load_test_data_from_files(wkt_reader& wkt_io) {
+	region_test_data load_test_data_from_files(wkt_reader& wkt_io)  {
 		region_test_data r;
 		r.forest = wkt_io.read("forest", slurp(test_path("neanidelv/landtype_forest_wkt.txt")));
 		r.glacier = wkt_io.read("glacier", slurp(test_path("neanidelv/landtype_glacier_wkt.txt")));
@@ -60,8 +59,8 @@ namespace shyfttest {
 	}
 
 }
-
-void cell_builder_test::test_read_geo_region_data_from_files(void) {
+TEST_SUITE("cell_builder");
+TEST_CASE("cell_builder_test::test_read_geo_region_data_from_files") {
 	using namespace shyft::experimental;
 	using namespace shyfttest;
 	TS_TRACE("geo testing not activated yet, experimental");
@@ -90,7 +89,7 @@ void cell_builder_test::test_read_geo_region_data_from_files(void) {
 
 }
 
-void cell_builder_test::test_read_geo_point_map(void) {
+TEST_CASE("cell_builder_test::test_read_geo_point_map") {
 	using namespace shyft::experimental;
 	using namespace shyfttest;
 	namespace ec = shyft::core;
@@ -107,7 +106,7 @@ void cell_builder_test::test_read_geo_point_map(void) {
 	}
 }
 
-void cell_builder_test::test_read_geo_located_ts() {
+TEST_CASE("cell_builder_test::test_read_geo_located_ts") {
 	using namespace shyft::experimental;
 	using namespace shyfttest;
 	using namespace shyft::core;
@@ -135,7 +134,7 @@ void cell_builder_test::test_read_geo_located_ts() {
 	}
 }
 
-void cell_builder_test::test_io_performance() {
+TEST_CASE("cell_builder_test::test_io_performance") {
 	auto t0 = shyft::core::utctime_now();
 
 	auto temp = shyfttest::find("neanidelv", "temperature");
@@ -165,7 +164,7 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 
 #include <boost/filesystem.hpp>
 
-void cell_builder_test::test_read_and_run_region_model(void) {
+TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 
 	//
 	// Arrange
@@ -411,3 +410,4 @@ void cell_builder_test::test_read_and_run_region_model(void) {
 	}
 	cout<< "done"<<endl;
 }
+TEST_SUITE_END();

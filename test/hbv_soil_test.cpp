@@ -1,12 +1,11 @@
 
 #include "test_pch.h"
-#include "hbv_soil_test.h"
 #include "core/hbv_soil.h"
 
 
 using namespace shyft::core;
-
-void hbv_soil_test::test_regression() {
+TEST_SUITE("hbv_soil");
+TEST_CASE("test_regression") {
 	hbv_soil::parameter p;
 	hbv_soil::calculator<hbv_soil::parameter> calc(p);
 	hbv_soil::state s;
@@ -22,7 +21,7 @@ void hbv_soil_test::test_regression() {
 	TS_ASSERT_DELTA(r.outflow, 1.38888000, 0.05);
 }
 
-void hbv_soil_test::test_dry_soil_case() {
+TEST_CASE("test_dry_soil_case") {
     hbv_soil::parameter p;
     hbv_soil::calculator<hbv_soil::parameter> calc(p);
     hbv_soil::state s;
@@ -35,3 +34,4 @@ void hbv_soil_test::test_dry_soil_case() {
     TS_ASSERT_DELTA(r.outflow, 4.4444e-5, 1.0e-6);
 
 }
+TEST_SUITE_END();

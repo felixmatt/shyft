@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "routing_test.h"
 #include "core/timeseries.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
@@ -41,9 +40,9 @@ namespace shyft {
     }
 }
 
+TEST_SUITE("routing");
 
-
-void routing_test::test_build_valid_river_network() {
+TEST_CASE("test_build_valid_river_network") {
 
     using namespace std;
     using namespace shyft::core;
@@ -91,7 +90,7 @@ void routing_test::test_build_valid_river_network() {
 
 
 
-void routing_test::test_routing_model() {
+TEST_CASE("test_routing_model") {
     using namespace shyft::core;
     using ta_t = shyft::time_axis::fixed_dt;
     using ts_t = shyft::timeseries::point_ts<ta_t>;
@@ -153,14 +152,8 @@ void routing_test::test_routing_model() {
     m.rivers->add(c);
     m.rivers->add(b);
     m.rivers->add(a);
-
-    try {
-        m.rivers->check_rid(5);
-        TS_FAIL("Expect runtime error here");
-    } catch(const std::runtime_error&) {
-        // ok!
-        m.rivers->check_rid(2);// ok, this exists
-    }
+    CHECK_THROWS_AS(m.rivers->check_rid(5), std::runtime_error);
+    m.rivers->check_rid(2);// ok, this exists
     /// now, with the model in place, including some fake-timeseries at cell-level, we can expect things to happen:
     // fto establish regression, uncomment and print out out the response
     auto observation_m3s = m.local_inflow(d_id) + m.upstream_inflow(d_id);// this arrives into river d:
@@ -175,3 +168,4 @@ void routing_test::test_routing_model() {
 
 
 }
+TEST_SUITE_END();

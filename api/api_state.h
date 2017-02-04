@@ -32,6 +32,7 @@ namespace shyft {
             bool operator==(const cell_state_id & o) const {
                 return cid == o.cid && x == o.x && y == o.y && area == o.area;
             }
+            bool operator!=(cell_state_id const&o) const { return !operator==(o); }
             bool operator<(const cell_state_id& o) const {
                 if (cid < o.cid) return true;
                 if (cid > o.cid) return false;

@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "sceua_test.h"
 #include "core/sceua_optimizer.h"
 
 using namespace std;
@@ -27,8 +26,8 @@ struct fx_complex:public ifx {
         return y;
     }
 };
-
-void sceua_test::test_basic(){
+TEST_SUITE("sceua");
+TEST_CASE("test_basic") {
     sceua opt;
     const size_t n=2;
     double x[2]={-1.0, 2.5};
@@ -40,7 +39,7 @@ void sceua_test::test_basic(){
     x2_fx f_basic;
     const size_t max_iterations=20000;
     auto r=opt.find_min(n,x_min,x_max,x,y,f_basic,eps, -1,-2,x_eps,max_iterations);
-    TS_ASSERT_LESS_THAN(f_basic.n_eval,max_iterations)
+    TS_ASSERT_LESS_THAN(f_basic.n_eval, max_iterations);
     TS_ASSERT_EQUALS(r,OptimizerState::FinishedXconvergence);
     TS_ASSERT_DELTA(y,0.0,1e-5);
     TS_ASSERT_DELTA(x[0],0.0,1e-5);
@@ -50,7 +49,7 @@ void sceua_test::test_basic(){
     }
 }
 
-void sceua_test::test_complex() {
+TEST_CASE("test_complex") {
     sceua opt;
     const size_t n=2;
     double x[2]={-4.01, -7.5};
@@ -80,3 +79,4 @@ void sceua_test::test_complex() {
         cout<<endl<<"2. approximate Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
     }
 }
+TEST_SUITE_END();
