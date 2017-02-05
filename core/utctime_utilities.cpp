@@ -237,7 +237,10 @@ namespace shyft {
                 time_zone_ptr tzinfo;///< we extract boost info from this one
                 string tz_region_name;///< the timezone region name, olson standard
                 /**\brief convert a ptime to a utctime */
-                utctime to_utctime(ptime p) const { return (p-posix_t1970).total_seconds();}
+                utctime to_utctime(ptime p) const {
+                    time_duration diff(p - posix_t1970);
+                    return (diff.ticks() / diff.ticks_per_second());
+                }
 
                 boost_tz_info(string tz_region_name,time_zone_ptr tzinfo):posix_t1970((date(1970,1,1))),tzinfo(tzinfo),tz_region_name(tz_region_name) {}
 
