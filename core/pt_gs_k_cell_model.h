@@ -30,6 +30,7 @@ namespace shyft {
                 double destination_area;///< in [m^2]
                 // these are the one that we collects from the response, to better understand the model::
                 pts_t avg_discharge; ///< Kirchner Discharge given in [m^3/s] for the timestep
+                pts_t charge_m3s; ///< = precip + glacier - act_evap - avg_discharge [m^3/s] for the timestep
                 pts_t snow_sca; ///< gamma snow covered area fraction, sca.. 0..1 - at the end of timestep (state)
                 pts_t snow_swe;///< gamma snow swe, [mm] over the cell sca.. area, - at the end of timestep ?
                 pts_t snow_outflow;///< gamma snow output [m^3/s] for the timestep
@@ -41,12 +42,13 @@ namespace shyft {
                 all_response_collector() : destination_area(0.0) {}
                 all_response_collector(const double destination_area) : destination_area(destination_area) {}
                 all_response_collector(const double destination_area, const timeaxis_t& time_axis)
-                    : destination_area(destination_area), avg_discharge(time_axis, 0.0), snow_sca(time_axis, 0.0), snow_swe(time_axis, 0.0), snow_outflow(time_axis, 0.0), glacier_melt(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
+                    : destination_area(destination_area), avg_discharge(time_axis, 0.0),charge_m3s(time_axis,0.0), snow_sca(time_axis, 0.0), snow_swe(time_axis, 0.0), snow_outflow(time_axis, 0.0), glacier_melt(time_axis, 0.0), ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
 
                 /**\brief called before run to allocate space for results */
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
                     ts_init(avg_discharge, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(charge_m3s, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_sca, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_swe, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_outflow, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
@@ -67,6 +69,7 @@ namespace shyft {
                 //template<class R>
                 void collect(size_t idx, const response_t& response) {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); // wants m3/s, q_avg is given in mm/h, so compute the totals in  mm/s
+                    charge_m3s.set(idx, response.charge_m3s);
                     snow_sca.set(idx, response.gs.sca);
                     snow_outflow.set(idx, response.gs.outflow); //TODO: current mm/h.. but  want m3/s, but we get mm/h from snow output
                     glacier_melt.set(idx, response.gm_melt_m3s);
@@ -82,6 +85,7 @@ namespace shyft {
             struct discharge_collector {
                 double cell_area;///< in [m^2]
                 pts_t avg_discharge; ///< Discharge given in [m^3/s] as the average of the timestep
+                pts_t charge_m3s; ///< = precip + glacier - act_evap - avg_discharge [m^3/s] for the timestep
                 response_t end_response;///<< end_response, at the end of collected
                 bool collect_snow;
                 pts_t snow_sca;
@@ -90,13 +94,14 @@ namespace shyft {
                 discharge_collector(const double cell_area) : cell_area(cell_area),collect_snow(false) {}
                 discharge_collector(const double cell_area, const timeaxis_t& time_axis)
                     : cell_area(cell_area),
-                      avg_discharge(time_axis, 0.0),collect_snow(false),
+                      avg_discharge(time_axis, 0.0), charge_m3s(time_axis, 0.0), collect_snow(false),
                       snow_sca(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0),
                       snow_swe(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0) {}
 
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     cell_area = area;
                     ts_init(avg_discharge, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(charge_m3s, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     auto ta = collect_snow ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
                     ts_init(snow_sca, ta, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
                     ts_init(snow_swe, ta, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
@@ -104,6 +109,7 @@ namespace shyft {
 
                 void collect(size_t idx, const response_t& response) {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, cell_area)); // q_avg is given in mm, so compute the totals
+                    charge_m3s.set(idx, response.charge_m3s);
                     if(collect_snow) {
                         snow_sca.set(idx,response.gs.sca);
                         snow_swe.set(idx,response.gs.storage);

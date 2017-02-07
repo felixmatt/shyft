@@ -154,6 +154,7 @@ namespace shyft {
             enum target_spec_calc_type {
                 NASH_SUTCLIFFE, // obsolete, should be replaced by using KLING_GUPTA
                 KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
+                ABS_DIFF // abs-difference suitable for periodic water-balance calculations
             };
 
             /** \brief property_type for target specification */
@@ -161,7 +162,8 @@ namespace shyft {
                 DISCHARGE,
                 SNOW_COVERED_AREA,
                 SNOW_WATER_EQUIVALENT,
-                ROUTED_DISCHARGE
+                ROUTED_DISCHARGE,
+                CELL_CHARGE
             };
 
             /** \brief The target specification contains:
@@ -647,6 +649,14 @@ namespace shyft {
                         discharge_sum.add(catchment_d[model.cix_from_cid(i)]);// important! the catchment_d(ischarge) is in internal index order
                     return discharge_sum;
                 }
+                pts_t compute_charge_sum(const target_specification_t& t, vector<pts_t>& catchment_charges) const {
+                    if (catchment_charges.empty())
+                        model.catchment_charges(catchment_charges);
+                    pts_t charge_sum(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+                    for (auto i : t.catchment_indexes)
+                        charge_sum.add(catchment_charges[model.cix_from_cid(i)]);// important! the catchment_charges is in internal index order
+                    return charge_sum;
+                }
 
                 /** \brief extracts vector of area_ts for all calculated catchments using the
                  * given property function tsf that should have signature pts_t (const cell& c)
@@ -743,12 +753,15 @@ namespace shyft {
                             break;
                         case ROUTED_DISCHARGE:
                             property_sum = *model.river_output_flow_m3s(t.river_id);
+                            break;
+                        case CELL_CHARGE:
+                            property_sum = compute_charge_sum(t, catchment_d);
                         }
                         shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
                         double partial_goal_function_value;
                         if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
                             partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
-                        } else {
+                        } else if(t.calc_mode == target_spec_calc_type::KLING_GUPTA) {
                             // ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
                             // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
                             partial_goal_function_value /* EDs */ = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
@@ -756,6 +769,8 @@ namespace shyft {
                                 t.s_r,
                                 t.s_a,
                                 t.s_b);
+                        } else {
+                            partial_goal_function_value = abs_diff_sum_goal_function(target_accessor,property_sum_accessor);
                         }
                         if (isfinite(partial_goal_function_value)) {
                             scale_factor_sum += t.scale_factor;
@@ -766,12 +781,12 @@ namespace shyft {
                     }
                     goal_function_value /= scale_factor_sum;
                     if (print_progress_level > 0) {
-                        cout << "ParameterVector(";
+                        cout << goal_function_value <<" : ParameterVector(";
                         for (size_t i = 0; i < parameter_accessor.size(); ++i) {
                             cout << parameter_accessor.get(i);
-                            if (i < parameter_accessor.size() - 1)cout << ", ";
+                            if (i < parameter_accessor.size() - 1) cout << ", ";
                         }
-                        cout << ") = " << goal_function_value << " (NS or KG)" << endl;
+                        cout << ")" << endl;
                     }
                     return goal_function_value;
                 }

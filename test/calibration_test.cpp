@@ -492,5 +492,28 @@ TEST_CASE("test_kling_gupta_goal_function") {
 	double nsg1 = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o1, s1,1.0,1.0,1.0);
 
 	TS_ASSERT_DELTA(nsg1,1.5666, 0.0001);
+    SUBCASE("avg ratio") {
+        o1.set(1, 1.0);
+        s1.set(2, 2.0);
+        double a = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o1, s1, 0.0, 1.0, 0.0);
+        FAST_CHECK_LE( fabs(a - 1.0) , 1e-12);
+    }
 }
+TEST_CASE("test_abs_diff_sum_goal_function") {
+    calendar utc;
+    utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
+    utctimespan dt = deltahours(1);
+    timeaxis ta1(start, dt, 3);
+    pts_t o1(ta1, 1.0); o1.set(1, 10.0);
+    pts_t s1(ta1, 2.0); s1.set(2, 7.0);
+    double ads1 = abs_diff_sum_goal_function(o1, s1);
+
+    TS_ASSERT_DELTA(fabs(1.0-2.0)+fabs(10.0-2.0)+fabs(1.0-7.0), ads1, 0.0001);
+    SUBCASE("with-nan") {
+        o1.set(1, shyft::nan);
+        double ads2 = abs_diff_sum_goal_function(o1, s1);
+        TS_ASSERT_DELTA(fabs(1.0 - 2.0) + fabs(0) + fabs(1.0 - 7.0), ads2, 0.0001);
+    }
+}
+
 TEST_SUITE_END();
