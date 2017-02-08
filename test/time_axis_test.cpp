@@ -58,19 +58,19 @@ TEST_CASE("test_all") {
     //
     // STEP 0: verify that the expected time-axis is correct
     //
-    TS_ASSERT_EQUALS( n, expected.size() );
+    TS_ASSERT_EQUALS( n, (int)expected.size() );
     TS_ASSERT_EQUALS( utcperiod( start, start + n * dt ), expected.total_period() );
     TS_ASSERT_EQUALS( string::npos, expected.index_of( start - 1 ) );
     TS_ASSERT_EQUALS( string::npos, expected.open_range_index_of( start - 1 ) );
     TS_ASSERT_EQUALS( string::npos, expected.index_of( start + n * dt ) );
-    TS_ASSERT_EQUALS( n - 1, expected.open_range_index_of( start + n * dt ) );
+    TS_ASSERT_EQUALS( n - 1,(int) expected.open_range_index_of( start + n * dt ) );
     for( int i = 0; i < n; ++i ) {
         TS_ASSERT_EQUALS( start + i * dt, expected.time( i ) );
         TS_ASSERT_EQUALS( utcperiod( start + i * dt, start + ( i + 1 )*dt ), expected.period( i ) );
-        TS_ASSERT_EQUALS( i, expected.index_of( start + i * dt ) );
-        TS_ASSERT_EQUALS( i, expected.index_of( start + i * dt + dt - 1 ) );
-        TS_ASSERT_EQUALS( i, expected.open_range_index_of( start + i * dt ) );
-        TS_ASSERT_EQUALS( i, expected.open_range_index_of( start + i * dt + dt - 1 ) );
+        TS_ASSERT_EQUALS( i,(int) expected.index_of( start + i * dt ) );
+        TS_ASSERT_EQUALS( i,(int) expected.index_of( start + i * dt + dt - 1 ) );
+        TS_ASSERT_EQUALS( i, (int)expected.open_range_index_of( start + i * dt ) );
+        TS_ASSERT_EQUALS( i,(int) expected.open_range_index_of( start + i * dt + dt - 1 ) );
     }
     //
     // STEP 1: construct all the other types of time-axis, with equal content, but represented differently

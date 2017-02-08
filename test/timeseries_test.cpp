@@ -73,7 +73,7 @@ typedef point_ts<point_timeaxis> xts_t;
 TEST_SUITE("time_series");
 TEST_CASE("test_point_timeaxis") {
     point_timeaxis ts0; //zero points
-    TS_ASSERT_EQUALS(ts0.size(),0);
+    TS_ASSERT_EQUALS(ts0.size(),0u);
     TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
     vector<utctime> t2={3600*1};//just one point
     try {
@@ -86,14 +86,14 @@ TEST_CASE("test_point_timeaxis") {
     }
     vector<utctime> t={3600*1,3600*2,3600*3};
     point_timeaxis tx(t);
-    TS_ASSERT_EQUALS(tx.size(),2);// number of periods, - two .. (unless we redefined the last to be last point .. +oo)
+    TS_ASSERT_EQUALS(tx.size(),2u);// number of periods, - two .. (unless we redefined the last to be last point .. +oo)
     TS_ASSERT_EQUALS(tx.period(0),utcperiod(t[0],t[1]));
     TS_ASSERT_EQUALS(tx.period(1),utcperiod(t[1],t[2]));
     TS_ASSERT_EQUALS(tx.index_of(-3600),std::string::npos);//(1),utcperiod(t[1],t[2]);
-    TS_ASSERT_EQUALS(tx.index_of(t[0]),0);
-    TS_ASSERT_EQUALS(tx.index_of(t[1]-1),0);
+    TS_ASSERT_EQUALS(tx.index_of(t[0]),0u);
+    TS_ASSERT_EQUALS(tx.index_of(t[1]-1),0u);
     TS_ASSERT_EQUALS(tx.index_of(t[2]+1),std::string::npos);
-    TS_ASSERT_EQUALS(tx.open_range_index_of(t[2]+1),1);
+    TS_ASSERT_EQUALS(tx.open_range_index_of(t[2]+1),1u);
 
 
 }
@@ -106,7 +106,7 @@ TEST_CASE("test_timeaxis") {
     TS_ASSERT_EQUALS(tx.size(),n);
     for(size_t i=0;i<n;++i) {
         TS_ASSERT_EQUALS(tx.period(i), utcperiod(t0+i*dt,t0+(i+1)*dt));
-        TS_ASSERT_EQUALS(tx.time(i), t0+i*dt );
+        TS_ASSERT_EQUALS(tx.time(i),utctime( t0+i*dt) );
         TS_ASSERT_EQUALS(tx.index_of(tx.time(i)),i);
         TS_ASSERT_EQUALS(tx.index_of(tx.time(i)+dt/2),i);
     }
@@ -224,40 +224,40 @@ TEST_CASE("test_hint_based_bsearch") {
     shyfttest::ts_source ta_null(t,d,0);
     TS_ASSERT_EQUALS(hint_based_search(ta_null,ta.total_period(),-1),string::npos);//trivial.
     size_t ix;
-    TS_ASSERT_EQUALS(ix=hint_based_search(ta,utcperiod(t+d,t+2*d),-1),1);
+    TS_ASSERT_EQUALS(ix=hint_based_search(ta,utcperiod(t+d,t+2*d),-1),1u);
 
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,1);ta.reset_call_count();
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+d,t+2*d),ix),1);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+2*d,t+3*d),ix),2);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,1u);ta.reset_call_count();
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+d,t+2*d),ix),1u);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+2*d,t+3*d),ix),2u);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);
 
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+7*d,t+8*d),4),7);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+7*d,t+8*d),4),7u);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);// great using linear approach to find near solution upward.
 
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+0*d,t+1*d),4),0);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// great using linear approach to find near solution upward.
-
-    ta.reset_call_count();
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+1*d,t+2*d),0),1);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// great using linear approach to find near solution upward.
-    TS_ASSERT_EQUALS(ta.n_get_calls,2);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+0*d,t+1*d),4),0u);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);// great using linear approach to find near solution upward.
 
     ta.reset_call_count();
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+1*d,t+2*d),0),1u);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(ta.n_get_calls,2u);// great using linear approach to find near solution upward.
 
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t-1*d,t-0*d),5),string::npos);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,0);// in this case, local search ends up with conclusive npos
+    ta.reset_call_count();
+
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t-1*d,t-0*d),5u),string::npos);
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,0u);// in this case, local search ends up with conclusive npos
 
     ta.reset_call_count();
 
 
     TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+20*d,t+21*d),5),ta.size()-1);
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,1);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,1u);// great using linear approach to find near solution upward.
 
     ta.reset_call_count();
 
-    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+2*d,t+3*d),ta.size()+5),2);//shall survive bad usage..
-    TS_ASSERT_EQUALS(ta.n_index_of_calls,1);// great using linear approach to find near solution upward.
+    TS_ASSERT_EQUALS(hint_based_search(ta,utcperiod(t+2*d,t+3*d),ta.size()+5),2u);//shall survive bad usage..
+    TS_ASSERT_EQUALS(ta.n_index_of_calls,1u);// great using linear approach to find near solution upward.
 
 }
 
@@ -270,11 +270,11 @@ TEST_CASE("test_average_value_staircase") {
 
 
     shyfttest::test_timeseries ps(begin(points),end(points));
-    TS_ASSERT_EQUALS(-1,ps.index_of(t0-deltahours(1)));
-    TS_ASSERT_EQUALS(0,ps.index_of(t0+deltahours(0)));
-    TS_ASSERT_EQUALS(1,ps.index_of(t0+deltahours(1)));
-    TS_ASSERT_EQUALS(2,ps.index_of(t0+deltahours(2)));
-    TS_ASSERT_EQUALS(2,ps.index_of(t0+deltahours(3)));
+    TS_ASSERT_EQUALS(string::npos,ps.index_of(t0-deltahours(1)));
+    TS_ASSERT_EQUALS(0u,ps.index_of(t0+deltahours(0)));
+    TS_ASSERT_EQUALS(1u,ps.index_of(t0+deltahours(1)));
+    TS_ASSERT_EQUALS(2u,ps.index_of(t0+deltahours(2)));
+    TS_ASSERT_EQUALS(2u,ps.index_of(t0+deltahours(3)));
 
     // case 1: just check it can compute true average..
     size_t ix=0;
@@ -285,21 +285,21 @@ TEST_CASE("test_average_value_staircase") {
     ix=-1;
     ps.index_of_count=0;
     TS_ASSERT_DELTA(1.0,average_value(ps,utcperiod(t0+deltaminutes(10),t0+ deltaminutes(11)),ix,false),0.0000001);
-    TS_ASSERT_EQUALS(1,ps.index_of_count);
-    TS_ASSERT_EQUALS(ix,1);
+    TS_ASSERT_EQUALS(1u,ps.index_of_count);
+    TS_ASSERT_EQUALS(ix,1u);
     // case 3: check that it deliver/keep average value after last value observed
     ps.index_of_count=0;
     ix=2;
     TS_ASSERT_DELTA(3.0,average_value(ps,utcperiod(t0+5*dt,t0+ 60*dt),ix,false),0.0000001);
-    TS_ASSERT_EQUALS(0,ps.index_of_count);
-    TS_ASSERT_EQUALS(ix,2);
+    TS_ASSERT_EQUALS(0u,ps.index_of_count);
+    TS_ASSERT_EQUALS(ix,2u);
     // case 4: ask for data before first point -> nan
     ix=2;
     ps.index_of_count=0;
     double v=average_value(ps,utcperiod(t0-5*dt,t0- 4*dt),ix,false);
     TS_ASSERT(!std::isfinite(v));
-    TS_ASSERT_EQUALS(ps.index_of_count,0);
-    TS_ASSERT_EQUALS(ix,0);
+    TS_ASSERT_EQUALS(ps.index_of_count,0u);
+    TS_ASSERT_EQUALS(ix,0u);
 
     // case 5: check it eats nans (nan-0)
     vector<point> points_with_nan0={point(t0,shyft::nan),point(t0+dt/2,2.0),point(t0+dt,shyft::nan),point(t0+2*dt,3)};
@@ -333,22 +333,22 @@ TEST_CASE("test_average_value_staircase") {
 
     ix=7;// ensure negative direction search ends up in doing a binary -search
     v=average_value(ps6,full_period,ix,false);
-    TS_ASSERT_EQUALS(ps6.index_of_count,1);
+    TS_ASSERT_EQUALS(ps6.index_of_count,1u);
     TS_ASSERT_DELTA((0*1+1*1+2*1.0)/3.0,v,0.00001);
     v=average_value(ps6,utcperiod(t0+3*dt,t0+4*dt),ix,false);
-    TS_ASSERT_EQUALS(ps6.index_of_count,1);
+    TS_ASSERT_EQUALS(ps6.index_of_count,1u);
     TS_ASSERT_DELTA((3)/1.0,v,0.00001);
-    TS_ASSERT_EQUALS(ix,4);
+    TS_ASSERT_EQUALS(ix,4u);
     ix=0;ps6.index_of_count=0;
     v=average_value(ps6,utcperiod(t0+7*dt,t0+8*dt),ix,false);
-    TS_ASSERT_EQUALS(ps6.index_of_count,1);
+    TS_ASSERT_EQUALS(ps6.index_of_count,1u);
     TS_ASSERT_DELTA((7)/1.0,v,0.00001);
     ps.index_of_count=0;
     average_accessor<shyfttest::test_timeseries,timeaxis> avg_a(ps,tx);
     TS_ASSERT_DELTA(avg_a.value(0),(1*0.5+2*0.5)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
     TS_ASSERT_DELTA(avg_a.value(1),(2*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
     TS_ASSERT_DELTA(avg_a.value(2),(3*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
-    TS_ASSERT_EQUALS(ps.index_of_count,0);
+    TS_ASSERT_EQUALS(ps.index_of_count,0u);
 }
 
 TEST_CASE("test_average_value_linear_between_points") {
@@ -360,11 +360,11 @@ TEST_CASE("test_average_value_linear_between_points") {
 
 
 	shyfttest::test_timeseries ps(begin(points), end(points));
-	TS_ASSERT_EQUALS(-1, ps.index_of(t0 - deltahours(1)));
-	TS_ASSERT_EQUALS(0, ps.index_of(t0 + deltahours(0)));
-	TS_ASSERT_EQUALS(1, ps.index_of(t0 + deltahours(1)));
-	TS_ASSERT_EQUALS(2, ps.index_of(t0 + deltahours(2)));
-	TS_ASSERT_EQUALS(2, ps.index_of(t0 + deltahours(3)));
+	TS_ASSERT_EQUALS(string::npos, ps.index_of(t0 - deltahours(1)));
+	TS_ASSERT_EQUALS(0u, ps.index_of(t0 + deltahours(0)));
+	TS_ASSERT_EQUALS(1u, ps.index_of(t0 + deltahours(1)));
+	TS_ASSERT_EQUALS(2u, ps.index_of(t0 + deltahours(2)));
+	TS_ASSERT_EQUALS(2u, ps.index_of(t0 + deltahours(3)));
 
 	// case 1: just check it can compute true average..
 	size_t ix = 0;
@@ -375,21 +375,21 @@ TEST_CASE("test_average_value_linear_between_points") {
 	ix = -1;
 	ps.index_of_count = 0;
 	TS_ASSERT_DELTA(1.0+ 2*10.5/60, average_value(ps, utcperiod(t0 + deltaminutes(10), t0 + deltaminutes(11)), ix), 0.0000001);
-	TS_ASSERT_EQUALS(1, ps.index_of_count);
-	TS_ASSERT_EQUALS(ix, 1);
+	TS_ASSERT_EQUALS(1u, ps.index_of_count);
+	TS_ASSERT_EQUALS(ix, 1u);
 	// case 3: check that it deliver/keep average value after last value observed
 	ps.index_of_count = 0;
 	ix = 2;
 	TS_ASSERT_DELTA(3.0, average_value(ps, utcperiod(t0 + 5 * dt, t0 + 60 * dt), ix), 0.0000001);
-	TS_ASSERT_EQUALS(0, ps.index_of_count);
-	TS_ASSERT_EQUALS(ix, 2);
+	TS_ASSERT_EQUALS(0u, ps.index_of_count);
+	TS_ASSERT_EQUALS(ix, 2u);
 	// case 4: ask for data before first point -> nan
 	ix = 2;
 	ps.index_of_count = 0;
 	double v = average_value(ps, utcperiod(t0 - 5 * dt, t0 - 4 * dt), ix);
 	TS_ASSERT(!std::isfinite(v));
-	TS_ASSERT_EQUALS(ps.index_of_count, 0);
-	TS_ASSERT_EQUALS(ix, 0);
+	TS_ASSERT_EQUALS(ps.index_of_count, 0u);
+	TS_ASSERT_EQUALS(ix, 0u);
 
 	// case 5: check it eats nans (nan-0)
 	vector<point> points_with_nan0 = { point(t0, shyft::nan), point(t0 + dt / 2, 2.0), point(t0 + dt, shyft::nan), point(t0 + 2 * dt, 3) };
@@ -423,15 +423,15 @@ TEST_CASE("test_average_value_linear_between_points") {
 
 	ix = 7;// ensure negative direction search ends up in doing a binary -search
 	v = average_value(ps6, full_period, ix);
-	TS_ASSERT_EQUALS(ps6.index_of_count, 1);
+	TS_ASSERT_EQUALS(ps6.index_of_count, 1u);
 	TS_ASSERT_DELTA(1.5, v, 0.00001);
 	v = average_value(ps6, utcperiod(t0 + 3 * dt, t0 + 4 * dt), ix);
-	TS_ASSERT_EQUALS(ps6.index_of_count, 1);
+	TS_ASSERT_EQUALS(ps6.index_of_count, 1u);
 	TS_ASSERT_DELTA(3.5, v, 0.00001);
-	TS_ASSERT_EQUALS(ix, 4);
+	TS_ASSERT_EQUALS(ix, 4u);
 	ix = 0; ps6.index_of_count = 0;
 	v = average_value(ps6, utcperiod(t0 + 7 * dt, t0 + 8 * dt), ix);
-	TS_ASSERT_EQUALS(ps6.index_of_count, 1);
+	TS_ASSERT_EQUALS(ps6.index_of_count, 1u);
 	TS_ASSERT_DELTA(7.5, v, 0.00001);
 	ps.index_of_count = 0;
 	ps.set_point_interpretation(POINT_INSTANT_VALUE);
@@ -439,7 +439,7 @@ TEST_CASE("test_average_value_linear_between_points") {
 	TS_ASSERT_DELTA(avg_a.value(0), 1.83333333333, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
 	TS_ASSERT_DELTA(avg_a.value(1), 2.6666666666, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
 	TS_ASSERT_DELTA(avg_a.value(2), (3 * 1.0) / 1.0, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
-	TS_ASSERT_EQUALS(ps.index_of_count, 0);
+	TS_ASSERT_EQUALS(ps.index_of_count, 0u);
 }
 
 
@@ -555,7 +555,7 @@ TEST_CASE("test_point_timeseries_with_point_timeaxis") {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
     point_ts<point_timeaxis> ps(point_timeaxis(times),points);
-    TS_ASSERT_EQUALS(ps.size(),3);
+    TS_ASSERT_EQUALS(ps.size(),3u);
     for(size_t i=0;i<ps.size();++i) {
         TS_ASSERT_EQUALS(ps.get(i).v,points[i]);
     }
@@ -864,8 +864,8 @@ TEST_CASE("test_periodic_ts_t") {
 	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
-	TS_ASSERT_EQUALS(pts.size(), 1000);
-	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
+	TS_ASSERT_EQUALS(pts.size(), 1000u);
+	TS_ASSERT_EQUALS(pts.index_of(t0), 0u);
 }
 
 TEST_CASE("test_periodic_ts_over_sampled") {
@@ -877,8 +877,8 @@ TEST_CASE("test_periodic_ts_over_sampled") {
 	typedef periodic_ts<timeaxis> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
-	TS_ASSERT_EQUALS(pts.size(), 1000);
-	TS_ASSERT_EQUALS(pts.index_of(t0), 0);
+	TS_ASSERT_EQUALS(pts.size(), 1000u);
+	TS_ASSERT_EQUALS(pts.index_of(t0), 0u);
 	TS_ASSERT_EQUALS(pts.value(0), v[0]);
 	TS_ASSERT_EQUALS(pts.value(1), v[0]);
 	TS_ASSERT_EQUALS(pts.value(2), v[0]);
@@ -945,8 +945,8 @@ TEST_CASE("test_periodic_template_ts") {
 
 	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
-	TS_ASSERT_EQUALS(fun.size(), 1000);
-	TS_ASSERT_EQUALS(fun.index_of(t0), 0);
+	TS_ASSERT_EQUALS(fun.size(), 1000u);
+	TS_ASSERT_EQUALS(fun.index_of(t0), 0u);
 	TS_ASSERT_EQUALS(fun.value(0), 2.2);
 	TS_ASSERT_EQUALS(fun.value(1), 5.5);
 	TS_ASSERT_EQUALS(fun.value(2), 4.0);
@@ -1083,7 +1083,7 @@ TEST_CASE("test_partition_by") {
 		auto v_common_t0 = ts.value(ts_ix);
 		auto v_year_start = src_a.value(src_ix);
 		TS_ASSERT_EQUALS(ts.size(), ta_y2015.size());
-		TS_ASSERT_EQUALS(ts_ix, 0);// because we make a separate one 365 day time-axis, so the first value should be at 0'th index
+		TS_ASSERT_EQUALS(ts_ix, 0u);// because we make a separate one 365 day time-axis, so the first value should be at 0'th index
 		TS_ASSERT_DELTA(v_common_t0, v_year_start, 0.01);// verify from source exactly equal to the partition value
 		TS_ASSERT_DELTA(v_year_start, double(src_ix), 0.01); // verify we did get the right value
 		ty = utc.add(ty, calendar::YEAR, 1);

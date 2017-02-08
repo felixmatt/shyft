@@ -184,7 +184,7 @@ TEST_CASE("test_region_vs_catchment_parameters") {
     cells->push_back(c1);
     cells->push_back(c2);
     region_model_t rm(cells,gp);
-    TS_ASSERT_EQUALS(rm.number_of_catchments(),2);
+    TS_ASSERT_EQUALS(rm.number_of_catchments(),2u);
     TS_ASSERT(rm.has_catchment_parameter(0)==false);
     TS_ASSERT(rm.has_catchment_parameter(1)==false); // by default, all should share the global rm parameter
     parameter_t c1p;                                 // now, put a specific parameter to catchment 0
