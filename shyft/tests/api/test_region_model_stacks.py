@@ -205,6 +205,8 @@ class RegionModel(unittest.TestCase):
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
+        sum_charge = model.statistics.charge(cids)
+        sum_charge_value=model.statistics.charge_value(cids, 0)
         opt_model.run_cells()  # starting out with the same state, same interpolated values, and region-parameters, we should get same results
         sum_discharge_opt_value= opt_model.statistics.discharge_value(cids, 0)
         self.assertAlmostEqual(sum_discharge_opt_value,sum_discharge_value,3)  # verify the opt_model clone gives same value
