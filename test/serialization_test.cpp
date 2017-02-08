@@ -232,7 +232,7 @@ TEST_CASE("test_api_ts_ref_binding") {
 
     auto xmls_unbound = f.serialize();
 
-    TS_ASSERT_EQUALS(tsr.size(),2);
+    TS_ASSERT_EQUALS(tsr.size(),2u);
     CHECK_THROWS_AS(f.value(0), runtime_error);
     // -now bind the variables
     api::apoint_ts b_c(ta,5.0);

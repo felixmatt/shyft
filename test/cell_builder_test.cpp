@@ -96,7 +96,7 @@ TEST_CASE("cell_builder_test::test_read_geo_point_map") {
 	wkt_reader wio;
 	map<int, observation_location> obs;
 	obs = wio.read_geo_point_map("met_stations", slurp(test_path("neanidelv/geo_point_map.txt")));
-	TS_ASSERT_DIFFERS(obs.size(), 0);
+	TS_ASSERT_DIFFERS(obs.size(), 0u);
 	for (const auto& kv : obs) {
 		TS_ASSERT_DIFFERS(kv.first, 0);
 		TS_ASSERT_DIFFERS(kv.second.point.x, 0.0);
@@ -141,10 +141,10 @@ TEST_CASE("cell_builder_test::test_io_performance") {
 	auto prec = shyfttest::find("neanidelv", "precipitation");
 	auto disc = shyfttest::find("neanidelv", "discharge");
 	auto rad = shyfttest::find("neanidelv", "radiation");
-	TS_ASSERT_EQUALS(temp.size(), 10);
-	TS_ASSERT_DIFFERS(prec.size(), 0);
-	TS_ASSERT_DIFFERS(disc.size(), 0);
-	TS_ASSERT_EQUALS(rad.size(), 1);
+	TS_ASSERT_EQUALS(temp.size(), 10u);
+	TS_ASSERT_DIFFERS(prec.size(), 0u);
+	TS_ASSERT_DIFFERS(disc.size(), 0u);
+	TS_ASSERT_EQUALS(rad.size(), 1u);
 	auto dt = shyft::core::utctime_now() - t0;
 	TS_ASSERT_LESS_THAN(dt, 10);
 }

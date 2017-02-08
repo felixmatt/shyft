@@ -300,6 +300,9 @@ namespace expose {
             rts_ (bc_stat::*discharge_ts)(cids_) const = &bc_stat::discharge;
             vd_  (bc_stat::*discharge_vd)(cids_,ix_) const =&bc_stat::discharge;
 
+            rts_(bc_stat::*charge_ts)(cids_) const = &bc_stat::charge;
+            vd_(bc_stat::*charge_vd)(cids_, ix_) const = &bc_stat::charge;
+
             rts_ (bc_stat::*temperature_ts)(cids_) const = &bc_stat::temperature;
             vd_  (bc_stat::*temperature_vd)(cids_,ix_) const =&bc_stat::temperature;
 
@@ -322,6 +325,9 @@ namespace expose {
                 .def("discharge",discharge_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("discharge",discharge_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("discharge_value", &bc_stat::discharge_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("charge", charge_ts, args("catchment_indexes"), "returns sum charge[m^3/s] for catcment_ids")
+                .def("charge", charge_vd, args("catchment_indexes", "i"), "returns charge[m^3/s]  for cells matching catchments_ids at the i'th timestep")
+                .def("charge_value", &bc_stat::charge_value, args("catchment_indexes", "i"), "returns charge[m^3/s] for cells matching catchments_ids at the i'th timestep")
                 .def("temperature",temperature_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("temperature",temperature_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("temperature_value", &bc_stat::temperature_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")

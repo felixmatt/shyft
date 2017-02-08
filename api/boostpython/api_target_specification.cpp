@@ -34,6 +34,7 @@ namespace expose {
         enum_<model_calibration::target_spec_calc_type>("TargetSpecCalcType")
             .value("NASH_SUTCLIFFE",model_calibration::NASH_SUTCLIFFE)
             .value("KLING_GUPTA",model_calibration::KLING_GUPTA)
+            .value("ABS_DIFF",model_calibration::ABS_DIFF)
             .export_values()
             ;
         enum_<model_calibration::target_property_type>("CatchmentPropertyType")
@@ -41,6 +42,7 @@ namespace expose {
             .value("SNOW_COVERED_AREA", model_calibration::SNOW_COVERED_AREA)
             .value("SNOW_WATER_EQUIVALENT", model_calibration::SNOW_WATER_EQUIVALENT)
             .value("ROUTED_DISCHARGE",model_calibration::ROUTED_DISCHARGE)
+            .value("CELL_CHARGE",model_calibration::CELL_CHARGE)
             .export_values()
             ;
         typedef shyft::core::pts_t target_ts_t;

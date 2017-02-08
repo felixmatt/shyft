@@ -748,6 +748,21 @@ namespace shyft {
                 }
             }
 
+            template <class TSV>
+            void catchment_charges(TSV& cr) const {
+                typedef typename TSV::value_type ts_t;
+                cr.clear();
+                cr.reserve(n_catchments);
+                for (size_t i = 0;i < n_catchments;++i) {
+                    cr.emplace_back(ts_t(time_axis, 0.0));
+                }
+                for (const auto& c : *cells) {
+                    if (is_calculated_by_catchment_ix(c.geo.catchment_ix)) {
+                        cr[c.geo.catchment_ix].add(c.rc.charge_m3s);
+                    }
+                }
+            }
+
             /**\brief return all discharges at the output of the routing points
              *
              * For all routing nodes,(maybe terminal routing nodes ?)

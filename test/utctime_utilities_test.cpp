@@ -83,9 +83,9 @@ TEST_CASE("test_calendar_to_string") {
 
 TEST_CASE("test_calendar_day_of_year") {
     calendar cet(deltahours(1));
-    TS_ASSERT_EQUALS(1,cet.day_of_year(cet.time(YMDhms(2012,1,1,10,11,12))));
-    TS_ASSERT_EQUALS(2,cet.day_of_year(cet.time(YMDhms(2012,1,2,0,0,0))));
-    TS_ASSERT_EQUALS(366,cet.day_of_year(cet.time(YMDhms(2012,12,31,12,0,0))));
+    TS_ASSERT_EQUALS(1u,cet.day_of_year(cet.time(YMDhms(2012,1,1,10,11,12))));
+    TS_ASSERT_EQUALS(2u,cet.day_of_year(cet.time(YMDhms(2012,1,2,0,0,0))));
+    TS_ASSERT_EQUALS(366u,cet.day_of_year(cet.time(YMDhms(2012,12,31,12,0,0))));
 
 
 }

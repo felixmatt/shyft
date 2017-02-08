@@ -188,6 +188,7 @@ namespace shyft {
                 double gm_melt_m3s;
 				// Stack response
 				double total_discharge;
+                double charge_m3s;
 			};
 
 			/** \brief Calculation Model using assembly of PriestleyTaylor, GammaSnow, Soil and hbv_tank
@@ -283,6 +284,7 @@ namespace shyft {
                 const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
                 const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
                 const double land_fraction = 1 - total_lake_fraction - glacier_fraction;
+                const double cell_area_m2 = geo_cell_data.area();
                 const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;//const double forest_fraction = geo_cell_data.land_type_fractions_info().forest();
 
                 size_t i_begin = n_steps > 0 ? start_step : 0;
@@ -309,10 +311,14 @@ namespace shyft {
 					tank.step(state.tank, response.tank, period.start, period.end, response.soil.outflow);
 
                     response.total_discharge =
-                        prec*total_lake_fraction // precipitation on lake|reservoirs give direct response in this alg.
-                        + m3s_to_mmh(response.gm_melt_m3s, geo_cell_data.area()) // the glacier also direct
+                          std::max(0.0, prec - response.ae.ae)*total_lake_fraction // when it rains, remove ae. from direct response
+                        + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) // the glacier also direct
                         + response.tank.outflow * land_fraction;
-
+                    response.charge_m3s =
+                        + shyft::mmh_to_m3s(prec, cell_area_m2)
+                        - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)
+                        + response.gm_melt_m3s
+                        - shyft::mmh_to_m3s(response.total_discharge, cell_area_m2);
 					// Possibly save the calculated values using the collector callbacks.
 					response_collector.collect(i, response);///< \note collect the response valid for the i'th period (current state is now at the end of period)
 					if (i + 1 == i_end)
