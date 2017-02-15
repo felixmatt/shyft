@@ -104,6 +104,8 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_ss_k.PTSSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         self.verify_state_handler(model)
+        self.assertIsNotNone(model.skaugen_snow_response)
+        self.assertIsNotNone(model.skaugen_snow_state)
 
     def test_pt_hs_k_model_init(self):
         num_cells = 20

@@ -12,8 +12,8 @@ PTSSKModel.state_with_id_t = PTSSKStateWithId
 PTSSKModel.state = property(lambda self:PTSSKCellAllStateHandler(self.get_cells()))
 PTSSKModel.statistics = property(lambda self: PTSSKCellAllStatistics(self.get_cells()))
 
-PTSSKModel.gamma_snow_state = property(lambda self: PTSSKCellGammaSnowStateStatistics(self.get_cells()))
-PTSSKModel.gamma_snow_response = property(lambda self: PTSSKCellGammaSnowResponseStatistics(self.get_cells()))
+PTSSKModel.skaugen_snow_state = property(lambda self: PTSSKCellSkaugenStateStatistics(self.get_cells()))
+PTSSKModel.skaugen_snow_response = property(lambda self: PTSSKCellSkaugenResponseStatistics(self.get_cells()))
 PTSSKModel.priestley_taylor_response = property(lambda self: PTSSKCellPriestleyTaylorResponseStatistics(self.get_cells()))
 PTSSKModel.actual_evaptranspiration_response=property(lambda self: PTSSKCellActualEvapotranspirationResponseStatistics(self.get_cells()))
 PTSSKModel.kirchner_state = property(lambda self: PTSSKCellKirchnerStateStatistics(self.get_cells()))
