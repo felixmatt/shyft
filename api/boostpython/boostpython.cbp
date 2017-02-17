@@ -5,6 +5,7 @@
 		<Option title="boostpython" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option virtualFolders="api/;" />
 		<Build>
 			<Target title="api_Debug">
 				<Option output="../../shyft/api/_api" prefix_auto="0" extension_auto="1" />
@@ -162,106 +163,132 @@
 			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_actual_evapotranspiration.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_cell_environment.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_dtss.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_gamma_snow.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_geo_cell_data.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_geo_point.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_glacier_melt.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_actual_evapotranspiration.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_snow.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_soil.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_tank.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_interpolation.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_kalman.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_kirchner.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_precipitation_correction.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_priestley_taylor.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_region_environment.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_routing.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_skaugen.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_state.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_target_specification.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_time_axis.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_time_series.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_utctime.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_vectors.cpp">
+			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
