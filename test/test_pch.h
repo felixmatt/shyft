@@ -31,3 +31,7 @@
 #define TS_FAIL(msg) FAST_CHECK_UNARY((msg)!=nullptr)
 #define TS_ASSERT_THROWS_ANYTHING(e) CHECK_THROWS((e))
 // TODO: reference additional headers your program requires here
+using timing = std::chrono::high_resolution_clock;
+inline int  elapsed_ms(timing::time_point t0, timing::time_point t1) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+};

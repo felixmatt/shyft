@@ -230,25 +230,54 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
 	size_t n = 24 * ndays;//365;// 365 takes 20 seconds at cell stage 8core
 	et::timeaxis ta(start, dt, n);
+    et::timeaxis ta_one_step(start, dt*n, 1);
 	ec::interpolation_parameter ip;
 	ip.use_idw_for_temperature = true;
-	auto ti1 = ec::utctime_now();
+    vector<int> all_catchment_ids;// empty vector means no filtering
+    vector<int> catchment_ids{ 87,115 };
+    vector<int> other_ids{ 38,188,259,295,389,465,496,516,551,780 };
+	auto ti1 = timing::now();
     rm.initialize_cell_environment(ta);
+    rm.set_catchment_calculation_filter(catchment_ids);
 	rm.interpolate(ip, re);
-	auto ipt = ec::utctime_now() - ti1;
-	cout << "3. a Done with interpolation step used = " << ipt << "[s]" << endl;
-	if (getenv("SHYFT_IP_ONLY"))
+	auto ipt =elapsed_ms(ti1,timing::now());
+	cout << "3. a Done with interpolation step two catchments used = " << ipt << "[ms]" << endl;
+    auto avg_precip_ip_set = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
+    auto avg_precip_ip_set_value = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_set, ta_one_step).value(0);
+    auto avg_precip_ip_o_set = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), other_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
+    auto avg_precip_ip_o_set_value = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_o_set, ta_one_step).value(0);
+    //cout << "partial:avg precip for selected    catchments is:" << avg_precip_ip_set_value << endl;
+    //cout << "partial:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value << endl;
+    FAST_CHECK_GT(avg_precip_ip_set_value, 0.05);
+    FAST_CHECK_EQ(avg_precip_ip_o_set_value, 0.00);
+    rm.set_catchment_calculation_filter(all_catchment_ids);
+    ti1 = timing::now();
+    rm.interpolate(ip, re);
+    ipt = elapsed_ms(ti1, timing::now());
+    cout << "3. a Done with interpolation step *all* catchments used = " << ipt << "[ms]" << endl;
+    // now verify we got same results for the limited set, and non-zero for the others.
+    auto avg_precip_ip_set2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
+    auto avg_precip_ip_set_value2 = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_set2, ta_one_step).value(0);
+    auto avg_precip_ip_o_set2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), other_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
+    auto avg_precip_ip_o_set_value2 = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_o_set2, ta_one_step).value(0);
+    FAST_CHECK_LT(std::abs(avg_precip_ip_set_value - avg_precip_ip_set_value2), 0.0001);
+    FAST_CHECK_GT(avg_precip_ip_o_set_value2, 0.05);
+    //cout << "full:avg precip for selected    catchments is:" << avg_precip_ip_set_value2 << endl;
+    //cout << "full:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value2 << endl;
+    if (getenv("SHYFT_IP_ONLY"))
 		return;
 	vector<shyft::core::pt_gs_k::state_t> s0;
 	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
-	auto t0 = ec::utctime_now();
-	vector<int> all_catchment_ids;// empty vector means no filtering
-	//rm.set_catchment_calculation_filter(catchment_ids);
+    //
+    auto t0 = timing::now();
+
+    //rm.set_catchment_calculation_filter(catchment_ids);
 	rm.set_snow_sca_swe_collection(-1, true);
 	rm.run_cells();
 
+    auto ms = elapsed_ms(t0,timing::now());
 
-	cout << "3. b Done with cellstep :" << ec::utctime_now() - t0 << " [s]" << endl;
+	cout << "3. b Done with cell-step :" << ms << " [ms]" << endl;
 	auto sum_discharge = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
 	auto snow_sca = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
 	auto snow_swe = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), all_catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
@@ -260,7 +289,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         cout << "snow_sca :" << endl; print(cout, *snow_sca, i0, n_steps);
         cout << "snow_swe :" << endl; print(cout, *snow_swe, i0, n_steps);
     }
-    vector<int> catchment_ids{ 87,115 };
+
     auto sum_dischargex = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
     auto snow_scax = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_sca; });
     auto snow_swex = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t &c) {return c.rc.snow_swe; });
@@ -383,10 +412,10 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     parameter_accessor_t px; px.set(x);
     rm_opt.set_target_specification(target_specs, lwr, upr);
 	rm_opt.set_verbose_level(1);
-	auto tz = ec::utctime_now();
+	auto tz = timing::now();
 	auto x_optimized = rm_opt.optimize(px, 2500, 0.2, 5e-4);
-	auto used = ec::utctime_now() - tz;
-	cout << "results: " << used << " seconds, nthreads = " << rm.ncore << endl;
+	auto used = elapsed_ms(tz,timing::now());
+	cout << "results: " << used << " ms, nthreads = " << rm.ncore << endl;
 	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized) << endl;
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
@@ -396,11 +425,11 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	}
 	cout << " done" << endl;
 	cout <<"Retry with sceua:\n";
-	tz=ec::utctime_now();
+	tz=timing::now();
 	auto x_optimized2=rm_opt.optimize_sceua(x_optimized);
-	used= ec::utctime_now() - tz;
+	used= elapsed_ms(tz,timing::now());
 
-	cout << "results: " << used << " seconds, nthreads = " << rm.ncore << endl;
+	cout << "results: " << used << " ms, nthreads = " << rm.ncore << endl;
 	cout << " goal function value:" << rm_opt.calculate_goal_function(x_optimized2) << endl;
 	cout << " x-parameters before and after" << endl;
 	for (size_t i = 0; i < x.size(); ++i) {
