@@ -364,6 +364,28 @@ namespace shyft {
 				using namespace std;
 				namespace idw = shyft::core::inverse_distance;
 				namespace btk = shyft::core::bayesian_kriging;
+				// we use local scoped cell_proxy to support
+				// filtering interpolation to the cells set by
+				// calculation filter
+                struct cell_proxy {
+                    cell_proxy():cell(nullptr) {}
+                    cell_proxy(cell_t *c):cell(c){}
+                    cell_proxy(cell_proxy const &o):cell(o.cell) {}
+                    cell_proxy(cell_proxy&&o):cell(o.cell){}
+                    cell_proxy& operator=(cell_proxy const&o){cell=o.cell;return *this;}
+                    cell_proxy& operator=(cell_proxy&&o){cell=o.cell;return *this;}
+                    cell_t *cell;// ptr ok, because it's only within this scope, no life-time stuff needed, just ref
+                    // support enough methods to make it look like a cell during idw/btk
+                    geo_point mid_point()const {return cell->mid_point();}
+                    //< support for the interpolation phase, executes before the cell-run
+			        void   set_temperature(size_t ix, double temperature_value) { cell->env_ts.temperature.set(ix, temperature_value); }
+			        ///< used by the radiation interpolation to adjust the local radiation with respect to idw sources.
+			        double slope_factor() const { return cell->geo.radiation_slope_factor(); }
+                };
+                std::vector<cell_proxy> cell_ps;cell_ps.reserve(cells->size());
+                for(auto&c:*cells)
+                    if(is_calculated_by_catchment_ix(c.geo.catchment_ix))
+                        cell_ps.emplace_back(&c);
 
 
 				typedef shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
@@ -380,11 +402,11 @@ namespace shyft {
 				typedef idw_compliant_geo_point_ts<typename region_env_t::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
 				typedef idw_compliant_geo_point_ts<typename region_env_t::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
-				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_radiation_model_t;
-				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
-				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_proxy, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_proxy, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
+				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_radiation_model_t;
+				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
+				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
 				typedef  shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
@@ -395,17 +417,18 @@ namespace shyft {
 				//  the intention is that the orchestrator at the outside could provide it's own ready-made
 				//  interpolated/distributed signal, e.g. temperature input from arome-data
 
+
 				auto btkx = async(launch::async, [&]() {
 					if (env.temperature != nullptr) {
 						if (env.temperature->size()>1) {
 							if (ip_parameter.use_idw_for_temperature) {
 								idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>(
-									time_axis, *env.temperature, ip_parameter.temperature_idw, *cells,
-									[](cell_t &d, size_t ix, double value) { d.env_ts.temperature.set(ix, value); }
+									time_axis, *env.temperature, ip_parameter.temperature_idw, cell_ps,
+									[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.temperature.set(ix, value); }
 								);
 							} else {
 								btk::btk_interpolation<btk_tsa_t>(
-									begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
+									begin(*env.temperature), end(*env.temperature), begin(cell_ps), end(cell_ps),
 									time_axis, ip_parameter.temperature
 									);
 							}
@@ -417,6 +440,7 @@ namespace shyft {
 								temp_ts.set(i, tsa.value(i));
 							}
 							for (auto& c : *cells) {
+                                if(is_calculated_by_catchment_ix(c.geo.catchment_ix))
 								c.env_ts.temperature = temp_ts;
 							}
 						}
@@ -426,32 +450,32 @@ namespace shyft {
 				auto idw_precip = async(launch::async, [&]() {
 					if (env.precipitation != nullptr)
 						idw::run_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t>(
-							time_axis, *env.precipitation, ip_parameter.precipitation, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.precipitation.set(ix, value); }
+							time_axis, *env.precipitation, ip_parameter.precipitation, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.precipitation.set(ix, value); }
 					);
 				});
 
 				auto idw_radiation = async(launch::async, [&]() {
 					if (env.radiation != nullptr)
 						idw::run_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
-							time_axis, *env.radiation, ip_parameter.radiation, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.radiation.set(ix, value); }
+							time_axis, *env.radiation, ip_parameter.radiation, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.radiation.set(ix, value); }
 					);
 				});
 
 				auto idw_wind_speed = async(launch::async, [&]() {
 					if (env.wind_speed != nullptr)
 						idw::run_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
-							time_axis, *env.wind_speed, ip_parameter.wind_speed, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.wind_speed.set(ix, value); }
+							time_axis, *env.wind_speed, ip_parameter.wind_speed, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.wind_speed.set(ix, value); }
 					);
 				});
 
 				auto idw_rel_hum = async(launch::async, [&]() {
 					if (env.rel_hum != nullptr)
 						idw::run_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
-							time_axis, *env.rel_hum, ip_parameter.rel_hum, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.rel_hum.set(ix, value); }
+							time_axis, *env.rel_hum, ip_parameter.rel_hum, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.rel_hum.set(ix, value); }
 					);
 				});
 
