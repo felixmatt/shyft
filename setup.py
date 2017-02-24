@@ -61,7 +61,7 @@ if "Windows" in platform.platform():
     for f in files:
         shutil.copy2(f, path.join(dest_dir, path.basename(f)))
 
-
+requires = ["numpy", "nose", "netcdf4", "pyyaml","six", "pyproj", "shapely" ]
 setup(
     name='shyft',
     version=VERSION,
@@ -75,5 +75,6 @@ setup(
         'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 
         'tests/netcdf/*', 'lib/*.dll']},
     entry_points={},
-    requires=["numpy", "nose", "netcdf4"]
+    requires= requires,
+	install_requires=requires
 )
