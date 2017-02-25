@@ -224,10 +224,11 @@ namespace shyft {
             ///< if a 'null' or valid_coordinates
 			bool is_valid() const { return is_null() || is_valid_coordinates(); }
 			bool is_null() const { return year == 0 && month == 0 && day == 0 && hour == 0 && minute == 0 && second == 0; }
-			bool operator==(const YMDhms& x) const {
+			bool operator==(YMDhms const& x) const {
                 return x.year == year && x.month == month && x.day == day && x.hour == hour
                        && x.minute == minute && x.second == second;
             }
+            bool operator!=(YMDhms const&o) const { return !operator==(o); }
 			static YMDhms max() {return YMDhms(YEAR_MAX,12,31,23,59,59);}
 			static YMDhms min() {return YMDhms(YEAR_MIN,1,1,0,0,0);}
 		};
