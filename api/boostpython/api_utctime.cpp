@@ -11,6 +11,7 @@ namespace expose {
 
 
     BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(calendar_time_overloads,calendar::time,1,6);
+    BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(calendar_time_overloads_week, calendar::time_from_week, 1, 6);
 
     static void e_calendar() {
 
@@ -18,9 +19,10 @@ namespace expose {
         std::string (calendar::*to_string_p)(utcperiod) const =&calendar::to_string;
         utctimespan (calendar::*diff_units)(utctime,utctime,utctimespan) const=&calendar::diff_units;
         utctime (calendar::*time_YMDhms)(YMDhms) const = &calendar::time;
+        utctime (calendar::*time_YWdhms)(YWdhms) const = &calendar::time;
         utctime (calendar::*time_6)(int,int,int,int,int,int) const = &calendar::time;
-
-        class_<calendar,shared_ptr<calendar>>("Calendar",
+        utctime (calendar::*time_from_week_6)(int, int, int, int, int, int) const = &calendar::time_from_week;
+        class_<calendar, shared_ptr<calendar>>("Calendar",
             "Calendar deals with the concept of human calendar\n"
             " In SHyFT we practice the 'utctime-perimeter' principle,\n"
             "  * so the core is utc-time only \n"
@@ -30,7 +32,7 @@ namespace expose {
             " we only implement features as needed in the core and interfaces\n"
             " Currently this includes most options, including olson time-zone handling\n"
             "Calendar functionality:\n"
-            " -# Conversion between the calendar coordinates YMDhms and utctime, taking  any timezone and DST into account\n"
+            " -# Conversion between the calendar coordinates YMDhms or iso week YWdhms and utctime, taking  any timezone and DST into account\n"
             " -# Calendar constants, utctimespan like values for Year,Month,Week,Day,Hour,Minute,Second\n"
             " -# Calendar arithmetic, like adding calendar units, e.g. day,month,year etc.\n"
             " -# Calendar arithmetic, like trim/truncate a utctime down to nearest timespan/calendar unit. eg. day\n"
@@ -39,25 +41,34 @@ namespace expose {
             " -# Converting utctime to string and vice-versa\n"
             "\n"
             )
-        .def(init<utctimespan>(args("tz-offset"),"creates a calendar with constant tz-offset"))
-        .def(init<string>(args("olson tz-id"),"create a Calendar from Olson timezone id, eg. 'Europe/Oslo'" ))
-        .def("to_string",to_string_t,args("utctime"),"convert time t to readable string taking current calendar properties, including timezone into account")
-        .def("to_string",to_string_p,args("utcperiod"),"convert utcperiod p to readable string taking current calendar properties, including timezone into account")
-        .def("region_id_list",&calendar::region_id_list,"Returns a list over predefined olson time-zone identifiers").staticmethod("region_id_list")
-        .def("calendar_units",&calendar::calendar_units,args("t"),"returns YMDhms for specified t, in the time-zone as given by the calendar")
-        .def("time",time_YMDhms,args("YMDhms"),"convert calendar coordinates into time using the calendar time-zone")
+            .def(init<utctimespan>(args("tz-offset"), "creates a calendar with constant tz-offset"))
+            .def(init<string>(args("olson tz-id"), "create a Calendar from Olson timezone id, eg. 'Europe/Oslo'"))
+            .def("to_string", to_string_t, args("utctime"), "convert time t to readable string taking current calendar properties, including timezone into account")
+            .def("to_string", to_string_p, args("utcperiod"), "convert utcperiod p to readable string taking current calendar properties, including timezone into account")
+            .def("region_id_list", &calendar::region_id_list, "Returns a list over predefined olson time-zone identifiers").staticmethod("region_id_list")
+            .def("calendar_units", &calendar::calendar_units, args("t"), "returns YMDhms for specified t, in the time-zone as given by the calendar")
+            .def("calendar_week_units", &calendar::calendar_week_units, args("t"), "returns iso YWdhms for specified t, in the time-zone as given by the calendar")
+            .def("time", time_YMDhms, args("YMDhms"), "convert calendar coordinates into time using the calendar time-zone")
+            .def("time", time_YWdhms, args("YWdhms"), "convert calendar coordinates into time using the calendar time-zone")
 
-        .def("time",time_6,calendar_time_overloads("returns time accoring to calendar",args("Y,M,D,h,m,s")))//args("Y"),"returns time of Y.01.01 in calendar time-zone")
+            .def("time", time_6, calendar_time_overloads("returns time according to calendar", args("Y,M,D,h,m,s")))
+            .def("time_from_week", time_from_week_6, calendar_time_overloads_week("returns time according to calendar iso year,week ..", args("Y,W,w,h,m,s")))
 
-        .def("add",&calendar::add,args("t,delta_t,n"),
-             "calendar semantic add\n"
-             " conceptually this is similar to t + deltaT*n\n"
-             " but with deltaT equal to calendar::DAY,WEEK,MONTH,YEAR\n"
-             " and/or with dst enabled time-zone the variation of length due to dst\n"
-             " or month/year length is taken into account\n"
-             " e.g. add one day, and calendar have dst, could give 23,24 or 25 hours due to dst.\n"
-             " similar for week or any other time steps.\n"
-             )
+            .def("add", &calendar::add, args("t", "delta_t", "n"),
+                doc_intro("calendar semantic add")
+                doc_intro("conceptually this is similar to t + deltaT*n")
+                doc_intro(" but with deltaT equal to calendar::DAY,WEEK,MONTH,YEAR")
+                doc_intro(" and/or with dst enabled time-zone the variation of length due to dst")
+                doc_intro(" or month/year length is taken into account")
+                doc_intro(" e.g. add one day, and calendar have dst, could give 23,24 or 25 hours due to dst.")
+                doc_intro(" similar for week or any other time steps.")
+                doc_parameters()
+                doc_parameter("t","int","timestamp utc since epoch")
+                doc_parameter("delta_t","int","timestep in seconds, with semantic interpretation of DAY,WEEK,MONTH,YEAR")
+                doc_parameter("n","int","number of timesteps to add")
+                doc_returns("t","int","new timestamp with the added time-steps, seconds utc since epoch")
+                doc_see_also("diff_units,trim")  
+            )
         .def("diff_units",diff_units,args("t,delta_t,n"),
              "calculate the distance t1..t2 in specified units\n"
              " The function takes calendar semantics when deltaT is calendar::DAY,WEEK,MONTH,YEAR,\n"
@@ -89,6 +100,29 @@ namespace expose {
         .def_readwrite("second",&YMDhms::second)
         .def("max",&YMDhms::max,"returns the maximum representation").staticmethod("max")
         .def("min",&YMDhms::max,"returns the minimum representation").staticmethod("min");
+
+        class_<YWdhms>("YWdhms", "Defines calendar coordinates as iso Year Week week-day hour minute second")
+            .def(init<int, optional<int, int, int, int, int>>(args("Y", "W", "wd", "h", "m", "s"), 
+                doc_intro("Creates calendar coordinates specifying iso Y,W,wd,h,m,s")
+                doc_parameters()
+                doc_parameter("Y","int","iso-year")
+                doc_parameter("W","int","iso week [1..53]")
+                doc_parameter("wd","int","week_day [1..7]=[mo..sun]")
+                doc_parameter("h","int","hour [0..23]")
+                doc_parameter("m","int","minute [0..59]")
+                doc_parameter("s","int","second [0..59]")
+                )
+            )
+            .def("is_valid", &YWdhms::is_valid, "returns true if YWdhms values are reasonable")
+            .def("is_null", &YWdhms::is_null, "returns true if all values are 0, - the null definition")
+            .def_readwrite("iso_year", &YWdhms::iso_year)
+            .def_readwrite("iso_week", &YWdhms::iso_week)
+            .def_readwrite("week_day", &YWdhms::week_day,doc_intro("week_day,[1..7]=[mo..sun]"))
+            .def_readwrite("hour", &YWdhms::hour)
+            .def_readwrite("minute", &YWdhms::minute)
+            .def_readwrite("second", &YWdhms::second)
+            .def("max", &YWdhms::max, "returns the maximum representation").staticmethod("max")
+            .def("min", &YWdhms::max, "returns the minimum representation").staticmethod("min");
 
         class_<time_zone::tz_info_t,bases<>,time_zone::tz_info_t_,boost::noncopyable>("TzInfo",
             "TzInfo class is responsible for providing information about the\n"
