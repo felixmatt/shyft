@@ -58,7 +58,7 @@ namespace shyft {
             }
             return string("[not-valid-period>");
         }
-        
+
         // returns sun=0, mon=1 etc.. based on code from boost greg.date
         static inline int day_of_week_idx(YMDhms const&c) {
             unsigned short a = static_cast<unsigned short>((14 - c.month) / 12);
@@ -66,7 +66,7 @@ namespace shyft {
             unsigned short m = static_cast<unsigned short>(c.month + 12 * a - 2);
             return static_cast<int>((c.day + y + (y / 4) - (y / 100) + (y / 400) + (31 * m) / 12) % 7);
         }
-        
+
         // return iso weekday, mon=1, sun=7;
         static inline int iso_week_day(YMDhms const&c) {
             auto wd = day_of_week_idx(c);
@@ -106,7 +106,6 @@ namespace shyft {
             auto jdn = day_number(t);
             auto cw = from_day_number(jdn);
             cw.month = 1;cw.day = 1;// round/trim down to year.1.1
-            auto jdn_y_1_1 = day_number(cw);
             auto w1_daynumber = trim_day_number_to_week(day_number(cw));
             auto cy = from_day_number(w1_daynumber);
             if (cy.month == 12 && cy.day < 29)
