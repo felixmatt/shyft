@@ -293,6 +293,31 @@ TEST_CASE("test_add_months") {
         }
     }
 }
+TEST_CASE("calendar_quarter") {
+    using calendar = shyft::core::calendar;
+    calendar c("Europe/Oslo");
+    int mq[12] = { 1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10 };
+    int qm[12] = {1,1,1,2,2,2,3,3,3,4,4,4};
+    SUBCASE("trim_and_quarter") {
+        for (int m = 1;m <= 12;++m) {
+            auto t = c.time(2017, m, 3, 10, 30, 22);
+            FAST_CHECK_EQ(c.trim(t, calendar::QUARTER), c.time(2017, mq[m - 1], 1));
+            FAST_CHECK_EQ(c.quarter(t), qm[m - 1]);
+        }
+    }
+    SUBCASE("add_diff_units") {
+        for (int m = 1;m <= 12;++m) {
+            for (int n = -10;n <= 10;++n) {
+                auto t = c.time(2016, m, 3, 4, 5, 6);// pick a time
+                auto tn = c.add(t, calendar::QUARTER, n);// add n quarters
+                auto tr = c.add(tn, calendar::QUARTER, -n);// add neg. num, expect to get back
+                auto nc = c.diff_units(t, tn, calendar::QUARTER);// verify it can calc. correctly
+                FAST_CHECK_EQ(nc, n);
+                FAST_CHECK_EQ(t, tr);
+            }
+        }
+    }
+}
 
 TEST_CASE("calendar_iso_week") {
     using YWdhms = shyft::core::YWdhms;

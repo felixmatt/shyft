@@ -77,6 +77,12 @@ class Calendar(unittest.TestCase):
         self.assertEqual(a.month, c.month, 'trim day  Should leave month')
         self.assertEqual(a.day, c.day, 'should leave same day')
 
+    def test_quarter(self):
+        t = self.std.time(2017, 2, 28, 1, 2, 3)
+        tt = self.std.trim(t,api.Calendar.QUARTER)
+        self.assertEqual(tt,self.std.time(2017, 1, 1))
+        self.assertEqual(1,self.std.quarter(t))
+
     def test_conversion_roundtrip(self):
         c1 = api.YMDhms(1960, 1, 2, 3, 4, 5)
         t1 = self.std.time(c1)
