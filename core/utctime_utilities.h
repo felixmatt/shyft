@@ -281,7 +281,8 @@ namespace shyft {
 		struct calendar {
 			// these do have calendar sematics(could/should be separate typed/enum instad)
 			static const utctimespan YEAR=365*24*3600L;
-			static const utctimespan MONTH=30*24*3600L;
+            static const utctimespan QUARTER = 3*30*24*3600L;
+			static const utctimespan MONTH = 30*24*3600L;
 			static const utctimespan WEEK = 7*24*3600L;
 			static const utctimespan DAY =  1*24*3600L;
 			static const utctimespan HOUR_3 = 3 * 3600L;
@@ -387,6 +388,8 @@ namespace shyft {
 			///< returns the month of t, 1..12, -1 of not valid time
 			int month(utctime t) const ;
 
+            ///< returns quarter of t, 1..4, -1 no valid time
+            int quarter(utctime t) const;
             ///< returns a readable iso standard string
 			std::string to_string(utctime t) const;
 

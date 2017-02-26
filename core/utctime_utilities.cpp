@@ -193,7 +193,13 @@ namespace shyft {
             if (t == no_utctime || t == max_utctime || t == min_utctime) return -1;
             return calendar_units(t ).month;
         }
-
+        ///< month to quarter for the trim function
+        static int mq[12] = { 1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10 };
+        int calendar::quarter(utctime t) const {
+            if (t == no_utctime || t == max_utctime || t == min_utctime) return -1;
+            auto cu = calendar_units(t);
+            return 1+ mq[cu.month - 1]/3;
+        }
         utctime calendar::trim(utctime t, utctimespan deltaT) const {
             if (t == no_utctime || t == min_utctime || t == max_utctime || deltaT==utctimespan(0))
                 return t;
@@ -202,6 +208,10 @@ namespace shyft {
                 auto c = calendar_units(t);
                 c.month = c.day = 1; c.hour = c.minute = c.second = 0;
                 return time(c);
+            }break;
+            case QUARTER: {
+                auto c = calendar_units(t);
+                return time(YMDhms(c.year, mq[c.month - 1], 1));
             }break;
             case MONTH: {
                 auto c = calendar_units(t);
@@ -229,6 +239,10 @@ namespace shyft {
                     c.year += int(dt/YEAR);// gives signed number of units.
                     return time(c);
                 } break;
+                case QUARTER://just let it appear as 3xmonth
+                    deltaT = MONTH;
+                    n = 3 * n;
+                    // fall through to month
                 case MONTH:{
                     auto c=calendar_units(t);
                     // calculate number of years..
@@ -242,7 +256,7 @@ namespace shyft {
                 } break;
                 default: break;
             }
-            utctime r= t+dt;
+            utctime r = t + dt; //naive first estimate
             auto utc_diff_1=tz_info->utc_offset(t);
             auto utc_diff_2=tz_info->utc_offset(r);
             return r + (utc_diff_1-utc_diff_2);
@@ -268,38 +282,39 @@ namespace shyft {
             utctimespan n_units= (t2-t1)/deltaT;// a *rough* estimate in case of dst or month/year
             // recall that this should give n_unit=1, remainder=0 for dst days 23h | 25h etc.
             // and that it should be complementary to the add(t,dt,n) function.
-            switch (deltaT) {
-                case calendar::MONTH: n_units -= n_units/72; // MONTH is 30 days, a real one  is ~ 30.41, after 72 monts this adds up to ~ 1 month error
-                case calendar::YEAR:
-                case calendar::WEEK:
-                case calendar::DAY:{
-                    auto t2x=add(t1,deltaT,long(n_units));
-                    if(t2x>t2) { // got one step to far
-                        --n_units;// reduce n_units, and calculate remainder
-                        remainder= t2 - add(t1,deltaT,long(n_units));
-                    } else if(t2x<t2) {// got one step short, there might be a hope for one more
-                        ++n_units;// try adding one unit
-                        auto t2xx= add(t1,deltaT,long(n_units));//calc new t2x
-                        if(t2xx>t2) { // to much ?
-                            --n_units;// reduce, and
-                            remainder = t2 - t2x;// remainder is as with previous t2x
-                        } else {// success, we could increase with one
-                            remainder = t2 - t2xx;//new remainder based on t2xx
-                        }
-                    } else {
-                        remainder=utctimespan(0);// perfect hit, zero remainder
+            if (deltaT < DAY) {
+                if (deltaT > HOUR) {// a bit tricky, tz might jeopardize interval size by 1h (again assuming dst=1h)
+                    auto utc_diff_1 = tz_info->utc_offset(t1);//assuming dst=1h!
+                    auto utc_diff_2 = tz_info->utc_offset(t2);//assuming dst=1h!
+                    n_units = (t2 - t1 - (utc_diff_1 - utc_diff_2)) / deltaT;
+                    remainder = t2 - add(t1, deltaT, n_units);
+                } else { // simple case, hour< 15 min etc.
+                    remainder = t2 - (t1 + n_units*deltaT);
+                }
+            } else {
+                if (deltaT == MONTH) {
+                    n_units -= n_units / 72; // MONTH is 30 days, a real one  is ~ 30.4375, after 72 months this adds up to ~ 1 month error
+                } else if (deltaT == QUARTER) {
+                    n_units -=  n_units /(3* 72);// 3x month compensation
+                } else if (deltaT == YEAR) {
+                    n_units -= n_units / (4 * 365 * 365);// YEAR is 365, real is ~365.25, takes 5332900 years before it adds up to 1 year
+                }
+                auto t2x=add(t1,deltaT,long(n_units));
+                if(t2x>t2) { // got one step to far
+                    --n_units;// reduce n_units, and calculate remainder
+                    remainder= t2 - add(t1,deltaT,long(n_units));
+                } else if(t2x<t2) {// got one step short, there might be a hope for one more
+                    ++n_units;// try adding one unit
+                    auto t2xx= add(t1,deltaT,long(n_units));//calc new t2x
+                    if(t2xx>t2) { // to much ?
+                        --n_units;// reduce, and
+                        remainder = t2 - t2x;// remainder is as with previous t2x
+                    } else {// success, we could increase with one
+                        remainder = t2 - t2xx;//new remainder based on t2xx
                     }
-                } break;
-                default: {
-					if (deltaT > HOUR) {// a bit tricky, tz might jeopardize interval size by 1h (again assuming dst=1h)
-						auto utc_diff_1 = tz_info->utc_offset(t1);//assuming dst=1h!
-						auto utc_diff_2 = tz_info->utc_offset(t2);//assuming dst=1h!
-						n_units = (t2 - t1 - (utc_diff_1 - utc_diff_2)) / deltaT;
-						remainder = t2 - add(t1, deltaT, n_units);
-					} else { // simple case, hour< 15 min etc.
-						remainder = t2 - (t1 + n_units*deltaT);
-					}
-                } break;
+                } else {
+                    remainder=utctimespan(0);// perfect hit, zero remainder
+                }
             }
             return n_units*sgn;
         };
