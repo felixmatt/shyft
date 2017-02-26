@@ -46,6 +46,8 @@ def VectorString(v):
 
 DoubleVector.__str__ = lambda self: VectorString(self)
 
+Calendar.__str__ = lambda self: "Calendar('{0}')".format(self.tz_info.name())
+
 
 def ShowUtcTime(v):
     utc = Calendar()
@@ -78,6 +80,17 @@ StringVector.push_back = lambda self, x: self.append(x)
 # FIx up YMDhms
 YMDhms.__str__ = lambda self: "YMDhms({0},{1},{2},{3},{4},{5})".format(self.year, self.month, self.day, self.hour,
                                                                        self.minute, self.second)
+
+YMDhms.__repr__ = lambda self: "{0}({1},{2},{3},{4},{5},{6})".format(self.__class__.__name__,
+                                                                    self.year, self.month, self.day, self.hour,
+                                                                    self.minute, self.second)
+
+YWdhms.__str__ = lambda self: "YWdhms({0},{1},{2},{3},{4},{5})".format(self.iso_year, self.iso_week, self.week_day, self.hour,
+                                                                       self.minute, self.second)
+
+YWdhms.__repr__ = lambda self: "{0}({1},{2},{3},{4},{5},{6})".format(self.__class__.__name__,
+                                                                     self.iso_year, self.iso_week, self.week_day, self.hour,
+                                                                     self.minute, self.second)
 
 # Fix up GeoPoint
 GeoPoint.__str__ = lambda self: "GeoPoint({0},{1},{2})".format(self.x, self.y, self.z)

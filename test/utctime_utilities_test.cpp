@@ -111,6 +111,23 @@ TEST_CASE("test_YMDhms_reasonable_calendar_coordinates") {
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,-1));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,60));
 }
+
+TEST_CASE("test_YWdhms_reasonable_calendar_coordinates") {
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(10000, 1, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(-10000, 1, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 0, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 55, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 0, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 8, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, -1, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 24, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, -1, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 60, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 0, -1));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 0, 60));
+}
+
+
 TEST_CASE("test_calendar_add_and_diff_units") {
 	calendar cet(deltahours(1));
 	int n_units = 3;
@@ -275,6 +292,51 @@ TEST_CASE("test_add_months") {
             }
         }
     }
+}
 
+TEST_CASE("calendar_iso_week") {
+    using YWdhms = shyft::core::YWdhms;
+    shyft::core::calendar c("Europe/Oslo");
+    auto t = c.time(2017, 1, 9,1,2,3);
+    SUBCASE("calendar_week_units") {
+        FAST_CHECK_EQ(c.calendar_week_units(t), YWdhms(2017, 2, 1, 1, 2, 3));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2017, 1, 8, 23, 59, 59)), YWdhms(2017, 1, 7, 23, 59, 59));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2017, 12, 31, 23, 59, 59)), YWdhms(2017, 52, 7, 23, 59, 59));
+        auto y2015w53 = c.calendar_week_units(c.time(2016, 1, 3, 23, 59, 59));
+        FAST_CHECK_EQ(y2015w53, YWdhms(2015, 53, 7, 23, 59, 59));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2015, 12, 29, 1, 2, 3)), YWdhms(2015, 53, 2, 1, 2, 3));
+        auto y2015w1 = c.calendar_week_units(c.time(2015, 1, 1, 0, 0, 0));
+        FAST_CHECK_EQ(y2015w1, YWdhms(2015, 1, 4, 0, 0, 0));
+        for (int d = 0;d < 3;++d)
+            FAST_CHECK_EQ(c.calendar_week_units(c.time(2014, 12, 29 + d, 0, 0, 0)), YWdhms(2015, 1, 1 + d, 0, 0, 0));
+        for (int d = 0;d < 4;++d)
+            FAST_CHECK_EQ(c.calendar_week_units(c.time(2015, 1, 1 + d, 0, 0, 0)), YWdhms(2015, 1, 4 + d, 0, 0, 0));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(1963, 3, 21, 10, 30, 0)), YWdhms(1963, 12, 4, 10, 30, 0));
+    }
+    SUBCASE("trim_week") {
+        for (int d = 2;d < 9;++d) // just to test trim
+            FAST_CHECK_EQ(c.trim(c.time(2017, 1, d, 3, 40, 50), calendar::WEEK), c.time(2017, 1, 2, 0, 0, 0));
+        for(int d =7;d<14;++d)
+            FAST_CHECK_EQ(c.trim(c.time(1963, 1, d, 3, 40, 50), calendar::WEEK), c.time(1963, 1, 7, 0, 0, 0));
+    }
+    SUBCASE("calendar.time(iso_week)") {
+        FAST_CHECK_EQ(c.time_from_week(2017, 1, 1), c.time(2017, 1, 2));
+        FAST_CHECK_EQ(c.time_from_week(2017, 12, 7,4,30,15), c.time(2017, 3,26,4,30,15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 12, 7, 1, 30, 15), c.time(2017, 3, 26, 1, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 43, 7, 1, 30, 15), c.time(2017,10, 29, 1, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 43, 7, 4, 30, 15), c.time(2017, 10, 29, 4, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(1963, 16, 1), c.time(1963, 4, 15));
+
+        FAST_CHECK_EQ(t, c.time(YWdhms(2017, 2, 1, 1, 2, 3)));
+        FAST_CHECK_EQ(c.time(2017, 1, 8, 23, 59, 59),c.time( YWdhms(2017, 1, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2017, 12, 31, 23, 59, 59),c.time(YWdhms(2017, 52, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2016, 1, 3, 23, 59, 59), c.time(YWdhms(2015, 53, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2015, 12, 29, 1, 2, 3), c.time(YWdhms(2015, 53, 2, 1, 2, 3)));
+        FAST_CHECK_EQ(c.time(2015, 1, 1, 0, 0, 0), c.time(YWdhms(2015, 1, 4, 0, 0, 0)));
+        for (int d = 0;d < 3;++d)
+            FAST_CHECK_EQ(c.time(2014, 12, 29 + d, 0, 0, 0), c.time(YWdhms(2015, 1, 1 + d, 0, 0, 0)));
+        for (int d = 0;d < 4;++d)
+            FAST_CHECK_EQ(c.time(2015, 1, 1 + d, 0, 0, 0), c.time(YWdhms(2015, 1, 4 + d, 0, 0, 0)));
+    }
 }
 TEST_SUITE_END();

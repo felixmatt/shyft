@@ -224,13 +224,46 @@ namespace shyft {
             ///< if a 'null' or valid_coordinates
 			bool is_valid() const { return is_null() || is_valid_coordinates(); }
 			bool is_null() const { return year == 0 && month == 0 && day == 0 && hour == 0 && minute == 0 && second == 0; }
-			bool operator==(const YMDhms& x) const {
+			bool operator==(YMDhms const& x) const {
                 return x.year == year && x.month == month && x.day == day && x.hour == hour
                        && x.minute == minute && x.second == second;
             }
+            bool operator!=(YMDhms const&o) const { return !operator==(o); }
 			static YMDhms max() {return YMDhms(YEAR_MAX,12,31,23,59,59);}
 			static YMDhms min() {return YMDhms(YEAR_MIN,1,1,0,0,0);}
 		};
+        struct YWdhms {
+            int iso_year;
+            int iso_week;
+            int week_day;
+            int hour;
+            int minute;
+            int second;
+            YWdhms() :iso_year(0), iso_week(0), week_day(0), hour(0), minute(0), second(0) {}
+            YWdhms(int iso_year,
+                int iso_week=1,
+                int week_day=1,
+                int hour=0,
+                int minute=0,
+                int second=0
+            ):iso_year(iso_year), iso_week(iso_week), week_day(week_day), hour(hour), minute(minute), second(second) {
+                if (!is_valid())
+                    throw std::runtime_error("calendar iso week coordinates failed simple range check for one or more item");
+            }
+            bool operator==(YWdhms const& x) const {
+                return x.iso_year == iso_year && x.iso_week == iso_week && x.week_day == week_day && x.hour == hour
+                    && x.minute == minute && x.second == second;
+            }
+            bool operator!=(YWdhms const&x) const { return !operator==(x); }
+            bool is_null() const { return iso_year == 0 && iso_week == 0 && week_day == 0 && hour == 0 && minute == 0 && second == 0; }
+            ///< just check that YMDhms are within reasonable ranges,\note it might still be an 'invalid' date!
+            bool is_valid_coordinates() const { return !(iso_year<YMDhms::YEAR_MIN || iso_year>YMDhms::YEAR_MAX || iso_week < 1 || iso_week>53 || week_day < 1 || week_day>7 || hour < 0 || hour>23 || minute < 0 || minute>59 || second < 0 || second>59); }
+            ///< if a 'null' or valid_coordinates
+            bool is_valid() const { return is_null() || is_valid_coordinates(); }
+            static YWdhms max() { return YWdhms(YMDhms::YEAR_MAX, 52, 6, 23, 59, 59); }
+            static YWdhms min() { return YWdhms(YMDhms::YEAR_MIN, 1, 1, 0, 0, 0); }
+
+        };
         /** \brief Calendar deals with the concept of human calendar.
          *
          * Please notice that although the calendar concept is complete,
@@ -281,8 +314,8 @@ namespace shyft {
 				int year = static_cast<unsigned short>(100 * b + d - 4800 + (m / 10));
 				return YMDhms(year, month, day);
 			}
-			static int day_number(utctime t) {
-				return (int)(int)((UnixSecond + t) / DAY);
+			static int inline day_number(utctime t) {
+				return (int)((UnixSecond + t) / DAY);
 			}
 			static inline utctimespan seconds(int h, int m, int s) { return h*HOUR + m*MINUTE + s*SECOND; }
 
@@ -313,11 +346,13 @@ namespace shyft {
 			 * \return utctime
 			 */
 			utctime time(YMDhms c) const;
+            utctime time(YWdhms c) const; 
 
             ///<short hand for calendar::time(YMDhms)
             utctime time(int Y,int M=1,int D=1,int h=0,int m=0,int s=0) const {
                 return time(YMDhms(Y,M,D,h,m,s));
             }
+            utctime time_from_week(int Y, int W = 1, int wd = 1, int h = 0, int m = 0, int s = 0) const;
             /**\brief returns *utc_year* of t \note for internal dst calculations only */
 			static inline int utc_year(utctime t) {
                 if(t == no_utctime  ) throw std::runtime_error("year of no_utctime");
@@ -333,6 +368,15 @@ namespace shyft {
              * \return calendar units YMDhms
              */
 			YMDhms  calendar_units(utctime t) const ;
+
+            /**\brief return the calendar iso week units of t taking timezone and dst into account
+            *
+            * Special utctime values, no_utctime max_utctime, min_utctime are mapped to corresponding
+            * YWdhms special values.
+            * \sa YWdhms
+            * \return calendar iso week units YWdhms
+            */
+            YWdhms calendar_week_units(utctime t) const;
 
 			///< returns  0=sunday, 1= monday ... 6=sat.
 			int day_of_week(utctime t) const ;
