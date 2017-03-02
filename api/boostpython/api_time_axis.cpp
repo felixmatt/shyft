@@ -130,6 +130,15 @@ namespace expose {
                 e_time_axis_std<point_dt>(p_dt);
         }
 
+        static std::vector<utctime> time_axis_extract_time_points(shyft::time_axis::generic_dt const&ta) {
+            std::vector<utctime> r;r.reserve(ta.size() + 1);
+            for (size_t i = 0;i < ta.size();++i) {
+                r.emplace_back(ta.time(i));
+            }
+            if (ta.size())
+                r.emplace_back(ta.total_period().end);
+            return r;
+        }
 
         static void e_generic_dt() {
             using namespace shyft::time_axis;
@@ -209,6 +218,12 @@ namespace expose {
                 ;//.def("full_range",&point_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
                 //.def("null_range",&point_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
             e_time_axis_std<generic_dt>(g_dt);
+            def("time_axis_extract_time_points", time_axis_extract_time_points, args("time_axis"),
+                doc_intro("Extract all time_axis.period(i).start plus time_axis.total_period().end into a UtcTimeVector")
+                doc_parameters()
+                doc_parameter("time_axis","TimeAxis","time-axis to extract all time-points from")
+                doc_returns("time_points","UtcTimeVector","all time_axis.period(i).start plus time_axis.total_period().end")
+            );
         }
 
     }
