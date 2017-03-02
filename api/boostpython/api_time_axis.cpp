@@ -38,7 +38,10 @@ namespace expose {
                      doc_parameters()
                      doc_parameter("t","int","utctime in seconds 1970.01.01")
                      doc_returns("index","int","the index the time-axis period that contains t, -1 if before first period n-1, if t is after last period")
-                );
+                )
+                .def(self == self)
+                .def(self != self)
+                    ;
 
         }
 
