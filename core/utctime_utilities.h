@@ -327,7 +327,17 @@ namespace shyft {
 			calendar(utctimespan tz=0): tz_info(new time_zone::tz_info_t(tz)) {}
 			/**\brief construct a timezone from tz_info shared ptr provided from typically time_zone db */
 			calendar(time_zone::tz_info_t_ tz_info):tz_info(tz_info) {}
-
+            calendar(calendar const&o) :tz_info(o.tz_info) {}
+            calendar(calendar&&o) :tz_info(std::move(o.tz_info)) {}
+            calendar& operator=(calendar const &o) {
+                if (this != &o)
+                    tz_info = o.tz_info;
+                return *this;
+            }
+            calendar& operator=(calendar&&o) {
+                tz_info = std::move(o.tz_info);
+                return *this;
+            }
             /**\brief construct a timezone based on region id
              * uses internal tz_info_database to lookup the name.
              * \param region_id like Europe/Oslo, \sa time_zone::tz_info_database

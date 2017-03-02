@@ -57,7 +57,7 @@ class TimeAxis(unittest.TestCase):
         self.assertTrue(len(s) > 0)
 
     def test_generic_timeaxis(self):
-        c = api.Calendar()
+        c = api.Calendar('Europe/Oslo')
         dt = api.deltahours(1)
         n = 240
         t0 = c.time(2016, 4, 10)
@@ -69,6 +69,7 @@ class TimeAxis(unittest.TestCase):
         tag2 = api.TimeAxis(c, t0, dt, n)
         self.assertEqual(len(tag2), n)
         self.assertEqual(tag2.time(0), t0)
+        self.assertIsNotNone(tag2.calendar_dt.calendar)
 
 
 if __name__ == "__main__":

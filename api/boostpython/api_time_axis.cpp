@@ -79,7 +79,7 @@ namespace expose {
                     doc_intro("or calendar-specific periods like day,week,month,quarters or years.")
                     doc_see_also("TimeAxisFixedDeltaT,TimeAxisByPoints,TimeAxis")
                 )
-                .def(init<shared_ptr<const calendar>,utctime,utctimespan,long>(
+                .def(init<shared_ptr<calendar>const&,utctime,utctimespan,long>(
                         args("calendar","start","delta_t","n"),
                         doc_intro("creates a calendar time-axis")
                         doc_parameters()
@@ -92,7 +92,7 @@ namespace expose {
                 .def_readonly("n",&calendar_dt::n,"int,number of periods")
                 .def_readonly("start",&calendar_dt::t,"start of the time-axis, in seconds since 1970.01.01 UTC")
                 .def_readonly("delta_t",&calendar_dt::dt,"int,timespan of each interval,use Calendar.DAY|.WEEK|.MONTH|.QUARTER|.YEAR, or seconds")
-                .def_readonly("calendar",&calendar_dt::cal,"Calendar, the calendar of the time-axis")
+                .add_property("calendar",&calendar_dt::get_calendar,"Calendar, the calendar of the time-axis")
                 ;
             e_time_axis_std<calendar_dt>(c_dt);
         }
