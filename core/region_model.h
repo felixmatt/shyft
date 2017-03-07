@@ -8,6 +8,7 @@
 #include "pt_gs_k.h"
 #include "pt_hs_k.h"
 #include "geo_cell_data.h"
+#include "routing.h"
 
 /**
  * This file now contains mostly things to provide the PTxxK model,or
@@ -243,6 +244,7 @@ namespace shyft {
                 cid_to_cix=c.cid_to_cix;
                 initial_state = c.initial_state;
                 cells = cell_vec_t_(new cell_vec_t(*(c.cells)));
+                river_network=c.river_network;
                 set_region_parameter(*(c.region_parameter));
                 for(const auto& pair:c.catchment_parameters)
                     set_catchment_parameter(pair.first, *(pair.second));
@@ -258,7 +260,7 @@ namespace shyft {
             region_model(std::shared_ptr<std::vector<C> >& cells, const parameter_t &region_param)
              : cells(cells) {
                 set_region_parameter(region_param);// ensure we have a correct model
-                ncore = thread::hardware_concurrency()*4;
+                ncore = thread::hardware_concurrency();
                 update_ix_to_id_mapping();
             }
             region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param) {
@@ -267,7 +269,7 @@ namespace shyft {
                 auto global_parameter = make_shared<typename cell_t::parameter_t>();
                 for (const auto&gcd : geov)  cells->push_back(cell_t{ gcd, global_parameter, s0 });
                 set_region_parameter(region_param);// ensure we have a correct region_param for all cells
-                ncore = thread::hardware_concurrency() * 4;
+                ncore = thread::hardware_concurrency() ;
                 update_ix_to_id_mapping();
             }
             region_model(std::shared_ptr<std::vector<C> >& cells,
@@ -278,7 +280,7 @@ namespace shyft {
                 update_ix_to_id_mapping();
                 for(const auto & pair:catchment_parameters)
                      set_catchment_parameter(pair.first, pair.second);
-                ncore = thread::hardware_concurrency()*4;
+                ncore = thread::hardware_concurrency();
             }
             region_model(const region_model& model) { clone(model); }
 			region_model& operator=(const region_model& c) {
@@ -292,10 +294,28 @@ namespace shyft {
 			interpolation_parameter ip_parameter;///< the interpolation parameter as passed to interpolate/run_interpolation
             region_env_t region_env;///< the region environment (shallow-copy?) as passed to the interpolation/run_interpolation
             std::vector<state_t> initial_state; ///< the initial state, set explicit, or by the first call to .set_states(..) or run_cells()
-
+            routing::river_network river_network;///< the routing river_network, can be empty
             /** \brief compute and return number of catchments inspecting call cells.geo.catchment_id() */
             size_t number_of_catchments() const { return cix_to_cid.size(); }
 
+            /** connect all cells in a catchment to a river
+             * \param cid catchment id for the cells to be connected to the specified river
+             * \param rid river id for the target river. Note it can be 0 to set no routing for the cells
+             */
+            void connect_catchment_to_river(int cid,int rid) {
+                if(cid_to_cix.find(cid)==cid_to_cix.end()) throw std::runtime_error(string("specified catchment id=") + std::to_string(cid)+string(" not found"));
+                if(routing::valid_routing_id(rid)) river_network.check_rid(rid);// verify it exists.
+                for(auto&c:*cells)
+                    if(int(c.geo.catchment_id())==cid) c.geo.routing.id=rid;
+            }
+
+            bool has_routing() const {
+                for(auto&c:*cells) {
+                    if(routing::valid_routing_id(c.geo.routing.id))
+                        return true;
+                }
+                return false;
+            }
             /**\brief extracts the geo-cell data part out from the cells */
             std::vector<geo_cell_data> extract_geo_cell_data() const {
                 std::vector<geo_cell_data> r; r.reserve(cells->size());
@@ -344,6 +364,28 @@ namespace shyft {
 				using namespace std;
 				namespace idw = shyft::core::inverse_distance;
 				namespace btk = shyft::core::bayesian_kriging;
+				// we use local scoped cell_proxy to support
+				// filtering interpolation to the cells set by
+				// calculation filter
+                struct cell_proxy {
+                    cell_proxy():cell(nullptr) {}
+                    cell_proxy(cell_t *c):cell(c){}
+                    cell_proxy(cell_proxy const &o):cell(o.cell) {}
+                    cell_proxy(cell_proxy&&o):cell(o.cell){}
+                    cell_proxy& operator=(cell_proxy const&o){cell=o.cell;return *this;}
+                    cell_proxy& operator=(cell_proxy&&o){cell=o.cell;return *this;}
+                    cell_t *cell;// ptr ok, because it's only within this scope, no life-time stuff needed, just ref
+                    // support enough methods to make it look like a cell during idw/btk
+                    geo_point mid_point()const {return cell->mid_point();}
+                    //< support for the interpolation phase, executes before the cell-run
+			        void   set_temperature(size_t ix, double temperature_value) { cell->env_ts.temperature.set(ix, temperature_value); }
+			        ///< used by the radiation interpolation to adjust the local radiation with respect to idw sources.
+			        double slope_factor() const { return cell->geo.radiation_slope_factor(); }
+                };
+                std::vector<cell_proxy> cell_ps;cell_ps.reserve(cells->size());
+                for(auto&c:*cells)
+                    if(is_calculated_by_catchment_ix(c.geo.catchment_ix))
+                        cell_ps.emplace_back(&c);
 
 
 				typedef shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
@@ -360,11 +402,11 @@ namespace shyft {
 				typedef idw_compliant_geo_point_ts<typename region_env_t::wind_speed_t, wind_speed_tsa_t, timeaxis_t> idw_compliant_wind_speed_gts_t;
 				typedef idw_compliant_geo_point_ts<typename region_env_t::rel_hum_t, rel_hum_tsa_t, timeaxis_t> idw_compliant_rel_hum_gts_t;
 
-				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_t, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
-				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_t, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
-				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_radiation_model_t;
-				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
-				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_t, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
+				typedef idw::temperature_model  <idw_compliant_temperature_gts_t, cell_proxy, typename interpolation_parameter::idw_temperature_parameter_t, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
+				typedef idw::precipitation_model<idw_compliant_precipitation_gts_t, cell_proxy, typename interpolation_parameter::idw_precipitation_parameter_t, geo_point> idw_precipitation_model_t;
+				typedef idw::radiation_model    <idw_compliant_radiation_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_radiation_model_t;
+				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
+				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
 				typedef  shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
@@ -375,17 +417,18 @@ namespace shyft {
 				//  the intention is that the orchestrator at the outside could provide it's own ready-made
 				//  interpolated/distributed signal, e.g. temperature input from arome-data
 
+
 				auto btkx = async(launch::async, [&]() {
 					if (env.temperature != nullptr) {
 						if (env.temperature->size()>1) {
 							if (ip_parameter.use_idw_for_temperature) {
 								idw::run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>(
-									time_axis, *env.temperature, ip_parameter.temperature_idw, *cells,
-									[](cell_t &d, size_t ix, double value) { d.env_ts.temperature.set(ix, value); }
+									time_axis, *env.temperature, ip_parameter.temperature_idw, cell_ps,
+									[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.temperature.set(ix, value); }
 								);
 							} else {
 								btk::btk_interpolation<btk_tsa_t>(
-									begin(*env.temperature), end(*env.temperature), begin(*cells), end(*cells),
+									begin(*env.temperature), end(*env.temperature), begin(cell_ps), end(cell_ps),
 									time_axis, ip_parameter.temperature
 									);
 							}
@@ -397,6 +440,7 @@ namespace shyft {
 								temp_ts.set(i, tsa.value(i));
 							}
 							for (auto& c : *cells) {
+                                if(is_calculated_by_catchment_ix(c.geo.catchment_ix))
 								c.env_ts.temperature = temp_ts;
 							}
 						}
@@ -406,32 +450,32 @@ namespace shyft {
 				auto idw_precip = async(launch::async, [&]() {
 					if (env.precipitation != nullptr)
 						idw::run_interpolation<idw_precipitation_model_t, idw_compliant_precipitation_gts_t>(
-							time_axis, *env.precipitation, ip_parameter.precipitation, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.precipitation.set(ix, value); }
+							time_axis, *env.precipitation, ip_parameter.precipitation, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.precipitation.set(ix, value); }
 					);
 				});
 
 				auto idw_radiation = async(launch::async, [&]() {
 					if (env.radiation != nullptr)
 						idw::run_interpolation<idw_radiation_model_t, idw_compliant_radiation_gts_t>(
-							time_axis, *env.radiation, ip_parameter.radiation, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.radiation.set(ix, value); }
+							time_axis, *env.radiation, ip_parameter.radiation, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.radiation.set(ix, value); }
 					);
 				});
 
 				auto idw_wind_speed = async(launch::async, [&]() {
 					if (env.wind_speed != nullptr)
 						idw::run_interpolation<idw_windspeed_model_t, idw_compliant_wind_speed_gts_t>(
-							time_axis, *env.wind_speed, ip_parameter.wind_speed, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.wind_speed.set(ix, value); }
+							time_axis, *env.wind_speed, ip_parameter.wind_speed, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.wind_speed.set(ix, value); }
 					);
 				});
 
 				auto idw_rel_hum = async(launch::async, [&]() {
 					if (env.rel_hum != nullptr)
 						idw::run_interpolation<idw_relhum_model_t, idw_compliant_rel_hum_gts_t>(
-							time_axis, *env.rel_hum, ip_parameter.rel_hum, *cells,
-							[](cell_t &d, size_t ix, double value) { d.env_ts.rel_hum.set(ix, value); }
+							time_axis, *env.rel_hum, ip_parameter.rel_hum, cell_ps,
+							[](cell_proxy &d, size_t ix, double value) { d.cell->env_ts.rel_hum.set(ix, value); }
 					);
 				});
 
@@ -478,17 +522,19 @@ namespace shyft {
             *  -# all cells have updated state variables
             *
             *
-            * \param thread_cell_count if 0 figure out cells pr thread using hardware info,
-            *   otherwise use supplied value. Setting 1000 means one thread gets 1000 cells to work with.
+            * \param use_ncore if 0 figure out threads using hardware info,
+            *   otherwise use supplied value (throws if >100x ncore)
             * \param start_step of time-axis, defaults to 0, starting at the beginning
             * \param n_steps number of steps to run from the start_step, a value of 0 means running all time-steps
             * \return void
             *
             */
-            void run_cells(size_t thread_cell_count=0, int start_step=0, int  n_steps=0) {
-                if(thread_cell_count==0) {
+            void run_cells(size_t use_ncore=0, int start_step=0, int  n_steps=0) {
+                if(use_ncore == 0) {
                     if(ncore==0) ncore=4;// a reasonable minimum..
-                    thread_cell_count = size() <= ncore ? 1 : size()/ncore;
+                    use_ncore = ncore;
+                } else if (use_ncore > 100 * ncore) {
+                    throw runtime_error(string("illegal parameter value: use_ncore(")+to_string(use_ncore)+string(" is more than 100 time available physical cores: ") + to_string(ncore));
                 }
                 if(! (time_axis.size()>0))
                     throw runtime_error("region_model::run with invalid time_axis invoked");
@@ -500,7 +546,8 @@ namespace shyft {
                     throw runtime_error("region_model::run start_step+n_steps must be within time-axis range");
                 if (initial_state.size() != cells->size())
                     get_states(initial_state); // snap the initial state here, unless it's already set by the user
-                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells), thread_cell_count);
+                parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells),use_ncore);
+                run_routing(start_step,n_steps);
             }
 
             /** \brief set the region parameter, apply it to all cells
@@ -573,11 +620,11 @@ namespace shyft {
                 else
                     return *region_parameter;
             }
+
             /** \brief set/reset the catchment based calculation filter. This affects what get simulate/calculated during
              * the run command. Pass an empty list to reset/clear the filter (i.e. no filter).
              *
              * \param catchment_id_list is a catchment id vector
-             *
              */
             void set_catchment_calculation_filter(const std::vector<int>& catchment_id_list) {
                 if (catchment_id_list.size()) {
@@ -592,6 +639,40 @@ namespace shyft {
                 } else {
                     catchment_filter.clear();
                 }
+
+            }
+
+            /** \brief set/reset the catchment and river based calculation filter.
+             * This affects what get simulate/calculated during
+             * the run command. Pass an empty list to reset/clear the filter (i.e. no filter).
+             *
+             * \param catchment_id_list is a catchment id vector
+             * \param river_id_list is a river id vector
+             */
+            void set_calculation_filter(const std::vector<int>& catchment_id_list, const std::vector<int>& river_id_list) {
+                set_catchment_calculation_filter(catchment_id_list);
+                for (auto rid : river_id_list) {
+                    auto catchments_involved = get_catchment_feeding_to_river(rid);
+                    for (auto cid : catchments_involved) {
+                        if(catchment_filter.size()==0) // none selected yet, allocate full vector, and
+                            catchment_filter = vector<bool>(cix_to_cid.size(), false);
+                        catchment_filter[cid_to_cix[cid]] = true;// then assign true
+                    }
+                }
+            }
+
+            /**compute the unique set of catchments feeding into this river_id, or any river upstream */
+            std::set<int> get_catchment_feeding_to_river(int river_id) const {
+                std::set<int> r;
+                auto all_upstreams_rid = river_network.all_upstreams_by_id(river_id);
+                all_upstreams_rid.push_back(river_id);// remember to add this river
+                for (const auto&c : *cells) {
+                    if (routing::valid_routing_id(c.geo.routing.id) &&
+                        std::find(begin(all_upstreams_rid), end(all_upstreams_rid), c.geo.routing.id) != end(all_upstreams_rid) ) {
+                        r.insert(c.geo.catchment_id());
+                    }
+                }
+                return r;
             }
 
             /** \brief using the catchment_calculation_filter to decide if discharge etc. are calculated.
@@ -690,6 +771,70 @@ namespace shyft {
                         cr[c.geo.catchment_ix].add(c.rc.avg_discharge);
                 }
             }
+
+            template <class TSV>
+            void catchment_charges(TSV& cr) const {
+                typedef typename TSV::value_type ts_t;
+                cr.clear();
+                cr.reserve(n_catchments);
+                for (size_t i = 0;i < n_catchments;++i) {
+                    cr.emplace_back(ts_t(time_axis, 0.0));
+                }
+                for (const auto& c : *cells) {
+                    if (is_calculated_by_catchment_ix(c.geo.catchment_ix)) {
+                        cr[c.geo.catchment_ix].add(c.rc.charge_m3s);
+                    }
+                }
+            }
+
+            /**\brief return all discharges at the output of the routing points
+             *
+             * For all routing nodes,(maybe terminal routing nodes ?)
+             * compute the routed discharge.
+             * \note if no routing, empty time-series is returned.
+             * \return time-series by ascending routing id order where the i'th entry correspond to sorted river idents asc.
+             */
+            template <class TSV>
+            void routing_discharges( TSV& cr) const {
+                //typedef typename TSV::value_type ts_t;
+                cr.clear();
+                if(has_routing()) {
+                    //TODO: iterate over the routing model, return results
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    std::vector<int> rids;
+                    for(auto r:river_network.rid_map)
+                        rids.push_back(r.first);
+                    std::sort(begin(rids),end(rids));// ascending order!
+                    for(auto rid:rids) {
+                        cr.emplace_back(rn.output_m3s(rid));
+                    }
+                }
+                return cr;
+            }
+            std::shared_ptr<pts_t> river_output_flow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=std::make_shared<pts_t>(rn.output_m3s(rid));
+                }
+                return r;
+            }
+            std::shared_ptr<pts_t> river_upstream_inflow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=std::make_shared<pts_t>(rn.upstream_inflow(rid));
+                }
+                return r;
+            }
+            std::shared_ptr<pts_t> river_local_inflow_m3s(int rid) const {
+                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                if(has_routing()) {
+                    routing::model<C> rn(river_network,cells,time_axis);
+                    r=std::make_shared<pts_t>(rn.local_inflow(rid));
+                }
+                return r;
+            }
         protected:
             /** \brief parallell_run using a mid-point split + async to engange multicore execution
              *
@@ -716,28 +861,63 @@ namespace shyft {
              * \param 'endc' the end of cell range
              * \param thread_cell_count number of cells given to each async thread
              */
-            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc, size_t thread_cell_count) {
+            void parallel_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc,int use_ncore) {
                 size_t len = distance(beg, endc);
                 if(len == 0)
                     return;
-                if(thread_cell_count == 0)
-                    throw runtime_error("parallel_run:cell pr thread is zero ");
+                if(use_ncore == 0)
+                    throw runtime_error("parallel_run: use_ncore is zero ");
                 vector<future<void>> calcs;
-                for (size_t i = 0; i < len;) {
-                    size_t n = thread_cell_count;
-                    if (i + n > len)
-                        n = len - i;
+                mutex pos_mx;
+                size_t pos = 0;
+                for (int i = 0;i < use_ncore;++i) { // using ncore = logical available core saturates cpu 100%
                     calcs.emplace_back(
-                        async(launch::async, [this, &time_axis, beg, n,start_step,n_steps]() {
-                            this->single_run(time_axis, start_step,n_steps, beg, beg + n); }
+                        async(launch::async,
+                            [this,&pos,&pos_mx,len,&time_axis,&beg,start_step,n_steps]() {
+                                while (true) {
+                                    size_t ci;
+                                    { lock_guard<decltype(pos_mx)> lock(pos_mx);// get work item here
+                                        if (pos < len)
+                                            ci = pos++;
+                                        else
+                                            break;
+                                    }
+                                    this->single_run(time_axis, start_step, n_steps, beg + ci, beg + ci + 1);// just for one cell
+                                }
+                            }
                         )
                     );
-                    beg = beg + n;
-                    i = i + n;
                 }
                 for(auto &f:calcs)
                     f.get();
                 return;
+            }
+            void run_routing(int start_step,int n_steps) {
+                // TODO: implement
+                // things to consider:
+                //  a) start_step,n_steps could be a problem due to the time-delay/convolution window.
+                //     so data is not available through the convolution until after window-size.
+                //     possible solutions:
+                //         1) leave it to the user
+                //         2)  always run from start_step=0 ?
+                //         3) as the routing model for the largest delay counted in timesteps, start - longest delay
+                //  b) for convolution, we can base the approach on 'pull', calculate on demand, possibly with memory-cached result time-series
+                //     in that scenario, we would need a 'dirty' bit to be set (initially) and when starting the run-cells step.
+                //         1) optimization, maybe later
+                //  c) the catchment filter, based on cids, could also be extended to routing ids (rids).
+                //     also: if routing, only rids type of filter allowed ?
+                //           if rids, cell to rid is possibly multi-step lookup. Need to make a rids-filter, where members are all reachable
+                //           cells from wanted rids (to be calculated).
+                //         1) leave it to user
+                //         2) make alg. given rid's: compute cid's needed
+                //         3) if river_network available, deny cids based filter, insist on rids ?
+                //
+                //  d) consistency: if cids are used, and routing (and rids) are enabled, auto-extend the cids so that all connected cells(and corresponding cids)
+                //     are calculated (avoid partial calculation of something that goes into a routing network...
+                //     question: how much of this consistency/complexity should we put to the user setting the calculation filter
+                if(!has_routing())
+                    return;
+
             }
         };
 

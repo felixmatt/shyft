@@ -40,10 +40,10 @@ class ConfigSimulator(simulator.DefaultSimulator):
         methods = {'discharge': lambda m: tst.to_average(t_st, t_dt, t_n, m.statistics.discharge(c_id))}
         return methods[ts_info['type']]
 
-    def save_result_timeseries(self):
+    def save_result_timeseries(self, is_forecast=False):
         for repo in self.dst_repo:
             save_list = [TsStoreItem(ts_info['uid'],self._extraction_method_1d(ts_info)) for ts_info in repo['1D_timeseries']]
-            TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model)
+            TimeseriesStore(repo['repository'], save_list).store_ts(self.region_model, is_forecast)
 
     def save_end_state(self):
         endstate = self.region_model.state_t.vector_t()
@@ -165,7 +165,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         """Save calibrated params in a model-like YAML file."""
         name_map = {"pt": "priestley_taylor", "kirchner": "kirchner", "p_corr": "precipitation_correction",
                     "ae": "actual_evapotranspiration", "gs": "gamma_snow", "ss": "skaugen_snow", "hs": "hbv_snow","gm":"glacier_melt",
-                    "hbv_actual_evapotranspiration": "ae", "hbv_soil": "soil", "hbv_tank": "tank"
+                    "ae": "hbv_actual_evapotranspiration", "soil": "hbv_soil", "tank": "hbv_tank","routing":"routing"
                     }
         model_file = self.model_config_file
         model_dict = yaml.load(open(model_file))
@@ -198,8 +198,8 @@ class ConfigForecaster(object):
         self.historical_cfg = config.sim_config
         self.forecast_cfg = config.forecast_config
         self.historical_sim = ConfigSimulator(self.historical_cfg)
-        # self.forecast_sim = {k: ConfigSimulator(v) for k, v in self.forecast_cfg}  # creating ConfigSimulator from config
-        self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}  # making copy rather than creating ConfigSimulator from config to avoid get_region_model being called multiple times
+        # Make copy rather than create ConfigSimulator from config to avoid get_region_model being called multiple times
+        self.forecast_sim = {name: self.historical_sim.copy() for name in self.forecast_cfg}  
         for k, v in self.forecast_sim.items():
             v.geo_ts_repository = self.forecast_cfg[k].get_geots_repo()
             v.ip_repos = self.forecast_cfg[k].get_interp_repo()
@@ -215,7 +215,7 @@ class ConfigForecaster(object):
             v.run_forecast(self.forecast_cfg[k].time_axis, self.forecast_cfg[k].time_axis.start, state)
             state = v.reg_model_state
             if save_result_timeseries:
-                v.save_result_timeseries()
+                v.save_result_timeseries(is_forecast=True)
 
     def save_end_state(self):
         self.historical_sim.save_end_state()
@@ -223,4 +223,4 @@ class ConfigForecaster(object):
     def save_result_timeseries(self):
         self.historical_sim.save_result_timeseries()
         for k, v in self.forecast_sim.items():
-            v.save_result_timeseries()
+            v.save_result_timeseries(is_forecast=True)

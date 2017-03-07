@@ -89,7 +89,7 @@ class YAMLConfig(object):
 
         # Create a time axis
         self.start_time = utctime_from_datetime(self.start_datetime)
-        self.time_axis = api.Timeaxis(
+        self.time_axis = api.TimeAxisFixedDeltaT(
             self.start_time, self.run_time_step, self.number_of_steps)
         # Get the region model in API (already an object if in kwargs)
         if 'model_t' not in kwargs:

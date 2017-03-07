@@ -31,7 +31,7 @@ namespace expose {
 				"Contains the parameters to the methods used in the HBV assembly\n"
 				"priestley_taylor,hbv_snow,hbv_actual_evapotranspiration,hbv_soil, hbv_tank,precipitation_correction\n"
 				)
-				.def(init<const priestley_taylor::parameter&, const hbv_snow::parameter&, const hbv_actual_evapotranspiration::parameter&, const hbv_soil::parameter&, const hbv_tank::parameter&, const precipitation_correction::parameter&, optional<glacier_melt::parameter>>(args("pt", "snow", "ae", "soil", "tank", "p_corr","gm"), "create object with specified parameters"))
+				.def(init<const priestley_taylor::parameter&, const hbv_snow::parameter&, const hbv_actual_evapotranspiration::parameter&, const hbv_soil::parameter&, const hbv_tank::parameter&, const precipitation_correction::parameter&, optional<glacier_melt::parameter,routing::uhg_parameter>>(args("pt", "snow", "ae", "soil", "tank", "p_corr","gm","routing"), "create object with specified parameters"))
 				.def(init<const parameter&>(args("p"), "clone a parameter"))
 				.def_readwrite("pt", &parameter::pt, "priestley_taylor parameter")
 				.def_readwrite("ae", &parameter::ae, "hbv actual evapotranspiration parameter")
@@ -40,6 +40,7 @@ namespace expose {
 				.def_readwrite("soil", &parameter::soil, "hbv_soil parameter")
 				.def_readwrite("tank", &parameter::tank, "hbv_tank parameter")
 				.def_readwrite("p_corr", &parameter::p_corr, "precipitation correction parameter")
+				.def_readwrite("routing",&parameter::routing,"routing cell-to-river catchment specific parameters")
 				.def("size", &parameter::size, "returns total number of calibration parameters")
 				.def("set", &parameter::set, args("p"), "set parameters from vector/list of float, ordered as by get_name(i)")
 				.def("get", &parameter::get, args("i"), "return the value of the i'th parameter, name given by .get_name(i)")
@@ -54,7 +55,7 @@ namespace expose {
 				.def(init<hbv_snow::state, hbv_soil::state, hbv_tank::state>(args("snow", "soil", "tank"), "initializes state with hbv_snow, hbv_soil and hbv_tank"))
 				.def_readwrite("snow", &state::snow, "hbv_snow state")
 				.def_readwrite("soil", &state::soil, "soil state")
-				.def_readwrite("tank", &state::soil, "tank state")
+				.def_readwrite("tank", &state::tank, "tank state")
 				;
 
 			typedef std::vector<state> HbvStateVector;
@@ -122,6 +123,7 @@ namespace expose {
 			expose::statistics::hbv_actual_evapotranspiration<HbvCellAll>("HbvCell");
 			expose::statistics::hbv_soil<HbvCellAll>("HbvCell");
 			expose::statistics::hbv_tank<HbvCellAll>("HbvCell");
+            expose::cell_state_etc<HbvCellAll>("Hbv");// just one expose of state
 		}
 
 		static void
@@ -130,6 +132,8 @@ namespace expose {
 			typedef shyft::core::region_model<hbv_stack::cell_complete_response_t, shyft::api::a_region_environment> HbvModel;
 			expose::model<HbvModel>("HbvModel", "Hbv_stack");
 			expose::model<HbvOptModel>("HbvOptModel", "Hbv_stack");
+            def_clone_to_similar_model<HbvModel, HbvOptModel>("create_opt_model_clone");
+            def_clone_to_similar_model<HbvOptModel, HbvModel>("create_full_model_clone");
 		}
 
 		static void

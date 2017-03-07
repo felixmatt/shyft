@@ -161,13 +161,66 @@ namespace shyft {
                     for(const auto& fcts:fc_ts_set) {
                         shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
                         for(size_t i=0;i<time_axis.size();++i) {
+                            if(!fcts.total_period().contains(time_axis.time(i)))
+                                continue;// skip when fc is not valid/available
                             double bias = fc.value(i) - obs.value(i);
                             if(isfinite(bias)) // we skip nan's here, just want to 'learn' from non-nan- values
                                 f.update(bias,time_axis.time(i),s);
                         }
                     }
                 }
-                //todo: get_bias_ts(utcperiod range) -> a timeseries with fixed_dt time-axis and values from s.x projected out on the time-axis
+
+                /** compute the running bias timeseries,
+                 * using one 'merged'-forecasts and one observation time-series.
+                 *
+                 * before each day-period, the bias-values are copied out to form
+                 * a cont. bias prediction time-series.
+                 *
+                 * \tparam a_ts a template class for the resulting bias time-series
+                 * \tparam fc_ts a template class for forecast time-series
+                 * \tparam obs_ts a template class for the observation time-series
+                 * \tparam ta timeaxis type, e.g. fixed_dt, should(but don't need to) match filter-timestep
+                 * \param fc_ts_set of type const vector<fc_ts>& contains the forecast time-series
+                 * \param observation_ts of type obs_ts with the observations
+                 * \param time_axis of type ta, time-axis that can be used for average_accessors
+                 * \return a_ts(time_axis,bias_values,POINT_AVERAGE) time-series
+                 */
+                template<class a_ts, class fc_ts,class obs_ts,class ta>
+                a_ts compute_running_bias(const fc_ts& fcts,const obs_ts& observation_ts, const ta& time_axis) {
+                    shyft::timeseries::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
+                    shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
+                    std::vector<double> bias_vector;bias_vector.reserve(time_axis.size());
+                    shyft::core::calendar utc;
+                    utctime pd_t0 = utc.trim(time_axis.time(0),shyft::core::calendar::DAY);
+                    utctime pd_dt = shyft::core::deltahours(24)/f.p.n_daily_observations;
+                    shyft::timeseries::profile_description pd(pd_t0,pd_dt,arma::conv_to<std::vector<double>>::from(s.x));
+                    shyft::timeseries::profile_accessor<ta> pa(pd,time_axis,POINT_AVERAGE_VALUE);
+
+                    size_t i_save_point=0; // keep track of when we extract day-bias
+                    size_t i_save_point_delta = shyft::core::deltahours(24)/time_axis.dt; // ta
+                    for(size_t i=0;i<time_axis.size();++i) {
+                        if(i==i_save_point) {
+                            for(size_t j=0;j<pa.profile.profile.size();++j)// update profle
+                                pa.profile.profile[j]=s.x.at(j);//=arma::conv_to<std::vector<double>>::from(s.x);
+                            auto i_next_save_point = i_save_point + i_save_point_delta;
+                            if(i_next_save_point>time_axis.size()) // figure out how many value to fill in
+                                i_next_save_point = time_axis.size();
+                            for(auto k=i_save_point;k<i_next_save_point;++k)
+                                bias_vector.push_back(pa.value(k));// push out result
+                            i_save_point = i_next_save_point;
+                        }
+                        if(fcts.total_period().contains(time_axis.time(i))) {
+                            double bias = fc.value(i) - obs.value(i);
+                            if(isfinite(bias)) // we skip nan's here, just want to 'learn' from non-nan- values
+                               f.update(bias,time_axis.time(i),s);
+                        }
+
+                    }
+
+                    return a_ts(time_axis,bias_vector,POINT_AVERAGE_VALUE);
+
+                }
+
             };
         }
     }

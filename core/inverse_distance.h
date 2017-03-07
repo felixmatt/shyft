@@ -489,15 +489,17 @@ namespace shyft {
 				///    the last position. It is essential for performance, -but again-, then each thread needs it's own copy of the sources.
 				///    Since the accessors just have a const *reference* to the underlying TS; there is no memory involved, so copy is no problem.
 
-				vector<IDWModelSource> src; src.reserve(api_sources.size());
-                for (auto& s : api_sources) src.emplace_back(s, ta);
+
 				idw_timeaxis<TimeAxis> idw_ta(ta);
 				///    - and figure out a suitable ncore number. Using single cpu 4..8 core shows we can have more threads than cores, and gain speed.
                 if (ncore < 0) {
                     ncore = (int) thread::hardware_concurrency();//in case of not available, default to 4,
-                    if (ncore == 0) ncore = 4;
+                    if (ncore < 2) ncore = 4;
+                    //ncore = 1; // we got unstable interpolation with ncore=auto and ncells=10 -> disable auto detection, and run one thread pr. interpolation
                 }
                 if (ncore < 2) {
+                    vector<IDWModelSource> src; src.reserve(api_sources.size());
+                    for (auto& s : api_sources) src.emplace_back(s, ta);
                     run_interpolation<IDWModel>(begin(src), end(src), begin(cells), end(cells), idw_ta, parameters, result_setter);
                 } else {
                     /// 2. Create a set of futures, for the threads that we want to run
@@ -508,6 +510,8 @@ namespace shyft {
                     for (size_t i = 0; i < n_cells;) {
                         size_t n = thread_cell_count;
                         if (i + n > n_cells) n = n_cells - i;// Figure out a cell-partition to compute
+                        vector<IDWModelSource> src; src.reserve(api_sources.size());// need one source set pr. thread, since src accessors is not threadsafe
+                        for (auto& s : api_sources) src.emplace_back(s, ta);
                         calcs.emplace_back( /// spawn a thread to run IDW on this part of the cells, using *all* sources (later we could speculate in sources needed)
                             async(launch::async, [src, cells_iterator, &idw_ta, &parameters, &result_setter, n]() { /// capture src by value, we *want* a copy of that..
                             run_interpolation<IDWModel>(begin(src), end(src), cells_iterator, cells_iterator + n, idw_ta, parameters, result_setter);

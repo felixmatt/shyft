@@ -1,7 +1,5 @@
 #include "test_pch.h"
-#include "skaugen_test.h"
 #include "core/skaugen.h"
-#include <iomanip>
 
 namespace skaugen_test_constant {
     const double EPS = 1.0e-10;
@@ -9,8 +7,8 @@ namespace skaugen_test_constant {
 
 using namespace shyft::core::skaugen;
 typedef calculator<parameter, state, response> SkaugenModel;
-
-void skaugen_test::test_accumulation() {
+TEST_SUITE("skaugen");
+TEST_CASE("test_accumulation") {
     // Model parameters
     const double d_range = 113.0;
     const double unit_size = 0.1;
@@ -52,7 +50,7 @@ void skaugen_test::test_accumulation() {
 }
 
 
-void skaugen_test::test_melt() {
+TEST_CASE("test_melt") {
     // Model parameters
     const double d_range = 113.0;
     const double unit_size = 0.1;
@@ -118,7 +116,7 @@ void skaugen_test::test_melt() {
 }
 
 
-void skaugen_test::test_lwc() {
+TEST_CASE("test_lwc") {
     // Model parameters
     const double d_range = 113.0;
     const double unit_size = 0.1;
@@ -166,3 +164,4 @@ void skaugen_test::test_lwc() {
 
     return;
 }
+TEST_SUITE_END();

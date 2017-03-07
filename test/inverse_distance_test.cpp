@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "inverse_distance_test.h"
 #include "mocks.h"
 
 
@@ -13,8 +12,8 @@ const double NAN = *(double*)nanx;
 
 using namespace shyft::core;
 using namespace shyfttest::idw;
-
-void inverse_distance_test::test_temperature_model() {
+TEST_SUITE("inverse_distance");
+TEST_CASE("test_temperature_model") {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -69,7 +68,7 @@ void inverse_distance_test::test_temperature_model() {
 	TS_ASSERT_DELTA(transformedValue, sourceValue + scaleValue*(d1.point.z - s1.point.z), TEST_EPS);
 }
 
-void inverse_distance_test::test_temperature_model_default_gradient() {
+TEST_CASE("test_temperature_model_default_gradient") {
 	inverse_distance::temperature_parameter p;
 	p.default_temp_gradient = 1.0;
 	inverse_distance::temperature_default_gradient_scale_computer gsc(p);
@@ -77,7 +76,7 @@ void inverse_distance_test::test_temperature_model_default_gradient() {
 	TS_ASSERT(inverse_distance::temperature_default_gradient_scale_computer::is_source_based() == false);
 }
 
-void inverse_distance_test::test_radiation_model() {
+TEST_CASE("test_radiation_model") {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -110,7 +109,7 @@ void inverse_distance_test::test_radiation_model() {
 	TS_ASSERT_DELTA(transformedValue, sourceValue*d1.slope_factor(), TEST_EPS);
 }
 
-void inverse_distance_test::test_precipitation_model() {
+TEST_CASE("test_precipitation_model") {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
 	//
@@ -146,7 +145,7 @@ void inverse_distance_test::test_precipitation_model() {
 	// TS_ASSERT_DELTA(0.0, TestPrecipitationModel::transform(0.0, scaleValue, s1, d0), TEST_EPS);
 }
 
-void inverse_distance_test::test_one_source_one_dest_calculation() {
+TEST_CASE("test_one_source_one_dest_calculation") {
 	//
 	// Arrange
 	//
@@ -177,7 +176,7 @@ void inverse_distance_test::test_one_source_one_dest_calculation() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_two_sources_one_dest_calculation() {
+TEST_CASE("test_two_sources_one_dest_calculation") {
 	//
 	// Arrange
 	//
@@ -216,7 +215,7 @@ void inverse_distance_test::test_two_sources_one_dest_calculation() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_using_finite_sources_only() {
+TEST_CASE("test_using_finite_sources_only") {
 	//
 	// Arrange
 	//
@@ -255,7 +254,7 @@ void inverse_distance_test::test_using_finite_sources_only() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_eliminate_far_away_sources() {
+TEST_CASE("test_eliminate_far_away_sources") {
 	//
 	// Arrange
 	//
@@ -293,7 +292,7 @@ void inverse_distance_test::test_eliminate_far_away_sources() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_using_up_to_max_sources() {
+TEST_CASE("test_using_up_to_max_sources") {
 	//
 	// Arrange
 	//
@@ -330,7 +329,7 @@ void inverse_distance_test::test_using_up_to_max_sources() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
-void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
+TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	//
 	// Arrange
 	//
@@ -374,7 +373,7 @@ void inverse_distance_test::test_handling_different_sources_pr_timesteps() {
 }
 #include "api/api.h"
 #include "api/timeseries.h"
-void inverse_distance_test::test_performance() {
+TEST_CASE("test_performance") {
     using namespace shyft;
     //
     // Arrange
@@ -384,15 +383,15 @@ void inverse_distance_test::test_performance() {
 #ifdef _DEBUG
     int n = 4;// just speed up test.
 #else
-    int n = 24 * 365; // number of timesteps
+    int n = 24 * 3 * 1;//365; // number of timesteps
 #endif
     int n_core = 1;
     if (getenv("SHYFT_NCORE")) {
         sscanf(getenv("SHYFT_NCORE"), "%d", &n_core);
     }
-    const int n_xy = 20; // number for xy-squares for sources
-    const int nx = 3 * n_xy; // 3 times more for grid-cells, typical arome -> cell
-    const int ny = 3 * n_xy;
+    const int n_xy = 70; // number for xy-squares for sources
+    const int nx = 55; // 3 times more for grid-cells, typical arome -> cell
+    const int ny = 55;
     const int s_nx = n_xy;
     const int s_ny = n_xy;
     const int n_sources = s_nx * s_ny;
@@ -435,7 +434,7 @@ arma::vec3 p_vec(geo_point a, geo_point b) {
 	return arma::vec3({ b.x - a.x, b.y - a.y, b.z - a.z });
 }
 
-void inverse_distance_test::test_temperature_gradient_model() {
+TEST_CASE("test_temperature_gradient_model") {
 	using namespace arma;
 	geo_point p0(0, 0, 10); // 10 deg
 	geo_point p1(1000, 0, 110); // 9.4 deg
@@ -475,11 +474,11 @@ void inverse_distance_test::test_temperature_gradient_model() {
 	TS_ASSERT_DELTA(sc.compute(), as_scalar(dTv(2)), 0.00001); // now we should get the correct linear vertical
 }
 
-void inverse_distance_test::test_zscale_distance() {
+TEST_CASE("test_zscale_distance") {
 	geo_point p0(0, 0, 0);
 	geo_point p1(1, 1, 1);
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), pow(1+1+10*10*1,0.5), 1e-9);
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 2.0, 1.0), pow(1 + 1 + 1, 2.0 / 2.0), 1e-9);
 }
-
+TEST_SUITE_END();
 /* vim: set filetype=cpp: */

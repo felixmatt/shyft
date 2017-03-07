@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "gamma_snow_test.h"
 #include "mocks.h"
 #include "core/gamma_snow.h"
 //#include "core/region_model.h"
@@ -11,8 +10,28 @@ namespace shyfttest {
 };
 using namespace shyft::core;
 namespace gs=shyft::core::gamma_snow;
-
-void gamma_snow_test::test_reset_snow_pack_zero_storage() {
+class gamma_snow_test {
+public:
+    template <class GS_CALC,class P>
+    void reset_snow_pack(GS_CALC&gsc, double& sca, double& lwc, double& alpha, double& sdc_melt_mean, double& acc_melt,
+        double& temp_swe, const double storage, const P& p) const {
+        gsc.reset_snow_pack(sca, lwc, alpha, sdc_melt_mean, acc_melt, temp_swe, storage, p);
+    }
+    template <class GS_CALC>
+    void calc_snow_state(GS_CALC&gsc, const double shape, const double scale, const double y0, const double lambda,
+        const double lwd, const double max_water_frac, const double temp_swe,
+        double& swe, double& sca) const {
+        gsc.calc_snow_state(shape, scale, y0, lambda, lwd, max_water_frac, temp_swe, swe, sca);
+    }
+    template <class GS_CALC>
+    double corr_lwc(GS_CALC&gsc, const double z1, const double a1, const double b1,
+        double z2, const double a2, const double b2) const {
+        return gsc.corr_lwc(z1, a1, b1, z2, a2, b2);
+    }
+};
+static gamma_snow_test fix; // access to private scope
+TEST_SUITE("actual_evapotranspiration");
+TEST_CASE("test_reset_snow_pack_zero_storage") {
 
     gs::calculator<gs::parameter, gs::state, gs::response> gs;
     gs::parameter p;
@@ -23,8 +42,7 @@ void gamma_snow_test::test_reset_snow_pack_zero_storage() {
     double acc_melt;
     double temp_swe;
     const double storage = 0.0;
-
-    gs.reset_snow_pack(sca, lwc, alpha, sdc_melt_mean, acc_melt, temp_swe, storage, p);
+    fix.reset_snow_pack(gs,sca, lwc, alpha, sdc_melt_mean, acc_melt, temp_swe, storage, p);
     TS_ASSERT_DELTA(sca, 0.0, shyfttest::EPS);
     TS_ASSERT_DELTA(lwc, 0.0, shyfttest::EPS);
     TS_ASSERT_DELTA(alpha, 1.0/(p.snow_cv*p.snow_cv), shyfttest::EPS);
@@ -34,7 +52,7 @@ void gamma_snow_test::test_reset_snow_pack_zero_storage() {
 }
 
 
-void gamma_snow_test::test_reset_snow_pack_with_storage() {
+TEST_CASE("test_reset_snow_pack_with_storage") {
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
 	gs::parameter p;
@@ -46,7 +64,7 @@ void gamma_snow_test::test_reset_snow_pack_with_storage() {
     double temp_swe;
     const double storage = 1.0;
 
-    gs.reset_snow_pack(sca, lwc, alpha, sdc_melt_mean, acc_melt, temp_swe, storage, p);
+    fix.reset_snow_pack(gs,sca, lwc, alpha, sdc_melt_mean, acc_melt, temp_swe, storage, p);
     TS_ASSERT_DELTA(sca, 1.0 - p.initial_bare_ground_fraction, shyfttest::EPS);
     TS_ASSERT_DELTA(lwc, 0.0, shyfttest::EPS);
     TS_ASSERT_DELTA(alpha, 1.0/(p.snow_cv*p.snow_cv), shyfttest::EPS);
@@ -55,7 +73,7 @@ void gamma_snow_test::test_reset_snow_pack_with_storage() {
     TS_ASSERT_DELTA(temp_swe, 0.0, shyfttest::EPS);
 }
 
-void gamma_snow_test::test_calculate_snow_state() {
+TEST_CASE("test_calculate_snow_state") {
     // This is a pure regression test, based on some standard values and recorded response
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
@@ -69,12 +87,12 @@ void gamma_snow_test::test_calculate_snow_state() {
     const double temp_swe = 0.0;
     double swe; // Output from gs.calc_snow_state(...)
     double sca; // Output from gs.calc_snow_state(...)
-    gs.calc_snow_state(shape, scale, y0, lambda, lwd, max_water_frac, temp_swe, swe, sca);
+    fix.calc_snow_state(gs,shape, scale, y0, lambda, lwd, max_water_frac, temp_swe, swe, sca);
     TS_ASSERT_DELTA(swe, 0.384, shyfttest::EPS);
     TS_ASSERT_DELTA(sca, 0.96, shyfttest::EPS);
 }
 
-void gamma_snow_test::test_correct_lwc() {
+TEST_CASE("test_correct_lwc") {
     // This is a pure regression test, based on a set of input values and recorded response
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
@@ -85,13 +103,18 @@ void gamma_snow_test::test_correct_lwc() {
     const double a2 = 5.0;
     const double b2 = 2.0;
 
-    const double result = gs.corr_lwc(z1, a1, b1, z2, a2, b2);
+    const double result = fix.corr_lwc(gs,z1, a1, b1, z2, a2, b2);
 // as a result of using lower resolution, less accuracy
-    TS_ASSERT_DELTA(result, 3.8417594715,10000* shyfttest::EPS);
+    TS_ASSERT_DELTA(result, 3.8411,0.0001);
+    // would throw in previous versions
+    fix.corr_lwc(gs, 1.0, 6.25, 0.005358, 0.5, 6.25, 0.005358);
+
+    fix.corr_lwc(gs, 0.0, a1, b1, z2, a2, b2);
+    fix.corr_lwc(gs, z1, a1, b1, 0.0, a2, b2);
 
 }
 
-void gamma_snow_test::test_warm_winter_effect() {
+TEST_CASE("test_warm_winter_effect") {
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
     double tx = -0.5;
     double wind_scale = 2.0;
@@ -151,7 +174,7 @@ void gamma_snow_test::test_warm_winter_effect() {
     }
 }
 
-void gamma_snow_test::test_step() {
+TEST_CASE("test_step") {
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
 	gs::parameter param;
@@ -178,7 +201,7 @@ void gamma_snow_test::test_step() {
 }
 
 
-void gamma_snow_test::test_output_independent_of_timestep() {
+TEST_CASE("test_output_independent_of_timestep") {
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
 	gs::parameter param;
     auto dt = shyft::core::deltahours(1);
@@ -213,7 +236,7 @@ void gamma_snow_test::test_output_independent_of_timestep() {
     }
 
 }
-void gamma_snow_test::test_forest_altitude_dependent_snow_cv() {
+TEST_CASE("test_forest_altitude_dependent_snow_cv") {
     gs::parameter p;
     TS_ASSERT_DELTA(p.effective_snow_cv(1.0,1000),p.snow_cv,0.0000001);// assume default no effect, backward compatible
     p.snow_cv_forest_factor=0.1; // forest fraction 1.0 should add 0.1 to the snow_cv
@@ -222,3 +245,4 @@ void gamma_snow_test::test_forest_altitude_dependent_snow_cv() {
     TS_ASSERT_DELTA(p.effective_snow_cv(1.0,0.0),p.snow_cv+0.1,0.0000001);// verify increase in forest direction
     TS_ASSERT_DELTA(p.effective_snow_cv(0.0,1000.0),p.snow_cv +0.1, 0.0000001);// verify increase in altitude direction
 }
+TEST_SUITE_END();

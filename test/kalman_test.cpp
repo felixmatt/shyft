@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "kalman_test.h"
 #include "mocks.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
 #include "api/timeseries.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
@@ -50,8 +49,8 @@ namespace shyfttest {
         }
     }
 }
-
-void kalman_test::test_filter() {
+TEST_SUITE("kalman");
+TEST_CASE("test_filter") {
     using namespace shyfttest;
     // prepare the time-dimension, using time-axis
     calendar utc;
@@ -91,7 +90,7 @@ void kalman_test::test_filter() {
         TS_ASSERT_DELTA(s_last_known.x(i),s.x(i),0.01);
 }
 
-void kalman_test::test_bias_predictor() {
+TEST_CASE("test_bias_predictor") {
     using namespace shyfttest;
     using namespace std;
     using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
@@ -129,3 +128,38 @@ void kalman_test::test_bias_predictor() {
         TS_ASSERT_DELTA(fx.bias_offset(t),bias_estimate,0.2);
     }
 }
+
+TEST_CASE("test_running_predictor") {
+    using namespace shyfttest;
+    using namespace std;
+    using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
+    // prepare the time-dimension, using time-axis
+    calendar utc;
+    utctimespan dt=deltahours(1);
+    size_t n=24*10;
+    auto t0=utc.time(2000,1,1);
+    timeaxis_t ta(t0,dt,n); /// for the test,this is the governing time-axis (corresponding to region_model.time_axis during run/interpolation)
+    temperature fx(0.1);
+
+    pts_t observation(ta,0.0);
+    pts_t merged_forecast(ta,0.0);
+    for(size_t i=0;i<ta.size();++i) {
+        observation.set(i,fx.observation(ta.time(i)));
+        merged_forecast.set(i,fx.forecast(ta.time(i)));
+    }
+
+    kalman::parameter p;
+    kalman::filter f(p);
+    kalman::bias_predictor bias_predictor(f);
+    timeaxis_t pred_ta(t0,deltahours(3),n/3);// the predictor time-axis that covers the observation time-series ta
+    auto bias_ts = bias_predictor.compute_running_bias<pts_t>(merged_forecast,observation,pred_ta);
+    TS_ASSERT_EQUALS(bias_ts.size(),pred_ta.size());
+    for(size_t i=0;i<8;++i) {
+        TS_ASSERT_DELTA(bias_ts.value(i),0.0,0.0001);// assume first values are 0.0 since there is no learning.
+    }
+    for(size_t i=bias_ts.size()-8;i<bias_ts.size();++i) {
+        auto t= bias_ts.time(i);
+        TS_ASSERT_DELTA(fx.bias_offset(t),bias_ts.value(i),0.2);// at the end it should have a quite correct pattern
+    }
+}
+TEST_SUITE_END();

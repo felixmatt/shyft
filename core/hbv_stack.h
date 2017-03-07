@@ -8,7 +8,7 @@
 #include "precipitation_correction.h"
 #include "glacier_melt.h"
 #include "unit_conversion.h"
-
+#include "routing.h"
 namespace shyft {
 	namespace core {
 		namespace hbv_stack {
@@ -33,6 +33,7 @@ namespace shyft {
 				typedef hbv_tank::parameter tank_parameter_t;
 				typedef precipitation_correction::parameter precipitation_correction_parameter_t;
                 typedef glacier_melt::parameter glacier_parameter_t;
+            	typedef routing::uhg_parameter routing_parameter_t;
 
 				parameter(pt_parameter_t pt,
 					snow_parameter_t snow,
@@ -40,13 +41,15 @@ namespace shyft {
 					soil_parameter_t soil,
 					tank_parameter_t tank,
 					precipitation_correction_parameter_t p_corr,
-                    glacier_parameter_t gm = glacier_parameter_t())
-					: pt(pt), snow(snow), ae(ae), soil(soil), tank(tank), p_corr(p_corr),gm(gm)  { /*Do nothing */}
+                    glacier_parameter_t gm = glacier_parameter_t(),
+					routing_parameter_t routing=routing_parameter_t())
+					: pt(pt), snow(snow), ae(ae), soil(soil), tank(tank), p_corr(p_corr),gm(gm),routing(routing)  { /*Do nothing */}
 
-				parameter() {}
-				parameter(const parameter& other)
-					: pt(other.pt), snow(other.snow), ae(other.ae),
-					soil(other.soil), tank(other.tank), p_corr(other.p_corr),gm(other.gm)  { /*Do nothing */}
+				parameter()=default;
+				parameter(const parameter&)=default;
+				parameter(parameter&&)=default;
+				parameter& operator=(const parameter &c)=default;
+				parameter& operator=(parameter&&c)=default;
 
 				pt_parameter_t pt;						// I followed pt_gs_k but pt_hs_k differ
 				snow_parameter_t snow;
@@ -55,8 +58,9 @@ namespace shyft {
 				tank_parameter_t  tank;
 				precipitation_correction_parameter_t p_corr;
                 glacier_parameter_t gm;
+                routing_parameter_t routing;
 				///<calibration support, needs vector interface to params, size is the total count
-				size_t size() const { return 17; }
+				size_t size() const { return 20; }
 				///<calibration support, need to set values from ordered vector
 				void set(const vector<double>& p) {
 					if (p.size() != size())
@@ -79,7 +83,9 @@ namespace shyft {
 					pt.albedo = p[i++];
 					pt.alpha = p[i++];
                     gm.dtf = p[i++];
-
+					routing.velocity = p[i++];
+         	        routing.alpha = p[i++];
+               		routing.beta  = p[i++];
 				}
 
 				///< calibration support, get the value of i'th parameter
@@ -102,6 +108,9 @@ namespace shyft {
 					case 14:return pt.albedo;
 					case 15:return pt.alpha;
                     case 16:return gm.dtf;
+					case 17:return routing.velocity;
+                    case 18:return routing.alpha;
+                    case 19:return routing.beta;
 					default:
 						throw runtime_error("HBV_stack Parameter Accessor:.get(i) Out of range.");
 					}
@@ -127,7 +136,10 @@ namespace shyft {
 						"p_corr.scale_factor",
 						"pt.albedo",
 						"pt.alpha",
-                        "gm.dtf"
+                        "gm.dtf",
+						"routing.velocity",
+						"routing.alpha",
+						"routing.beta"
 					};
 					if (i >= size())
 						throw runtime_error("hbv_stack Parameter Accessor:.get_name(i) Out of range.");
@@ -153,7 +165,8 @@ namespace shyft {
 				soil_state_t soil;
 				tank_state_t tank;
 				bool operator==(const state& x) const { return snow == x.snow && tank == x.tank && soil == x.soil; }
-			};
+                x_serialize_decl();
+            };
 
 
 			/** \brief Simple response struct for the hbv_stack method stack
@@ -175,6 +188,7 @@ namespace shyft {
                 double gm_melt_m3s;
 				// Stack response
 				double total_discharge;
+                double charge_m3s;
 			};
 
 			/** \brief Calculation Model using assembly of PriestleyTaylor, GammaSnow, Soil and hbv_tank
@@ -270,6 +284,7 @@ namespace shyft {
                 const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
                 const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
                 const double land_fraction = 1 - total_lake_fraction - glacier_fraction;
+                const double cell_area_m2 = geo_cell_data.area();
                 const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;//const double forest_fraction = geo_cell_data.land_type_fractions_info().forest();
 
                 size_t i_begin = n_steps > 0 ? start_step : 0;
@@ -296,10 +311,14 @@ namespace shyft {
 					tank.step(state.tank, response.tank, period.start, period.end, response.soil.outflow);
 
                     response.total_discharge =
-                        prec*total_lake_fraction // precipitation on lake|reservoirs give direct response in this alg.
-                        + m3s_to_mmh(response.gm_melt_m3s, geo_cell_data.area()) // the glacier also direct
+                          std::max(0.0, prec - response.ae.ae)*total_lake_fraction // when it rains, remove ae. from direct response
+                        + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) // the glacier also direct
                         + response.tank.outflow * land_fraction;
-
+                    response.charge_m3s =
+                        + shyft::mmh_to_m3s(prec, cell_area_m2)
+                        - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)
+                        + response.gm_melt_m3s
+                        - shyft::mmh_to_m3s(response.total_discharge, cell_area_m2);
 					// Possibly save the calculated values using the collector callbacks.
 					response_collector.collect(i, response);///< \note collect the response valid for the i'th period (current state is now at the end of period)
 					if (i + 1 == i_end)
@@ -310,3 +329,5 @@ namespace shyft {
 		} // hbv_stack
 	} // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_stack::state);

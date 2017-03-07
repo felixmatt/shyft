@@ -1,6 +1,8 @@
 #pragma once
 #include "expose_statistics.h"
 #include "api/api.h"
+#include "api/api_state.h"
+
 namespace expose {
     using namespace boost::python;
     using namespace std;
@@ -37,6 +39,52 @@ namespace expose {
         return move(r);
     }
 
+    template<class C>
+    static void cell_state_etc(const char *stack_name) {
+        typedef typename C::state_t cstate_t;
+        typedef typename shyft::api::cell_state_with_id<cstate_t> CellState;
+        char cs_name[200];sprintf(cs_name, "%sStateWithId", stack_name);
+        class_<CellState>(cs_name, "Keep the cell id and cell state")
+            .def_readwrite("id", &CellState::id, "the cell identifier for the state")
+            .def_readwrite("state", &CellState::state, "the cell state")
+            .def("cell_state", &shyft::api::cell_state_id_of, args("geo_cell_data"), "create a cell state with id for the supplied cell.geo")
+            .staticmethod("cell_state")
+            ;
+        char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
+        class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
+            .def(vector_indexing_suite<std::vector<CellState>>())
+
+            ;
+        def("serialize", shyft::api::serialize_to_bytes<CellState>, args("states"), "make a blob out of the states");
+        def("deserialize", shyft::api::deserialize_from_bytes<CellState>, args("bytes", "states"), "from a blob, fill in states");
+    }
+
+    template <class C>
+    static void cell_state_io(const char *cell_name) {
+
+        char csh_name[200];sprintf(csh_name, "%sStateHandler", cell_name);
+        typedef shyft::api::state_io_handler<C> CellStateHandler;
+        class_<CellStateHandler>(csh_name, "Provides functionality to extract and restore state from cells")
+            .def(init<std::shared_ptr<std::vector<C>> >(args("cells"),"construct a cell state handler for the supplied cells"))
+            .def("extract_state", &CellStateHandler::extract_state, args("cids"),
+                "Extract cell state for the optionaly specified catchment ids, cids\n"
+                "Return\n"
+                "------\n"
+                " CellStateIdVector: the state for the cells\n"
+            )
+            .def("apply_state", &CellStateHandler::apply_state,args("cell_id_state_vector","cids"),
+                "apply the supplied cell-identified state to the cells,\n"
+                "limited to the optionally supplied catchment id's\n"
+                "If no catchment-id's specifed, it applies to all cells\n"
+                "Return\n"
+                "------\n"
+                "IntVector: a list of indices into cell_id_state_vector that did not match any cells\n"
+                "\t taken into account the optionally catchment-id specification\n"
+            )
+        ;
+
+
+    }
 
     template <class T>
     static void cell(const char *cell_name,const char* cell_doc) {
@@ -70,6 +118,7 @@ namespace expose {
 
         ;
       expose::statistics::basic_cell<T>(cell_name);//common for all type of cells, so expose it here
+      cell_state_io<T>(cell_name);
     }
 
 
@@ -101,6 +150,25 @@ namespace expose {
                         "0(=default) means detect by hardware probe"
                         )
          .def_readwrite("region_env",&M::region_env,"empty or the region_env as passed to run_interpolation() or interpolate()")
+         .def_readwrite("river_network",&M::river_network,
+                        "river network that when enabled do the routing part of the region-model\n"
+                        "See also RiverNetwork class for how to build a working river network\n"
+                        "Then use the connect_catchment_to_river(cid,rid) method\n"
+                        "to route cell discharge into the river-network\n")
+         .def("has_routing",&M::has_routing,"true if some cells routes to river-network")
+         .def("river_output_flow_m3s",&M::river_output_flow_m3s,args("rid"),"returns the routed output flow of the specified river id (rid))")
+         .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s,args("rid"),"returns the routed upstream inflow to the specified river id (rid))")
+         .def("river_local_inflow_m3s",&M::river_local_inflow_m3s,args("rid"),"returns the routed local inflow from connected cells to the specified river id (rid))")
+         .def("connect_catchment_to_river",&M::connect_catchment_to_river,args("cid","rid"),
+         "Connect routing of all the cells in the specified catchment id to the specified river id\n"
+         ""
+         "Parameters\n"
+         "----------\n"
+         " cid: int\n"
+         "\t catchment identifier\n"
+         " rid: int\n"
+         "\t river identifier, can be set to 0 to indicate disconnect from routing"
+         )
          .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
 		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
              "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"
@@ -143,15 +211,15 @@ namespace expose {
 				" env: RegionEnvironemnt\n"
 				"     contains the ref: region_environment type\n"
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("thread_cell_count")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+         .def("run_cells",&M::run_cells,(boost::python::arg("use_ncore")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
              "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
              "require that initialize(time_axis) or run_interpolation is done first\n"
              "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
              "notice that in any case, the current model state is used as a starting point\n"
              "Parameters\n"
              "----------\n"
-             "thread_cell_count : int\n"
-             "\t number of cells pr.worker thread, if 0 is passed, the the core-count is used to determine the count\n"
+             "use_ncore : int\n"
+             "\t number of worker threads, or cores to use, if 0 is passed, the the core-count is used to determine the count\n"
              "start_step : int\n"
              "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
              "n_steps :int\n"
@@ -195,7 +263,14 @@ namespace expose {
                     "set/reset the catchment based calculation filter. This affects what get simulate/calculated during\n"
                     "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
                     "\n"
-                    "param catchment_id_list is a (zero-based) catchment id vector\n"
+                    "param catchment_id_list is a catchment id vector\n"
+         )
+         .def("set_calculation_filter", &M::set_catchment_calculation_filter, args("catchment_id_list","river_id_list"),
+                 "set/reset the catchment *and* river based calculation filter. This affects what get simulate/calculated during\n"
+                 "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
+                 "\n"
+                 "param catchment_id_list is a catchment id vector\n"
+                "param river_id_list is a river id vector\n"
          )
          .def("is_calculated",&M::is_calculated,args("catchment_id"),"true if catchment id is calculated during runs, ref set_catchment_calculation_filter")
          .def("get_states",&M::get_states,args("end_states"),
@@ -232,6 +307,39 @@ namespace expose {
         .add_property("cells",&M::get_cells,"cells of the model")
          ;
     }
+
+    template <class F, class O>
+    O clone_to_opt_impl(F const& f) {
+        O o(f.extract_geo_cell_data(), f.get_region_parameter());
+        o.time_axis = f.time_axis;
+        o.ip_parameter = f.ip_parameter;
+        o.region_env = f.region_env;
+        o.initial_state = f.initial_state;
+        o.river_network = f.river_network;
+        auto fc = f.get_cells();
+        auto oc = o.get_cells();
+        for (size_t i = 0;i < f.size();++i) {
+            (*oc)[i].env_ts = (*fc)[i].env_ts;
+            (*oc)[i].state = (*fc)[i].state;
+        }
+        return o;
+    }
+
+    template <typename F, typename O>
+    void def_clone_to_similar_model(const char *func_name) {
+        auto pfi = &clone_to_opt_impl< F, O>;
+        def(func_name, pfi, args("src_model"),
+            doc_intro("Clone a model to a another similar type model, full to opt-model or vice-versa")
+            doc_intro("The entire state except catchment-specific parameters, filter and result-series are cloned")
+            doc_intro("The returned model is ready to run_cells(), state and interpolated enviroment is identical to the clone source")
+            doc_parameters()
+            doc_parameter("src_model","XXXX?Model","The model to be cloned, with state interpolation done, etc")
+            doc_returns("new_model","XXXX?Model","new_model ready to run_cells, or to put into the calibrator/optimizer")
+        );
+    }
+
+
+
     template<class RegionModel>
     static void
     model_calibrator(const char *optimizer_name) {

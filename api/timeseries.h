@@ -197,6 +197,7 @@ namespace shyft {
                 static apoint_ts max(const apoint_ts& a, const apoint_ts& b);
                 static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
 				std::vector<apoint_ts> partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
+                apoint_ts convolve_w(const std::vector<double>& w, shyft::timeseries::convolve_policy conv_policy) const;
 
                 //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
                 //   we would like these to be working (exception if it's not possible,i.e. an expression)
@@ -405,7 +406,7 @@ namespace shyft {
                     for(size_t i=0;i<ta.size();++i) {
                         r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
                     }
-                    return std::move(r);//needed ?
+                    return r;
                 }
                 // to help the average function, return the i'th point of the underlying timeseries
                 //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
@@ -496,7 +497,7 @@ namespace shyft {
 					for (size_t i = 0;i<ta.size();++i) {                      // given sequential access
 						r.push_back(accumulate.value(i));                     // reuses acc.computation
 					}
-					return std::move(r);
+					return r;
 				}
 				// to help the average function, return the i'th point of the underlying timeseries
 				//point get(size_t i) const {return point(ts->time(i),ts->value(i));}
@@ -602,6 +603,55 @@ namespace shyft {
                 x_serialize_decl();
 			};
 
+            /** \brief convolve_w is used for providing a convolution by weights ts
+            *
+            * The convolve_w_ts is particularly useful for implementing routing and model
+            * time-delays and shape-of hydro-response.
+            *
+            */
+            struct convolve_w_ts : ipoint_ts {
+                typedef vector<double> weights_t;
+                typedef shyft::timeseries::convolve_w_ts<apoint_ts> cnv_ts_t;
+                //std::shared_ptr<ipoint_ts> ts;
+                cnv_ts_t ts_impl;
+
+                convolve_w_ts(const apoint_ts& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(ats, w, conv_policy) {}
+                convolve_w_ts(apoint_ts&& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(move(ats), w, conv_policy) {}
+                // hmm: convolve_w_ts(const std::shared_ptr<ipoint_ts> &ats,const weights_t& w,convolve_policy conv_policy ):ts(ats),ts_impl(*ts,w,conv_policy) {}
+
+                // std.ct
+                convolve_w_ts() {}
+                convolve_w_ts(const convolve_w_ts& c) : ts_impl(c.ts_impl) {}
+                convolve_w_ts(convolve_w_ts&& c) : ts_impl(move(c.ts_impl)) {}
+                convolve_w_ts& operator=(const convolve_w_ts& c) {
+                    if (this != &c) {
+                        ts_impl = c.ts_impl;
+                    }
+                    return *this;
+                }
+                convolve_w_ts& operator=(convolve_w_ts&& c) {
+                    ts_impl = move(c.ts_impl);
+                    return *this;
+                }
+
+                // implement ipoint_ts contract
+                virtual point_interpretation_policy point_interpretation() const { return ts_impl.point_interpretation(); }
+                virtual void set_point_interpretation(point_interpretation_policy) { throw std::runtime_error("not implemented"); }
+                virtual const gta_t& time_axis() const { return ts_impl.time_axis(); }
+                virtual utcperiod total_period() const { return ts_impl.total_period(); }
+                virtual size_t index_of(utctime t) const { return ts_impl.index_of(t); }
+                virtual size_t size() const { return ts_impl.size(); }
+                virtual utctime time(size_t i) const { return ts_impl.time(i); }
+                virtual double value(size_t i) const { return ts_impl.value(i); }
+                virtual double value_at(utctime t) const { return value(index_of(t)); }
+                virtual vector<double> values() const {
+                    vector<double> r;r.reserve(size());
+                    for (size_t i = 0;i<size();++i)
+                        r.push_back(ts_impl.value(i));
+                    return r;
+                }
+                x_serialize_decl();
+            };
 
             /** The iop_t represent the basic 'binary' operation,
              *   a stateless function that takes two doubles and returns the binary operation.
@@ -612,6 +662,26 @@ namespace shyft {
                 OP_NONE,OP_ADD,OP_SUB,OP_DIV,OP_MUL,OP_MIN,OP_MAX
             };
 
+            /** deferred_bind helps to defer the computation cost of the
+             * expression bin-op variants until its actually used.
+             * this is also needed when having ts_refs| unbound symbolic time-series references
+             * that we would like to serialize and pass over to another server for execution
+             * This comes at the cost and complexity of multithreading, since
+             * 'until-used' implies a const usage of the time-series, like .value(i), value_at(t) etc.
+             * The deferred computation of the time-axis and values must then be executed,
+             * and will modify the state of the class.
+             * In a multi-threaded execution environment, this would create race-conditions
+             * unless handled with a mutex.
+             */
+            struct safe_deferred_bind  {
+                  mutable mutex bind_once;// could consider global lock if ct.cost is high
+                  virtual void do_deferred_bind()=0;
+                  ~safe_deferred_bind(){}
+                  void deferred_bind() const {
+                    lock_guard<mutex> lock{bind_once};
+                    const_cast<safe_deferred_bind*>(this)->do_deferred_bind();
+                  }
+            };
             /** \brief The binary operation for type ts op ts
              *
              * The binary operation is lazy, and only keep the reference to the two operands
@@ -628,22 +698,24 @@ namespace shyft {
              * by the user.
              *
              */
-            struct abin_op_ts:ipoint_ts {
+            struct abin_op_ts:ipoint_ts,safe_deferred_bind {
 
                   apoint_ts lhs;
                   iop_t op;
                   apoint_ts rhs;
                   gta_t ta;
                   point_interpretation_policy fx_policy;
+
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
 
-                  void deferred_bind() const {
+                  void do_deferred_bind() {
                     if(ta.size()==0) {
-                        ((abin_op_ts*)this)->ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
-                        ((abin_op_ts*)this)->fx_policy=result_policy(lhs.point_interpretation(),rhs.point_interpretation());;
+                        fx_policy=result_policy(lhs.point_interpretation(),rhs.point_interpretation());
+                        ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
                     }
                   }
+
                   abin_op_ts():op(iop_t::OP_NONE){}
                   abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
@@ -656,6 +728,7 @@ namespace shyft {
                   abin_op_ts(abin_op_ts&& c)
                     :lhs(std::move(c.lhs)),op(c.op),rhs(std::move(c.rhs)),ta(std::move(c.ta)),fx_policy(c.fx_policy)
                      {
+
                   }
 
                   abin_op_ts& operator=(const abin_op_ts& c) {
@@ -696,7 +769,7 @@ namespace shyft {
              *
              * The resulting time-axis and point interpretation policy is equal to the ts.
              */
-            struct abin_op_scalar_ts:ipoint_ts {
+            struct abin_op_scalar_ts:ipoint_ts,safe_deferred_bind {
                   double lhs;
                   iop_t op;
                   apoint_ts rhs;
@@ -704,18 +777,16 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
-                  void deferred_bind() const {
+                  void do_deferred_bind()  {
                       if(ta.size()==0) {
-                          ((abin_op_scalar_ts*)this)->ta=rhs.time_axis();
-                          ((abin_op_scalar_ts*)this)->fx_policy= rhs.point_interpretation();
+                          ta=rhs.time_axis();
+                          fx_policy= rhs.point_interpretation();
                       }
                   }
 
                   abin_op_scalar_ts():op(iop_t::OP_NONE) {}
                   abin_op_scalar_ts(double lhs,iop_t op,const apoint_ts& rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
-                      //ta=rhs.time_axis();
-                      //fx_policy= rhs.point_interpretation();
                   }
                   abin_op_scalar_ts(const abin_op_scalar_ts& c)
                     :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
@@ -762,7 +833,7 @@ namespace shyft {
              *
              * The resulting time-axis and point interpretation policy is equal to the ts.
              */
-            struct abin_op_ts_scalar:ipoint_ts {
+            struct abin_op_ts_scalar:ipoint_ts,safe_deferred_bind {
                   apoint_ts lhs;
                   iop_t op;
                   double rhs;
@@ -770,17 +841,15 @@ namespace shyft {
                   point_interpretation_policy fx_policy;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
-                    void deferred_bind() const {
-                        if(ta.size()==0) {
-                            ((abin_op_ts_scalar*)this)->ta=lhs.time_axis();
-                            ((abin_op_ts_scalar*)this)->fx_policy= lhs.point_interpretation();
-                        }
-                    }
+                  void do_deferred_bind()  {
+                      if(ta.size()==0) {
+                          ta=lhs.time_axis();
+                          fx_policy= lhs.point_interpretation();
+                      }
+                  }
                   abin_op_ts_scalar():op(iop_t::OP_NONE) {}
                   abin_op_ts_scalar(const apoint_ts &lhs,iop_t op,double rhs)
                   :lhs(lhs),op(op),rhs(rhs) {
-                      //ta=lhs.time_axis();
-                      //fx_policy= lhs.point_interpretation();
                   }
                   abin_op_ts_scalar(const abin_op_ts_scalar& c)
                     :lhs(c.lhs),op(c.op),rhs(c.rhs),ta(c.ta),fx_policy(c.fx_policy) {
@@ -820,7 +889,7 @@ namespace shyft {
                   double value_at(utctime t) const;
                   double value(size_t i) const;
                   std::vector<double> values() const;
-                x_serialize_decl();
+                  x_serialize_decl();
 
             };
 
@@ -890,4 +959,6 @@ x_serialize_export_key(shyft::api::abin_op_scalar_ts);
 x_serialize_export_key(shyft::api::abin_op_ts);
 x_serialize_export_key(shyft::api::abin_op_ts_scalar);
 x_serialize_export_key(shyft::api::aref_ts);
+x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>); // oops need this from core
+x_serialize_export_key(shyft::api::convolve_w_ts);
 x_serialize_export_key(shyft::api::apoint_ts);

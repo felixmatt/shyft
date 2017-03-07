@@ -1,10 +1,10 @@
 #include "test_pch.h"
-#include "bayesian_kriging_test.h"
 #include "mocks.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
 #include "core/timeseries.h"
 #include "core/geo_point.h"
+
 
 using namespace std;
 namespace shyfttest {
@@ -155,8 +155,8 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 	}
 }
 using namespace shyft::core::bayesian_kriging;
-
-void bayesian_kriging_test::test_covariance_calculation() {
+TEST_SUITE("bayesian_kriging");
+TEST_CASE("test_covariance_calculation") {
 	Parameter params;
 
 	const arma::uword n = 100;
@@ -195,7 +195,7 @@ void bayesian_kriging_test::test_covariance_calculation() {
 	}
 }
 
-void bayesian_kriging_test::test_build_covariance_matrices() {
+TEST_CASE("test_build_covariance_matrices") {
 	Parameter params;
 	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
@@ -222,7 +222,7 @@ void bayesian_kriging_test::test_build_covariance_matrices() {
 	TS_ASSERT_EQUALS(k.n_cols, (size_t)15 * 15);
 }
 
-void bayesian_kriging_test::test_build_elevation_matrices() {
+TEST_CASE("test_build_elevation_matrices") {
 	Parameter params;
 	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
@@ -236,7 +236,7 @@ void bayesian_kriging_test::test_build_elevation_matrices() {
 	TS_ASSERT_EQUALS(D_e.n_rows, (size_t)2);
 }
 
-void bayesian_kriging_test::test_interpolation() {
+TEST_CASE("test_interpolation") {
 	Parameter params;
 	SourceList sources;
 	DestinationList destinations;
@@ -271,3 +271,39 @@ void bayesian_kriging_test::test_interpolation() {
 	}
 }
 
+TEST_CASE("test_performance") {
+    Parameter params;
+    SourceList sources;
+    DestinationList destinations;
+    using namespace shyft::timeseries;
+    using namespace shyft::core;
+    using namespace shyfttest;
+    size_t n_s = 5;//(int)sqrt(5100);
+    size_t n_d = 12;//(int)sqrt(3100);
+    size_t n_times = 24;
+    shyft::timeseries::utctime dt = 3600;
+    vector<utctime> times; times.reserve(n_times);
+    for (size_t i = 0; i < n_times; ++i)
+        times.emplace_back(dt*i);
+    bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
+    if(verbose) cout << "start building interpolation " << n_s << " sources to " << n_d << "destination cells, timesteps is "<<n_times<<endl;
+    const point_timeaxis time_axis(times);
+    build_sources_and_dests(n_s, n_s, n_d, n_d, n_times, dt, time_axis, true, sources, destinations);
+    if (verbose) cout << "done building, running real-case now:" << endl;
+    const std::clock_t start = std::clock();
+
+    btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
+    const std::clock_t total = std::clock() - start;
+
+    
+    if (verbose) std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
+     {
+        if (verbose) std::cout << "\taltitude\tmax\tmin\n ";
+        for (auto d : destinations) {
+            if (verbose) std::cout << std::setprecision(3) << "\t " << d.mid_point().z << "\t "
+                << *std::max_element(d.temperatures.begin(), d.temperatures.end()) << "\t "
+                << *std::min_element(d.temperatures.begin(), d.temperatures.end()) << std::endl;
+        }
+    }
+}
+TEST_SUITE_END();

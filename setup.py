@@ -1,8 +1,10 @@
-import os.path
+import os
+from os import path
+import sys
+import shutil
 import glob
 import platform
 import subprocess
-import sys
 from setuptools import setup, find_packages
 
 
@@ -45,6 +47,21 @@ VERSION = open('VERSION').read().strip()
 # Create the version.py file
 open('shyft/version.py', 'w').write('__version__ = "%s"\n' % VERSION)
 
+# Copy libraries needed to run Shyft
+if "Windows" in platform.platform():
+    lib_dir = os.getenv('SHYFT_DEPENDENCIES', '.')
+    boost_dll = path.join(lib_dir, 'boost', 'stage', 'lib', '*.dll')
+    blas_dir = path.join(lib_dir, 'blaslapack')
+    files = glob.glob(boost_dll)
+    files += [path.join(blas_dir, 'lapack_win64_MT.dll'), path.join(blas_dir, 'blas_win64_MT.dll')]
+    files = [f for f in files if '-gd-' not in path.basename(f)]
+    dest_dir = path.join(path.dirname(path.realpath(__file__)), 'shyft', 'lib')
+    if not path.isdir(dest_dir):
+        os.mkdir(dest_dir)
+    for f in files:
+        shutil.copy2(f, path.join(dest_dir, path.basename(f)))
+
+requires = ["numpy", "nose", "netcdf4", "pyyaml","six", "pyproj", "shapely" ]
 setup(
     name='shyft',
     version=VERSION,
@@ -54,7 +71,10 @@ setup(
     description='An OpenSource hydrological toolbox',
     license='LGPL v3',
     packages=find_packages(),
-    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 'tests/netcdf/*']},
+    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 
+        'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 
+        'tests/netcdf/*', 'lib/*.dll']},
     entry_points={},
-    requires=["numpy", "nose", "netcdf4"]
+    requires= requires,
+	install_requires=requires
 )

@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "pt_hs_k_test.h"
 #include "core/pt_hs_k.h"
 #include "mocks.h"
 #include "core/timeseries.h"
@@ -36,8 +35,8 @@ namespace shyfttest {
         }
     };
 }; // End namespace shyfttest
-
-void pt_hs_k_test::test_call_stack() {
+TEST_SUITE("pt_hs_k");
+TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
     xpts_t rel_hum;
@@ -88,3 +87,4 @@ void pt_hs_k_test::test_call_stack() {
     for (size_t i = 0; i < snow_swe.size(); ++i)
         TS_ASSERT(std::isfinite(snow_swe.get(i).v) && snow_swe.get(i).v >= 0);
 }
+TEST_SUITE_END();

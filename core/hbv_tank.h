@@ -31,6 +31,7 @@ namespace shyft {
 					else
 						return false;
 				}
+                x_serialize_decl();
 			};
 
 			struct response {
@@ -66,3 +67,5 @@ namespace shyft {
 		}
 	} // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_tank::state);

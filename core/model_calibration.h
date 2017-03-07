@@ -1,6 +1,5 @@
 #pragma once
-#include <dlib/optimization.h>
-#include <dlib/statistics.h>
+
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"
@@ -102,7 +101,7 @@ namespace shyft {
              * \param x_eps stop when all x's changes less than x_eps(recall range 0..1), convergence in x
              * \param y_eps stop when last y-values (model goal functions) seems to have converged (no improvements)
              * \return the goal function of m value, and x is the corresponding parameter-set.
-             * \throw runtime_error with text sceua: max_iterations reached before convergence
+             * \throw runtime_error with text sceua: terminated before convergence or max iterations
              */
             template <class M>
             double min_sceua(M& model, vector<double>& x, size_t max_n_evaluations, double x_eps = 0.0001, double y_eps = 0.0001) {
@@ -122,8 +121,8 @@ namespace shyft {
                 for (size_t i = 0; i < x_s.size(); ++i) x_s[i] = xv[i];//copy from raw vector
                 // Convert back to real parameter range
                 x = model.from_scaled(x_s);
-                if (!(opt_state == shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state == shyft::core::optimizer::OptimizerState::FinishedXconvergence))
-                    throw runtime_error("sceua: max-iterations reached before convergence"); //FinishedMaxIterations)
+                if (!(opt_state == shyft::core::optimizer::OptimizerState::FinishedFxConvergence || opt_state == shyft::core::optimizer::OptimizerState::FinishedXconvergence || opt_state == shyft::core::optimizer::FinishedMaxIterations))
+                    throw runtime_error("sceua: terminated before convergence or max iterations"); //FinishedMaxIterations)
                 return y_result;
 
             }
@@ -155,13 +154,16 @@ namespace shyft {
             enum target_spec_calc_type {
                 NASH_SUTCLIFFE, // obsolete, should be replaced by using KLING_GUPTA
                 KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
+                ABS_DIFF // abs-difference suitable for periodic water-balance calculations
             };
 
             /** \brief property_type for target specification */
-            enum catchment_property_type {
+            enum target_property_type {
                 DISCHARGE,
                 SNOW_COVERED_AREA,
-                SNOW_WATER_EQUIVALENT
+                SNOW_WATER_EQUIVALENT,
+                ROUTED_DISCHARGE,
+                CELL_CHARGE
             };
 
             /** \brief The target specification contains:
@@ -180,18 +182,19 @@ namespace shyft {
                     : scale_factor(1.0), calc_mode(NASH_SUTCLIFFE), catchment_property(DISCHARGE), s_r(1.0), s_a(1.0), s_b(1.0) {
                 }
                 target_specification(const target_specification& c)
-                    : ts(c.ts), catchment_indexes(c.catchment_indexes), scale_factor(c.scale_factor),
+                    : ts(c.ts), catchment_indexes(c.catchment_indexes),river_id(c.river_id), scale_factor(c.scale_factor),
                     calc_mode(c.calc_mode), catchment_property(c.catchment_property), s_r(c.s_r), s_a(c.s_a), s_b(c.s_b), uid(c.uid) {
                 }
                 target_specification(target_specification&&c)
                     : ts(std::move(c.ts)),
-                    catchment_indexes(std::move(c.catchment_indexes)),
+                    catchment_indexes(std::move(c.catchment_indexes)),river_id(c.river_id),
                     scale_factor(c.scale_factor), calc_mode(c.calc_mode), catchment_property(c.catchment_property),
                     s_r(c.s_r), s_a(c.s_a), s_b(c.s_b), uid(c.uid) {
                 }
                 target_specification& operator=(target_specification&& c) {
                     ts = std::move(c.ts);
                     catchment_indexes = move(c.catchment_indexes);
+                    river_id = c.river_id;
                     scale_factor = c.scale_factor;
                     calc_mode = c.calc_mode;
                     catchment_property = c.catchment_property;
@@ -203,6 +206,7 @@ namespace shyft {
                     if (this == &c) return *this;
                     ts = c.ts;
                     catchment_indexes = c.catchment_indexes;
+                    river_id = c.river_id;
                     scale_factor = c.scale_factor;
                     calc_mode = c.calc_mode;
                     catchment_property = c.catchment_property;
@@ -211,7 +215,7 @@ namespace shyft {
                     return *this;
                 }
                 bool operator==(const target_specification& x) const {
-                    return catchment_indexes == x.catchment_indexes && catchment_property == x.catchment_property;
+                    return catchment_indexes == x.catchment_indexes && catchment_property == x.catchment_property && river_id==x.river_id;
                 }
                 /** \brief Constructs a target specification element for calibration, specifying all needed parameters
                  *
@@ -227,16 +231,33 @@ namespace shyft {
                  */
                 target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
                     target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
-                    double s_a = 1.0, double s_b = 1.0, catchment_property_type catchment_property_ = DISCHARGE, std::string uid = "")
+                    double s_a = 1.0, double s_b = 1.0, target_property_type catchment_property_ = DISCHARGE, std::string uid = "")
                     : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
                     calc_mode(calc_mode), catchment_property(catchment_property_), s_r(s_r), s_a(s_a), s_b(s_b), uid(uid) {
                 }
-
+                /** \brief Constructs a target specification element for calibration, specifying all needed parameters
+                *
+                * \param ts the target time-series that contain the target/observed discharge values
+                * \param rid  identifies the river id in the model that this target specifies
+                * \param scale_factor the weight that this target_specification should have relative to the possible other target_specs.
+                * \param calc_mode how to calculate goal-function nash-sutcliffe or the more advanced and flexible kling-gupta
+                * \param s_r scale factor r in kling-gupta
+                * \param s_a scale factor a in kling-gupta
+                * \param s_b scale factor b in kling-gupta
+                * \param uid a user supplied uid, string, to help user correlate this target to external data-sources
+                */
+                target_specification(const target_time_series_t& ts, int river_id, double scale_factor,
+                    target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
+                    double s_a = 1.0, double s_b = 1.0, std::string uid = "")
+                    : ts(ts), river_id(river_id), scale_factor(scale_factor),
+                    calc_mode(calc_mode), catchment_property(ROUTED_DISCHARGE), s_r(s_r), s_a(s_a), s_b(s_b), uid(uid) {
+                }
                 target_time_series_t ts; ///< The target ts, - any type that is time-series compatible
                 std::vector<int> catchment_indexes; ///< the catchment_indexes that denotes the catchments in the model that together should match the target ts
+                int river_id=0;///< in case of catchment_property = ROUTED_DISCHARGE, this identifies the river id to get discharge for
                 double scale_factor; ///<< the scale factor to be used when considering multiple target_specifications.
                 target_spec_calc_type calc_mode;///< *NASH_SUTCLIFFE, KLING_GUPTA
-                catchment_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT
+                target_property_type catchment_property;///<  *DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT, ROUTED_DISCHARGE
                 double s_r; ///< KG-scalefactor for correlation
                 double s_a; ///< KG-scalefactor for alpha (variance)
                 double s_b; ///< KG-scalefactor for beta (bias)
@@ -276,7 +297,7 @@ namespace shyft {
                 pts_t ts; ///< ts representing the property for the area, e.g. sca, swe
                 area_ts(double area_m2, pts_t ts) :area(area_m2), ts(move(ts)) {}
                 area_ts() :area(0.0) {}                              // maybe we could drop this and rely on defaults ?
-                area_ts(area_ts&&c) :area(c.area), ts(move(ts)) {}
+                area_ts(area_ts&&c) :area(c.area), ts(move(c.ts)) {}
                 area_ts(const area_ts&c) :area(c.area), ts(c.ts) {}
                 area_ts& operator=(const area_ts&c) {
                     if (&c != this) {
@@ -433,12 +454,17 @@ namespace shyft {
                     // 3. figure out the catchment indexes to evaluate..
                     //    and if we need to turn on snow collection
                     vector<int> catchment_indexes;
+
                     model.set_snow_sca_swe_collection(-1, false);//turn off all snow by default.
                     for (const auto&t : targets) {
                         catchment_indexes.insert(catchment_indexes.end(), begin(t.catchment_indexes), end(t.catchment_indexes));
-                        if (t.catchment_property != DISCHARGE)
+                        if (t.catchment_property == SNOW_WATER_EQUIVALENT || t.catchment_property==SNOW_COVERED_AREA)
                             for (auto cid : t.catchment_indexes)
                                 model.set_snow_sca_swe_collection(cid, true);//turn on for those with something like snow enabled
+                        if (t.catchment_property == ROUTED_DISCHARGE) {
+                            auto river_cids = model.get_catchment_feeding_to_river(t.river_id);
+                            for (auto rc : river_cids)catchment_indexes.push_back(rc);
+                        }
                     }
                     if (catchment_indexes.size() > 1) {
                         sort(begin(catchment_indexes), end(catchment_indexes));
@@ -623,6 +649,14 @@ namespace shyft {
                         discharge_sum.add(catchment_d[model.cix_from_cid(i)]);// important! the catchment_d(ischarge) is in internal index order
                     return discharge_sum;
                 }
+                pts_t compute_charge_sum(const target_specification_t& t, vector<pts_t>& catchment_charges) const {
+                    if (catchment_charges.empty())
+                        model.catchment_charges(catchment_charges);
+                    pts_t charge_sum(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+                    for (auto i : t.catchment_indexes)
+                        charge_sum.add(catchment_charges[model.cix_from_cid(i)]);// important! the catchment_charges is in internal index order
+                    return charge_sum;
+                }
 
                 /** \brief extracts vector of area_ts for all calculated catchments using the
                  * given property function tsf that should have signature pts_t (const cell& c)
@@ -717,12 +751,17 @@ namespace shyft {
                         case SNOW_WATER_EQUIVALENT:
                             property_sum = compute_swe_sum(t, catchment_swe);
                             break;
+                        case ROUTED_DISCHARGE:
+                            property_sum = *model.river_output_flow_m3s(t.river_id);
+                            break;
+                        case CELL_CHARGE:
+                            property_sum = compute_charge_sum(t, catchment_d);
                         }
                         shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
                         double partial_goal_function_value;
                         if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
                             partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);
-                        } else {
+                        } else if(t.calc_mode == target_spec_calc_type::KLING_GUPTA) {
                             // ref. KLING-GUPTA Journal of Hydrology 377 (2009) 80–91, page 83, formula (10):
                             // a=alpha, b=betha, q =sigma, u=my, s=simulated, o=observed
                             partial_goal_function_value /* EDs */ = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(target_accessor,
@@ -730,6 +769,8 @@ namespace shyft {
                                 t.s_r,
                                 t.s_a,
                                 t.s_b);
+                        } else {
+                            partial_goal_function_value = abs_diff_sum_goal_function(target_accessor,property_sum_accessor);
                         }
                         if (isfinite(partial_goal_function_value)) {
                             scale_factor_sum += t.scale_factor;
@@ -740,12 +781,12 @@ namespace shyft {
                     }
                     goal_function_value /= scale_factor_sum;
                     if (print_progress_level > 0) {
-                        cout << "ParameterVector(";
+                        cout << goal_function_value <<" : ParameterVector(";
                         for (size_t i = 0; i < parameter_accessor.size(); ++i) {
                             cout << parameter_accessor.get(i);
-                            if (i < parameter_accessor.size() - 1)cout << ", ";
+                            if (i < parameter_accessor.size() - 1) cout << ", ";
                         }
-                        cout << ") = " << goal_function_value << " (NS or KG)" << endl;
+                        cout << ")" << endl;
                     }
                     return goal_function_value;
                 }

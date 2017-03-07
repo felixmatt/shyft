@@ -5,6 +5,7 @@
 		<Option title="core" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option virtualFolders="methods/;interpolation/;method_stacks/;time_and_calendar/;geo/;time_series/;compiler_etc/;experimental/;optimizers/;serialization/;" />
 		<Option show_notes="0">
 			<notes>
 				<![CDATA[The core parts, - basically our target is a header-only concept, but there is still a need for a tiny static library]]>
@@ -49,63 +50,144 @@
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#armadillo.include)" />
+			<Add directory="$(#dlib.include)" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
 			<Add library="boost_filesystem" />
 			<Add library="boost_system" />
 		</Linker>
-		<Unit filename="actual_evapotranspiration.h" />
-		<Unit filename="bayesian_kriging.h" />
+		<Unit filename="actual_evapotranspiration.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="bayesian_kriging.h">
+			<Option virtualFolder="interpolation/" />
+		</Unit>
 		<Unit filename="cell_model.h" />
-		<Unit filename="compiler_compatiblity.h" />
+		<Unit filename="compiler_compatiblity.h">
+			<Option virtualFolder="compiler_etc/" />
+		</Unit>
 		<Unit filename="core_pch.cpp">
 			<Option compile="0" />
 			<Option link="0" />
+			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="core_pch.h">
 			<Option compile="1" />
 			<Option weight="0" />
+			<Option virtualFolder="compiler_etc/" />
 		</Unit>
-		<Unit filename="core_serialization.cpp" />
-		<Unit filename="dream_optimizer.cpp" />
-		<Unit filename="dream_optimizer.h" />
-		<Unit filename="experimental.cpp" />
-		<Unit filename="experimental.h" />
-		<Unit filename="gamma_snow.h" />
-		<Unit filename="gaussian_random_field.h" />
-		<Unit filename="geo_cell_data.h" />
-		<Unit filename="geo_point.h" />
-		<Unit filename="glacier_melt.h" />
-		<Unit filename="hbv_actual_evapotranspiration.h" />
-		<Unit filename="hbv_snow.h" />
-		<Unit filename="hbv_soil.h" />
-		<Unit filename="hbv_stack.h" />
-		<Unit filename="hbv_stack_cell_model.h" />
-		<Unit filename="hbv_tank.h" />
-		<Unit filename="inverse_distance.h" />
-		<Unit filename="kalman.h" />
-		<Unit filename="kirchner.h" />
-		<Unit filename="kriging.h" />
+		<Unit filename="core_serialization.cpp">
+			<Option virtualFolder="serialization/" />
+		</Unit>
+		<Unit filename="dream_optimizer.cpp">
+			<Option virtualFolder="optimizers/" />
+		</Unit>
+		<Unit filename="dream_optimizer.h">
+			<Option virtualFolder="optimizers/" />
+		</Unit>
+		<Unit filename="experimental.cpp">
+			<Option virtualFolder="experimental/" />
+		</Unit>
+		<Unit filename="experimental.h">
+			<Option virtualFolder="experimental/" />
+		</Unit>
+		<Unit filename="gamma_snow.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="geo_cell_data.h">
+			<Option virtualFolder="geo/" />
+		</Unit>
+		<Unit filename="geo_point.h">
+			<Option virtualFolder="geo/" />
+		</Unit>
+		<Unit filename="glacier_melt.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="hbv_actual_evapotranspiration.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="hbv_snow.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="hbv_soil.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="hbv_stack.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="hbv_stack_cell_model.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="hbv_tank.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="inverse_distance.h">
+			<Option virtualFolder="interpolation/" />
+		</Unit>
+		<Unit filename="kalman.h">
+			<Option virtualFolder="interpolation/" />
+		</Unit>
+		<Unit filename="kirchner.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="kriging.h">
+			<Option virtualFolder="interpolation/" />
+		</Unit>
 		<Unit filename="model_calibration.h" />
-		<Unit filename="optimizer_utils.h" />
-		<Unit filename="precipitation_correction.h" />
-		<Unit filename="priestley_taylor.h" />
-		<Unit filename="pt_gs_k.h" />
-		<Unit filename="pt_gs_k_cell_model.h" />
-		<Unit filename="pt_hs_k.h" />
-		<Unit filename="pt_hs_k_cell_model.h" />
-		<Unit filename="pt_ss_k.h" />
-		<Unit filename="pt_ss_k_cell_model.h" />
+		<Unit filename="optimizer_utils.h">
+			<Option virtualFolder="optimizers/" />
+		</Unit>
+		<Unit filename="precipitation_correction.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="priestley_taylor.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="pt_gs_k.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_gs_k_cell_model.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_hs_k.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_hs_k_cell_model.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_ss_k.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_ss_k_cell_model.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
 		<Unit filename="region_model.h" />
-		<Unit filename="sceua_optimizer.cpp" />
-		<Unit filename="sceua_optimizer.h" />
-		<Unit filename="skaugen.h" />
-		<Unit filename="time_axis.h" />
-		<Unit filename="timeseries.h" />
-		<Unit filename="unit_conversion.h" />
-		<Unit filename="utctime_utilities.cpp" />
-		<Unit filename="utctime_utilities.h" />
+		<Unit filename="routing.h" />
+		<Unit filename="sceua_optimizer.cpp">
+			<Option virtualFolder="optimizers/" />
+		</Unit>
+		<Unit filename="sceua_optimizer.h">
+			<Option virtualFolder="optimizers/" />
+		</Unit>
+		<Unit filename="skaugen.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="time_axis.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="timeseries.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="unit_conversion.h">
+			<Option virtualFolder="compiler_etc/" />
+		</Unit>
+		<Unit filename="utctime_utilities.cpp">
+			<Option virtualFolder="time_and_calendar/" />
+		</Unit>
+		<Unit filename="utctime_utilities.h">
+			<Option virtualFolder="time_and_calendar/" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<debugger />

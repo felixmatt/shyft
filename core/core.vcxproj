@@ -125,7 +125,6 @@
     <ClInclude Include="geo_cell_data.h" />
     <ClInclude Include="geo_point.h" />
     <ClInclude Include="glacier_melt.h" />
-    <ClInclude Include="gaussian_random_field.h" />
     <ClInclude Include="hbv_snow.h" />
     <ClInclude Include="inverse_distance.h" />
     <ClInclude Include="bayesian_kriging.h" />
@@ -141,6 +140,7 @@
     <ClInclude Include="pt_hs_k_cell_model.h" />
     <ClInclude Include="pt_ss_k.h" />
     <ClInclude Include="pt_ss_k_cell_model.h" />
+    <ClInclude Include="routing.h" />
     <ClInclude Include="sceua_optimizer.h" />
     <ClInclude Include="skaugen.h" />
     <ClInclude Include="timeseries.h" />

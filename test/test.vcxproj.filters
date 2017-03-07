@@ -1,98 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="actual_evapotranspiration_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="gamma_snow_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="hbv_snow_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="kirchner_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="priestley_taylor_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="bayesian_kriging_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="gaussian_random_field_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="inverse_distance_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="pt_gs_k_test.h">
-      <Filter>method-stacks</Filter>
-    </ClInclude>
-    <ClInclude Include="pt_hs_k_test.h">
-      <Filter>method-stacks</Filter>
-    </ClInclude>
-    <ClInclude Include="pt_ss_k_test.h">
-      <Filter>method-stacks</Filter>
-    </ClInclude>
-    <ClInclude Include="skaugen_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="utctime_utilities_test.h">
-      <Filter>time</Filter>
-    </ClInclude>
-    <ClInclude Include="sceua_test.h">
-      <Filter>optimizers</Filter>
-    </ClInclude>
-    <ClInclude Include="calibration_test.h">
-      <Filter>optimizers</Filter>
-    </ClInclude>
-    <ClInclude Include="time_axis_test.h">
-      <Filter>timeseries</Filter>
-    </ClInclude>
-    <ClInclude Include="timeseries_test.h">
-      <Filter>timeseries</Filter>
-    </ClInclude>
-    <ClInclude Include="api_test.h">
-      <Filter>usecases</Filter>
-    </ClInclude>
-    <ClInclude Include="cell_builder_test.h">
-      <Filter>usecases</Filter>
-    </ClInclude>
-    <ClInclude Include="region_model_test.h">
-      <Filter>usecases</Filter>
-    </ClInclude>
     <ClInclude Include="mocks.h">
       <Filter>compiler_and_testsupport</Filter>
     </ClInclude>
     <ClInclude Include="test_pch.h">
       <Filter>compiler_and_testsupport</Filter>
-    </ClInclude>
-    <ClInclude Include="gridpp_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="kalman_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="hbv_actual_evapotranspiration_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="hbv_soil_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="hbv_stack_test.h">
-      <Filter>method-stacks</Filter>
-    </ClInclude>
-    <ClInclude Include="hbv_tank_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="glacier_melt_test.h">
-      <Filter>methods</Filter>
-    </ClInclude>
-    <ClInclude Include="kriging_test.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
-    <ClInclude Include="serialization_test.h">
-      <Filter>serialization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -112,9 +25,6 @@
       <Filter>methods</Filter>
     </ClCompile>
     <ClCompile Include="bayesian_kriging_test.cpp">
-      <Filter>interpolation</Filter>
-    </ClCompile>
-    <ClCompile Include="gaussian_random_field_test.cpp">
       <Filter>interpolation</Filter>
     </ClCompile>
     <ClCompile Include="inverse_distance_test.cpp">
@@ -192,6 +102,9 @@
     <ClCompile Include="serialization_test.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
+    <ClCompile Include="routing_test.cpp">
+      <Filter>routing</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -221,20 +134,8 @@
     <Filter Include="serialization">
       <UniqueIdentifier>{dd510b90-1bd0-410d-b22c-504d8e303e96}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Makefile.testupdate">
-      <Filter>compiler_and_testsupport</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="NMakeFile.testupdate">
-      <Filter>compiler_and_testsupport</Filter>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt">
-      <Filter>compiler_and_testsupport</Filter>
-    </Text>
+    <Filter Include="routing">
+      <UniqueIdentifier>{b2995031-3646-4ed1-9f64-5bb11612f0a0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

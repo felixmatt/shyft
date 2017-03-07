@@ -90,9 +90,6 @@
     <ClInclude Include="bayesian_kriging.h">
       <Filter>interpolation</Filter>
     </ClInclude>
-    <ClInclude Include="gaussian_random_field.h">
-      <Filter>interpolation</Filter>
-    </ClInclude>
     <ClInclude Include="kriging.h">
       <Filter>interpolation</Filter>
     </ClInclude>
@@ -130,6 +127,7 @@
       <Filter>method-stacks</Filter>
     </ClInclude>
     <ClInclude Include="unit_conversion.h" />
+    <ClInclude Include="routing.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

@@ -40,6 +40,7 @@
 //#include <sstream>
 #include <thread>
 #include <future>
+#include <mutex>
 #include <stdexcept>
 #include <random>
 #include <type_traits>
@@ -106,5 +107,11 @@ typedef boost::math::static_gcd_type static_gcd_type;
     template void T::serialize( boost::archive::AI &,const unsigned int);
 
 
-
+//--providing all needed lin-alg:
 #include <armadillo>
+
+//-- providing all needed optimization
+
+#include <dlib/optimization.h>
+#include <dlib/statistics.h>
+

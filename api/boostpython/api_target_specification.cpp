@@ -34,12 +34,15 @@ namespace expose {
         enum_<model_calibration::target_spec_calc_type>("TargetSpecCalcType")
             .value("NASH_SUTCLIFFE",model_calibration::NASH_SUTCLIFFE)
             .value("KLING_GUPTA",model_calibration::KLING_GUPTA)
+            .value("ABS_DIFF",model_calibration::ABS_DIFF)
             .export_values()
             ;
-        enum_<model_calibration::catchment_property_type>("CatchmentPropertyType")
+        enum_<model_calibration::target_property_type>("CatchmentPropertyType")
             .value("DISCHARGE", model_calibration::DISCHARGE)
             .value("SNOW_COVERED_AREA", model_calibration::SNOW_COVERED_AREA)
             .value("SNOW_WATER_EQUIVALENT", model_calibration::SNOW_WATER_EQUIVALENT)
+            .value("ROUTED_DISCHARGE",model_calibration::ROUTED_DISCHARGE)
+            .value("CELL_CHARGE",model_calibration::CELL_CHARGE)
             .export_values()
             ;
         typedef shyft::core::pts_t target_ts_t;
@@ -57,8 +60,12 @@ namespace expose {
             "\n"
             )
             .def(init<const target_ts_t&,vector<int>,double,
-                 optional<model_calibration::target_spec_calc_type,double,double,double,model_calibration::catchment_property_type,std::string>>(
+                 optional<model_calibration::target_spec_calc_type,double,double,double,model_calibration::target_property_type,std::string>>(
                  args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),"constructs a complete target specification using a TsFixed as target ts")
+            )
+            .def(init<const target_ts_t&, int, double,
+                optional<model_calibration::target_spec_calc_type, double, double, double, std::string>>(
+                    args("ts", "river_id", "scale_factor", "calc_mode", "s_r", "s_a", "s_b", "uid"), "constructs a complete target specification using a TsFixed as target ts")
             )
 			/*Wanted! .def(init<shyft::api::apoint_ts, vector<int>, double,
 				optional<model_calibration::target_spec_calc_type, double, double, double, model_calibration::catchment_property_type>>(
@@ -71,18 +78,16 @@ namespace expose {
             .def_readwrite("s_a",&TargetSpecificationPts::s_a,"KG-scalefactor for alpha (variance)")
             .def_readwrite("s_b",&TargetSpecificationPts::s_b,"KG-scalefactor for beta (bias)")
             .def_readwrite("ts", &TargetSpecificationPts::ts," target ts")
+            .def_readwrite("river_id",&TargetSpecificationPts::river_id,"river identifier for routed discharge calibration")
 			.def_readwrite("catchment_indexes",&TargetSpecificationPts::catchment_indexes,"catchment indexes, 'cids'")
-		    .def_readwrite("uid",&TargetSpecificationPts::uid,"user specifed identfier:string")
+		    .def_readwrite("uid",&TargetSpecificationPts::uid,"user specified identifier:string")
             ;
 
-        //.i:   %template(TargetSpecificationVector) vector<shyft::core::model_calibration::target_specification<shyft::core::pts_t>>;
+
         typedef vector<TargetSpecificationPts> TargetSpecificationVector;
         class_<TargetSpecificationVector>("TargetSpecificationVector","A list of (weighted) target specifications to be used for model calibration")
             .def(vector_indexing_suite<TargetSpecificationVector>())
          ;
-        //typedef model_calibration::ts_transform TsTransform;
-        //        %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::api::ITimeSeriesOfPoints>;
-        //    %template(to_average) TsTransform::to_average<shyft::core::pts_t,shyft::core::pts_t>;
 
         shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::api::apoint_ts& )=&TsTransform::to_average;
         shared_ptr<shyft::core::pts_t> (TsTransform::*m2)(utctime , utctimespan , size_t ,shared_ptr<shyft::api::apoint_ts> )=&TsTransform::to_average;

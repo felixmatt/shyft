@@ -22,6 +22,7 @@ namespace shyft {
 					const double eps = 1e-6;
 					return fabs(sm - x.sm)<eps;
 				}
+                x_serialize_decl();
 			};
 
 			struct response {
@@ -44,11 +45,13 @@ namespace shyft {
 				template <class R,class S> 
 				void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, double insoil, double act_evap) {
 					double temp = s.sm + insoil;					//compute fraction at end of time after adding insoil
-					double fraction = pow(temp/param.fc, param.beta);
-					r.outflow = fraction*insoil;
-					s.sm = s.sm + insoil - r.outflow - act_evap;
+					double outflow = insoil*pow(temp/param.fc, param.beta);
+                    r.outflow = outflow > temp ? temp : outflow;
+					s.sm = std::max(0.0,s.sm + insoil - r.outflow - act_evap);
 				}
 			};
 		}
 	} // core
 } // shyft
+  //-- serialization support shyft
+x_serialize_export_key(shyft::core::hbv_soil::state);

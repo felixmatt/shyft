@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "actual_evapotranspiration_test.h"
 #include "core/actual_evapotranspiration.h"
 #include "core/utctime_utilities.h"
 
@@ -9,7 +8,8 @@ namespace shyfttest {
 
 using namespace shyft::core;
 using namespace shyft::core::actual_evapotranspiration;
-void actual_evapotranspiration_test::test_water() {
+TEST_SUITE("actual_evapotranspiration");
+TEST_CASE("test_water") {
     const double sca = 0.0;
     const double pot_evap = 5.0; // [mm/h]
     const double scale_factor = 1.0;
@@ -21,10 +21,10 @@ void actual_evapotranspiration_test::test_water() {
 	act_evap = calculate_step(1.0e8, pot_evap, scale_factor, sca, dt);
     TS_ASSERT_DELTA(act_evap, pot_evap, shyfttest::EPS);
 
-	TS_ASSERT_DELTA((1-exp(-3*1.0/1.0)), calculate_step(1.0, 1.0, 1.0, 0.0, dt), shyfttest::EPS)
+    TS_ASSERT_DELTA((1 - exp(-3 * 1.0 / 1.0)), calculate_step(1.0, 1.0, 1.0, 0.0, dt), shyfttest::EPS);
 }
 
-void actual_evapotranspiration_test::test_snow() {
+TEST_CASE("test_snow") {
     const double water = 5.0;
     const double pot_evap = 5.0; // [mm/h]
     const double scale_factor = 1.0;
@@ -35,7 +35,7 @@ void actual_evapotranspiration_test::test_snow() {
     TS_ASSERT(act_evap_no_snow > act_evap_some_snow );
 }
 
-void actual_evapotranspiration_test::test_scale_factor() {
+TEST_CASE("test_scale_factor") {
     const double water = 5.0;
     const double sca = 0.5;
     const double pot_evap = 5.0; // [mm/h]
@@ -46,3 +46,4 @@ void actual_evapotranspiration_test::test_scale_factor() {
     TS_ASSERT(act_evap_small_scale > act_evap_large_scale);
 
 }
+TEST_SUITE_END();

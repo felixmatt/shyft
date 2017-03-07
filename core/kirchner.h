@@ -126,6 +126,7 @@ namespace shyft {
                     const double eps=1e-6;
                     return fabs(q-x.q)<eps;
                 }
+                x_serialize_decl();
             };
 
 
@@ -227,5 +228,6 @@ namespace shyft {
         } // End namespace kirchner
     };
 };
-
+//-- serialization support shyft
+x_serialize_export_key(shyft::core::kirchner::state);
 /* vim: set filetype=cpp: */

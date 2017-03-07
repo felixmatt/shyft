@@ -62,7 +62,7 @@ namespace shyft{
             for(size_t i=0;i<time_axis().size();++i) {
                 r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
             }
-            return std::move(r);
+            return r;
         }
 
         // implement popular ct for apoint_ts to make it easy to expose & use
@@ -223,7 +223,9 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-
+        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::timeseries::convolve_policy conv_policy) const {
+            return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
+        }
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
             //-- use core calc here:
@@ -283,7 +285,7 @@ namespace shyft{
           deferred_bind();
           std::vector<double> r(lhs.values());
           for(auto& v:r)
-            v=do_op(rhs,op,v);
+            v=do_op(v,op,rhs);
           return r;
         }
 

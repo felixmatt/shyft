@@ -119,6 +119,15 @@ namespace expose {
 		const shyft::time_axis::generic_dt &ta) {
         bp.update_with_forecast(fc_ts_set, obs, ta);
 	}
+    static shyft::api::apoint_ts compute_running_bias(
+        shyft::core::kalman::bias_predictor& bp,
+        const shyft::api::apoint_ts& fc_ts,
+        const shyft::api::apoint_ts& obs,
+        const shyft::time_axis::generic_dt &ta) {
+        if (ta.gt != ta.FIXED)
+            throw std::runtime_error("The supplied time-axis must be of type FIXED for the compute_running_bias function");
+        return bp.compute_running_bias<shyft::api::apoint_ts>(fc_ts, obs, ta.f);
+    }
 
 	static void kalman_bias_predictor() {
 		typedef shyft::core::kalman::bias_predictor KalmanBiasPredictor;
@@ -164,6 +173,29 @@ namespace expose {
 				"\tcovering the period/timesteps to be updated\n"
 				"\t e.g. yesterday, 3h resolution steps, according to the points in the filter\n"
             ).staticmethod("update_with_forecast_vector")
+            .def("compute_running_bias_ts", compute_running_bias, args("bias_predictor", "forecast_ts", "observation_ts", "time_axis"),
+                "compute the running bias timeseries,\n"
+                "using one 'merged' - forecasts and one observation time - series.\n"
+                "\n"
+                "Before each day - period, the bias - values are copied out to form\n"
+                "a continuous bias prediction time-series.\n"
+                "Parameters\n"
+                "----------\n"
+                "bias_predictor : KalmanBiasPredictor\n"
+                "\tThe bias predictor object it self\n"
+                "forecast_ts : Timeseries\n"
+                "\ta merged forecast ts\n"
+                "\twith period covering the observation_ts and time_axis supplied\n"
+                "observation ts: Timeseries\n"
+                "\tthe observation time-series\n"
+                "time_axis : Timeaxis\n"
+                "\tcovering the period/timesteps to be updated\n"
+                "\t e.g. yesterday, 3h resolution steps, according to the points in the filter\n"
+                "\nReturns\n-------\n"
+                "bias_ts:Timeseries(time_axis,bias_vector,POINT_AVERAGE)\n"
+                "\t computed running bias-ts\n"
+            ).staticmethod("compute_running_bias_ts")
+
 			.def_readonly("filter",&KalmanBiasPredictor::f,"the kalman filter with parameters")
 			.def_readwrite("state",&KalmanBiasPredictor::s,"current state of the predictor")
 			;

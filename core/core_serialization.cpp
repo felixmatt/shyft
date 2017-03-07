@@ -9,6 +9,16 @@
 #include "time_axis.h"
 #include "timeseries.h"
 #include "geo_cell_data.h"
+#include "hbv_snow.h"
+#include "hbv_soil.h"
+#include "hbv_tank.h"
+#include "gamma_snow.h"
+#include "kirchner.h"
+#include "skaugen.h"
+#include "hbv_stack.h"
+#include "pt_gs_k.h"
+#include "pt_ss_k.h"
+#include "pt_hs_k.h"
 
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
@@ -188,6 +198,18 @@ void shyft::timeseries::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, con
     & make_nvp("fx_policy", fx_policy)
     ;
 }
+
+template <class Ts>
+template <class Archive>
+void shyft::timeseries::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
+    ar
+    & make_nvp("ts", ts)
+    & make_nvp("fx_policy", fx_policy)
+    & make_nvp("w", w)
+    & make_nvp("convolve_policy",policy)
+    ;
+}
+
 template <class A, class B, class O, class TA>
 template<class Archive>
 void shyft::timeseries::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsigned int version) {
@@ -209,6 +231,7 @@ void shyft::core::geo_point::serialize(Archive& ar, const unsigned int version) 
     & make_nvp("z",z)
     ;
 }
+
 template <class Archive>
 void shyft::core::land_type_fractions::serialize(Archive& ar, const unsigned int version) {
     ar
@@ -219,6 +242,14 @@ void shyft::core::land_type_fractions::serialize(Archive& ar, const unsigned int
     ;
 }
 template <class Archive>
+void shyft::core::routing_info::serialize(Archive& ar, const unsigned int version) {
+    ar
+    & make_nvp("id", id)
+    & make_nvp("distance", distance)
+    ;
+}
+
+template <class Archive>
 void shyft::core::geo_cell_data::serialize(Archive& ar, const unsigned int version) {
     ar
     & make_nvp("mid_point_",mid_point_)
@@ -226,12 +257,95 @@ void shyft::core::geo_cell_data::serialize(Archive& ar, const unsigned int versi
     & make_nvp("catchment_id_",catchment_id_)
     & make_nvp("radiation_slope_factor_",radiation_slope_factor_)
     & make_nvp("fractions",fractions)
+    & make_nvp("routing",routing)
     ;
+}
+//-- state serialization
+template <class Archive>
+void shyft::core::hbv_snow::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & make_nvp("swe",swe)
+    & make_nvp("sca",sca)
+    ;
+}
+template <class Archive>
+void shyft::core::hbv_soil::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & make_nvp("sm",sm)
+    ;
+}
+template <class Archive>
+void shyft::core::hbv_tank::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & make_nvp("uz",uz)
+    & make_nvp("lz",lz)
+    ;
+}
+template <class Archive>
+void shyft::core::kirchner::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("q",q)
+        ;
+}
+template <class Archive>
+void shyft::core::gamma_snow::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("albedo", albedo)
+        & make_nvp("lwc", lwc)
+        & make_nvp("surface_heat",surface_heat )
+        & make_nvp("alpha", alpha)
+        & make_nvp("sdc_melt_mean",sdc_melt_mean )
+        & make_nvp("acc_melt",acc_melt )
+        & make_nvp("iso_pot_energy", iso_pot_energy)
+        & make_nvp("temp_swe",temp_swe )
+        ;
+}
+template <class Archive>
+void shyft::core::skaugen::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("nu",nu)
+        & make_nvp("alpha",alpha)
+        & make_nvp("sca",sca)
+        & make_nvp("swe",swe)
+        & make_nvp("free_water",free_water)
+        & make_nvp("residual",residual)
+        & make_nvp("num_units",num_units)
+        ;
+}
+template <class Archive>
+void shyft::core::hbv_stack::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("snow",snow)
+        & make_nvp("soil",soil)
+        & make_nvp("tank",tank)
+        ;
+}
+template <class Archive>
+void shyft::core::pt_gs_k::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("gs",gs)
+        & make_nvp("kirchner",kirchner)
+        ;
+}
+template <class Archive>
+void shyft::core::pt_ss_k::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("snow",snow)
+        & make_nvp("kirchner", kirchner)
+        ;
+}
+template <class Archive>
+void shyft::core::pt_hs_k::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & make_nvp("snow",snow)
+        & make_nvp("kirchner", kirchner)
+        ;
 }
 
 //-- export geo stuff
 x_serialize_implement(shyft::core::geo_point);
 x_serialize_implement(shyft::core::land_type_fractions);
+x_serialize_implement(shyft::core::routing_info);
 x_serialize_implement(shyft::core::geo_cell_data);
 
 //-- export utctime_utilities
@@ -263,10 +377,28 @@ x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::fixe
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::calendar_dt>);
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::point_dt>);
 x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::generic_dt>);
+
+x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
+
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::fixed_dt>);
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::calendar_dt>);
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::point_dt>);
 x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::generic_dt>);
+
+//-- export method and method-stack state
+x_serialize_implement(shyft::core::hbv_snow::state);
+x_serialize_implement(shyft::core::hbv_soil::state);
+x_serialize_implement(shyft::core::hbv_tank::state);
+x_serialize_implement(shyft::core::gamma_snow::state);
+x_serialize_implement(shyft::core::skaugen::state);
+x_serialize_implement(shyft::core::kirchner::state);
+
+x_serialize_implement(shyft::core::pt_gs_k::state);
+x_serialize_implement(shyft::core::pt_hs_k::state);
+x_serialize_implement(shyft::core::pt_ss_k::state);
+x_serialize_implement(shyft::core::hbv_stack::state);
 
 //
 // 4. Then include the archive supported
@@ -291,6 +423,9 @@ x_arch(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
 x_arch(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
 x_arch(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
 
+x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>>);
 x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>);
@@ -308,4 +443,17 @@ x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::generic_dt>);
 
 x_arch(shyft::core::geo_point);
 x_arch(shyft::core::land_type_fractions);
+x_arch(shyft::core::routing_info);
 x_arch(shyft::core::geo_cell_data);
+
+x_arch(shyft::core::hbv_snow::state);
+x_arch(shyft::core::hbv_soil::state);
+x_arch(shyft::core::hbv_tank::state);
+x_arch(shyft::core::gamma_snow::state);
+x_arch(shyft::core::skaugen::state);
+x_arch(shyft::core::kirchner::state);
+
+x_arch(shyft::core::pt_gs_k::state);
+x_arch(shyft::core::pt_hs_k::state);
+x_arch(shyft::core::pt_ss_k::state);
+x_arch(shyft::core::hbv_stack::state);

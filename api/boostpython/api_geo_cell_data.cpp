@@ -32,14 +32,16 @@ namespace expose {
                               "  land_type_fractions (unspecified=1)\n"
                               "  catchment_id   def (-1)\n"
                               "  radiation_slope_factor def 0.9\n"
+                              "  routing_info def(0,0.0), i.e. not routed and hydrological distance=0.0m\n"
         )
-        .def(init<geo_point,double,int,optional<double,const land_type_fractions&>>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions"),"constructs a GeoCellData with all parameters specified"))
+        .def(init<geo_point,double,int,optional<double,const land_type_fractions&,routing_info>>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions","routing_info"),"constructs a GeoCellData with all parameters specified"))
         .def("mid_point",&geo_cell_data::mid_point,"returns the mid_point",return_value_policy<copy_const_reference>())
         .def("catchment_id",&geo_cell_data::catchment_id,"returns the catchment_id")
         .def("set_catchment_id",&geo_cell_data::catchment_id,args("catchment_id"),"set the catchment_id")
         .def("radiation_slope_factor",&geo_cell_data::radiation_slope_factor,"radiation slope factor")
         .def("land_type_fractions_info",&geo_cell_data::land_type_fractions_info,"land_type_fractions",return_value_policy<copy_const_reference>())
         .def("set_land_type_fractions",&geo_cell_data::set_land_type_fractions,args("ltf"),"set new LandTypeFractions")
+        .def_readwrite("routing_info",&geo_cell_data::routing,"the routing information for the cell keep destination id and hydrological distance to destination")
         .def("area",&geo_cell_data::area,"returns the area in m^2")
         ;
     }

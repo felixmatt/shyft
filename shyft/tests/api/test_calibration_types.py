@@ -29,7 +29,7 @@ class ShyftApi(unittest.TestCase):
             self.assertEqual(valid_names[i],p_name)
 
     def test_pt_hs_k_param(self):
-        pthsk_size = 13
+        pthsk_size = 16
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
         self.assertEqual(pthsk.size(), pthsk_size)
@@ -53,12 +53,14 @@ class ShyftApi(unittest.TestCase):
                     "p_corr.scale_factor",
                     "pt.albedo",
                     "pt.alpha",
-                    "gm.dtf"
+                    "routing.velocity",
+                    "routing.alpha",
+                    "routing.beta"
 				]
         self.verify_parameter_for_calibration(pthsk, pthsk_size,valid_names)
 
     def test_hbv_stack_param(self):
-        hbv_size = 17
+        hbv_size = 20
         hbv = hbv_stack.HbvParameter()
         self.assertIsNotNone(hbv)
         self.assertEqual(hbv.size(), hbv_size)
@@ -79,12 +81,15 @@ class ShyftApi(unittest.TestCase):
         "p_corr.scale_factor",
         "pt.albedo",
         "pt.alpha",
-        "gm.dtf"
+        "gm.dtf",
+        "routing.velocity",
+        "routing.alpha",
+        "routing.beta"
         ]
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 25
+        ptgsk_size = 28
         valid_names = [
         "kirchner.c1",
         "kirchner.c2",
@@ -110,7 +115,10 @@ class ShyftApi(unittest.TestCase):
         "gs.initial_bare_ground_fraction",
         "gs.winter_end_day_of_year",
         "gs.calculate_iso_pot_energy",
-        "gm.dtf"
+        "gm.dtf",
+        "routing.velocity",
+        "routing.alpha",
+        "routing.beta"
         ]
         p=pt_gs_k.PTGSKParameter()
         self.verify_parameter_for_calibration(p, ptgsk_size,valid_names)
@@ -128,9 +136,16 @@ class ShyftApi(unittest.TestCase):
         pv[23]=0.0;
         p.set(pv)
         self.assertFalse(p.gs.calculate_iso_pot_energy)
+        # checkout new parameters for routing
+        p.routing.velocity = 1/3600.0
+        p.routing.alpha = 1.1
+        p.routing.beta = 0.8
+        self.assertAlmostEqual(p.routing.velocity, 1/3600.0)
+        self.assertAlmostEqual(p.routing.alpha, 1.1)
+        self.assertAlmostEqual(p.routing.beta, 0.8)
 
     def test_pt_ss_k_param(self):
-        ptssk_size = 16
+        ptssk_size = 19
         valid_names=[
             "kirchner.c1",
             "kirchner.c2",
@@ -147,7 +162,10 @@ class ShyftApi(unittest.TestCase):
             "p_corr.scale_factor",
             "pt.albedo",
             "pt.alpha",
-            "gm.dtf"
+            "gm.dtf",
+            "routing.velocity",
+            "routing.alpha",
+            "routing.beta"
         ]
         self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size,valid_names)
 
@@ -217,6 +235,7 @@ class ShyftApi(unittest.TestCase):
         t.scale_factor = 1.0
         t.calc_mode = api.NASH_SUTCLIFFE
         t.calc_mode = api.KLING_GUPTA
+        t.calc_mode = api.ABS_DIFF
         t.s_r = 1.0  # KGEs scale-factors
         t.s_a = 2.0
         t.s_b = 3.0
@@ -252,6 +271,8 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(t2.uid,'test_uid')
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
+        t2.catchment_property = api.CELL_CHARGE
+        self.assertEqual(t2.catchment_property, api.CELL_CHARGE)
         self.assertIsNotNone(t2.catchment_indexes)
         for i in range(len(cids)):
             self.assertEqual(cids[i], t2.catchment_indexes[i])

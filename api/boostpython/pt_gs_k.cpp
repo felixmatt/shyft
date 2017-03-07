@@ -32,7 +32,7 @@ namespace expose {
                               "Contains the parameters to the methods used in the PTGSK assembly\n"
                               "priestley_taylor,gamma_snow,actual_evapotranspiration,precipitation_correction,kirchner\n"
                 )
-                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter, optional<glacier_melt::parameter>>(args("pt","gs","ae","k","p_corr","gm"),"create object with specified parameters"))
+                .def(init<priestley_taylor::parameter,gamma_snow::parameter,actual_evapotranspiration::parameter,kirchner::parameter,precipitation_correction::parameter, optional<glacier_melt::parameter,routing::uhg_parameter>>(args("pt","gs","ae","k","p_corr","gm","routing"),"create object with specified parameters"))
                 .def(init<const parameter&>(args("p"),"clone a parameter"))
                 .def_readwrite("pt",&parameter::pt,"priestley_taylor parameter")
                 .def_readwrite("gs",&parameter::gs,"gamma-snow parameter")
@@ -40,6 +40,7 @@ namespace expose {
 				.def_readwrite("ae",&parameter::ae,"actual evapotranspiration parameter")
                 .def_readwrite("kirchner",&parameter::kirchner,"kirchner parameter")
                 .def_readwrite("p_corr",&parameter::p_corr,"precipitation correction parameter")
+                .def_readwrite("routing",&parameter::routing,"routing cell-to-river catchment specific parameters")
                 .def("size",&parameter::size,"returns total number of calibration parameters")
                 .def("set",&parameter::set,args("p"),"set parameters from vector/list of float, ordered as by get_name(i)")
                 .def("get",&parameter::get,args("i"),"return the value of the i'th parameter, name given by .get_name(i)")
@@ -127,6 +128,8 @@ namespace expose {
               expose::statistics::actual_evapotranspiration<PTGSKCellAll>("PTGSKCell");
               expose::statistics::priestley_taylor<PTGSKCellAll>("PTGSKCell");
               expose::statistics::kirchner<PTGSKCellAll>("PTGSKCell");
+              expose::cell_state_etc<PTGSKCellAll>("PTGSK");// just one expose of state
+
         }
 
         static void
@@ -135,6 +138,8 @@ namespace expose {
             typedef shyft::core::region_model<pt_gs_k::cell_complete_response_t, shyft::api::a_region_environment> PTGSKModel;
             expose::model<PTGSKModel>("PTGSKModel","PTGSK");
             expose::model<PTGSKOptModel>("PTGSKOptModel","PTGSK");
+            def_clone_to_similar_model<PTGSKModel, PTGSKOptModel>("create_opt_model_clone");
+            def_clone_to_similar_model<PTGSKOptModel,PTGSKModel>("create_full_model_clone");
         }
 
         static void
@@ -147,7 +152,6 @@ namespace expose {
         model_calibrator() {
             expose::model_calibrator<shyft::core::region_model<pt_gs_k::cell_discharge_response_t,shyft::api::a_region_environment>>("PTGSKOptimizer");
         }
-
     }
 }
 
