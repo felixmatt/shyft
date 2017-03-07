@@ -38,7 +38,10 @@ namespace expose {
                      doc_parameters()
                      doc_parameter("t","int","utctime in seconds 1970.01.01")
                      doc_returns("index","int","the index the time-axis period that contains t, -1 if before first period n-1, if t is after last period")
-                );
+                )
+                .def(self == self)
+                .def(self != self)
+                    ;
 
         }
 
@@ -79,7 +82,7 @@ namespace expose {
                     doc_intro("or calendar-specific periods like day,week,month,quarters or years.")
                     doc_see_also("TimeAxisFixedDeltaT,TimeAxisByPoints,TimeAxis")
                 )
-                .def(init<shared_ptr<const calendar>,utctime,utctimespan,long>(
+                .def(init<shared_ptr<calendar>const&,utctime,utctimespan,long>(
                         args("calendar","start","delta_t","n"),
                         doc_intro("creates a calendar time-axis")
                         doc_parameters()
@@ -92,7 +95,7 @@ namespace expose {
                 .def_readonly("n",&calendar_dt::n,"int,number of periods")
                 .def_readonly("start",&calendar_dt::t,"start of the time-axis, in seconds since 1970.01.01 UTC")
                 .def_readonly("delta_t",&calendar_dt::dt,"int,timespan of each interval,use Calendar.DAY|.WEEK|.MONTH|.QUARTER|.YEAR, or seconds")
-                .def_readonly("calendar",&calendar_dt::cal,"Calendar, the calendar of the time-axis")
+                .add_property("calendar",&calendar_dt::get_calendar,"Calendar, the calendar of the time-axis")
                 ;
             e_time_axis_std<calendar_dt>(c_dt);
         }
@@ -127,6 +130,15 @@ namespace expose {
                 e_time_axis_std<point_dt>(p_dt);
         }
 
+        static std::vector<utctime> time_axis_extract_time_points(shyft::time_axis::generic_dt const&ta) {
+            std::vector<utctime> r;r.reserve(ta.size() + 1);
+            for (size_t i = 0;i < ta.size();++i) {
+                r.emplace_back(ta.time(i));
+            }
+            if (ta.size())
+                r.emplace_back(ta.total_period().end);
+            return r;
+        }
 
         static void e_generic_dt() {
             using namespace shyft::time_axis;
@@ -206,6 +218,12 @@ namespace expose {
                 ;//.def("full_range",&point_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
                 //.def("null_range",&point_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
             e_time_axis_std<generic_dt>(g_dt);
+            def("time_axis_extract_time_points", time_axis_extract_time_points, args("time_axis"),
+                doc_intro("Extract all time_axis.period(i).start plus time_axis.total_period().end into a UtcTimeVector")
+                doc_parameters()
+                doc_parameter("time_axis","TimeAxis","time-axis to extract all time-points from")
+                doc_returns("time_points","UtcTimeVector","all time_axis.period(i).start plus time_axis.total_period().end")
+            );
         }
 
     }

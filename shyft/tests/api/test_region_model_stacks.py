@@ -104,6 +104,8 @@ class RegionModel(unittest.TestCase):
         model = self.build_model(model_type, pt_ss_k.PTSSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         self.verify_state_handler(model)
+        self.assertIsNotNone(model.skaugen_snow_response)
+        self.assertIsNotNone(model.skaugen_snow_state)
 
     def test_pt_hs_k_model_init(self):
         num_cells = 20
@@ -205,6 +207,8 @@ class RegionModel(unittest.TestCase):
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
+        sum_charge = model.statistics.charge(cids)
+        sum_charge_value=model.statistics.charge_value(cids, 0)
         opt_model.run_cells()  # starting out with the same state, same interpolated values, and region-parameters, we should get same results
         sum_discharge_opt_value= opt_model.statistics.discharge_value(cids, 0)
         self.assertAlmostEqual(sum_discharge_opt_value,sum_discharge_value,3)  # verify the opt_model clone gives same value

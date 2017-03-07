@@ -1,10 +1,10 @@
 #include "test_pch.h"
-#include "bayesian_kriging_test.h"
 #include "mocks.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
 #include "core/timeseries.h"
 #include "core/geo_point.h"
+
 
 using namespace std;
 namespace shyfttest {
@@ -155,8 +155,8 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 	}
 }
 using namespace shyft::core::bayesian_kriging;
-
-void bayesian_kriging_test::test_covariance_calculation() {
+TEST_SUITE("bayesian_kriging");
+TEST_CASE("test_covariance_calculation") {
 	Parameter params;
 
 	const arma::uword n = 100;
@@ -195,7 +195,7 @@ void bayesian_kriging_test::test_covariance_calculation() {
 	}
 }
 
-void bayesian_kriging_test::test_build_covariance_matrices() {
+TEST_CASE("test_build_covariance_matrices") {
 	Parameter params;
 	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
@@ -222,7 +222,7 @@ void bayesian_kriging_test::test_build_covariance_matrices() {
 	TS_ASSERT_EQUALS(k.n_cols, (size_t)15 * 15);
 }
 
-void bayesian_kriging_test::test_build_elevation_matrices() {
+TEST_CASE("test_build_elevation_matrices") {
 	Parameter params;
 	const point_timeaxis time_axis(ctimes);
 	SourceList sources;
@@ -236,7 +236,7 @@ void bayesian_kriging_test::test_build_elevation_matrices() {
 	TS_ASSERT_EQUALS(D_e.n_rows, (size_t)2);
 }
 
-void bayesian_kriging_test::test_interpolation() {
+TEST_CASE("test_interpolation") {
 	Parameter params;
 	SourceList sources;
 	DestinationList destinations;
@@ -271,7 +271,7 @@ void bayesian_kriging_test::test_interpolation() {
 	}
 }
 
-void bayesian_kriging_test::test_performance() {
+TEST_CASE("test_performance") {
     Parameter params;
     SourceList sources;
     DestinationList destinations;
@@ -306,3 +306,4 @@ void bayesian_kriging_test::test_performance() {
         }
     }
 }
+TEST_SUITE_END();

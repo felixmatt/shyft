@@ -235,6 +235,7 @@ class ShyftApi(unittest.TestCase):
         t.scale_factor = 1.0
         t.calc_mode = api.NASH_SUTCLIFFE
         t.calc_mode = api.KLING_GUPTA
+        t.calc_mode = api.ABS_DIFF
         t.s_r = 1.0  # KGEs scale-factors
         t.s_a = 2.0
         t.s_b = 3.0
@@ -270,6 +271,8 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(t2.uid,'test_uid')
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
+        t2.catchment_property = api.CELL_CHARGE
+        self.assertEqual(t2.catchment_property, api.CELL_CHARGE)
         self.assertIsNotNone(t2.catchment_indexes)
         for i in range(len(cids)):
             self.assertEqual(cids[i], t2.catchment_indexes[i])

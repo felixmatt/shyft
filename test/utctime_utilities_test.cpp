@@ -1,11 +1,13 @@
 #include "test_pch.h"
 #include "core/utctime_utilities.h"
-#include "utctime_utilities_test.h"
+
 using namespace std;
 using namespace shyft;
 using namespace shyft::core;
 
-void utctime_utilities_test::test_utctime() {
+TEST_SUITE("utctime_utilities");
+
+TEST_CASE("test_utctime") {
     calendar c(0);
     YMDhms unixEra(1970,01,01,00,00,00);
     YMDhms y_null;
@@ -19,7 +21,7 @@ void utctime_utilities_test::test_utctime() {
     YMDhms r=c.calendar_units(utctime(0L));
     TS_ASSERT_EQUALS(r,unixEra);
 }
-void utctime_utilities_test::test_utcperiod() {
+TEST_CASE("test_utcperiod") {
     calendar utc;
     utctime t0=utc.time(2015,1,1);
     utctime t1=utc.time(2015,2,1);
@@ -42,7 +44,7 @@ void utctime_utilities_test::test_utcperiod() {
 
 
 }
-void utctime_utilities_test::test_calendar_trim() {
+TEST_CASE("test_calendar_trim") {
     // simple trim test
     calendar cet(deltahours(1));
     utctime t=cet.time(YMDhms(2012,3,8,12,16,44));
@@ -61,13 +63,13 @@ void utctime_utilities_test::test_calendar_trim() {
 }
 
 
-void utctime_utilities_test::test_calendar_timezone() {
+TEST_CASE("test_calendar_timezone") {
     YMDhms unixEra(1970,01,01,00,00,00);
     calendar cet(deltahours(1));
     TS_ASSERT_EQUALS(deltahours(-1),cet.time(unixEra));
 }
 
-void utctime_utilities_test::test_calendar_to_string() {
+TEST_CASE("test_calendar_to_string") {
     calendar utc;
     calendar osl(deltahours(1));
     calendar cet("Europe/Oslo");
@@ -79,15 +81,15 @@ void utctime_utilities_test::test_calendar_to_string() {
     TS_ASSERT_EQUALS(xxx.to_string(t),string("2012-05-08T09:46:44-02:30"));
 }
 
-void utctime_utilities_test::test_calendar_day_of_year() {
+TEST_CASE("test_calendar_day_of_year") {
     calendar cet(deltahours(1));
-    TS_ASSERT_EQUALS(1,cet.day_of_year(cet.time(YMDhms(2012,1,1,10,11,12))));
-    TS_ASSERT_EQUALS(2,cet.day_of_year(cet.time(YMDhms(2012,1,2,0,0,0))));
-    TS_ASSERT_EQUALS(366,cet.day_of_year(cet.time(YMDhms(2012,12,31,12,0,0))));
+    TS_ASSERT_EQUALS(1u,cet.day_of_year(cet.time(YMDhms(2012,1,1,10,11,12))));
+    TS_ASSERT_EQUALS(2u,cet.day_of_year(cet.time(YMDhms(2012,1,2,0,0,0))));
+    TS_ASSERT_EQUALS(366u,cet.day_of_year(cet.time(YMDhms(2012,12,31,12,0,0))));
 
 
 }
-void utctime_utilities_test::test_calendar_month() {
+TEST_CASE("test_calendar_month") {
     calendar cet(deltahours(1));
     TS_ASSERT_EQUALS( 1,cet.month(cet.time(YMDhms(2012,1,1,10,11,12))));
     TS_ASSERT_EQUALS( 2,cet.month(cet.time(YMDhms(2012,2,2,0,0,0))));
@@ -95,7 +97,7 @@ void utctime_utilities_test::test_calendar_month() {
 
 }
 
-void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
+TEST_CASE("test_YMDhms_reasonable_calendar_coordinates") {
 	TS_ASSERT_THROWS_ANYTHING(YMDhms(10000, 1, 1, 0, 0, 0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(-10000,1,1,0,0,0));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,0,1,0,0,0));
@@ -109,7 +111,24 @@ void utctime_utilities_test::test_YMDhms_reasonable_calendar_coordinates() {
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,-1));
     TS_ASSERT_THROWS_ANYTHING(YMDhms(2000,1,1,0,0,60));
 }
-void utctime_utilities_test::test_calendar_add_and_diff_units() {
+
+TEST_CASE("test_YWdhms_reasonable_calendar_coordinates") {
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(10000, 1, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(-10000, 1, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 0, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 55, 1, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 0, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 8, 0, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, -1, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 24, 0, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, -1, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 60, 0));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 0, -1));
+    TS_ASSERT_THROWS_ANYTHING(YWdhms(2000, 1, 1, 0, 0, 60));
+}
+
+
+TEST_CASE("test_calendar_add_and_diff_units") {
 	calendar cet(deltahours(1));
 	int n_units = 3;
 	utctimespan dts[] = { calendar::HOUR, calendar::DAY, calendar::WEEK, calendar::MONTH,calendar::YEAR };
@@ -123,14 +142,14 @@ void utctime_utilities_test::test_calendar_add_and_diff_units() {
 		TS_ASSERT_EQUALS(t3, t1);// verify subtraction gives back original result
 	}
 }
-void utctime_utilities_test::test_calendar_day_of_week() {
+TEST_CASE("test_calendar_day_of_week") {
 	calendar cet(deltahours(1));
 	for (int i = 0; i < 7;++i)
 		TS_ASSERT_EQUALS(i, cet.day_of_week(cet.time(YMDhms(2015, 8, 9+i, 10, 11, 12))));
 
 }
 
-void utctime_utilities_test::test_tz_info_db() {
+TEST_CASE("test_tz_info_db") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -152,9 +171,10 @@ void utctime_utilities_test::test_tz_info_db() {
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016, 3,27, 1, 0, 0))),true); // exactly at shift into summer
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016,10,30, 0,59,59))),true); // second before..
     TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(YMDhms(2016,10,30, 1, 0, 0))),false);// exactly at shift into winter
+    TS_ASSERT_EQUALS(eu_osl_iso->is_dst(utc.time(2040, 7, 1)), true);// make sure overflow in posix total_seconds() is away
 
 }
-void utctime_utilities_test::test_add_over_dst_transitions() {
+TEST_CASE("test_add_over_dst_transitions") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -181,7 +201,7 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
     TS_ASSERT_EQUALS(t1_2,t0+deltahours(1));
     TS_ASSERT_EQUALS(YMDhms(2016,3,27,1),cet.calendar_units(t1_2));
     TS_ASSERT_EQUALS(t1_3,t0+deltahours(2));
-	TS_ASSERT_EQUALS(1,cet.diff_units(t0,t1_3,deltahours(3)))
+    TS_ASSERT_EQUALS(1, cet.diff_units(t0, t1_3, deltahours(3)));
     /// case 2: 25 hour, summer->winter
     t0 = cet.time(YMDhms(2016,10,30));
     t1 = cet.add(t0,calendar::DAY,1);
@@ -207,7 +227,7 @@ void utctime_utilities_test::test_add_over_dst_transitions() {
 
 }
 
-void utctime_utilities_test::test_calendar_trim_with_dst() {
+TEST_CASE("test_calendar_trim_with_dst") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -233,7 +253,7 @@ void utctime_utilities_test::test_calendar_trim_with_dst() {
 
 
 }
-void utctime_utilities_test::test_add_months() {
+TEST_CASE("test_add_months") {
     using namespace shyft::core;
     using namespace shyft::core::time_zone;
     tz_info_database tz_info_db;
@@ -272,5 +292,76 @@ void utctime_utilities_test::test_add_months() {
             }
         }
     }
-
 }
+TEST_CASE("calendar_quarter") {
+    using calendar = shyft::core::calendar;
+    calendar c("Europe/Oslo");
+    int mq[12] = { 1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10 };
+    int qm[12] = {1,1,1,2,2,2,3,3,3,4,4,4};
+    SUBCASE("trim_and_quarter") {
+        for (int m = 1;m <= 12;++m) {
+            auto t = c.time(2017, m, 3, 10, 30, 22);
+            FAST_CHECK_EQ(c.trim(t, calendar::QUARTER), c.time(2017, mq[m - 1], 1));
+            FAST_CHECK_EQ(c.quarter(t), qm[m - 1]);
+        }
+    }
+    SUBCASE("add_diff_units") {
+        for (int m = 1;m <= 12;++m) {
+            for (int n = -10;n <= 10;++n) {
+                auto t = c.time(2016, m, 3, 4, 5, 6);// pick a time
+                auto tn = c.add(t, calendar::QUARTER, n);// add n quarters
+                auto tr = c.add(tn, calendar::QUARTER, -n);// add neg. num, expect to get back
+                auto nc = c.diff_units(t, tn, calendar::QUARTER);// verify it can calc. correctly
+                FAST_CHECK_EQ(nc, n);
+                FAST_CHECK_EQ(t, tr);
+            }
+        }
+    }
+}
+
+TEST_CASE("calendar_iso_week") {
+    using YWdhms = shyft::core::YWdhms;
+    shyft::core::calendar c("Europe/Oslo");
+    auto t = c.time(2017, 1, 9,1,2,3);
+    SUBCASE("calendar_week_units") {
+        FAST_CHECK_EQ(c.calendar_week_units(t), YWdhms(2017, 2, 1, 1, 2, 3));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2017, 1, 8, 23, 59, 59)), YWdhms(2017, 1, 7, 23, 59, 59));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2017, 12, 31, 23, 59, 59)), YWdhms(2017, 52, 7, 23, 59, 59));
+        auto y2015w53 = c.calendar_week_units(c.time(2016, 1, 3, 23, 59, 59));
+        FAST_CHECK_EQ(y2015w53, YWdhms(2015, 53, 7, 23, 59, 59));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(2015, 12, 29, 1, 2, 3)), YWdhms(2015, 53, 2, 1, 2, 3));
+        auto y2015w1 = c.calendar_week_units(c.time(2015, 1, 1, 0, 0, 0));
+        FAST_CHECK_EQ(y2015w1, YWdhms(2015, 1, 4, 0, 0, 0));
+        for (int d = 0;d < 3;++d)
+            FAST_CHECK_EQ(c.calendar_week_units(c.time(2014, 12, 29 + d, 0, 0, 0)), YWdhms(2015, 1, 1 + d, 0, 0, 0));
+        for (int d = 0;d < 4;++d)
+            FAST_CHECK_EQ(c.calendar_week_units(c.time(2015, 1, 1 + d, 0, 0, 0)), YWdhms(2015, 1, 4 + d, 0, 0, 0));
+        FAST_CHECK_EQ(c.calendar_week_units(c.time(1963, 3, 21, 10, 30, 0)), YWdhms(1963, 12, 4, 10, 30, 0));
+    }
+    SUBCASE("trim_week") {
+        for (int d = 2;d < 9;++d) // just to test trim
+            FAST_CHECK_EQ(c.trim(c.time(2017, 1, d, 3, 40, 50), calendar::WEEK), c.time(2017, 1, 2, 0, 0, 0));
+        for(int d =7;d<14;++d)
+            FAST_CHECK_EQ(c.trim(c.time(1963, 1, d, 3, 40, 50), calendar::WEEK), c.time(1963, 1, 7, 0, 0, 0));
+    }
+    SUBCASE("calendar.time(iso_week)") {
+        FAST_CHECK_EQ(c.time_from_week(2017, 1, 1), c.time(2017, 1, 2));
+        FAST_CHECK_EQ(c.time_from_week(2017, 12, 7,4,30,15), c.time(2017, 3,26,4,30,15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 12, 7, 1, 30, 15), c.time(2017, 3, 26, 1, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 43, 7, 1, 30, 15), c.time(2017,10, 29, 1, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(2017, 43, 7, 4, 30, 15), c.time(2017, 10, 29, 4, 30, 15));
+        FAST_CHECK_EQ(c.time_from_week(1963, 16, 1), c.time(1963, 4, 15));
+
+        FAST_CHECK_EQ(t, c.time(YWdhms(2017, 2, 1, 1, 2, 3)));
+        FAST_CHECK_EQ(c.time(2017, 1, 8, 23, 59, 59),c.time( YWdhms(2017, 1, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2017, 12, 31, 23, 59, 59),c.time(YWdhms(2017, 52, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2016, 1, 3, 23, 59, 59), c.time(YWdhms(2015, 53, 7, 23, 59, 59)));
+        FAST_CHECK_EQ(c.time(2015, 12, 29, 1, 2, 3), c.time(YWdhms(2015, 53, 2, 1, 2, 3)));
+        FAST_CHECK_EQ(c.time(2015, 1, 1, 0, 0, 0), c.time(YWdhms(2015, 1, 4, 0, 0, 0)));
+        for (int d = 0;d < 3;++d)
+            FAST_CHECK_EQ(c.time(2014, 12, 29 + d, 0, 0, 0), c.time(YWdhms(2015, 1, 1 + d, 0, 0, 0)));
+        for (int d = 0;d < 4;++d)
+            FAST_CHECK_EQ(c.time(2015, 1, 1 + d, 0, 0, 0), c.time(YWdhms(2015, 1, 4 + d, 0, 0, 0)));
+    }
+}
+TEST_SUITE_END();

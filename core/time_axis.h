@@ -103,13 +103,13 @@ namespace shyft {
          */
         struct calendar_dt :continuous<true> {
             static constexpr utctimespan dt_h = 3600;
-            shared_ptr<const calendar> cal;
+            shared_ptr<calendar> cal;
             utctime t;
             utctimespan dt;
             size_t n;
-
+            shared_ptr<calendar> get_calendar() const { return cal; }
             calendar_dt() : t( no_utctime ), dt( 0 ), n( 0 ) {}
-            calendar_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : cal( cal ), t( t ), dt( dt ), n( n ) {}
+            calendar_dt( const shared_ptr< calendar>& cal, utctime t, utctimespan dt, size_t n ) : cal( cal ), t( t ), dt( dt ), n( n ) {}
             calendar_dt(const calendar_dt&c):cal(c.cal),t(c.t),dt(c.dt),n(c.n) {}
             calendar_dt(calendar_dt &&c):cal(std::move(c.cal)),t(c.t),dt(c.dt),n(c.n){}
             calendar_dt& operator=(calendar_dt&&c) {
@@ -291,7 +291,7 @@ namespace shyft {
             generic_dt(): gt( FIXED ) {}
             // provide convinience constructors, to directly create the wanted time-axis, regardless underlying rep.
             generic_dt( utctime t0,utctimespan dt,size_t n):gt(FIXED),f(t0,dt,n) {}
-            generic_dt( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
+            generic_dt( const shared_ptr<calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
             generic_dt( const vector<utctime>& t, utctime t_end ):gt(POINT),p(t,t_end) {}
             generic_dt( const vector<utctime>& all_points):gt(POINT),p(all_points){}
             // --
@@ -383,7 +383,7 @@ namespace shyft {
             calendar_dt cta;
             vector<utcperiod> p;// sub-periods within each cta.period, using cta.period.start as t0
             calendar_dt_p(){}
-            calendar_dt_p( const shared_ptr<const calendar>& cal, utctime t, utctimespan dt, size_t n, vector<utcperiod> p )
+            calendar_dt_p( const shared_ptr< calendar>& cal, utctime t, utctimespan dt, size_t n, vector<utcperiod> p )
                 : cta( cal, t, dt, n ), p( move( p ) ) {
                 // TODO: validate p, each p[i] non-overlapping and within ~ dt
                 // possibly throw if invalid period, but

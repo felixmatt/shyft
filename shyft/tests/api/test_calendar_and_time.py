@@ -39,32 +39,31 @@ class Calendar(unittest.TestCase):
         self.assertEqual(7, osl.diff_units(t0, t1, api.Calendar.DAY))
         self.assertEqual(1, osl.diff_units(t0, t1, api.Calendar.WEEK))
         self.assertEqual(0, osl.diff_units(t0, t1, api.Calendar.MONTH))
-        self.assertEqual(7*24, osl.diff_units(t0, t1, api.deltahours(1)))
+        self.assertEqual(7 * 24, osl.diff_units(t0, t1, api.deltahours(1)))
 
     def test_calendar_add_during_dst(self):
         osl = api.Calendar("Europe/Oslo")
         t0 = osl.time(2016, 3, 27)  # dst change during spring
-        t1 = osl.add(t0, api.Calendar.DAY,  1)
+        t1 = osl.add(t0, api.Calendar.DAY, 1)
         t2 = osl.add(t1, api.Calendar.DAY, -1)
         self.assertEqual(t0, t2)
         self.assertEqual("2016-03-28T00:00:00+02", osl.to_string(t1))
         self.assertEqual(1, osl.diff_units(t0, t1, api.Calendar.DAY))
         self.assertEqual(23, osl.diff_units(t0, t1, api.Calendar.HOUR))
         t0 = osl.time(2016, 10, 30)
-        t1 = osl.add(t0, api.Calendar.WEEK,  1)
+        t1 = osl.add(t0, api.Calendar.WEEK, 1)
         t2 = osl.add(t1, api.Calendar.WEEK, -1)
         self.assertEqual(t0, t2)
         self.assertEqual("2016-11-06T00:00:00+01", osl.to_string(t1))
-        self.assertEqual(168+1, osl.diff_units(t0, t1, api.Calendar.HOUR))
+        self.assertEqual(168 + 1, osl.diff_units(t0, t1, api.Calendar.HOUR))
 
     def test_calendar_add_3h_during_dst(self):
         osl = api.Calendar("Europe/Oslo")
         t0 = osl.time(2016, 3, 27)  # dst change during spring
-        t1 = osl.add(t0, api.Calendar.DAY,  1)
-        dt3h=api.deltahours(3)
-        d3h= osl.diff_units(t0,t1,dt3h)
+        t1 = osl.add(t0, api.Calendar.DAY, 1)
+        dt3h = api.deltahours(3)
+        d3h = osl.diff_units(t0, t1, dt3h)
         self.assertEqual(8, d3h)
-
 
     def test_trim_day(self):
         t = api.utctime_now()
@@ -78,10 +77,27 @@ class Calendar(unittest.TestCase):
         self.assertEqual(a.month, c.month, 'trim day  Should leave month')
         self.assertEqual(a.day, c.day, 'should leave same day')
 
+    def test_quarter(self):
+        t = self.std.time(2017, 2, 28, 1, 2, 3)
+        tt = self.std.trim(t,api.Calendar.QUARTER)
+        self.assertEqual(tt,self.std.time(2017, 1, 1))
+        self.assertEqual(1,self.std.quarter(t))
+
     def test_conversion_roundtrip(self):
         c1 = api.YMDhms(1960, 1, 2, 3, 4, 5)
         t1 = self.std.time(c1)
         c2 = self.std.calendar_units(t1)
+        cw = self.std.calendar_week_units(t1)
+        tw2 = self.std.time_from_week(1959, 53, 6, 3, 4, 5)
+        tw1 = self.std.time(cw)
+        self.assertEqual(tw2, t1)
+        self.assertEqual(tw1, t1)
+        self.assertEqual(cw.iso_year, 1959)
+        self.assertEqual(cw.iso_week, 53)
+        self.assertEqual(cw.week_day, 6)
+        self.assertEqual(cw.hour, 3)
+        self.assertEqual(cw.minute, 4)
+        self.assertEqual(cw.second, 5)
         self.assertEqual(c1.year, c2.year, 'roundtrip should keep year')
         self.assertEqual(c1.month, c2.month)
         self.assertEqual(c1.day, c2.day)

@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "serialization_test.h"
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
@@ -66,8 +65,8 @@ static bool is_equal(const Ts& a,const Ts &b) {
     return true;
 }
 
-
-void serialization_test::test_serialization() {
+TEST_SUITE("serialization");
+TEST_CASE("test_serialization") {
     // testing serialization in the order of appearance/dependency
 
     //
@@ -218,7 +217,7 @@ void serialization_test::test_serialization() {
 
 
 
-void serialization_test::test_api_ts_ref_binding() {
+TEST_CASE("test_api_ts_ref_binding") {
 
     calendar utc;
     time_axis::generic_dt ta(utc.time(2016,1,1),deltahours(1),24);
@@ -233,14 +232,8 @@ void serialization_test::test_api_ts_ref_binding() {
 
     auto xmls_unbound = f.serialize();
 
-    TS_ASSERT_EQUALS(tsr.size(),2);
-    try {
-        f.value(0);
-        TS_FAIL("Expected runtine_error here");
-
-    } catch (const runtime_error&) {
-        ;//OK!
-    }
+    TS_ASSERT_EQUALS(tsr.size(),2u);
+    CHECK_THROWS_AS(f.value(0), runtime_error);
     // -now bind the variables
     api::apoint_ts b_c(ta,5.0);
     api::apoint_ts b_d(ta,3.0);
@@ -273,7 +266,7 @@ void serialization_test::test_api_ts_ref_binding() {
     TS_ASSERT_DELTA(f.value(0), a_f.value(0), 1e-9);
 }
 
-void serialization_test::test_serialization_performance() {
+TEST_CASE("test_serialization_performance") {
     bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
     //
     // 1. create one large ts, do loop it.
@@ -397,7 +390,7 @@ api::apoint_ts mk_expression(int kb=1000) {
     return a;
 }
 
-void serialization_test::test_dlib_server() {
+TEST_CASE("test_dlib_server") {
    try
     {
         shyft_server our_server;
@@ -428,3 +421,5 @@ void serialization_test::test_dlib_server() {
         cout << e.what() << endl;
     }
 }
+
+TEST_SUITE_END();

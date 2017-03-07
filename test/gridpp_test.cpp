@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "gridpp_test.h"
 #include "mocks.h"
 #include "core/region_model.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
@@ -27,8 +26,8 @@ namespace shyfttest {
 
 #define TS0_EQUAL(ts, v) fabs(ts.value(0) - (v)) < 1e-9
 }
-
-void gridpp_test::test_sih_workbench() {
+TEST_SUITE("gridpp");
+TEST_CASE("test_sih_workbench") {
     // from region_model::run_interpolation, we copy some typedefs to setup
     // a realistic IDW run
     // Triple AAA:
@@ -113,7 +112,7 @@ void gridpp_test::test_sih_workbench() {
             for(size_t i=0;i<ta.size();++i) {
                 double value_at_cell = cell_1km_grid[y*n1+x].ts.v[i];
                 TS_ASSERT_LESS_THAN(value_at_cell,-10.0);// since bias is -31.0, we get a range
-                TS_ASSERT( value_at_cell > -31.0);// -31..-10 approx.
+                TS_ASSERT_LESS_THAN( -31.0, value_at_cell );// -31..-10 approx.
                 //ok, we could compute the expected value more accurate
                 // but after all, it's based upon already tested functions
             }
@@ -121,7 +120,7 @@ void gridpp_test::test_sih_workbench() {
 
 }
 
-void gridpp_test::test_interpolate_sources_should_populate_grids() {
+TEST_CASE("test_interpolate_sources_should_populate_grids") {
 
     calendar utc;
 	utctime Tstart = utc.time(2000, 1, 1);
@@ -145,7 +144,7 @@ void gridpp_test::test_interpolate_sources_should_populate_grids() {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [](const MCell& d) {return d.v > 0; }), ngs*ngs);
 }
 
-void gridpp_test::test_main_workflow_should_populate_grids() {
+TEST_CASE("test_main_workflow_should_populate_grids") {
 	// The main workflow for offset-bias is
 	// T_forecast_1x1 = IDW(T_arome_2.5x2.5, 1x1, idw-parameters) + T_bias
 	// Do the same correction for scaled-bias variables
@@ -192,7 +191,7 @@ void gridpp_test::test_main_workflow_should_populate_grids() {
 	TS_ASSERT_EQUALS(count_if(temp_grid.begin(), temp_grid.end(), [=](auto& a) {return TS0_EQUAL(a, temp + bias); }), ngx * ngy);
 }
 
-void gridpp_test::test_calc_bias_should_match_observations() {
+TEST_CASE("test_calc_bias_should_match_observations") {
 	// Timeaxis
 	calendar utc;
 	utctime t0 = utc.time(2000, 1, 1);
@@ -246,3 +245,4 @@ void gridpp_test::test_calc_bias_should_match_observations() {
 	for (auto it_obs = obs_set.begin(), it_fc = fc_set.begin(); it_obs != obs_set.end() || it_fc != fc_set.end(); ++it_obs, ++it_fc)
 		TS_ASSERT_LESS_THAN(fabs((*it_obs).value(0) - (*it_fc).value(0)), 1e-2);
 }
+TEST_SUITE_END();

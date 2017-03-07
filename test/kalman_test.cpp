@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "kalman_test.h"
 #include "mocks.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
 #include "api/timeseries.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
@@ -50,8 +49,8 @@ namespace shyfttest {
         }
     }
 }
-
-void kalman_test::test_filter() {
+TEST_SUITE("kalman");
+TEST_CASE("test_filter") {
     using namespace shyfttest;
     // prepare the time-dimension, using time-axis
     calendar utc;
@@ -91,7 +90,7 @@ void kalman_test::test_filter() {
         TS_ASSERT_DELTA(s_last_known.x(i),s.x(i),0.01);
 }
 
-void kalman_test::test_bias_predictor() {
+TEST_CASE("test_bias_predictor") {
     using namespace shyfttest;
     using namespace std;
     using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
@@ -130,7 +129,7 @@ void kalman_test::test_bias_predictor() {
     }
 }
 
-void kalman_test::test_running_predictor() {
+TEST_CASE("test_running_predictor") {
     using namespace shyfttest;
     using namespace std;
     using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
@@ -163,3 +162,4 @@ void kalman_test::test_running_predictor() {
         TS_ASSERT_DELTA(fx.bias_offset(t),bias_ts.value(i),0.2);// at the end it should have a quite correct pattern
     }
 }
+TEST_SUITE_END();

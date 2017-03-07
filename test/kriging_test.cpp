@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "kriging_test.h"
 #include "core/kriging.h"
 #include "core/timeseries.h"
 #include "core/geo_point.h"
@@ -28,8 +27,8 @@ using namespace shyft::core;
 using namespace std;
 using namespace shyfttest;
 using int_t=arma::uword;
-
-void kriging_test::test_covariance_calculation() {
+TEST_SUITE("kriging");
+TEST_CASE("test_covariance_calculation") {
     kriging::covariance::exponential e(1.0,1000.0);
     kriging::covariance::gaussian g(1.0,1000.0);
     TS_ASSERT_DELTA(e(0.0), 1.0,0.00001);
@@ -39,7 +38,7 @@ void kriging_test::test_covariance_calculation() {
 
 }
 
-void kriging_test::test_build_covariance_obs_to_obs_matrix() {
+TEST_CASE("test_build_covariance_obs_to_obs_matrix") {
 
     /* verify covariance::build observation vs observation produces the correct matrix */
     vector<location> s;
@@ -69,7 +68,7 @@ void kriging_test::test_build_covariance_obs_to_obs_matrix() {
     //std::cout << "\n" << c << endl;
     //std::cout << "\nc.inv()\n" << c.i() << endl;
 }
-void kriging_test::test_build_covariance_obs_to_grid_matrix() {
+TEST_CASE("test_build_covariance_obs_to_grid_matrix") {
 
     vector<location> s;
     s.push_back(location{ geo_point(1,   0,  0),10.0 });
@@ -89,7 +88,7 @@ void kriging_test::test_build_covariance_obs_to_grid_matrix() {
     //std::cout << "\n" << c << endl;
 }
 
-void kriging_test::test_interpolation() {
+TEST_CASE("test_interpolation") {
         /* numbers and coordinates are taken from met.no/gridpp  10x10 netcdf file */
         vector<double> x = { -487442.2 ,-484942.2,	 -482442.2,	-479942.2,	-477442.2,	-474942.2,	-472442.2,	-469942.2,	-467442.2,	-464942.2 };
         vector<double> y = { -269321.8,-266821.8,-264321.8,-261821.8,-259321.8,-256821.8,-254321.8,-251821.8,-249321.8,-246821.8 };
@@ -144,9 +143,10 @@ void kriging_test::test_interpolation() {
         for(int_t i=0;i<10;++i) {
             for(int_t j=0;j<10;++j) {
                 TS_ASSERT_LESS_THAN(0.7,grid_values(i,j));
-                TS_ASSERT_LESS_THAN(grid_values(i,j),1.2)
+                TS_ASSERT_LESS_THAN(grid_values(i, j), 1.2);
             }
         }
         // for debug/validation
         //cout<<"\ngrid values (should be between 0.6..1.2)\n"<<grid_values<<endl;
 }
+TEST_SUITE_END();

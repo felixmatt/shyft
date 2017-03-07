@@ -1,11 +1,10 @@
 #include "test_pch.h"
-#include "hbv_tank_test.h"
 #include "core/hbv_tank.h"
 
 
 using namespace shyft::core;
-
-void hbv_tank_test::test_regression() {
+TEST_SUITE("hbv_tank");
+TEST_CASE("test_regression") {
 	hbv_tank::parameter p;
 	hbv_tank::calculator<hbv_tank::parameter> calc(p);
 	hbv_tank::state s;
@@ -21,3 +20,4 @@ void hbv_tank_test::test_regression() {
 	TS_ASSERT_DELTA(s.uz, 20.8, 0.0002);
 	TS_ASSERT_DELTA(r.outflow, 11.82768, 0.00005);
 }
+TEST_SUITE_END();

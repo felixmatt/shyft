@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "pt_gs_k_test.h"
 #include "core/pt_gs_k.h"
 #include "core/cell_model.h"
 #include "core/pt_gs_k_cell_model.h"
@@ -29,9 +28,8 @@ static std::ostream& operator<<(std::ostream& os, const point& pt) {
     os << calendar().to_string(pt.t) << ", " << pt.v;
     return os;
 }
-
-void pt_gs_k_test::test_call_stack()
-{
+TEST_SUITE("pt_gs_k");
+TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
     xpts_t rel_hum;
@@ -84,8 +82,7 @@ void pt_gs_k_test::test_call_stack()
     }
 }
 
-void pt_gs_k_test::test_raster_call_stack()
-{
+TEST_CASE("test_raster_call_stack") {
     //using shyfttest::TSSource;
 
     typedef MCell<response, state, parameter, xpts_t> PTGSKCell;
@@ -174,7 +171,7 @@ void pt_gs_k_test::test_raster_call_stack()
 
 }
 
-void pt_gs_k_test::test_mass_balance() {
+TEST_CASE("test_mass_balance") {
     calendar cal;
     utctime t0 = cal.time(YMDhms(2014, 8, 1, 0, 0, 0));
     utctimespan dt=deltahours(1);
@@ -220,3 +217,4 @@ void pt_gs_k_test::test_mass_balance() {
 }
 
 
+TEST_SUITE_END();

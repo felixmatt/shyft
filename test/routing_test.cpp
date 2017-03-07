@@ -1,5 +1,4 @@
 #include "test_pch.h"
-#include "routing_test.h"
 #include "core/timeseries.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
@@ -41,9 +40,9 @@ namespace shyft {
     }
 }
 
+TEST_SUITE("routing");
 
-
-void routing_test::test_build_valid_river_network() {
+TEST_CASE("test_build_valid_river_network") {
 
     using namespace std;
     using namespace shyft::core;
@@ -65,23 +64,23 @@ void routing_test::test_build_valid_river_network() {
     routing::river c0{5,routing_info(5)};//
     TS_ASSERT_THROWS(rn.add(c0),std::runtime_error);// self circle  detect.
     TS_ASSERT_THROWS(rn.set_downstream_by_id(4,1),std::runtime_error);// attempt to establish circle
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(a_id).size(),0);// verify we still got the correct network
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(b_id).size(),1);// verify we still got the correct network
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(c_id).size(),0);// verify we still got the correct network
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),2);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(a_id).size(),0u);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(b_id).size(),1u);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(c_id).size(),0u);// verify we still got the correct network
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),2u);// verify we still got the correct network
     TS_ASSERT_EQUALS(rn.downstream_by_id(a_id),b_id);
     TS_ASSERT_EQUALS(rn.downstream_by_id(b_id),d_id);
     TS_ASSERT_EQUALS(rn.downstream_by_id(c_id),d_id);
     TS_ASSERT_EQUALS(rn.downstream_by_id(d_id),0);
     TS_ASSERT_DELTA(rn.river_by_id(a_id).downstream.distance,a.downstream.distance,0.01);
     auto all_ups = rn.all_upstreams_by_id(d_id);
-    TS_ASSERT_EQUALS(all_ups.size(), 3);
+    TS_ASSERT_EQUALS(all_ups.size(), 3u);
     // remove stuff:
     rn.remove_by_id(c_id);
     TS_ASSERT_THROWS(rn.check_rid(c_id),std::runtime_error);
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),1);
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),1u);
     rn.remove_by_id(b_id);
-    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),0);
+    TS_ASSERT_EQUALS(rn.upstreams_by_id(d_id).size(),0u);
     TS_ASSERT_EQUALS(rn.downstream_by_id(a_id),0);
     rn.remove_by_id(a_id);
     TS_ASSERT_THROWS(rn.remove_by_id(b_id),std::runtime_error);
@@ -91,7 +90,7 @@ void routing_test::test_build_valid_river_network() {
 
 
 
-void routing_test::test_routing_model() {
+TEST_CASE("test_routing_model") {
     using namespace shyft::core;
     using ta_t = shyft::time_axis::fixed_dt;
     using ts_t = shyft::timeseries::point_ts<ta_t>;
@@ -153,14 +152,8 @@ void routing_test::test_routing_model() {
     m.rivers->add(c);
     m.rivers->add(b);
     m.rivers->add(a);
-
-    try {
-        m.rivers->check_rid(5);
-        TS_FAIL("Expect runtime error here");
-    } catch(const std::runtime_error&) {
-        // ok!
-        m.rivers->check_rid(2);// ok, this exists
-    }
+    CHECK_THROWS_AS(m.rivers->check_rid(5), std::runtime_error);
+    m.rivers->check_rid(2);// ok, this exists
     /// now, with the model in place, including some fake-timeseries at cell-level, we can expect things to happen:
     // fto establish regression, uncomment and print out out the response
     auto observation_m3s = m.local_inflow(d_id) + m.upstream_inflow(d_id);// this arrives into river d:
@@ -175,3 +168,4 @@ void routing_test::test_routing_model() {
 
 
 }
+TEST_SUITE_END();

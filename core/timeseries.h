@@ -1651,9 +1651,20 @@ namespace shyft{
             if(!isfinite(a)) a = 1.0;//could happen in theory if qo is zero
             if(!isfinite(b)) b = 1.0;// could happen if uo is zero
             // We use EDs to scale, and KGEs = (1-EDs) with max at 1.0, we use 1-KGEs to get minimum as 0 for minbobyqa
-            return /*EDs=*/ sqrt(std::pow(s_r*(r - 1), 2) + std::pow(s_a*(a - 1), 2) + std::pow(s_b*(b - 1), 2));
+            double eds2 = (s_r != 0.0 ? std::pow(s_r*(r - 1), 2) : 0.0) + (s_a != 0.0 ? std::pow(s_a*(a - 1), 2) : 0.0) + (s_b != 0.0 ? std::pow(s_b*(b - 1), 2) : 0.0);
+            return /*EDs=*/ sqrt( eds2);
 		}
-
+        template<class TSA1, class TSA2>
+        double abs_diff_sum_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
+            double abs_diff_sum = 0.0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double tv = observed_ts.value(i);
+                double dv = model_ts.value(i);
+                if (isfinite(tv) && isfinite(dv))
+                    abs_diff_sum +=fabs(tv-dv);
+            }
+            return abs_diff_sum;
+        }
         /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
         /// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
         /// calculate percentile using full sort.. works nice for a larger set of percentiles.
