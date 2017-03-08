@@ -367,16 +367,15 @@ class WRFDataRepository(interfaces.GeoTsRepository):
         """
         We need full time if deaccumulating
         """
-
         def noop_time(t):
             t0 = int(t[0])
             t1 = int(t[1])
-            return api.Timeaxis(t0, t1 - t0, len(t))
+            return api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t))
 
         def dacc_time(t):
             t0 = int(t[0])
             t1 = int(t[1])
-            return noop_time(t) if issubset else api.Timeaxis(t0, t1 - t0, len(t) - 1)
+            return noop_time(t) if issubset else api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t) - 1)
 
         def noop_space(x):
             return x
@@ -395,11 +394,11 @@ class WRFDataRepository(interfaces.GeoTsRepository):
             return np.clip(dr/(time[1] - time[0]), 0.0, 5000.0)
 
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
-                       "relative_humidity_2m": lambda x, t: (noop_space(x), noop_time(t)),
-                       "air_temperature_2m": lambda x, t: (air_temp_conv(x), noop_time(t)),
-                       "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
+                       "Q2": lambda x, t: (noop_space(x), noop_time(t)),
+                       "T2": lambda x, t: (air_temp_conv(x), noop_time(t)),
+                       "SWDOWN":
                        lambda x, t: (rad_conv(x), dacc_time(t)),
-                       "precipitation_amount": lambda x, t: (prec_conv(x), dacc_time(t)),
+                       "PREC_ACC_NC": lambda x, t: (prec_conv(x), dacc_time(t)),
                        "precipitation_amount_acc": lambda x, t: (prec_acc_conv(x), dacc_time(t))}
         res = {}
         for k, (v, ak) in data.items():

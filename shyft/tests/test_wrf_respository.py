@@ -1,4 +1,3 @@
-from __future__ import print_function
 import unittest
 from os import path
 
@@ -9,7 +8,6 @@ from shyft.repository.netcdf.wrf_data_repository import WRFDataRepositoryError
 
 
 class WRFDataRepositoryTestCase(unittest.TestCase):
-
     def test_get_timeseries(self):
         """
         Simple regression test of WRF data repository.
@@ -17,11 +15,13 @@ class WRFDataRepositoryTestCase(unittest.TestCase):
         EPSG, bbox = self.wrf_epsg_bbox
 
         # Period start
-        n_hours = 30
-        t0 = api.YMDhms(2009, 10)
-        date_str = "{}_{:02}".format(t0.year, t0.month)
         utc = api.Calendar()  # No offset gives Utc
-        period = api.UtcPeriod(utc.time(t0), utc.time(t0) + api.deltahours(n_hours))
+        n_hours = 10
+        t0_dt = api.YMDhms(2009, 10)
+        t0 = utc.time(2009,10)
+        date_str = "{}_{:02}".format(t0_dt.year, t0_dt.month)
+
+        period = api.UtcPeriod(t0, t0 + api.deltahours(n_hours))
 
         base_dir = path.join(shyftdata_dir, "repository", "wrf_data_repository")
         f1 = "out_d02_{}.nc".format(date_str)
@@ -42,7 +42,7 @@ class WRFDataRepositoryTestCase(unittest.TestCase):
         self.assertTrue(p0.time(0) == temp0.time(0))
         self.assertTrue(r0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
         self.assertTrue(p0.time(r0.size() - 1) == temp0.time(temp0.size() - 1))
-        self.assertTrue(p0.time(0),period.start)
+        self.assertTrue(p0.time(0), period.start)
 
     @property
     def wrf_epsg_bbox(self):
@@ -54,7 +54,7 @@ class WRFDataRepositoryTestCase(unittest.TestCase):
         ny = 121
         dx = 1000.0
         dy = 1000.0
-        return EPSG, ([x0, x0 + nx*dx, x0 + nx*dx, x0], [y0, y0, y0 + ny*dy, y0 + ny*dy])
+        return EPSG, ([x0, x0 + nx * dx, x0 + nx * dx, x0], [y0, y0, y0 + ny * dy, y0 + ny * dy])
 
 
 if __name__ == "__main__":
