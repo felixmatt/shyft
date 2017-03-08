@@ -50,6 +50,12 @@ namespace expose {
             ;
     }
 
+    ///< extract value_at(t) for all ts in tsv
+    static std::vector<double> tsv_values(std::vector<shyft::api::apoint_ts> const &tsv,utctime t) {
+        std::vector<double> r;r.reserve(tsv.size());
+        for (auto const &ts : tsv) r.push_back(ts(t));
+        return r;
+    }
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -276,13 +282,16 @@ namespace expose {
 
         TsVector (*percentile_1)(const TsVector&,const time_axis::generic_dt&, const std::vector<int>&)=shyft::api::percentiles;
         TsVector (*percentile_2)(const TsVector&,const time_axis::fixed_dt&, const std::vector<int>&)=shyft::api::percentiles;
-        const char *percentile_doc="return the percentiles (as TsVector type) (NIST R7, excel,R definition) of the timeseries\n"
-            " over the specified time_axis.\n"
-            " the time-series point_fx interpretation is used when performing \n"
-            " the true-average over the time_axis periods\n"
-            " percentiles: 0..100, -1 means arithmetic average,e.g.\n"
-            "   [ 0, 25,50,-1,75,100] will return 6 time-series\n"
-            "";
+        const char *percentile_doc=
+            doc_intro("Calculate the percentiles, NIST R7, excel,R definition, of the timeseries")
+            doc_intro("over the specified time-axis.")
+            doc_intro("The time-series point_fx interpretation is used when performing")
+            doc_intro("the true-average over the time_axis periods.")
+            doc_parameters()
+            doc_parameter("percentiles","IntVector","A list of numbers,[ 0, 25,50,-1,75,100] will return 6 time-series, -1 -> arithmetic average")
+            doc_parameter("time_axis","TimeAxis","The time-axis used when applying true-average to the time-series")
+            doc_returns("calculated_percentiles","TsVector","Time-series list with evaluated percentile results, same length as input")
+            ;
         def("percentiles",percentile_1,args("timeseries","time_axis","percentiles"),percentile_doc);
         def("percentiles",percentile_2,args("timeseries","time_axis","percentiles"),percentile_doc);
 
@@ -291,22 +300,21 @@ namespace expose {
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        def("create_glacier_melt_ts_m3s",shyft::api::create_glacier_melt_ts_m3s,args("temperature","sca_m2","glacier_area_m2","dtf"),
-            "Parameters\n"
-            "----------\n"
-            "temperature : time-series\n"
-            "\t a temperature time-series, unit [deg.Celcius]\n"
-            "sca_m2 : time-series\n"
-            "\t a snow covered area (sca) time-series, unit [m2]\n"
-            "glacier_area_m2: float\n"
-            "\t the glacier area, unit[m2]\n"
-            "dtf : float\n"
-            "\t degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.\n"
-            "\n"
-            "Returns\n"
-            "-------\n"
-            "\t a time-series that's an expression computing the glacier melt\n"
-            "\t based on input time-series and parameters supplied\n"
+        def("create_glacier_melt_ts_m3s", shyft::api::create_glacier_melt_ts_m3s, args("temperature", "sca_m2", "glacier_area_m2", "dtf"),
+            doc_intro("create a ts that provide the glacier-melt algorithm based on the inputs")
+            doc_parameters()
+            doc_parameter("temperature", "TimeSeries", "a temperature time-series, unit [deg.Celcius]")
+            doc_parameter("sca_m2", "TimeSeries", "a snow covered area (sca) time-series, unit [m2]")
+            doc_parameter("glacier_area_m2", "float", "the glacier area, unit[m2]")
+            doc_parameter("dtf","float","degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115")
+            doc_returns("glacier_melt","TimeSeries","an expression computing the glacier melt based on the inputs")
+        );
+        def("compute_ts_values_at_time", &tsv_values, args("ts_vector", "t"),
+            doc_intro("extract values at specified time for all ts in ts_vector")
+            doc_parameters()
+            doc_parameter("ts_vector","TsVector","A list of time-series")
+            doc_parameter("t","int","utc timestamp in seconds since epoch")
+            doc_returns("ts_values","DoubleVector","a list of equal length of the input list with computed values at time t")
         );
 		/* local scope */ {
 
@@ -322,44 +330,28 @@ namespace expose {
     }
 	static void expose_correlation_functions() {
 		const char * kg_doc =
-			"Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis\n"
-			"Parameters\n"
-			"----------\n"
-			"observed_ts : Timeseries\n"
-			"\tthe observed time-series\n"
-			"model_ts : Timeseries\n"
-			"\t the time-series that is the model simulated / calculated ts\n"
-			"time_axis : Timeaxis2\n"
-			"\tthe time-axis that is used for the computation\n"
-			"s_r : float\n"
-			"\tthe kling gupta scale r factor(weight the correlation of goal function)\n"
-			"s_a : float\n"
-			"\tthe kling gupta scale a factor(weight the relative average of the goal function)\n"
-			"s_b : float\n"
-			"\tthe kling gupta scale b factor(weight the relative standard deviation of the goal function)\n"
-			"Return\n"
-			"------\n"
-			" float: The  KGEs= 1-EDs that have a maximum at 1.0\n";
-
+			doc_intro("Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis")
+			doc_parameters()
+			doc_parameter("observed_ts","TimeSeries","the observed time-series")
+			doc_parameter("model_ts","TimeSeries","the time-series that is the model simulated / calculated ts")
+			doc_parameter("time_axis","TimeAxis","the time-axis that is used for the computation")
+			doc_parameter("s_r","float","the kling gupta scale r factor(weight the correlation of goal function)")
+			doc_parameter("s_a","float","the kling gupta scale a factor(weight the relative average of the goal function)")
+			doc_parameter("s_b","float","the kling gupta scale b factor(weight the relative standard deviation of the goal function)")
+            doc_returns("KGEs","float","The  KGEs= 1-EDs that have a maximum at 1.0");
 		def("kling_gupta", shyft::api::kling_gupta, args("observation_ts", "model_ts", "time_axis", "s_r", "s_a", "s_b"),
 			kg_doc
 		);
 
-		const char *ns_doc = "Computes the Nash-Sutcliffe model effiency coefficient (n.s) \n"
-			" for the two time-series over the specified time_axis\n"
-			" Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient \n"
-
-			"Parameters\n"
-			"----------\n"
-			"observed_ts : Timeseries\n"
-			"\tthe observed time-series\n"
-			"model_ts : Timeseries\n"
-			"\t the time-series that is the model simulated / calculated ts\n"
-			"time_axis : Timeaxis2\n"
-			"\tthe time-axis that is used for the computation\n"
-			"Return\n"
-			"------\n"
-			" float: The  n.s performance, that have a maximum at 1.0\n";
+		const char *ns_doc =
+            doc_intro("Computes the Nash-Sutcliffe model effiency coefficient (n.s) ")
+			doc_intro("for the two time-series over the specified time_axis\n")
+			doc_intro("Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient \n")
+            doc_parameters()
+			doc_parameter("observed_ts","TimeSeries","the observed time-series")
+			doc_parameter("model_ts","TimeSeries","the time-series that is the model simulated / calculated ts")
+			doc_parameter("time_axis","TimeAxis","the time-axis that is used for the computation")
+			doc_returns("ns","float","The  n.s performance, that have a maximum at 1.0");
 
 		def("nash_sutcliffe", shyft::api::nash_sutcliffe, args("observation_ts", "model_ts", "time_axis"),
 			ns_doc
@@ -369,19 +361,12 @@ namespace expose {
 	}
 	static void expose_periodic_ts() {
 		const char *docstr =
-			"Create a Timeseries by repeating the pattern-specification\n"
-			"Parameters\n"
-			"----------\n"
-			"pattern : DoubleVector\n"
-			"\tthe value-pattern as a sequence of values\n"
-			"dt : int\n"
-			"\tnumber of seconds between the pattern values, e.g. deltahours(3)\n"
-			"t0 : utctime\n"
-			"\tspecifies the starttime of the pattern\n"
-			"ta : Timeaxis\n"
-			"\tthe time-axis for which the pattern is repeated\n"
-			"\t e.g. your pattern might be 8 3h values,and you could supply\n"
-			"\ta time-axis 'ta' at hourly resolution\n"
+			doc_intro("Create a Timeseries by repeating the pattern-specification")
+			doc_parameters()
+			doc_parameter("pattern","DoubleVector","the value-pattern as a sequence of values")
+            doc_parameter("dt","int","number of seconds between the pattern values, e.g. deltahours(3)")
+            doc_parameter("t0","utctime","specifies the start-time of the pattern")
+            doc_parameter("ta","TimeAxis","the time-axis for which the pattern is repeated\n\te.g. your pattern might be 8 3h values,and you could supply\n\ta time-axis 'ta' at hourly resolution")
 			;
 		def("create_periodic_pattern_ts", shyft::api::create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
 

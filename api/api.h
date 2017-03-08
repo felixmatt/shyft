@@ -73,7 +73,7 @@ namespace shyft {
       public:
         GeoPointSource(geo_point midpoint=geo_point(), apoint_ts ts=apoint_ts())
           : mid_point_(midpoint), ts(ts) {}
-
+        virtual ~GeoPointSource() {}
         typedef apoint_ts ts_t;
         typedef geo_point geo_point_t;
 

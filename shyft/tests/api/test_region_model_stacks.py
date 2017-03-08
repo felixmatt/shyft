@@ -90,6 +90,10 @@ class RegionModel(unittest.TestCase):
         self.assertIsNotNone(re)
         self.assertEqual(len(re.radiation), 1)
         self.assertAlmostEqual(re.radiation[0].ts.value(0), 300.0)
+        vv = re.radiation.values_at_time(time_axis.time(0))  # verify .values_at_time(t)
+        self.assertEqual(len(vv), len(re.radiation))
+        self.assertAlmostEqual(vv[0], 300.0)
+
 
     def verify_state_handler(self, model):
         cids_unspecified = api.IntVector()

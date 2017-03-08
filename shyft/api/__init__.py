@@ -372,3 +372,33 @@ class PointTimeaxis(TimeAxisByPoints):
         super(PointTimeaxis, self).__init__(*args, **kwargs)
 
 TimeaxisType = TimeAxisType  #  todo: deprecate it
+
+def ts_vector_values_at_time(tsv:TsVector, t:int):
+    if not isinstance(tsv, TsVector):
+        if not isinstance(tsv, list):
+            raise RuntimeError('Supplied list of timeseries must be of type TsVector or list(TimeSeries)')
+        list_of_ts = tsv
+        tsv = TsVector()
+        for ts in list_of_ts:
+            tsv.append(ts)
+    return compute_ts_values_at_time(tsv, t).to_numpy()
+
+ts_vector_values_at_time.__doc__ = compute_ts_values_at_time.__doc__.replace('DoubleVector','ndarray').replace('TsVector','TsVector or list(TimeSeries)')
+
+TsVector.values_at_time = ts_vector_values_at_time
+TsVector.values_at_time.__doc__ = compute_ts_values_at_time.__doc__.replace('DoubleVector','ndarray')
+
+
+
+def geo_point_source_vector_values_at_time(gtsv:GeoPointSourceVector, t:int):
+    #if not isinstance(gtsv, GeoPointSourceVector):
+    #    raise RuntimeError('Supplied list of timeseries must be of GeoPointSourceVector')
+    return compute_geo_ts_values_at_time(gtsv, t).to_numpy()
+
+GeoPointSourceVector.values_at_time = geo_point_source_vector_values_at_time
+GeoPointSourceVector.values_at_time.__doc__ = compute_geo_ts_values_at_time.__doc__.replace('DoubleVector','ndarray')
+RadiationSourceVector.values_at_time = GeoPointSourceVector.values_at_time
+PrecipitationSourceVector.values_at_time = GeoPointSourceVector.values_at_time
+TemperatureSourceVector.values_at_time = GeoPointSourceVector.values_at_time
+RelHumSourceVector.values_at_time = GeoPointSourceVector.values_at_time
+WindSpeedSourceVector.values_at_time = GeoPointSourceVector.values_at_time
