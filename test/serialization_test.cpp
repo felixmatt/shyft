@@ -317,8 +317,11 @@ TEST_CASE("test_dlib_server") {
         calendar utc;
         auto t=utc.time(2016,1,1);
         auto dt=deltahours(1);
+        auto dt24 = deltahours(24);
         int n = 10000;
+        int n24 = n / 24;
         shyft::time_axis::fixed_dt ta(t,dt,n);
+        api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
         call_back_t cb=[ta,&throw_exception](id_vector_t ts_ids,core::utcperiod p)
                 ->ts_vector_t {
@@ -354,6 +357,10 @@ TEST_CASE("test_dlib_server") {
             TS_ASSERT_THROWS_ANYTHING(dtss_evaluate(host_port, tsl, ta.period(0)));
             throw_exception = false;// verify server-side exception gets back here.
             dtss_evaluate(host_port, tsl, ta.period(0)); // verify no exception here, should still work ok
+            std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
+            auto percentiles = dtss_percentiles(host_port, tsl, ta.total_period(), ta24, percentile_spec);
+            FAST_CHECK_EQ(percentiles.size(), percentile_spec.size());
+            FAST_CHECK_EQ(percentiles[0].size(), ta24.size());
         }
     }
     catch (exception& e)
