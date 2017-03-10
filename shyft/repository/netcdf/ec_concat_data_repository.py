@@ -479,7 +479,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                     # print('t_add:',t_add)
                     t_padded[:,-nb_pads:] = t[:,-nb_pads:] + t_add
 
-                    v_padded = np.zeros((v.shape[0],t.shape[1]+nb_pads,v.shape[2]), dtype=t.dtype)
+                    v_padded = np.zeros((v.shape[0],t.shape[1]+nb_pads,v.shape[2]), dtype=v.dtype)
                     v_padded[:, :-nb_pads, :] = v[:, :, :]
                     v_padded[:, -nb_pads:, :] = v[:, -nb_pads:, :]
 
