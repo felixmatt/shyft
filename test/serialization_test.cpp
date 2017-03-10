@@ -317,14 +317,17 @@ TEST_CASE("test_dlib_server") {
         calendar utc;
         auto t=utc.time(2016,1,1);
         auto dt=deltahours(1);
-        int n = 100000;
+        int n = 10000;
         shyft::time_axis::fixed_dt ta(t,dt,n);
-        call_back_t cb=[ta](id_vector_t ts_ids,core::utcperiod p)
+        bool throw_exception = false;
+        call_back_t cb=[ta,&throw_exception](id_vector_t ts_ids,core::utcperiod p)
                 ->ts_vector_t {
                     ts_vector_t r;
                     double fv=1.0;
                     for(size_t i=0;i<ts_ids.size();++i)
                         r.push_back(api::apoint_ts(ta,fv+=1.0));
+                    if (throw_exception)
+                        throw std::runtime_error("test exception");
                     return r;
                 };
         server our_server(cb);
@@ -347,8 +350,11 @@ TEST_CASE("test_dlib_server") {
             for(const auto& ts:ts_b)
                 cout<<"\n\t ts.size()"<<ts.size();
             cout<<"done"<<endl;
+            throw_exception = true;// verify server-side exception gets back here.
+            TS_ASSERT_THROWS_ANYTHING(dtss_evaluate(host_port, tsl, ta.period(0)));
+            throw_exception = false;// verify server-side exception gets back here.
+            dtss_evaluate(host_port, tsl, ta.period(0)); // verify no exception here, should still work ok
         }
-
     }
     catch (exception& e)
     {

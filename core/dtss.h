@@ -150,7 +150,7 @@ namespace shyft {
             }
         };
 
-        inline std::vector<api::apoint_ts> dtss_evaluate(std::string host_port, std::vector<api::apoint_ts> const& tsv, core::utcperiod p) {
+        inline std::vector<api::apoint_ts> dtss_evaluate(std::string host_port, ts_vector_t const& tsv, core::utcperiod p) {
             dlib::iosockstream io(host_port);
             msg::write_type(message_type::EVALUATE_TS_VECTOR,io);
             boost::archive::binary_oarchive oa(io);
