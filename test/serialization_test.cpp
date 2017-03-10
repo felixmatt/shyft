@@ -325,10 +325,10 @@ TEST_CASE("test_dlib_server") {
         bool throw_exception = false;
         call_back_t cb=[ta,&throw_exception](id_vector_t ts_ids,core::utcperiod p)
                 ->ts_vector_t {
-                    ts_vector_t r;
+                    ts_vector_t r;r.reserve(ts_ids.size());
                     double fv=1.0;
                     for(size_t i=0;i<ts_ids.size();++i)
-                        r.push_back(api::apoint_ts(ta,fv+=1.0));
+                        r.emplace_back(ta,fv+=1.0);
                     if (throw_exception)
                         throw std::runtime_error("test exception");
                     return r;
