@@ -14,9 +14,9 @@ namespace shyft {
             SERVER_EXCEPTION,
             EVALUATE_TS_VECTOR,
             EVALUATE_TS_VECTOR_PERCENTILES,
+            // EVALUATE_TS_VECTOR_HISTOGRAM //-- tsv,period,ta,bin_min,bin_max -> ts_vector[n_bins]
         };
 
-        // TODO: Reformulate this crap using serialization concepts
         namespace msg {
             template <class T>
             message_type read_type(T&in) {
@@ -67,7 +67,7 @@ namespace shyft {
         }
 
         typedef std::vector<api::apoint_ts> ts_vector_t;
-        typedef std::vector<string> id_vector_t;
+        typedef std::vector<std::string> id_vector_t;
         typedef std::function< ts_vector_t (id_vector_t ts_ids,core::utcperiod p)> call_back_t;
 
         struct server : dlib::server_iostream {
@@ -78,7 +78,7 @@ namespace shyft {
             }
             ~server() {}
 
-            void 
+            void
             do_bind_ts(core::utcperiod bind_period, ts_vector_t& atsv) const {
                 std::map<std::string, std::vector<api::ts_bind_info>> ts_bind_map;
                 std::vector<std::string> ts_id_list;
@@ -113,7 +113,7 @@ namespace shyft {
                 ts_vector_t evaluated_tsv;
                 for (auto &ats : atsv) // TODO: in parallel
                    evaluated_tsv.emplace_back(ats.time_axis(), ats.values(), ats.point_interpretation());
-                
+
                 return evaluated_tsv;
             }
 
