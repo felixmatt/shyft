@@ -55,12 +55,12 @@ namespace shyft {
             boost::python::object cb;
             py_server():server([=](id_vector_t ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); }) {
                 if (!PyEval_ThreadsInitialized()) {
-                    std::cout << "InitThreads needed\n";
+                    //std::cout << "InitThreads needed\n";
                     PyEval_InitThreads();// ensure threads-is enabled
                 }
             }
             ~py_server() {
-                std::cout << "~dtss()\n";
+                //std::cout << "~dtss()\n";
                 cb = boost::python::object();
             }
 
@@ -152,11 +152,11 @@ namespace expose {
                     "from shyft import api as sa\n\n"
                     "def resolve_and_read_ts(ts_ids,read_period):\n"
                     "    print('ts_ids:', len(ts_ids), ', read period=', str(read_period))\n"
-                    "    ta = sa.Timeaxis2(read_period.start, sa.deltahours(1), read_period.timespan()//sa.deltahours(1))\n"
+                    "    ta = sa.TimeAxis(read_period.start, sa.deltahours(1), read_period.timespan()//sa.deltahours(1))\n"
                     "    x_value = 1.0\n"
                     "    r = sa.TsVector()\n"
                     "    for ts_id in ts_ids :\n"
-                    "        r.append(sa.Timeseries(ta, fill_value = x_value))\n"
+                    "        r.append(sa.TimeSeries(ta, fill_value = x_value))\n"
                     "        x_value = x_value + 1\n"
                     "    return r\n"
                     "# and then bind the function to the callback\n"
