@@ -60,4 +60,4 @@ class DtssTestCase(unittest.TestCase):
 
         for i in range(len(p2)):
             self.assertEqual(r2[i].time_axis,p2[i].time_axis)
-            assert_array_almost_equal(r2[i].values.to_numpy(),p2[i].values.to_numpy(),decimal=4)
+            assert_array_almost_equal(r2[i].values.to_numpy(),p2[i].values.to_numpy(),decimal=2)
