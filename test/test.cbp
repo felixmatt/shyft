@@ -13,17 +13,13 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="routing_test test_build_valid_river_network" />
+				<Option parameters="-tc=test_dlib_server" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
 					<Add directory="../bin/Debug" />
 				</Linker>
-				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  --test-suite=serialization" />
-					<Mode after="always" />
-				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />

@@ -10,8 +10,7 @@ from shyft.api import TimeSeries
 from shyft.api import TsVector
 from shyft.api import point_interpretation_policy as point_fx
 from shyft.api import DtsServer
-from shyft.api import dtss_evaluate
-from shyft.api import dtss_percentiles
+from shyft.api import DtsClient
 from shyft.api import IntVector
 
 class DtssTestCase(unittest.TestCase):
@@ -42,12 +41,12 @@ class DtssTestCase(unittest.TestCase):
         host_port = 'localhost:{0}'.format(port_no)
         dtss.set_listening_port(port_no)
         dtss.start_async()
-
+        dts = DtsClient(host_port);
         # then try something that should work
-        r1 = dtss_evaluate(host_port,tsv,ta.total_period())
-        r2 = dtss_percentiles(host_port,tsv,ta.total_period(), ta24,
-                              percentile_list)
-        dtss.clear()
+        r1 = dts.evaluate(tsv,ta.total_period())
+        r2 = dts.percentiles(tsv,ta.total_period(), ta24, percentile_list)
+        dts.close() # close connection (will use context manager later)
+        dtss.clear() # close server
 
         self.assertEqual(len(r1),len(tsv))
 

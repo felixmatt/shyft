@@ -132,29 +132,42 @@ namespace shyft {
                 unsigned short local_port,
                 dlib::uint64 connection_id
             ) {
+                //std::cout<<"on conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<endl;
                 while (in.peek() != EOF) {
                     auto msg_type= msg::read_type(in);
                     try {
                         switch (msg_type) { // currently switch, later maybe table[msg_type]=msg_handler
                             case EVALUATE_TS_VECTOR: {
-                                boost::archive::binary_iarchive ia(in);
                                 core::utcperiod bind_period;
                                 ts_vector_t rtsv;
-                                ia>>bind_period>>rtsv;
-                                msg::write_type(message_type::EVALUATE_TS_VECTOR,out);
-                                boost::archive::binary_oarchive oa(out);
-                                oa<<do_evaluate_ts_vector(bind_period, rtsv);
+                                {
+                                    boost::archive::binary_iarchive ia(in);
+                                    ia>>bind_period>>rtsv;
+                                }
+
+                                auto result=do_evaluate_ts_vector(bind_period, rtsv);// first get result
+                                {
+                                    msg::write_type(message_type::EVALUATE_TS_VECTOR,out);// then send
+                                    boost::archive::binary_oarchive oa(out);
+                                    oa<<result;
+                                }
                             } break;
                             case EVALUATE_TS_VECTOR_PERCENTILES: {
-                                boost::archive::binary_iarchive ia(in);
                                 core::utcperiod bind_period;
                                 ts_vector_t rtsv;
                                 std::vector<int> percentile_spec;
                                 api::gta_t ta;
-                                ia >> bind_period >> rtsv>>ta>>percentile_spec;
-                                msg::write_type(message_type::EVALUATE_TS_VECTOR_PERCENTILES, out);
-                                boost::archive::binary_oarchive oa(out);
-                                oa << do_evaluate_percentiles(bind_period, rtsv,ta,percentile_spec);
+                                {
+                                    boost::archive::binary_iarchive ia(in);
+                                    ia >> bind_period >> rtsv>>ta>>percentile_spec;
+                                }
+
+                                auto result = do_evaluate_percentiles(bind_period, rtsv,ta,percentile_spec);
+                                {
+                                    msg::write_type(message_type::EVALUATE_TS_VECTOR_PERCENTILES, out);
+                                    boost::archive::binary_oarchive oa(out);
+                                    oa << result;
+                                }
                             } break;
                             default:
                                 throw std::runtime_error(std::string("Got unknown message type:") + std::to_string((int)msg_type));
@@ -163,43 +176,75 @@ namespace shyft {
                         msg::send_exception(e,out);
                     }
                 }
+                //std::cout<<"of conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<endl;
+
             }
         };
 
-        inline std::vector<api::apoint_ts> dtss_evaluate(std::string host_port, ts_vector_t const& tsv, core::utcperiod p) {
-            dlib::iosockstream io(host_port);
-            msg::write_type(message_type::EVALUATE_TS_VECTOR,io);
-            boost::archive::binary_oarchive oa(io);
-            oa<<p<<tsv;
-            auto response_type= msg::read_type(io);
-            if(response_type==message_type::SERVER_EXCEPTION) {
-                auto re= msg::read_exception(io);
-                throw re;
-            } else if(response_type==message_type::EVALUATE_TS_VECTOR) {
-                boost::archive::binary_iarchive ia(io);
-                ts_vector_t r;
-                ia>>r;
-                return r;
+        struct client {
+            dlib::iosockstream io;
+            std::string host_port;
+            client(std::string host_port):io(host_port),host_port(host_port) {}
+
+            void reopen() {
+                io.close();
+                io.open(host_port);
             }
-            throw std::runtime_error(std::string("Got unexpected response:")+std::to_string((int)response_type));
-        }
-        inline std::vector<api::apoint_ts> dtss_percentiles(std::string host_port, ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec) {
-            dlib::iosockstream io(host_port);
-            msg::write_type(message_type::EVALUATE_TS_VECTOR_PERCENTILES, io);
-            boost::archive::binary_oarchive oa(io);
-            oa << p << tsv<<ta<<percentile_spec;
-            auto response_type = msg::read_type(io);
-            if (response_type == message_type::SERVER_EXCEPTION) {
-                auto re = msg::read_exception(io);
-                throw re;
-            } else if (response_type == message_type::EVALUATE_TS_VECTOR_PERCENTILES) {
-                boost::archive::binary_iarchive ia(io);
-                ts_vector_t r;
-                ia >> r;
-                return r;
+            void close(int timeout_ms=1000) {io.close(timeout_ms);}
+
+            std::vector<api::apoint_ts>
+            percentiles(ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec) {
+                msg::write_type(message_type::EVALUATE_TS_VECTOR_PERCENTILES, io);
+                {
+                    boost::archive::binary_oarchive oa(io);
+                    oa << p << tsv<<ta<<percentile_spec;
+                }
+                auto response_type = msg::read_type(io);
+                if (response_type == message_type::SERVER_EXCEPTION) {
+                    auto re = msg::read_exception(io);
+                    throw re;
+                } else if (response_type == message_type::EVALUATE_TS_VECTOR_PERCENTILES) {
+                    ts_vector_t r;
+                    {
+                        boost::archive::binary_iarchive ia(io);
+                        ia >> r;
+                    }
+                    return r;
+                }
+                throw std::runtime_error(std::string("Got unexpected response:") + std::to_string((int)response_type));
             }
-            throw std::runtime_error(std::string("Got unexpected response:") + std::to_string((int)response_type));
+
+            std::vector<api::apoint_ts>
+            evaluate(ts_vector_t const& tsv, core::utcperiod p) {
+                msg::write_type(message_type::EVALUATE_TS_VECTOR,io);
+                {
+                    boost::archive::binary_oarchive oa(io);
+                    oa<<p<<tsv;
+                }
+                auto response_type= msg::read_type(io);
+                if(response_type==message_type::SERVER_EXCEPTION) {
+                    auto re= msg::read_exception(io);
+                    throw re;
+                } else if(response_type==message_type::EVALUATE_TS_VECTOR) {
+                    ts_vector_t r;
+                    {
+                        boost::archive::binary_iarchive ia(io);
+                        ia>>r;
+                    }
+                    return r;
+                }
+                throw std::runtime_error(std::string("Got unexpected response:")+std::to_string((int)response_type));
+            }
+
+        };
+
+        inline std::vector<api::apoint_ts> dtss_evaluate(std::string host_port, ts_vector_t const& tsv, core::utcperiod p,int timeout_ms=10000) {
+            return client(host_port).evaluate(tsv,p);
         }
+        inline std::vector<api::apoint_ts> dtss_percentiles(std::string host_port, ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec,int timeout_ms=10000) {
+            return client(host_port).percentiles(tsv,p,ta,percentile_spec);
+        }
+
 
     }
 }

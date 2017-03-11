@@ -102,7 +102,6 @@ namespace expose {
     }
     static void dtss_server() {
         typedef shyft::dtss::py_server DtsServer;
-        //bases<>,std::shared_ptr<DtsServer>
         class_<DtsServer, boost::noncopyable >("DtsServer",
             doc_intro("A distributed time-series server object")
             doc_intro("Capable of processing time-series messages and responding accordingly")
@@ -110,7 +109,7 @@ namespace expose {
             doc_intro("- that typically involve reading time-series from a service or storage for the specified period")
             doc_intro("The server object will then compute the resulting time-series vector,")
             doc_intro("and respond back to clients with the results")
-            doc_see_also("shyft.api.dtss_evalutate(port_host,ts_array,utc_period)")
+            doc_see_also("shyft.api.DtsClient")
             )
             .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"),
                 doc_intro("set the listening port for the service")
@@ -184,34 +183,49 @@ namespace expose {
 
     }
     static void dtss_client() {
-
-        def("dtss_evaluate", shyft::dtss::dtss_evaluate, args("host_port","ts_vector","utcperiod"),
-            doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
-            doc_intro("If the expression includes unbound symbolic references to time-series,")
-            doc_intro("these time-series will be passed to the binding service callback")
-            doc_intro("on the serverside.")
-            doc_parameters()
-            doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
-            doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
-            doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
-            doc_returns("tsvector","TsVector","an evaluated list of point time-series in the same order as the input list")
-            doc_see_also("DtsServer,DtsServer.cb")
-            );
-
-        def("dtss_percentiles", shyft::dtss::dtss_percentiles, args("host_port","ts_vector","utcperiod","time_axis","percentile_list"),
-            doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
-            doc_intro("If the expression includes unbound symbolic references to time-series,")
-            doc_intro("these time-series will be passed to the binding service callback")
-            doc_intro("on the serverside.")
-            doc_parameters()
-            doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
-            doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
-            doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
-            doc_parameter("time_axis","TimeAxis","the time_axis for the percentiles, e.g. a weekly time_axis")
-            doc_parameter("percentile_list","IntVector","a list of percentiles, where -1 means true average, 25=25percentile etc")
-            doc_returns("tsvector","TsVector","an evaluated list of percentile time-series in the same order as the percentile input list")
-            doc_see_also("DtsServer,DtsServer.cb")
-            );
+        typedef shyft::dtss::client  DtsClient;
+        class_<DtsClient, boost::noncopyable >("DtsClient",
+            doc_intro("The client part of the DtsServer")
+            doc_intro("Capable of processing time-series messages and responding accordingly")
+            doc_intro("The user can setup callback to python to handle unbound symbolic time-series references")
+            doc_intro("- that typically involve reading time-series from a service or storage for the specified period")
+            doc_intro("The server object will then compute the resulting time-series vector,")
+            doc_intro("and respond back to clients with the results")
+            doc_see_also("DtsServer"),no_init
+            )
+            .def(init<std::string>(args("host_port"),
+                doc_intro("constructs a dts-client with the specifed host_port parameter")
+                doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
+                )
+             )
+            .def("close",&DtsClient::close,(boost::python::arg("timeout_ms")=1000),
+                doc_intro("close the connection")
+            )
+            .def("percentiles",&DtsClient::percentiles, args("ts_vector","utcperiod","time_axis","percentile_list"),
+                doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
+                doc_intro("If the expression includes unbound symbolic references to time-series,")
+                doc_intro("these time-series will be passed to the binding service callback")
+                doc_intro("on the serverside.")
+                doc_parameters()
+                doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
+                doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+                doc_parameter("time_axis","TimeAxis","the time_axis for the percentiles, e.g. a weekly time_axis")
+                doc_parameter("percentile_list","IntVector","a list of percentiles, where -1 means true average, 25=25percentile etc")
+                doc_returns("tsvector","TsVector","an evaluated list of percentile time-series in the same order as the percentile input list")
+                doc_see_also(".evaluate(), DtsServer")
+            )
+            .def("evaluate", &DtsClient::evaluate, args("ts_vector","utcperiod"),
+                doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
+                doc_intro("If the expression includes unbound symbolic references to time-series,")
+                doc_intro("these time-series will be passed to the binding service callback")
+                doc_intro("on the serverside.")
+                doc_parameters()
+                doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
+                doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+                doc_returns("tsvector","TsVector","an evaluated list of point time-series in the same order as the input list")
+                doc_see_also(".percentiles(),DtsServer")
+            )
+            ;
 
     }
 
