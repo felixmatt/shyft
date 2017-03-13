@@ -1,5 +1,5 @@
 #pragma once
-
+#include "api/timeseries.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/base_object.hpp>
@@ -9,7 +9,6 @@
 
 namespace shyft {
     namespace dtss {
-
         enum message_type {
             SERVER_EXCEPTION,
             EVALUATE_TS_VECTOR,

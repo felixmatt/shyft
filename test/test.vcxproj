@@ -126,6 +126,7 @@
     <ClCompile Include="calibration_test.cpp" />
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
+    <ClCompile Include="dtss_test.cpp" />
     <ClCompile Include="glacier_melt_test.cpp" />
     <ClCompile Include="gridpp_test.cpp" />
     <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />

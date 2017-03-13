@@ -105,6 +105,7 @@
     <ClCompile Include="routing_test.cpp">
       <Filter>routing</Filter>
     </ClCompile>
+    <ClCompile Include="dtss_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
