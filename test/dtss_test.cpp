@@ -139,7 +139,7 @@ TEST_CASE("dlib_server_performance") {
         int port_no = 20000;
         our_server.set_listening_port(port_no);
         our_server.start_async();
-        int n_threads = 10;
+        size_t n_threads = 10;
 
         vector<future<void>> clients;
         for (size_t i = 0;i < n_threads;++i) {
@@ -154,7 +154,7 @@ TEST_CASE("dlib_server_performance") {
                     client dtss(host_port);
                     auto t0 = timing::now();
                     size_t eval_count = 0;
-                    size_t test_duration_ms = 10000;
+                    int test_duration_ms = 10000;
                     while (elapsed_ms(t0, timing::now()) < test_duration_ms) {
                         // burn cpu server side, save time on serialization
                         std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
@@ -173,7 +173,7 @@ TEST_CASE("dlib_server_performance") {
         for (auto &f : clients) f.get();
         our_server.clear();
         dlog << dlib::LINFO << "done";
-        
+
     } catch (exception& e) {
         cout << e.what() << endl;
     }
