@@ -115,7 +115,7 @@ TEST_CASE("dlib_server_performance") {
         auto t = utc.time(2016, 1, 1);
         auto dt = deltahours(1);
         auto dt24 = deltahours(24);
-        int n = 24*365*5;
+        int n = 24*365*5;//24*365*5;
         int n24 = n / 24;
         shyft::time_axis::fixed_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
@@ -139,7 +139,7 @@ TEST_CASE("dlib_server_performance") {
         int port_no = 20000;
         our_server.set_listening_port(port_no);
         our_server.start_async();
-        size_t n_threads = 10;
+        size_t n_threads = 1;
 
         vector<future<void>> clients;
         for (size_t i = 0;i < n_threads;++i) {
@@ -155,15 +155,19 @@ TEST_CASE("dlib_server_performance") {
                     auto t0 = timing::now();
                     size_t eval_count = 0;
                     int test_duration_ms = 10000;
+                    int kilo_points= tsl.size()*ta.size()/1000;
                     while (elapsed_ms(t0, timing::now()) < test_duration_ms) {
                         // burn cpu server side, save time on serialization
-                        std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
-                        auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
-                        //slower due to serialization: auto ts_b = dtss.evaluate(tsl, ta.total_period());
+                        //std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
+                        //auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
+                        //slower due to serialization:
+                        auto ts_b = dtss.evaluate(tsl, ta.total_period());
                         ++eval_count;
                     }
                     auto total_ms = double(elapsed_ms(t0, timing::now()));
-                    dlog << dlib::LINFO << "Done testing " << i << ": #= " << eval_count << " e/s = " << 1000 * double(eval_count) / total_ms << " [e/s]";
+                    dlog << dlib::LINFO << "Done testing " << i << ": #= " << eval_count
+                    << " e/s = " << 1000 * double(eval_count) / total_ms << " [e/s]\n"
+                    << " netw throughput = "<< kilo_points*eval_count*8/(total_ms)<< " Mb/sec";
                     dtss.close();
                 }
 

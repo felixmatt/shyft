@@ -396,6 +396,19 @@ class TimeSeries(unittest.TestCase):
         percentiles = api.percentiles(ts_partitions, ta_percentiles, wanted_percentiles)
         self.assertEqual(len(percentiles), len(wanted_percentiles))
 
+    def test_empty_ts(self):
+        a = api.TimeSeries()
+        self.assertEqual(a.size(), 0)
+        self.assertEqual(a.values.size(),0)
+        self.assertEqual(len(a.values.to_numpy()), 0)
+        self.assertFalse(a.total_period().valid())
+        try:
+            a.time_axis
+            self.assertFail("Expected exception")
+        except RuntimeError as re:
+            pass
+
+
     def test_ts_reference_and_bind(self):
         c = api.Calendar()
         t0 = c.time(2016, 9, 1)

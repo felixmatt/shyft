@@ -168,6 +168,11 @@ namespace shyft {
                     ts=std::move(c.ts);
                     return *this;
                 }
+                std::shared_ptr<ipoint_ts> sts() const {
+                    if(!ts)
+                        throw runtime_error("TimeSeries is empty");
+                    return ts;
+                }
 
                 /**\brief Easy to compare for equality, but tricky if performance needed */
                 bool operator==(const apoint_ts& other) const;
@@ -175,16 +180,17 @@ namespace shyft {
                 // interface we want to expose
                 // the standard ipoint-ts stuff:
                 point_interpretation_policy point_interpretation() const {return ts->point_interpretation();}
-                void set_point_interpretation(point_interpretation_policy point_interpretation) { ts->set_point_interpretation(point_interpretation); };
-                const gta_t& time_axis() const { return ts->time_axis();};
-                utcperiod total_period() const {return ts->total_period();};   ///< Returns period that covers points, given
-                size_t index_of(utctime t) const {return ts->index_of(t);};
-                size_t open_range_index_of(utctime t, size_t ix_hint = std::string::npos) const { return ts->time_axis().open_range_index_of(t, ix_hint); }
-                size_t size() const {return ts->size();};        ///< number of points that descr. y=f(t) on t ::= period
-                utctime time(size_t i) const {return ts->time(i);};///< get the i'th time point
-                double value(size_t i) const {return ts->value(i);};///< get the i'th value
-                double operator()(utctime t) const  {return ts->value_at(t);};
-                std::vector<double> values() const {return ts->values();}
+                void set_point_interpretation(point_interpretation_policy point_interpretation) { sts()->set_point_interpretation(point_interpretation); };
+                const gta_t& time_axis() const { return sts()->time_axis();};
+                utcperiod total_period() const {return ts?ts->total_period():utcperiod();};   ///< Returns period that covers points, given
+                size_t index_of(utctime t) const {return ts?ts->index_of(t):std::string::npos;};
+                size_t open_range_index_of(utctime t, size_t ix_hint = std::string::npos) const {
+                    return ts ? ts->time_axis().open_range_index_of(t, ix_hint):std::string::npos; }
+                size_t size() const {return ts?ts->size():0;};        ///< number of points that descr. y=f(t) on t ::= period
+                utctime time(size_t i) const {return sts()->time(i);};///< get the i'th time point
+                double value(size_t i) const {return sts()->value(i);};///< get the i'th value
+                double operator()(utctime t) const  {return sts()->value_at(t);};
+                std::vector<double> values() const {return ts?ts->values():std::vector<double>();}
 
                 //-- then some useful functions/properties
                 apoint_ts average(const gta_t& ta) const;
