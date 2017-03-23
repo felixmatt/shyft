@@ -267,6 +267,11 @@ TEST_CASE("test_api_ts_ref_binding") {
 }
 
 TEST_CASE("test_serialization_performance") {
+    //ostringstream os;
+    //os.seekp(1000);
+    //os.put('\a');
+    //string oss = os.str();
+    //FAST_CHECK_EQ(oss.size(), 1001);
     bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
     //
     // 1. create one large ts, do loop it.
@@ -326,5 +331,56 @@ TEST_CASE("test_serialization_performance") {
     }
 }
 
+TEST_CASE("test_serialization_memcpy_performance") {
 
+    bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
+    //
+    // 1. create one large ts, do loop it.
+    //
+    for (size_t n_threads = 1;n_threads < (verbose ? 6 : 1);++n_threads) {
+        calendar utc;
+        size_t n = 10 * 1000 * 1000;// gives 80 Mb memory
+        vector<double> x(n, 0.0);
+        vector<vector<double>> av;
+        for (size_t i = 0;i < n_threads;++i)
+            av.emplace_back(x);
+
+
+        clock_t t0 = clock();
+        // -multi-thread this to n threads:
+        mutex c_mx;
+        condition_variable cv;
+        vector<future<void>> calcs1;
+        size_t c = 0;
+        for (size_t i = 0;i < n_threads;++i) {
+            calcs1.emplace_back(
+                async(launch::async, [&av, i,n,&c,&c_mx,&cv]() {
+                    double *y= new double[n];
+                    memcpy(y, av[i].data(), n * sizeof(double));
+                    //copy(av[i].begin(),av[i].end(),back_inserter(y));
+                    {
+                        unique_lock<mutex> sl(c_mx);
+                        c++;
+                        cv.notify_all();
+                    }
+                    
+                    delete y;
+                }
+                )
+            );
+        }
+        {
+            unique_lock<mutex> m_lck(c_mx);
+            while (c != n_threads)cv.wait(m_lck);
+        }
+        auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+        size_t mcpy_size = 8 * n_threads*n;
+        if (verbose) cout << "memcpy-serialization took " << ms
+            << "ms\n\tsize:" << mcpy_size
+            << " bytes \n\t number of doubles is " << mcpy_size / 1e6/8 << "mill 8byte size\n"
+            << "performance:" << mcpy_size / 1e6 / (ms / 1000.0) << " [MB/s]\n";
+        for (auto &f : calcs1) f.get();
+
+    }
+}
 TEST_SUITE_END();

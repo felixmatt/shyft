@@ -25,7 +25,7 @@ api::apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
 #include <dlib/misc_api.h>
 dlib::logger dlog("dlib.log");
 
-TEST_SUITE("serialization");
+TEST_SUITE("dtss");
 
 TEST_CASE("dlib_server_basics") {
     dlog.set_level(dlib::LALL);
@@ -115,7 +115,7 @@ TEST_CASE("dlib_server_performance") {
         auto t = utc.time(2016, 1, 1);
         auto dt = deltahours(1);
         auto dt24 = deltahours(24);
-        int n = 24*365*5;//24*365*5;
+        int n = 24 * 365 * 5;//24*365*5;
         int n24 = n / 24;
         shyft::time_axis::fixed_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
@@ -149,7 +149,7 @@ TEST_CASE("dlib_server_performance") {
                     dlog << dlib::LINFO << "sending an expression ts to " << host_port;
                     std::vector<api::apoint_ts> tsl;
                     for (size_t x = 1;x <= 83;++x) // just make a  very thin request, that get loads of data back
-                        tsl.push_back(double(x)*api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x)));
+                        tsl.push_back(api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x)));
 
                     client dtss(host_port);
                     auto t0 = timing::now();
