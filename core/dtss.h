@@ -67,7 +67,7 @@ namespace shyft {
 
         typedef std::vector<api::apoint_ts> ts_vector_t;
         typedef std::vector<std::string> id_vector_t;
-        typedef std::function< ts_vector_t (id_vector_t ts_ids,core::utcperiod p)> call_back_t;
+        typedef std::function< ts_vector_t (id_vector_t const& ts_ids,core::utcperiod p)> call_back_t;
 
         struct server : dlib::server_iostream {
             call_back_t bind_ts_cb;
@@ -82,6 +82,7 @@ namespace shyft {
                 std::map<std::string, std::vector<api::ts_bind_info>> ts_bind_map;
                 std::vector<std::string> ts_id_list;
                 // step 1: bind not yet bound time-series ( ts with only symbol, needs to be resolved using bind_cb)
+                //std::cout<<"bind 1\n"<<std::endl;
                 for (auto& ats : atsv) {
                     auto ts_refs = ats.find_ts_bind_info();
                     for (const auto& bi : ts_refs) {
@@ -92,6 +93,7 @@ namespace shyft {
                         ts_bind_map[bi.reference].push_back(bi);
                     }
                 }
+                //std::cout<<"bind 2\n"<<std::endl;
 
                 // step 2: (optional) bind_ts callback should resolve symbol time-series with content
                 if (ts_bind_map.size()) {
@@ -131,7 +133,7 @@ namespace shyft {
                 unsigned short local_port,
                 dlib::uint64 connection_id
             ) {
-                //std::cout<<"on conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<endl;
+                //std::cout<<"on conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<std::endl;
                 while (in.peek() != EOF) {
                     auto msg_type= msg::read_type(in);
                     try {
@@ -175,7 +177,7 @@ namespace shyft {
                         msg::send_exception(e,out);
                     }
                 }
-                //std::cout<<"of conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<endl;
+                //std::cout<<"of conn:"<<foreign_ip<<":"<<foreign_port<<", local_port ="<<local_port<<std::endl;
 
             }
         };

@@ -53,7 +53,7 @@ namespace shyft {
 
         struct py_server : server {
             boost::python::object cb;
-            py_server():server([=](id_vector_t ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); }) {
+            py_server():server([=](id_vector_t const &ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); }) {
                 if (!PyEval_ThreadsInitialized()) {
                     //std::cout << "InitThreads needed\n";
                     PyEval_InitThreads();// ensure threads-is enabled
@@ -67,10 +67,12 @@ namespace shyft {
 
             static int msg_count ;
 
-            ts_vector_t fire_cb(id_vector_t ts_ids,core::utcperiod p) {
+            ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
+                //std::cout << "cb("<<ts_ids.size()<<")\n";
                 std::vector<api::apoint_ts> r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
+                    //std::cout<<" py cb.."<<std::endl;std::cout.flush();
                     r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
                 } else {
                     // for testing, just fill in constant values.
@@ -87,8 +89,24 @@ namespace shyft {
             }
         };
         int py_server::msg_count = 0;
+        // need to wrap core client to unlock gil during processing
+        struct py_client {
+            client impl;
+            py_client(std::string host_port):impl(host_port) {}
+            void close(int timeout_ms=1000) {
+                scoped_gil_release gil;
+                impl.close(timeout_ms);
+            }
+            ts_vector_t percentiles(ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec) {
+                scoped_gil_release gil;
+                return impl.percentiles(tsv,p,ta,percentile_spec);
+            }
+            ts_vector_t evaluate(ts_vector_t const& tsv, core::utcperiod p) {
+                scoped_gil_release gil;
+                return impl.evaluate(tsv,p);
+            }
 
-
+        };
     }
 }
 
@@ -183,7 +201,7 @@ namespace expose {
 
     }
     static void dtss_client() {
-        typedef shyft::dtss::client  DtsClient;
+        typedef shyft::dtss::py_client  DtsClient;
         class_<DtsClient, boost::noncopyable >("DtsClient",
             doc_intro("The client part of the DtsServer")
             doc_intro("Capable of processing time-series messages and responding accordingly")
