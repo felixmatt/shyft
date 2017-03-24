@@ -90,6 +90,10 @@ class RegionModel(unittest.TestCase):
         self.assertIsNotNone(re)
         self.assertEqual(len(re.radiation), 1)
         self.assertAlmostEqual(re.radiation[0].ts.value(0), 300.0)
+        vv = re.radiation.values_at_time(time_axis.time(0))  # verify .values_at_time(t)
+        self.assertEqual(len(vv), len(re.radiation))
+        self.assertAlmostEqual(vv[0], 300.0)
+
 
     def verify_state_handler(self, model):
         cids_unspecified = api.IntVector()
@@ -223,10 +227,14 @@ class RegionModel(unittest.TestCase):
         # now, re-run the process in 24-hours steps x 10
         model.set_states(s0)  # restore state s0
         self.assertEqual(s0.size(), model.initial_state.size())
-        for section in range(10):
-            model2.run_cells(use_ncore=0, start_step=section * 24, n_steps=24)
-            section_discharge = model2.statistics.discharge(cids)
-            self.assertEqual(section_discharge.size(), sum_discharge.size())  # notice here that the values after current step are 0.0
+        for do_collect_state in [False,True]:
+            model2.set_state_collection(-1,do_collect_state)  # issue reported by Yisak, prior to 21.3, this would crash
+            model2.set_states(s0)
+            # now  after fix, it works Ok
+            for section in range(10):
+                model2.run_cells(use_ncore=0, start_step=section * 24, n_steps=24)
+                section_discharge = model2.statistics.discharge(cids)
+                self.assertEqual(section_discharge.size(), sum_discharge.size())  # notice here that the values after current step are 0.0
         stepwise_sum_discharge = model2.statistics.discharge(cids)
         # assert stepwise_sum_discharge == sum_discharge
         diff_ts = sum_discharge.values.to_numpy() - stepwise_sum_discharge.values.to_numpy()

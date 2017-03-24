@@ -15,7 +15,7 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5 ):
+    def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5, out_fields=[]):
         super(GeoLocationRepository, self).__init__()
         self.server_name="oslwvagi002p"
         self.server_name_preprod="oslwvagi001q"
@@ -25,6 +25,9 @@ class GisLocationService(GeoLocationRepository):
             self.server_name_preprod = server_name_preprod
         self.server_port=server_port
         self.service_index=service_index
+        self.out_fields = "MOH, GIS_ID, EIER, ST_NAVN"
+        if len(out_fields)>0:
+            self.out_fields = ', '.join([self.out_fields,', '.join(out_fields)])
 
     def _get_response(self, url, **kwargs):
         response = requests.get(url, **kwargs)
@@ -36,21 +39,22 @@ class GisLocationService(GeoLocationRepository):
                 "GeoJson data missing mandatory field, please check your gis service or your query.")
         return data
 
-    def build_query(self,base_fetcher,station_ids,epsg_id):
+    def build_query(self, base_fetcher, station_ids, epsg_id):
         q = base_fetcher.get_query()
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
             q["where"] = "GIS_ID IN ({})".format(", ".join([str(i) for i in station_ids]))
-        q["outFields"] = "MOH, GIS_ID, EIER, ST_NAVN"
+        # q["outFields"] = "MOH, GIS_ID, EIER, ST_NAVN"
+        q["outFields"] = self.out_fields
         q["outSR"] = epsg_id
         return q
     
-    def get_locations(self, location_id_list,epsg_id):
+    def get_locations(self, location_id_list,epsg_id,geometry=None):
         """ contract implementation """
-        return self.get_locations_and_info(location_id_list,epsg_id)[0]
+        return self.get_locations_and_info(location_id_list,epsg_id,geometry=geometry)[0]
 
-    def get_locations_and_info(self, location_id_list,epsg_id):
+    def get_locations_and_info(self, location_id_list,epsg_id,geometry=None):
         """ 
         might be useful for ui/debug etc. 
         Returns
@@ -58,7 +62,7 @@ class GisLocationService(GeoLocationRepository):
         tuple(location-dict(station:position),info-dict(station:info-dict))
 
         """
-        base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=None, server_name=self.server_name,
+        base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=geometry, server_name=self.server_name,
                                          server_name_preprod=self.server_name_preprod,
                                          server_port=self.server_port, service_index=self.service_index)
         q = self.build_query(base_fetcher,location_id_list,epsg_id)
@@ -82,7 +86,8 @@ class GisLocationService(GeoLocationRepository):
             name = str(str(name).encode("ascii", errors="replace"))
 
             locations[index] = (x,y,z)
-            station_info[index]= {"owner": feature["attributes"]["EIER"],"name": name}
+            station_info[index] = {k: v for k,v in feature["attributes"].items() if k not in ["EIER", "ST_NAVN"]}
+            station_info[index].update({"owner": feature["attributes"]["EIER"],"name": name})
         # else:
         #     raise StationDataError("Could not get data from GIS service!")
         return locations,station_info

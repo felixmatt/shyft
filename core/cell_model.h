@@ -42,7 +42,7 @@ namespace shyft {
 
 			//< reset/initializes all series with 0.0 and reserves size to ta. size.
 			void init(const timeaxis& ta) {
-                if (ta.size() != temperature.size()) {
+                if (ta != temperature.ta) {
                     temperature = temperature_ts(ta, 0.0);
                     precipitation = precipitation_ts(ta, 0.0);
                     rel_hum = relhum_ts(ta, 0.0);
@@ -139,7 +139,7 @@ namespace shyft {
         /**Utility function used to  initialize a pts_t in the core, typically making space, zero fill a ts
         *  prior to a run to ensure values are zero */
         inline void ts_init(pts_t&ts, const timeaxis&ta, int start_step, int n_steps, fx_policy_t fx_policy) {
-            if (ts.size() != ta.size()) {
+            if (ts.ta != ta || ta.size()==0 ) {
                 ts = pts_t(ta, 0.0, fx_policy);
             } else {
                 ts.fill_range(0.0, start_step, n_steps);
