@@ -148,7 +148,22 @@ TEST_CASE("test_build") {
     rm.run_cells();
     tsz1 = c1.env_ts.temperature.size();
     TS_ASSERT(tsz1>0);
-
+    SUBCASE("re_init_ts_test") { // test case that cover issue reported by Yisak, re-init/re-run did not fixup result time-axis
+        pts_t ts(ta, 2.0);
+        FAST_CHECK_EQ(ts.size(), ta.size());
+        FAST_CHECK_EQ(ta, ts.ta);
+        auto ta2 = ta;
+        ta2.t += sc::deltahours(1);
+        sc::ts_init(ts, ta2, 0, ta.size(), sc::fx_policy_t::POINT_AVERAGE_VALUE);
+        FAST_CHECK_EQ(ts.ta, ta2);
+    }
+    SUBCASE("change_ta_start_only") {
+        auto ta2 = ta;
+        ta2.t += sc::deltahours(1);
+        rm.run_interpolation(ip, ta2, testenv);
+        rm.run_cells();
+        FAST_CHECK_EQ((*rm.get_cells())[0].rc.avg_discharge.ta, ta2);
+    }
     ptgsk_region_model_t rm_copy(rm);
     auto p1 = rm.get_region_parameter();
     auto p2 = rm_copy.get_region_parameter();
