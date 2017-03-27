@@ -173,7 +173,7 @@ TEST_CASE("test_raster_call_stack") {
 
 TEST_CASE("test_mass_balance") {
     calendar cal;
-    utctime t0 = cal.time(YMDhms(2014, 8, 1, 0, 0, 0));
+    utctime t0 = cal.time(2014, 8, 1, 0, 0, 0);
     utctimespan dt=deltahours(1);
     const int n=1;
     timeaxis tax(t0,dt,n);
@@ -213,6 +213,36 @@ TEST_CASE("test_mass_balance") {
         pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
     }
     TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
+    SUBCASE("direct_response_on_bare_lake_only") {
+        // verify that when it rains, verify that only (1-snow.sca)*(lake+rsv).fraction * precip_mm *cell_area goes directly to response.
+        // case 1: no snow-covered area, close to zero in kirchner q, expect all rain directly
+        land_type_fractions ltf(0.0,0.5,0.5,0.0,0.0);// all is lake and reservoir
+        gcd.set_land_type_fractions(ltf);
+        state.kirchner.q=1e-4;//
+        state.gs.lwc=0.0;// no snow, should have direct response, 3 mm/h, over the cell_area
+        state.gs.acc_melt=-1;// should be no snow, should go straight through
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,prec.value(0),0.001);
+        state.gs.lwc=1.0;
+        state.gs.acc_melt=300.0;
+        temp.v[0]=-10.0;//it's cold
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        TS_ASSERT_DELTA(rc.snow_sca.value(0),0.96,0.01);// almost entirely covered by snow, so we should have 0.04 of rain direct response
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,0.04*prec.value(0),0.02);
+        temp.v[0]=10.0;// heat is on, melt snow, .9 should end up in kirchner it's cold
+        //state.gs.sdc_melt_mean=10.0;
+        state.gs.acc_melt=5.0;//simulate early autumn, melt out everything
+        state.gs.temp_swe = 3.0;//
+        state.gs.lwc = 10.0;//
+        for(size_t i=0;i<5000;++i){
+            pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+            if(rc.snow_sca.value(0)<0.1)
+                break;// melt done, everything should be in kirchner response by now
+        }
+        TS_ASSERT_DELTA(rc.snow_sca.value(0),0.0,0.1);// almost entirely covered by snow, so we should have 0.04 of rain direct response
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0),0.8333,0.001);//empirical
+
+    }
 
 }
 
