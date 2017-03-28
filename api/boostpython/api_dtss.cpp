@@ -17,7 +17,7 @@
 
 #include "api/timeseries.h"
 #include "core/dtss.h"
-
+#include "dlib/timer.h"
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
 struct scoped_gil_release {
@@ -112,11 +112,16 @@ namespace shyft {
 
 
 namespace expose {
-    //using namespace shyft::core;
+
     using namespace boost::python;
-
+    void dtss_finalize() {
+#ifdef _WIN32
+        dlib::delete_global_clock(); // to compile you need git clone https://github.com/sigbjorn/dlib 
+        WSACleanup();
+#endif
+    }
     static void dtss_messages() {
-
+        def("dtss_finalize", dtss_finalize, "dlib socket and timer cleanup before exit python(automatically called once at module exit)");
     }
     static void dtss_server() {
         typedef shyft::dtss::py_server DtsServer;
