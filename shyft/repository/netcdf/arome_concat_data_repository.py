@@ -287,8 +287,10 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             self.fc_len_to_concat = len(lead_time)  # Take all lead_times for now
             self.nb_fc_to_drop = 0  # Take all lead_times for now
             if isinstance(v, api.UtcPeriod):
-                raise AromeConcatDataRepositoryError(
-                        "'forecasts_within_period' selection criteria not supported yet.")
+                time_slice = ((time >= v.start)&(time <= v.end))
+                if not any(time_slice):
+                    raise AromeConcatDataRepositoryError(
+                        "No forecasts found with start time within period {}.".format(v.to_string()))
             elif isinstance(v, list):
                 raise AromeConcatDataRepositoryError(
                         "'forecasts_at_reference_times' selection criteria not supported yet.")
