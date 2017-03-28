@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="routing_test test_build_valid_river_network" />
+				<Option parameters="-nv -tc=test_mass_balance" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -21,7 +21,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  --test-suite=serialization" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  -tc=test_mass_balance" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

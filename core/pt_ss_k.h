@@ -190,7 +190,7 @@ namespace shyft {
             R response;
             const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
             const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
-            const double kirchner_fraction = 1 - total_lake_fraction - glacier_fraction;
+            const double kirchner_fraction = 1 - glacier_fraction;
             const double cell_area_m2 = geo_cell_data.area();
             const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
             // Initialize the method stack
@@ -218,10 +218,11 @@ namespace shyft {
                     period.timespan());
                 kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); //all units mm/h over 'same' area
 
-                response.total_discharge = 
-                      std::max(0.0, prec - response.ae.ae)*total_lake_fraction // when it rains, remove ae. from direct response
+                double bare_lake_fraction = total_lake_fraction*(1.0 - state.snow.sca);// only direct response on bare (no snow-cover) lakes
+                response.total_discharge =
+                      std::max(0.0, prec - response.ae.ae)*bare_lake_fraction // when it rains, remove ae. from direct response
                     + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2)
-                    + response.kirchner.q_avg * kirchner_fraction;
+                    + response.kirchner.q_avg * (kirchner_fraction-bare_lake_fraction);
                 response.charge_m3s =
                     + shyft::mmh_to_m3s(prec, cell_area_m2)
                     - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)
