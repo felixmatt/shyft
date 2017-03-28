@@ -20,6 +20,10 @@
 				<Linker>
 					<Add directory="../bin/Debug" />
 				</Linker>
+				<ExtraCommands>
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  -tc=test_mass_balance" />
+					<Mode after="always" />
+				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />
