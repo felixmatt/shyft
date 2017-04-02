@@ -1738,9 +1738,9 @@ namespace shyft{
 		template <class ts_t,class ta_t>
 		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
             std::vector<point_ts<ta_t>> result;
-
+            auto fx_p= ts_list.size()? ts_list.front().point_interpretation():fx_policy_t::POINT_AVERAGE_VALUE;
 			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
-				result.emplace_back(ta, 0.0);
+				result.emplace_back(ta, 0.0,fx_p);
 
 			auto partition_calc=[&result,&ts_list,&ta,&percentiles](size_t i0,size_t n) {
                 std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());

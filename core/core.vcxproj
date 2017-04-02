@@ -113,6 +113,7 @@
     <ClInclude Include="actual_evapotranspiration.h" />
     <ClInclude Include="core_pch.h" />
     <ClInclude Include="dream_optimizer.h" />
+    <ClInclude Include="dtss.h" />
     <ClInclude Include="experimental.h" />
     <ClInclude Include="hbv_actual_evapotranspiration.h" />
     <ClInclude Include="hbv_soil.h" />

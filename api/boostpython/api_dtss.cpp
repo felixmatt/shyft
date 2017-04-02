@@ -16,7 +16,8 @@
 #include <dlib/iosockstream.h>
 
 #include "api/timeseries.h"
-
+#include "core/dtss.h"
+#include "dlib/timer.h"
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
 struct scoped_gil_release {
@@ -50,108 +51,28 @@ private:
 namespace shyft {
     namespace dtss {
 
-        template<class T>
-        static api::apoint_ts read_ts(T& in) {
-            int sz;
-            in.read((char*)&sz, sizeof(sz));
-            std::vector<char> blob(sz, 0);
-            in.read((char*)blob.data(), sz);
-            return api::apoint_ts::deserialize_from_bytes(blob);
-        }
-
-        template <class T>
-        static void  write_ts(const api::apoint_ts& ats, T& out) {
-            auto blob = ats.serialize_to_bytes();
-            int sz = blob.size();
-            out.write((const char*)&sz, sizeof(sz));
-            out.write((const char*)blob.data(), sz);
-        }
-
-        template <class TSV,class T>
-        static void write_ts_vector(TSV &&ats, T & out) {
-            int sz = ats.size();
-            out.write((const char*)&sz, sizeof(sz));
-            for (const auto & ts : ats)
-                write_ts(ts, out);
-        }
-
-        template<class T>
-        static std::vector<api::apoint_ts> read_ts_vector(T& in) {
-            int sz;
-            in.read((char*)&sz, sizeof(sz));
-            std::vector<api::apoint_ts> r;
-            r.reserve(sz);
-            for (int i = 0;i < sz;++i)
-                r.push_back(read_ts(in));
-            return r;
-        }
-        enum dtss_message {
-            EVALUATE_TS_VECTOR,
-            //CACHE
-            //FIND
-            //etc. etc.
-        };
-
-
-
-        struct dtss_server : dlib::server_iostream {
+        struct py_server : server {
             boost::python::object cb;
-            dtss_server() {
+            py_server():server([=](id_vector_t const &ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); }) {
                 if (!PyEval_ThreadsInitialized()) {
-                    std::cout << "InitThreads needed\n";
+                    //std::cout << "InitThreads needed\n";
                     PyEval_InitThreads();// ensure threads-is enabled
                 }
             }
-            ~dtss_server() {
-                std::cout << "~dtss()\n";
+            ~py_server() {
+                //std::cout << "~dtss()\n";
                 cb = boost::python::object();
             }
-            template<class TSV>
-            std::vector<api::apoint_ts> do_evaluate_ts_vector(core::utcperiod bind_period, TSV&& atsv) {
-                std::map<std::string,std::vector<api::ts_bind_info>> ts_bind_map;
-                std::vector<std::string> ts_id_list;
-                for (auto& ats : atsv) {
-                    auto ts_refs = ats.find_ts_bind_info();
-                    for(const auto& bi:ts_refs) {
-                        if (ts_bind_map.find(bi.reference) == ts_bind_map.end()) { // maintain unique set
-                            ts_id_list.push_back( bi.reference );
-                            ts_bind_map[bi.reference] = std::vector<api::ts_bind_info>();
-                        }
-                        ts_bind_map[bi.reference].push_back(bi);
-                    }
-                }
-                auto bts=fire_cb(ts_id_list,bind_period);
-                if(bts.size()!=ts_id_list.size())
-                    throw std::runtime_error(std::string("failed to bind all of ")+std::to_string(bts.size())+std::string(" ts"));
-                for(size_t i=0;i<ts_id_list.size();++i) {
-                    try {
-                        //std::cout<<"bind "<<i<<": "<<ts_id_list[i]<<":"<<bts[i].size()<<"\n";
-                        for(auto &bi:ts_bind_map[ts_id_list[i]])
-                            bi.ts.bind(bts[i]);
-                    } catch(const std::runtime_error&re) {
-                        std::cout<<"failed to bind "<<ts_id_list[i]<<re.what()<<"\n";
-                    }
-                }
-                //-- evaluate, when all binding is done (vectorized calc.
-                std::vector<api::apoint_ts> evaluated_tsv;
-                int i=0;
-                for (auto &ats : atsv) {
-                    try {
-                        evaluated_tsv.emplace_back(ats.time_axis(), ats.values(), ats.point_interpretation());
-                    } catch(const std::runtime_error&re) {
-                        std::cout<<"failed to evalutate ts:"<<i<<"::"<<re.what()<<"\n";
-                    }
-                    i++;
-                }
-                return evaluated_tsv;
-            }
+
 
             static int msg_count ;
 
-            std::vector<api::apoint_ts> fire_cb(std::vector<std::string>ts_ids,core::utcperiod p) {
+            ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
+                //std::cout << "cb("<<ts_ids.size()<<")\n";
                 std::vector<api::apoint_ts> r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
+                    //std::cout<<" py cb.."<<std::endl;std::cout.flush();
                     r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
                 } else {
                     // for testing, just fill in constant values.
@@ -166,56 +87,51 @@ namespace shyft {
                 if(!is_running()) start_async();
                 std::this_thread::sleep_for(std::chrono::milliseconds(msec));
             }
-
-            void on_connect(
-                std::istream& in,
-                std::ostream& out,
-                const std::string& foreign_ip,
-                const std::string& local_ip,
-                unsigned short foreign_port,
-                unsigned short local_port,
-                dlib::uint64 connection_id
-            ) {
-                while (in.peek() != EOF) {
-                    int msg_type;
-                    in.read((char*)&msg_type, sizeof(msg_type));
-                    msg_count++;
-                    switch ((dtss_message)msg_type) {
-                        case EVALUATE_TS_VECTOR: {
-                            core::utcperiod bind_period;
-                            in.read((char*)&bind_period, sizeof(bind_period));
-                            write_ts_vector(do_evaluate_ts_vector(bind_period, read_ts_vector(in)),out);
-                        } break;
-                        default:
-                            throw std::runtime_error(std::string("Got unknown message type:") + std::to_string(msg_type));
-                    }
-                }
-            }
         };
-        int dtss::dtss_server::msg_count = 0;
-        std::vector<api::apoint_ts> dtss_evaluate(std::string host_port,const std::vector<api::apoint_ts>& tsv, core::utcperiod p) {
-            scoped_gil_release gil;
-            dlib::iosockstream io(host_port);
-            int msg_type = EVALUATE_TS_VECTOR;
-            io.write((const char*) &msg_type, sizeof(msg_type));
-            io.write((const char*)&p, sizeof(p));
-            write_ts_vector(tsv, io);
-            return read_ts_vector(io);
-        }
+        int py_server::msg_count = 0;
+        // need to wrap core client to unlock gil during processing
+        struct py_client {
+            client impl;
+            py_client(std::string host_port):impl(host_port) {}
+            ~py_client() {
+                //std::cout << "~py_client" << std::endl;
+            }
+            py_client(py_client const&) = delete;
+            py_client(py_client &&) = delete;
+            py_client& operator=(py_client const&o) = delete;
+
+            void close(int timeout_ms=1000) {
+                scoped_gil_release gil;
+                impl.close(timeout_ms);
+            }
+            ts_vector_t percentiles(ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec) {
+                scoped_gil_release gil;
+                return impl.percentiles(tsv,p,ta,percentile_spec);
+            }
+            ts_vector_t evaluate(ts_vector_t const& tsv, core::utcperiod p) {
+                scoped_gil_release gil;
+                return impl.evaluate(tsv,p);
+            }
+
+        };
     }
 }
 
 
 namespace expose {
-    //using namespace shyft::core;
+
     using namespace boost::python;
-
+    void dtss_finalize() {
+#ifdef _WIN32
+        dlib::delete_global_clock(); // to compile you need git clone https://github.com/sigbjorn/dlib 
+        WSACleanup();
+#endif
+    }
     static void dtss_messages() {
-
+        def("dtss_finalize", dtss_finalize, "dlib socket and timer cleanup before exit python(automatically called once at module exit)");
     }
     static void dtss_server() {
-        typedef shyft::dtss::dtss_server DtsServer;
-        //bases<>,std::shared_ptr<DtsServer>
+        typedef shyft::dtss::py_server DtsServer;
         class_<DtsServer, boost::noncopyable >("DtsServer",
             doc_intro("A distributed time-series server object")
             doc_intro("Capable of processing time-series messages and responding accordingly")
@@ -223,7 +139,7 @@ namespace expose {
             doc_intro("- that typically involve reading time-series from a service or storage for the specified period")
             doc_intro("The server object will then compute the resulting time-series vector,")
             doc_intro("and respond back to clients with the results")
-            doc_see_also("shyft.api.dtss_evalutate(port_host,ts_array,utc_period)")
+            doc_see_also("shyft.api.DtsClient")
             )
             .def("set_listening_port", &DtsServer::set_listening_port, args("port_no"),
                 doc_intro("set the listening port for the service")
@@ -265,11 +181,11 @@ namespace expose {
                     "from shyft import api as sa\n\n"
                     "def resolve_and_read_ts(ts_ids,read_period):\n"
                     "    print('ts_ids:', len(ts_ids), ', read period=', str(read_period))\n"
-                    "    ta = sa.Timeaxis2(read_period.start, sa.deltahours(1), read_period.timespan()//sa.deltahours(1))\n"
+                    "    ta = sa.TimeAxis(read_period.start, sa.deltahours(1), read_period.timespan()//sa.deltahours(1))\n"
                     "    x_value = 1.0\n"
                     "    r = sa.TsVector()\n"
                     "    for ts_id in ts_ids :\n"
-                    "        r.append(sa.Timeseries(ta, fill_value = x_value))\n"
+                    "        r.append(sa.TimeSeries(ta, fill_value = x_value))\n"
                     "        x_value = x_value + 1\n"
                     "    return r\n"
                     "# and then bind the function to the callback\n"
@@ -297,18 +213,49 @@ namespace expose {
 
     }
     static void dtss_client() {
-        def("dtss_evaluate", shyft::dtss::dtss_evaluate, args("host_port","ts_vector","utcperiod"),
-            doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
-            doc_intro("If the expression includes unbound symbolic references to time-series,")
-            doc_intro("these time-series will be passed to the binding service callback")
-            doc_intro("on the serverside.")
-            doc_parameters()
-            doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
-            doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
-            doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
-            doc_returns("tsvector","TsVector","an evaluated list of point timeseries in the same order as the input list")
-            doc_see_also("DtsServer,DtsServer.cb")
-            );
+        typedef shyft::dtss::py_client  DtsClient;
+        class_<DtsClient, boost::noncopyable >("DtsClient",
+            doc_intro("The client part of the DtsServer")
+            doc_intro("Capable of processing time-series messages and responding accordingly")
+            doc_intro("The user can setup callback to python to handle unbound symbolic time-series references")
+            doc_intro("- that typically involve reading time-series from a service or storage for the specified period")
+            doc_intro("The server object will then compute the resulting time-series vector,")
+            doc_intro("and respond back to clients with the results")
+            doc_see_also("DtsServer"),no_init
+            )
+            .def(init<std::string>(args("host_port"),
+                doc_intro("constructs a dts-client with the specifed host_port parameter")
+                doc_parameter("host_port","string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
+                )
+             )
+            .def("close",&DtsClient::close,(boost::python::arg("timeout_ms")=1000),
+                doc_intro("close the connection")
+            )
+            .def("percentiles",&DtsClient::percentiles, args("ts_vector","utcperiod","time_axis","percentile_list"),
+                doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
+                doc_intro("If the expression includes unbound symbolic references to time-series,")
+                doc_intro("these time-series will be passed to the binding service callback")
+                doc_intro("on the serverside.")
+                doc_parameters()
+                doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
+                doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+                doc_parameter("time_axis","TimeAxis","the time_axis for the percentiles, e.g. a weekly time_axis")
+                doc_parameter("percentile_list","IntVector","a list of percentiles, where -1 means true average, 25=25percentile etc")
+                doc_returns("tsvector","TsVector","an evaluated list of percentile time-series in the same order as the percentile input list")
+                doc_see_also(".evaluate(), DtsServer")
+            )
+            .def("evaluate", &DtsClient::evaluate, args("ts_vector","utcperiod"),
+                doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
+                doc_intro("If the expression includes unbound symbolic references to time-series,")
+                doc_intro("these time-series will be passed to the binding service callback")
+                doc_intro("on the serverside.")
+                doc_parameters()
+                doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
+                doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+                doc_returns("tsvector","TsVector","an evaluated list of point time-series in the same order as the input list")
+                doc_see_also(".percentiles(),DtsServer")
+            )
+            ;
 
     }
 

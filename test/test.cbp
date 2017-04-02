@@ -5,7 +5,7 @@
 		<Option title="test" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="methods/;method_stacks/;interpolation/;optimizers/;utils/;compiler_etc/;time_and_calendar/;serialization/;full_model/;api/;time_series/;routing/;" />
+		<Option virtualFolders="methods/;method_stacks/;interpolation/;optimizers/;utils/;compiler_etc/;time_and_calendar/;serialization/;full_model/;api/;time_series/;routing/;dtss/;" />
 		<Build>
 			<Target title="Debug">
 				<Option output="../bin/Debug/test_shyft" prefix_auto="1" extension_auto="1" />
@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=test_mass_balance" />
+				<Option parameters="-tc=test_dlib_server" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -40,7 +40,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  --test-suite=serialization" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=dlib_server_basics" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -89,6 +89,9 @@
 		</Unit>
 		<Unit filename="cell_builder_test.cpp">
 			<Option virtualFolder="full_model/" />
+		</Unit>
+		<Unit filename="dtss_test.cpp">
+			<Option virtualFolder="dtss/" />
 		</Unit>
 		<Unit filename="gamma_snow_test.cpp">
 			<Option virtualFolder="methods/" />
