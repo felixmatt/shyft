@@ -93,6 +93,13 @@ namespace shyft {
         struct py_client {
             client impl;
             py_client(std::string host_port):impl(host_port) {}
+            ~py_client() {
+                //std::cout << "~py_client" << std::endl;
+            }
+            py_client(py_client const&) = delete;
+            py_client(py_client &&) = delete;
+            py_client& operator=(py_client const&o) = delete;
+
             void close(int timeout_ms=1000) {
                 scoped_gil_release gil;
                 impl.close(timeout_ms);

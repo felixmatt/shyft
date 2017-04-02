@@ -105,7 +105,7 @@ BOOST_PYTHON_MODULE(_api) {
     // will be called _before_ the Python C-API is unloaded.
     // needed for proper clean-up on windows platform
     // otherwise python hangs on dlib::shared_ptr_thread_safe destruction
-    // 
+    //--with no at-exit 
     py::def("_finalize", &finalize_api);
     py::object atexit = py::object(py::handle<>(PyImport_ImportModule("atexit")));
     py::object finalize = py::scope().attr("_finalize");
