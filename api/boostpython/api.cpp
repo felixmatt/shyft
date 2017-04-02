@@ -32,7 +32,7 @@ namespace expose {
     extern void dtss_finalize();
     extern void api_cell_state_id();
 
-    
+
     static std::vector<char> byte_vector_from_file(std::string path) {
         using namespace std;
         ostringstream buf;
@@ -91,7 +91,7 @@ namespace expose {
     }
 }
 void finalize_api() {
-    extern void expose::dtss_finalize();
+    //extern void expose::dtss_finalize();
     expose::dtss_finalize();
 }
 
@@ -105,7 +105,6 @@ BOOST_PYTHON_MODULE(_api) {
     // will be called _before_ the Python C-API is unloaded.
     // needed for proper clean-up on windows platform
     // otherwise python hangs on dlib::shared_ptr_thread_safe destruction
-    //--with no at-exit 
     py::def("_finalize", &finalize_api);
     py::object atexit = py::object(py::handle<>(PyImport_ImportModule("atexit")));
     py::object finalize = py::scope().attr("_finalize");
