@@ -49,7 +49,8 @@ class DtssTestCase(unittest.TestCase):
             tsv.append(float(1 + i / 10) * TimeSeries(ta, np.linspace(start=0, stop=1.0, num=ta.size()),
                                                       point_fx.POINT_AVERAGE_VALUE))
 
-        tsv.append(TimeSeries('dummy://a'))
+        dummy_ts= TimeSeries('dummy://a')
+        tsv.append(dummy_ts.integral(ta))
 
         # then start the server
         dtss = DtsServer()
@@ -74,7 +75,7 @@ class DtssTestCase(unittest.TestCase):
             assert_array_almost_equal(r1[i].values.to_numpy(), tsv[i].values.to_numpy(), decimal=4)
 
         self.assertEqual(len(r2), len(percentile_list))
-        tsv[len(tsv)-1].bind(TimeSeries(ta,fill_value=1.0))
+        dummy_ts.bind(TimeSeries(ta,fill_value=1.0))
         p2 = tsv.percentiles(ta24, percentile_list)
         # r2 = tsv.percentiles(ta24,percentile_list)
 
