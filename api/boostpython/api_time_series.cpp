@@ -177,7 +177,17 @@ namespace expose {
                 doc_notes()
                 doc_note("the self point interpretation policy is used when calculating the true average")
 			)
-			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"),
+            .def("integral", &shyft::api::apoint_ts::integral, args("ta"),
+                doc_intro("create a new ts that is the true integral of self")
+                doc_intro("over the specified time-axis ta.")
+                doc_intro(" defined as integral of the non-nan part of each time-axis interval")
+                doc_parameters()
+                doc_parameter("ta", "TimeAxis", "time-axis that specifies the periods where true-integral is applied")
+                doc_returns("ts", "TimeSeries", "a new time-series expression, that will provide the true-integral when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the true average")
+            )
+            .def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"),
                 doc_intro("create a new ts where each i'th value is the ")
                 doc_intro("    integral f(t) *dt, from t0..ti,")
                 doc_intro("given the specified time-axis ta")
@@ -250,9 +260,12 @@ namespace expose {
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
+        typedef shyft::api::apoint_ts(*int_func_t)(const shyft::api::apoint_ts&, const shyft::time_axis::generic_dt&);
         avg_func_t avg=shyft::api::average;
+        int_func_t intfnc = shyft::api::integral;
 		avg_func_t acc = shyft::api::accumulate;
         def("average",avg,args("ts","time_axis"),"creates a true average time-series of ts for intervals as specified by time_axis");
+        def("integral", intfnc, args("ts", "time_axis"), "creates a true integral time-series of ts for intervals as specified by time_axis");
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",shyft::api::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
 

@@ -107,6 +107,7 @@ namespace shyft {
             };
             struct average_ts;//fwd api
 			struct accumulate_ts;//fwd api
+            struct integral_ts;// fwd api
             struct time_shift_ts;// fwd api
             struct aglacier_melt_ts;// fwd api
             struct aref_ts;// fwd api
@@ -127,6 +128,7 @@ namespace shyft {
 
                typedef gta_t ta_t;///< this is the generic time-axis type for apoint_ts, needed by timeseries namespace templates
                friend struct average_ts;
+               friend struct integral_ts;
                friend struct time_shift_ts;
                friend struct accumulate_ts;
                friend struct aglacier_melt_ts;
@@ -194,6 +196,7 @@ namespace shyft {
 
                 //-- then some useful functions/properties
                 apoint_ts average(const gta_t& ta) const;
+                apoint_ts integral(gta_t const &ta) const;
 				apoint_ts accumulate(const gta_t& ta) const;
 				apoint_ts time_shift(utctimespan dt) const;
 				apoint_ts max(double a) const;
@@ -411,6 +414,87 @@ namespace shyft {
                     bool linear_interpretation=ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE;
                     for(size_t i=0;i<ta.size();++i) {
                         r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
+                    }
+                    return r;
+                }
+                // to help the average function, return the i'th point of the underlying timeseries
+                //point get(size_t i) const {return point(ts->time(i),ts->value(i));}
+                x_serialize_decl();
+
+            };
+
+            /** \brief The integral_ts is used for providing ts integral values over a time-axis
+            *
+            * Given a any ts, concrete, or an expression, provide the 'true integral' values on the
+            * intervals as provided by the specified time-axis.
+            *
+            * true inegral for each period in the time-axis is defined as:
+            *
+            *   integral of f(t) dt from t0 to t1 
+            *
+            * using the f(t) interpretation of the supplied ts (linear or stair case).
+            *
+            * The \ref point_interpretation_policy is always POINT_AVERAGE_VALUE for the result ts.
+            *
+            * \note if a nan-value intervals are excluded from the integral and time-computations.
+            *       E.g. let's say half the interval is nan, then the true integral is computed for
+            *       the other half of the interval.
+            *
+            */
+            struct integral_ts :ipoint_ts {
+                gta_t ta;
+                std::shared_ptr<ipoint_ts> ts;
+                // useful constructors
+                integral_ts(gta_t&& ta, const apoint_ts& ats) :ta(std::move(ta)), ts(ats.ts) {}
+                integral_ts(gta_t&& ta, apoint_ts&& ats) :ta(std::move(ta)), ts(std::move(ats.ts)) {}
+                integral_ts(const gta_t& ta, apoint_ts&& ats) :ta(ta), ts(std::move(ats.ts)) {}
+                integral_ts(const gta_t& ta, const apoint_ts& ats) :ta(ta), ts(ats.ts) {}
+                integral_ts(const gta_t& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(ta), ts(ts) {}
+                integral_ts(gta_t&& ta, const std::shared_ptr<ipoint_ts> &ts) :ta(std::move(ta)), ts(ts) {}
+                // std copy ct and assign
+                integral_ts() {}
+                integral_ts(const integral_ts &c) :ta(c.ta), ts(c.ts) {}
+                integral_ts(integral_ts&&c) :ta(std::move(c.ta)), ts(std::move(c.ts)) {}
+                integral_ts& operator=(const integral_ts&c) {
+                    if (this != &c) {
+                        ta = c.ta;
+                        ts = c.ts;
+                    }
+                    return *this;
+                }
+                integral_ts& operator=(integral_ts&& c) {
+                    ta = std::move(c.ta);
+                    ts = std::move(c.ts);
+                    return *this;
+                }
+                // implement ipoint_ts contract:
+                virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
+                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) { ; }
+                virtual const gta_t& time_axis() const { return ta; }
+                virtual utcperiod total_period() const { return ta.total_period(); }
+                virtual size_t index_of(utctime t) const { return ta.index_of(t); }
+                virtual size_t size() const { return ta.size(); }
+                virtual utctime time(size_t i) const { return ta.time(i); };
+                virtual double value(size_t i) const {
+                    if (i>ta.size())
+                        return nan;
+                    size_t ix_hint = (i*ts->size()) / ta.size();// assume almost fixed delta-t.
+                    utctimespan tsum = 0;
+                    return accumulate_value(*ts, ta.period(i), ix_hint,tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+                }
+                virtual double value_at(utctime t) const {
+                    // return true average at t
+                    if (!ta.total_period().contains(t))
+                        return nan;
+                    return value(index_of(t));
+                }
+                virtual std::vector<double> values() const {
+                    std::vector<double> r;r.reserve(ta.size());
+                    size_t ix_hint = ts->index_of(ta.time(0));
+                    bool linear_interpretation = ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE;
+                    for (size_t i = 0;i<ta.size();++i) {
+                        utctimespan tsum = 0;
+                        r.push_back(accumulate_value(*ts, ta.period(i), ix_hint,tsum, linear_interpretation));
                     }
                     return r;
                 }
@@ -903,7 +987,10 @@ namespace shyft {
             apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */) ;
             apoint_ts average(apoint_ts&& ts,const gta_t& ta) ;
 
-			apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
+            apoint_ts integral(const apoint_ts& ts, const gta_t& ta/*fx-type */);
+            apoint_ts integral(apoint_ts&& ts, const gta_t& ta);
+            
+            apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
 
             apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf);
@@ -958,6 +1045,7 @@ namespace shyft {
 x_serialize_export_key(shyft::api::ipoint_ts);
 x_serialize_export_key(shyft::api::gpoint_ts);
 x_serialize_export_key(shyft::api::average_ts);
+x_serialize_export_key(shyft::api::integral_ts);
 x_serialize_export_key(shyft::api::accumulate_ts);
 x_serialize_export_key(shyft::api::time_shift_ts);
 x_serialize_export_key(shyft::api::periodic_ts);

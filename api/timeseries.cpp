@@ -19,6 +19,8 @@ namespace shyft{
        // add operators and functions to the apoint_ts class, of all variants that we want to expose
         apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
         apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
+        apoint_ts integral(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<integral_ts>(ta, ts)); }
+        apoint_ts integral(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<integral_ts>(ta, std::move(ts))); }
 
 		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
 		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
@@ -122,6 +124,9 @@ namespace shyft{
         apoint_ts apoint_ts::average(const gta_t &ta) const {
             return shyft::api::average(*this,ta);
         }
+        apoint_ts apoint_ts::integral(const gta_t &ta) const {
+            return shyft::api::integral(*this, ta);
+        }
 		apoint_ts apoint_ts::accumulate(const gta_t &ta) const {
 			return shyft::api::accumulate(*this, ta);
 		}
@@ -142,7 +147,9 @@ namespace shyft{
                     ;// maybe throw ?
             } else if (dynamic_cast<const api::average_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::average_ts*>(its.get())->ts, r);
-            } else if (dynamic_cast<const api::accumulate_ts*>(its.get())) {
+            } else if (dynamic_cast<const api::integral_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const api::integral_ts*>(its.get())->ts, r);
+            } else if(dynamic_cast<const api::accumulate_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::accumulate_ts*>(its.get())->ts, r);
             } else if (dynamic_cast<const api::time_shift_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::time_shift_ts*>(its.get())->ts, r);

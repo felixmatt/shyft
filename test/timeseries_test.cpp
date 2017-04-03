@@ -748,6 +748,16 @@ TEST_CASE("test_api_ts") {
     for(const auto&v:cv) {
         TS_ASSERT_DELTA(v,(a_value+3*b_value)*4 +(a_value*b_value/2.0), 0.001);
     }
+    SUBCASE("integral_ts") {
+        auto a_i_ts = a.integral(ta2);
+        auto a_i_v = a_i_ts.values();
+        TS_ASSERT_EQUALS(a_i_v.size(), ta2.size());
+        for (size_t i = 0;i < ta2.size();++i) {
+            TS_ASSERT_DELTA(a_i_v[i], a_i_ts.value(i), 0.00001);
+            TS_ASSERT_DELTA(a_i_v[i], a_value*double(ta2.period(i).timespan()),0.00001);
+        }
+    }
+
     // verify some special fx
     a.set(0,a_value*b_value);
     TS_ASSERT_DELTA(a.value(0),a_value*b_value,0.0001);
