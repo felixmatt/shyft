@@ -123,7 +123,7 @@ namespace expose {
     using namespace boost::python;
     void dtss_finalize() {
 #ifdef _WIN32
-        dlib::delete_global_clock(); // to compile you need git clone https://github.com/sigbjorn/dlib 
+        //to avoid infinite hang at exit on win, you need git clone https://github.com/sigbjorn/dlib 
         WSACleanup();
 #endif
     }
