@@ -737,7 +737,7 @@ namespace shyft{
         struct ref_ts {
             typedef typename TS::ta_t ta_t;
             string ref;///< reference to time-series supporting storage
-            fx_policy_t fx_policy;
+            //fx_policy_t fx_policy=POINT_AVERAGE_VALUE;
             shared_ptr<TS> ts;
             TS& bts() {
                 if(ts==nullptr)
@@ -756,26 +756,29 @@ namespace shyft{
                 bts().set_point_interpretation(point_interpretation);
             }
             // std. ct/dt etc.
-            ref_ts(){}
-            ref_ts(const ref_ts &c):ref(c.ref),fx_policy(c.fx_policy),ts(c.ts) {}
-            ref_ts(ref_ts&&c):ref(std::move(c.ref)),fx_policy(c.fx_policy),ts(std::move(c.ts)) {}
+            ref_ts() = default;
+            ref_ts(const ref_ts &c):ref(c.ref),/*fx_policy(c.fx_policy),*/ts(c.ts) {}
+            ref_ts(ref_ts&&c):ref(std::move(c.ref)),/*fx_policy(c.fx_policy),*/ts(std::move(c.ts)) {}
             ref_ts& operator=(const ref_ts& c) {
                 if(this != &c ) {
                     ref=c.ref;
-                    fx_policy=c.fx_policy;
+                    //fx_policy=c.fx_policy;
                     ts=c.ts;
                 }
                 return *this;
             }
             ref_ts& operator=(ref_ts&& c) {
                 ref=std::move(c.ref);
-                fx_policy=c.fx_policy;
+                //fx_policy=c.fx_policy;
                 ts=std::move(c.ts);
                 return *this;
             }
-
+            void set_ts(shared_ptr<TS>const &tsn) { 
+                ts = tsn; 
+                //fx_policy = ts?point_interpretation():POINT_AVERAGE_VALUE;
+            }
             // useful constructors goes here:
-            ref_ts(string sym_ref):ref(sym_ref) {}
+            ref_ts(string sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
             const ta_t& time_axis() const {return bts().time_axis();}
             /**\brief the function value f(t) at time t, fx_policy taken into account */
             double operator()(utctime t) const {
@@ -1000,12 +1003,22 @@ namespace shyft{
             A lhs;
             B rhs;
             TA ta;
-            bin_op(){}
-            point_interpretation_policy fx_policy;
+            mutex bind_once;
+            atomic_bool bind_done = false;
+            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+            bin_op() = default;
+            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs), op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = std::move(c.rhs);op = std::move(c.op);bind_done = c.bind_done;return *this; }
+            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op = c.op;bind_done = c.bind_done; }return *this; }
             void deferred_bind() const {
-                if(ta.size()==0) {
-                    ((bin_op*)this)->ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
-                    ((bin_op*)this)->fx_policy=result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
+                if(!bind_done) {
+                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
+                    if (!bind_done) {
+                        const_cast<bin_op*>(this)->ta = time_axis::combine(d_ref(lhs).time_axis(), d_ref(rhs).time_axis());
+                        const_cast<bin_op*>(this)->fx_policy = result_policy(d_ref(lhs).point_interpretation(), d_ref(rhs).point_interpretation());
+                        const_cast<bin_op*>(this)->bind_done = true;
+                    }
                 }
             }
             const TA& time_axis() const {
@@ -1023,8 +1036,6 @@ namespace shyft{
 
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
-                //ta=time_axis::combine(d_ref(lhs).time_axis(),d_ref(rhs).time_axis());
-                //fx_policy = result_policy(d_ref(lhs).fx_policy,d_ref(rhs).fx_policy);
             }
             double operator()(utctime t) const {
                 if(!time_axis().total_period().contains(t))
@@ -1057,12 +1068,23 @@ namespace shyft{
             B rhs;
             O op;
             TA ta;
-            point_interpretation_policy fx_policy;
-            bin_op(){}
+            mutex bind_once;
+            atomic_bool bind_done = false;
+            point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
+            bin_op() = default;
+            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs), op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = std::move(c.rhs);op = std::move(c.op);bind_done = c.bind_done;return *this; }
+            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op = c.op;bind_done = c.bind_done; }return *this; }
+
             void deferred_bind() const {
-                if(ta.size()==0) {
-                    ((bin_op*)this)->ta=d_ref(rhs).time_axis();
-                    ((bin_op*)this)->fx_policy=d_ref(rhs).fx_policy;
+                if (!bind_done) {
+                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
+                    if (!bind_done) {
+                        const_cast<bin_op*>(this)->ta = d_ref(rhs).time_axis();
+                        const_cast<bin_op*>(this)->fx_policy = d_ref(rhs).point_interpretation();
+                        const_cast<bin_op*>(this)->bind_done = true;
+                    }
                 }
             }
             const TA& time_axis() const {deferred_bind();return ta;}
@@ -1076,8 +1098,6 @@ namespace shyft{
             }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                //ta=d_ref(rhs).time_axis();
-                //fx_policy = d_ref(rhs).fx_policy;
             }
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
@@ -1097,12 +1117,23 @@ namespace shyft{
             double rhs;
             O op;
             TA ta;
-            point_interpretation_policy fx_policy;
-            bin_op(){}
+            mutex bind_once;
+            atomic_bool bind_done = false;
+            point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
+            bin_op() = default;
+            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(c.rhs), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done ? true : false), fx_policy(c.fx_policy) {}
+            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs),op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = c.rhs;op = std::move(c.op);bind_done = c.bind_done;return *this; }
+            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op =c.op;bind_done = c.bind_done; }return *this; }
+
             void deferred_bind() const {
-                if(ta.size()==0) {
-                    ((bin_op*)this)->ta=d_ref(lhs).time_axis();
-                    ((bin_op*)this)->fx_policy=d_ref(lhs).fx_policy;
+                if (!bind_done) {
+                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
+                    if (!bind_done) {
+                        const_cast<bin_op*>(this)->ta = d_ref(lhs).time_axis();
+                        const_cast<bin_op*>(this)->fx_policy = d_ref(lhs).point_interpretation();
+                        const_cast<bin_op*>(this)->bind_done = true;
+                    }
                 }
             }
             const TA& time_axis() const {deferred_bind();return ta;}
@@ -1116,8 +1147,6 @@ namespace shyft{
             }
             template<class A_,class B_>
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
-                //ta=d_ref(lhs).time_axis();
-                //fx_policy = d_ref(lhs).fx_policy;
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
@@ -1273,7 +1302,7 @@ namespace shyft{
             point_interpretation_policy point_fx=POINT_INSTANT_VALUE;
           public:
 
-                          /** point intepretation: how we should map points to f(t) */
+             /** point interpretation: how we should map points to f(t) */
             point_interpretation_policy point_interpretation() const {return point_fx;}
             void set_point_interpretation(point_interpretation_policy point_interpretation) {point_fx=point_interpretation;}
 
@@ -1407,13 +1436,13 @@ namespace shyft{
         class average_accessor {
           private:
             static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
-            mutable size_t last_idx;
-            mutable size_t q_idx;// last queried index
-            mutable double q_value;// outcome of
+            mutable size_t last_idx=-1;
+            mutable size_t q_idx=-1;// last queried index
+            mutable double q_value=nan;// outcome of
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
-            bool linear_between_points;
+            bool linear_between_points=false;
           public:
             average_accessor(const S& source, const TA& time_axis)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
@@ -1444,9 +1473,9 @@ namespace shyft{
 		class accumulate_accessor {
 		private:
 			static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
-			mutable size_t last_idx;
-			mutable size_t q_idx;// last queried index
-			mutable double q_value;// outcome of
+			mutable size_t last_idx=-1;
+			mutable size_t q_idx=-1;// last queried index
+			mutable double q_value=nan;// outcome of
 			const TA& time_axis;
 			const S& source;
 			std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref

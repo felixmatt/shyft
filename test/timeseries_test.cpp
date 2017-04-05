@@ -816,25 +816,61 @@ TEST_CASE("test_ts_statistics_speed") {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
 
-    auto fx_1 = [t0](size_t i, utctime t)->double {return double( rand()/36000.0 );};// should generate 0..9 constant ts.
+    auto fx_1 = [t0](size_t i, utctime t)->double {return 1000000.0*double( rand()/36000.0 );};
 #ifdef _DEBUG
-    auto n_days=365*100;
+    auto n_days=7*52;
 #else
 	auto n_days = 365 * 10;// fewer for debug
 #endif
-	auto n_ts=10;
+	auto n_ts=83;
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, deltahours(24), n_days);
-    auto tsv1 = create_test_ts(n_ts, ta, fx_1);
+    auto tsv = create_test_ts(n_ts, ta, fx_1);
+    std::vector<shyft::api::apoint_ts> tsv1;
+    auto ts0 = shyft::api::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::timeseries::POINT_AVERAGE_VALUE);
+
+    for (auto const &ts : tsv)
+        tsv1.push_back(shyft::api::apoint_ts(string("a_ref"))*ts0 - 1000.0);// make it an expression
+
+    {
+        std::vector<shyft::api::apoint_ts> bind_ts;
+        for(auto const &ts : tsv)
+            bind_ts.push_back(shyft::api::apoint_ts(ts.time_axis(), ts.v, shyft::timeseries::POINT_AVERAGE_VALUE));
+        std::vector<shyft::api::ts_bind_info> bi;
+        for (auto const& ats : tsv1) {
+            auto tsb = ats.find_ts_bind_info();
+            for (auto const&b : tsb)
+                bi.push_back(b);
+        }
+        size_t i = 0;
+        for (auto &ab : bi) 
+            ab.ts.bind(bind_ts[i++]);
+    }
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     if(verbose) cout << "\nStart calc percentiles " << n_days << " days, x " << n_ts << " ts\n";
     //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
     vector<tts_t> r1;
+#if 1
+    size_t diff_count = 0;
+    auto r0 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100 });
+    for (size_t i = 0;i < 10;++i) {
+        r1 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100 },1+n_days/10);
+        for (size_t j = 0;j < r1.size();++j) {
+            auto diff_ts = (r1[j] - r0[j]);
+            for (size_t t = 0;t < tad.size();++t) {
+                if (fabs(diff_ts.value(t)) > 1e-1)
+                    diff_count++;
+            }
+        }
+    }
+    TS_ASSERT_EQUALS(diff_count, 0);
+#else
     auto f1 = [&tad, &tsv1, &r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
     for (int sz = tad.size(); sz > 100; sz /= 2) {
         auto msec1 = measure<>::execution(f1,sz);
         if(verbose) cout<<"statistics speed tests, "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
     }
+#endif
     //auto msec2= measure<>::execution(f1,tad.size()/4);
     //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;
 }

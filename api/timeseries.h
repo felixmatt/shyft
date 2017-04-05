@@ -270,7 +270,7 @@ namespace shyft {
                 gpoint_ts(const gta_t& ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
 
                 // now for the gpoint_ts it self, constructors incl. move
-                gpoint_ts() {} // default for serialization conv
+                gpoint_ts() = default; // default for serialization conv
                 gpoint_ts(const gpoint_ts& c):rep(c.rep){}
                 gpoint_ts(gts_t&& c):rep(std::move(c)){}
                 gpoint_ts& operator=(const gpoint_ts&c) {
@@ -313,7 +313,7 @@ namespace shyft {
                 //aref_ts(const gta_t& ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
                 aref_ts(string sym_ref):rep(sym_ref) {}
                 // now for the aref_ts it self, constructors incl. move
-                aref_ts() {} // default for serialization conv
+                aref_ts() = default; // default for serialization conv
                 aref_ts(const aref_ts& c):rep(c.rep){}
                 aref_ts(aref_ts&& c):rep(std::move(c.rep)){}
                 aref_ts& operator=(const aref_ts&c) {

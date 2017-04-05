@@ -86,8 +86,7 @@ namespace shyft{
                 throw runtime_error("this time-series is not bindable");
             if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
                 throw runtime_error("the supplied argument time-series must be a point ts");
-            dynamic_cast<aref_ts*>(ts.get())->rep.ts=
-            make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep );
+            dynamic_cast<aref_ts*>(ts.get())->rep.set_ts( make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep ));
         }
 
         // and python needs these:

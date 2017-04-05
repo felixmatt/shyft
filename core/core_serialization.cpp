@@ -125,7 +125,7 @@ template <class Archive>
 void shyft::timeseries::ref_ts<TS>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ref", ref)
-    & make_nvp("fx_policy", fx_policy)
+    //& make_nvp("fx_policy", fx_policy)
     & make_nvp("ts", ts)
     ;
 }
@@ -213,13 +213,16 @@ void shyft::timeseries::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigne
 template <class A, class B, class O, class TA>
 template<class Archive>
 void shyft::timeseries::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsigned int version) {
+    bool bd=bind_done;
     ar
     //& make_nvp("op",o.op) // not needed yet, needed when op starts to carry data
     & make_nvp("lhs", lhs)
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bind_done",bd)
     ;
+    bind_done = bd;
 }
 
 //-- basic geo stuff
