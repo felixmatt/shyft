@@ -773,8 +773,8 @@ namespace shyft{
                 ts=std::move(c.ts);
                 return *this;
             }
-            void set_ts(shared_ptr<TS>const &tsn) { 
-                ts = tsn; 
+            void set_ts(shared_ptr<TS>const &tsn) {
+                ts = tsn;
                 //fx_policy = ts?point_interpretation():POINT_AVERAGE_VALUE;
             }
             // useful constructors goes here:
@@ -1004,11 +1004,11 @@ namespace shyft{
             B rhs;
             TA ta;
             mutex bind_once;
-            atomic_bool bind_done = false;
+            volatile bool bind_done = false;
             point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
             bin_op() = default;
-            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs), op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op(bin_op && c) : op(std::move(c.op)),lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
+            bin_op(bin_op const&c) :op(c.op),lhs(c.lhs), rhs(c.rhs),  ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
             bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = std::move(c.rhs);op = std::move(c.op);bind_done = c.bind_done;return *this; }
             bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op = c.op;bind_done = c.bind_done; }return *this; }
             void deferred_bind() const {
@@ -1069,7 +1069,7 @@ namespace shyft{
             O op;
             TA ta;
             mutex bind_once;
-            atomic_bool bind_done = false;
+            volatile bool bind_done = false;
             point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
             bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
@@ -1118,13 +1118,13 @@ namespace shyft{
             O op;
             TA ta;
             mutex bind_once;
-            atomic_bool bind_done = false;
+            volatile bool bind_done = false;
             point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
             bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(c.rhs), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done ? true : false), fx_policy(c.fx_policy) {}
             bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs),op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = c.rhs;op = std::move(c.op);bind_done = c.bind_done;return *this; }
-            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op =c.op;bind_done = c.bind_done; }return *this; }
+            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = c.rhs;op = std::move(c.op);bind_done = c.bind_done?true:false;return *this; }
+            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op =c.op;bind_done = c.bind_done?true:false; }return *this; }
 
             void deferred_bind() const {
                 if (!bind_done) {

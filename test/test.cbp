@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-tc=test_dlib_server" />
+				<Option parameters="-ts=time_series" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -31,6 +31,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-tc=test_ts_statistics_speed" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />

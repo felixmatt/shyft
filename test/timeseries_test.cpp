@@ -818,9 +818,9 @@ TEST_CASE("test_ts_statistics_speed") {
 
     auto fx_1 = [t0](size_t i, utctime t)->double {return 1000000.0*double( rand()/36000.0 );};
 #ifdef _DEBUG
-    auto n_days=7*52;
+    auto n_days=7;
 #else
-	auto n_days = 365 * 10;// fewer for debug
+	auto n_days = 7;// fewer for debug
 #endif
 	auto n_ts=83;
     tta_t  ta(t0, calendar::HOUR, n_days*24);
@@ -843,7 +843,7 @@ TEST_CASE("test_ts_statistics_speed") {
                 bi.push_back(b);
         }
         size_t i = 0;
-        for (auto &ab : bi) 
+        for (auto &ab : bi)
             ab.ts.bind(bind_ts[i++]);
     }
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;

@@ -430,7 +430,7 @@ namespace shyft {
             *
             * true inegral for each period in the time-axis is defined as:
             *
-            *   integral of f(t) dt from t0 to t1 
+            *   integral of f(t) dt from t0 to t1
             *
             * using the f(t) interpretation of the supplied ts (linear or stair case).
             *
@@ -794,7 +794,7 @@ namespace shyft {
                   iop_t op;
                   apoint_ts rhs;
                   gta_t ta;
-                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
 
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
@@ -864,7 +864,7 @@ namespace shyft {
                   iop_t op;
                   apoint_ts rhs;
                   gta_t ta;
-                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
                   void do_deferred_bind()  {
@@ -928,7 +928,7 @@ namespace shyft {
                   iop_t op;
                   double rhs;
                   gta_t ta;
-                  point_interpretation_policy fx_policy;
+                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
                   point_interpretation_policy point_interpretation() const {return fx_policy;}
                   void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
                   void do_deferred_bind()  {
@@ -989,7 +989,7 @@ namespace shyft {
 
             apoint_ts integral(const apoint_ts& ts, const gta_t& ta/*fx-type */);
             apoint_ts integral(apoint_ts&& ts, const gta_t& ta);
-            
+
             apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */);
 			apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta);
 
