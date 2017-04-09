@@ -15,7 +15,7 @@
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
 
-#include "api/timeseries.h"
+#include "api/time_series.h"
 #include "core/dtss.h"
 #include "dlib/timer.h"
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application

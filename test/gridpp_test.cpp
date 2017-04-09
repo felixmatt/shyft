@@ -2,7 +2,7 @@
 #include "mocks.h"
 #include "core/region_model.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
-#include "api/timeseries.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
+#include "api/time_series.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
 
 using namespace shyft::core;
 using namespace shyfttest;

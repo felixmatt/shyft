@@ -1,10 +1,10 @@
 #include "test_pch.h"
 #define _USE_MATH_DEFINES
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/time_axis.h"
 #include "api/api.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 
 namespace shyfttest {

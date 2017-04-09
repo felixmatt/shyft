@@ -2,7 +2,7 @@
 #include "core/hbv_stack.h"
 #include "core/hbv_stack_cell_model.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity

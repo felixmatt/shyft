@@ -2,7 +2,7 @@
 #include "mocks.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/geo_point.h"
 
 

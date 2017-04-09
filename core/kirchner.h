@@ -1,6 +1,6 @@
 #pragma once
 
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
     namespace core {

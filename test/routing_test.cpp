@@ -1,9 +1,9 @@
 #include "test_pch.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
 #include "core/routing.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 namespace shyft {
     namespace core {

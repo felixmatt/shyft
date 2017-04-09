@@ -7,9 +7,9 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 
-#include "timeseries.h"
+#include "time_series.h"
 #include "api_state.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 

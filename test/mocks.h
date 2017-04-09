@@ -1,6 +1,6 @@
 #pragma once
 #include "core/utctime_utilities.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/inverse_distance.h"
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"

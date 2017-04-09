@@ -18,7 +18,7 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 
-#include "timeseries.h"
+#include "time_series.h"
 #include <boost/math/special_functions/gamma.hpp>
 #include "utctime_utilities.h"
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "timeseries.h"
+#include "time_series.h"
 
 /**
  * contains all BayesianKriging stuff, like concrete useful Parameters and the templated BTK algorithm

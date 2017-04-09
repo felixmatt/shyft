@@ -2,7 +2,7 @@
 
 #include "geo_cell_data.h"
 #include "utctime_utilities.h"
-#include "timeseries.h"
+#include "time_series.h"
 
 #include "region_model.h"
 #include "pt_gs_k_cell_model.h"

@@ -1,6 +1,6 @@
 #include "test_pch.h"
 #include "core/glacier_melt.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 
 namespace glacier_test_constant {
     const double EPS = 1.0e-10;

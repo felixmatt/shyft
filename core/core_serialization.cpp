@@ -7,7 +7,7 @@
 
 #include "utctime_utilities.h"
 #include "time_axis.h"
-#include "timeseries.h"
+#include "time_series.h"
 #include "geo_cell_data.h"
 #include "hbv_snow.h"
 #include "hbv_soil.h"

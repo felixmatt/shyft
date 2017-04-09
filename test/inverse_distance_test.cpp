@@ -372,7 +372,7 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 #include "api/api.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 TEST_CASE("test_performance") {
     using namespace shyft;
     //

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "timeseries.h"
+#include "time_series.h"
 #include "geo_cell_data.h"
 
 namespace shyft {

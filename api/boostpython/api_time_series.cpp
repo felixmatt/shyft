@@ -2,9 +2,9 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "api/api.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 namespace expose {
     using namespace shyft;

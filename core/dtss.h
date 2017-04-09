@@ -1,5 +1,5 @@
 #pragma once
-#include "api/timeseries.h"
+#include "api/time_series.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/base_object.hpp>

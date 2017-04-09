@@ -277,7 +277,7 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
-		<Unit filename="api_time_series.cpp">
+		<Unit filename="api_time_series.h.cpp">
 			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />

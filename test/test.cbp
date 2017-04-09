@@ -5,7 +5,7 @@
 		<Option title="test" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="methods/;method_stacks/;interpolation/;optimizers/;utils/;compiler_etc/;time_and_calendar/;serialization/;full_model/;api/;time_series/;routing/;dtss/;" />
+		<Option virtualFolders="methods/;method_stacks/;interpolation/;optimizers/;utils/;compiler_etc/;time_and_calendar/;serialization/;full_model/;api/;time_series.h/;routing/;dtss/;" />
 		<Build>
 			<Target title="Debug">
 				<Option output="../bin/Debug/test_shyft" prefix_auto="1" extension_auto="1" />
@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-ts=time_series" />
+				<Option parameters="-ts=time_series.h" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -176,10 +176,10 @@
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="time_axis_test.cpp">
-			<Option virtualFolder="time_series/" />
+			<Option virtualFolder="time_series.h/" />
 		</Unit>
 		<Unit filename="timeseries_test.cpp">
-			<Option virtualFolder="time_series/" />
+			<Option virtualFolder="time_series.h/" />
 		</Unit>
 		<Unit filename="utctime_utilities_test.cpp">
 			<Option virtualFolder="time_and_calendar/" />

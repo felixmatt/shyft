@@ -3,7 +3,7 @@
 #include "core/core_pch.h"
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 
 namespace shyft {
     namespace api {

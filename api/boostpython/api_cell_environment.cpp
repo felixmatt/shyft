@@ -4,7 +4,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/cell_model.h"
 
 namespace expose {

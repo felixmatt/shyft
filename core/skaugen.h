@@ -19,7 +19,7 @@
 /// implemented in R, see [ref].
 
 #include "utctime_utilities.h"
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
     namespace core {

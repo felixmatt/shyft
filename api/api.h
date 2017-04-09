@@ -17,7 +17,7 @@
 #include "core/time_axis.h"
 #include "core/geo_point.h"
 #include "core/geo_cell_data.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
 #include "core/bayesian_kriging.h"
@@ -28,7 +28,7 @@
 #include "core/pt_ss_k_cell_model.h"
 #include "core/hbv_stack_cell_model.h"
 
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
   using namespace shyft::core;

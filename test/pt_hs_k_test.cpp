@@ -1,7 +1,7 @@
 #include "test_pch.h"
 #include "core/pt_hs_k.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity
