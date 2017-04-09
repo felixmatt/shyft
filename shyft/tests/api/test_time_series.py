@@ -449,10 +449,11 @@ class TimeSeries(unittest.TestCase):
             self.assertFalse(True, "should not reach here!")
         except RuntimeError:
             pass
-
+        self.assertEqual(c.needs_bind(),True) # verify this expression needs binding
         # verify we can bind a ts
         bind_info[0].ts.bind(a)  # it's ok to bind same series multiple times, it takes a copy of a values
-
+        c.bind_done()
+        self.assertEqual(c.needs_bind(), False)  # verify this expression do not need binding anymore
         # and now we can use c expression as pr. usual, evaluate etc.
         self.assertAlmostEqual(c.value(10), a.value(10) * 2 * 4.0, 3)
 
@@ -460,6 +461,7 @@ class TimeSeries(unittest.TestCase):
 
         bi = c_resurrected.find_ts_bind_info()
         bi[0].ts.bind(a)
+        c_resurrected.bind_done()
         self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2 * 4.0, 3)
 
 

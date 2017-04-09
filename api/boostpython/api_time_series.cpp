@@ -243,6 +243,20 @@ namespace expose {
                 doc_note("raises runtime_error if any of preconditions is not true")
                 doc_see_also("find_ts_bind_info,TimeSeries('a-ref-string')")
             )
+            .def("bind_done",&shyft::api::apoint_ts::do_bind,
+                 doc_intro("after bind operations on unbound time-series of an expression is done, call bind_done()")
+                 doc_intro("to prepare the expression for use")
+                 doc_notes()
+                 doc_note("Usually this is done automatically by the dtss framework, but if not using dtss")
+                 doc_note("this function is needed *after* the symbolic ts's are bound")
+                 doc_see_also(".bind(), .find_ts_bind_info(), needs_bind()")
+            )
+            .def("needs_bind",&shyft::api::apoint_ts::needs_bind,
+                 doc_intro("returns true if there are any unbound time-series in the expression")
+                 doc_intro("this time-series represent")
+                 doc_see_also(".find_ts_bind_info(),bind() and bind_done()")
+
+            )
             .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,
                 doc_intro("recursive search through the expression that this ts represents,\n")
                 doc_intro("and return a list of TsBindInfo that can be used to\n")
