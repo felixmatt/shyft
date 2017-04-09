@@ -125,7 +125,6 @@ template <class Archive>
 void shyft::timeseries::ref_ts<TS>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ref", ref)
-    //& make_nvp("fx_policy", fx_policy)
     & make_nvp("ts", ts)
     ;
 }
@@ -138,6 +137,7 @@ void shyft::timeseries::time_shift_ts<Ts>::serialize(Archive & ar, const unsigne
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
     & make_nvp("dt", dt)
+    & make_nvp("bound",bound)
     ;
 }
 template <class Ts, class Ta>
@@ -220,7 +220,7 @@ void shyft::timeseries::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsig
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
-    & make_nvp("bind_done",bd)
+    & make_nvp("bind_done",bind_done)
     ;
     bind_done = bd;
 }

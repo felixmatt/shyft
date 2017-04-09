@@ -121,6 +121,7 @@ void shyft::api::abin_op_ts::serialize(Archive & ar, const unsigned int version)
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 
@@ -133,6 +134,7 @@ void shyft::api::abin_op_scalar_ts::serialize(Archive & ar, const unsigned int v
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 
@@ -145,6 +147,7 @@ void shyft::api::abin_op_ts_scalar::serialize(Archive & ar, const unsigned int v
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 

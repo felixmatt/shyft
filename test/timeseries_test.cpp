@@ -872,6 +872,8 @@ TEST_CASE("test_ts_statistics_speed") {
         for (auto &ab : bi)
             ab.ts.bind(bind_ts[i++]);
     }
+    for(auto &ats:tsv1)
+        ats.do_bind();
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     if(verbose) cout << "\nStart calc percentiles " << n_days << " days, x " << n_ts << " ts\n";
     //auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});

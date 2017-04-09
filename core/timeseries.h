@@ -364,41 +364,32 @@ namespace shyft{
             // need to have a time-shifted time-axis here:
             // TA, ta.timeshift(dt) -> a clone of ta...
             ta_t ta;
-            point_interpretation_policy fx_policy; // inherited from ts
-            utctimespan dt;// despite ta time-axis, we need it
+            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
+            utctimespan dt=0;// despite ta time-axis, we need it
+            bool bound=false;
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
             //-- default stuff, ct/copy etc goes here
-            time_shift_ts():fx_policy(POINT_AVERAGE_VALUE),dt(0) {}
-            time_shift_ts(const time_shift_ts& c):ts(c.ts),ta(c.ta),fx_policy(c.fx_policy),dt(c.dt) {}
-            time_shift_ts(time_shift_ts&&c):ts(std::move(c.ts)),ta(std::move(c.ta)),fx_policy(c.fx_policy),dt(c.dt) {}
-            time_shift_ts& operator=(const time_shift_ts& o) {
-                if(this != &o) {
-                    ts=o.ts;
-                    ta=o.ta;
-                    fx_policy=o.fx_policy;
-                    dt=o.dt;
-                }
-                return *this;
-            }
-
-            time_shift_ts& operator=(time_shift_ts&& o) {
-                ts=std::move(o.ts);
-                ta=std::move(o.ta);
-                fx_policy=o.fx_policy;
-                dt=o.dt;
-                return *this;
-            }
+            time_shift_ts()=default;
 
             //-- useful ct goes here
             template<class A_>
             time_shift_ts(A_ && ts,utctimespan dt)
-                :ts(std::forward<A_>(ts)),
-                 ta(time_axis::time_shift(ts.time_axis(),dt)),
-                 fx_policy(ts.fx_policy),
-                 dt(dt) {}
+                :ts(std::forward<A_>(ts)),dt(dt) {
+                // we have to wait with time-axis until we know underlying stuff are ready:
+                if( !(needs_bind< typename d_ref_t<Ts>::type>::value && e_needs_bind(ts))) {
+                    do_deferred_bind();//if possible do it now
+                }
+            }
 
+            void do_deferred_bind() {
+                if(!bound) {
+                    fx_policy = d_ref(ts).point_interpretation();
+                    ta = time_axis::time_shift(d_ref(ts).time_axis(),dt);
+                    bound=true;
+                }
+            }
             const ta_t& time_axis() const { return ta;}
 
             point get(size_t i) const {return point(ta.time(i),ts.value(i));}
@@ -427,14 +418,15 @@ namespace shyft{
             typedef TA ta_t;
             TA ta;
             TS ts;
-            point_interpretation_policy fx_policy;
+            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
             const TA& time_axis() const {return ta;}
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
-            average_ts(){} // allow default construct
+            average_ts()=default; // allow default construct
             average_ts(const TS&ts,const TA& ta)
-            :ta(ta),ts(ts)
-            ,fx_policy(point_interpretation_policy::POINT_AVERAGE_VALUE) {} // because true-average of periods is per def. POINT_AVERAGE_VALUE
+            :ta(ta),ts(ts) {
+
+            } // because true-average of periods is per def. POINT_AVERAGE_VALUE
             // to help average_value method for now!
             point get(size_t i) const {return point(ta.time(i),ts.value(i));}
             size_t size() const { return ta.size();}
@@ -475,15 +467,15 @@ namespace shyft{
 			typedef TA ta_t;
 			TA ta;
 			TS ts;
-			point_interpretation_policy fx_policy;
+			point_interpretation_policy fx_policy=POINT_INSTANT_VALUE;
 			const TA& time_axis() const { return ta; }
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
 
-            accumulate_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){} // support default construct
+            accumulate_ts()=default;
 			accumulate_ts(const TS&ts, const TA& ta)
 				:ta(ta), ts(ts)
-				, fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE) {
+				 {
 			} // because accumulate represents the integral of the distance from t0 to t, valid at t
 
 			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
@@ -503,7 +495,7 @@ namespace shyft{
 			}
 			double operator()(utctime t) const {
 				size_t i = ta.index_of(t);
-				if (i == string::npos)
+				if (i == string::npos || ta.size()==0)
 					return nan;
 				if (t == ta.time(0))
 					return 0.0; // by definition
@@ -627,7 +619,7 @@ namespace shyft{
 		struct periodic_ts {
 			TA ta;
 			profile_accessor<TA> pa;
-			point_interpretation_policy fx_policy;
+			point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
 			const TA& time_axis() const {return ta;}
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
@@ -640,7 +632,7 @@ namespace shyft{
 			periodic_ts(const vector<double>& pattern, utctimespan dt,utctime pattern_t0, const TA& ta) :
 				periodic_ts(profile_description(pattern_t0, dt, pattern), ta) {
 			}
-			periodic_ts() {}
+			periodic_ts() =default;
 			double operator() (utctime t) const { return pa.value(t); }
 			size_t size() const { return ta.size(); }
             utcperiod total_period() const {return ta.total_period();}
@@ -673,9 +665,9 @@ namespace shyft{
 			typedef typename d_ref_t<TS_A>::type::ta_t ta_t;
 			TS_A temperature;
 			TS_B sca_m2;
-			double glacier_area_m2;
-			double dtf;
-			point_interpretation_policy fx_policy;
+			double glacier_area_m2=0.0;
+			double dtf=0.0;
+			point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
 			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
             point_interpretation_policy point_interpretation() const { return fx_policy; }
             void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
@@ -689,10 +681,10 @@ namespace shyft{
             template<class A_,class B_>
 			glacier_melt_ts(A_&& temperature, B_&& sca_m2, double glacier_area_m2, double dtf)
 				:temperature(forward<A_>(temperature)), sca_m2(forward<B_>(sca_m2)),glacier_area_m2(glacier_area_m2),dtf(dtf)
-				, fx_policy(fx_policy_t::POINT_AVERAGE_VALUE) {
+				{
 			}
 			// std. ct etc
-            glacier_melt_ts(){dtf=0.0;glacier_area_m2=0.0;fx_policy=fx_policy_t::POINT_AVERAGE_VALUE;}
+            glacier_melt_ts()=default;
             // ts property definitions
 			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
 			size_t size() const { return time_axis().size(); }
@@ -762,20 +754,7 @@ namespace shyft{
             }
             // std. ct/dt etc.
             ref_ts() = default;
-            ref_ts(const ref_ts &c):ref(c.ref),ts(c.ts) {}
-            ref_ts(ref_ts&&c):ref(std::move(c.ref)),ts(std::move(c.ts)) {}
-            ref_ts& operator=(const ref_ts& c) {
-                if(this != &c ) {
-                    ref=c.ref;
-                    ts=c.ts;
-                }
-                return *this;
-            }
-            ref_ts& operator=(ref_ts&& c) {
-                ref=std::move(c.ref);
-                ts=std::move(c.ts);
-                return *this;
-            }
+
             void set_ts(shared_ptr<TS>const &tsn) {
                 ts = tsn;
             }
@@ -847,39 +826,21 @@ namespace shyft{
             typedef typename Ts::ta_t ta_t;
             typedef std::vector<double> W;
             Ts ts;
-            point_interpretation_policy fx_policy; // inherited from ts
+            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
             W w;
             convolve_policy policy = convolve_policy::USE_FIRST;
             //-- default stuff, ct/copy etc goes here
-            convolve_w_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
-            convolve_w_ts(const convolve_w_ts& c) :ts(c.ts), fx_policy(c.fx_policy), w(c.w), policy(c.policy) {}
-            convolve_w_ts(convolve_w_ts&&c) :ts(std::move(c.ts)), fx_policy(c.fx_policy), w(std::move(c.w)), policy(c.policy) {}
-
-            convolve_w_ts& operator=(const convolve_w_ts& o) {
-                if (this != &o) {
-                    ts = o.ts;
-                    fx_policy = o.fx_policy;
-                    w = o.w;
-                    policy = o.policy;
-                }
-                return *this;
-            }
-
-            convolve_w_ts& operator=(convolve_w_ts&& o) {
-                ts = std::move(o.ts);
-                fx_policy = o.fx_policy;
-                w = o.w;
-                policy = o.policy;
-                return *this;
-            }
+            convolve_w_ts() = default;
 
             //-- useful ct goes here
             template<class A_, class W_>
-            convolve_w_ts(A_ && ts, W_ && w, convolve_policy policy = convolve_policy::USE_FIRST)
-                :ts(std::forward<A_>(ts)),
-                fx_policy(POINT_AVERAGE_VALUE),//TODO: resolve issue apoint_ts method vs. property in core::ts
+            convolve_w_ts(A_ && tsx, W_ && w, convolve_policy policy = convolve_policy::USE_FIRST)
+                :ts(std::forward<A_>(tsx)),
                 w(std::forward<W_>(w)),
-                policy(policy)                     {
+                policy(policy) {
+                if( !(needs_bind<typename d_ref_t<Ts>::type>::value && e_needs_bind(ts))) {
+                    fx_policy=d_ref(ts).point_interpretation();// TODO: use deferred_bind ! this will be incorrect on expr.
+                }
             }
 
             const ta_t& time_axis() const { return ts.time_axis(); }
@@ -918,10 +879,13 @@ namespace shyft{
         * time-axis equal to tsv[0].time_axis
         * time-axis should be equal, notice that only .size() is equal is ensured in the constructor
         *
+        *
         * \note The current approach only works for ts of same type, enforced by the compiler
         *  The runtime enforces that each time-axis are equal as well, and throws exception
         *  if not (in the non-default constructor), - if user later modifies the tsv
         *  it could break this assumption.
+        *  Point interpretation is default POINT_AVERAGE_VALUE, you can override it in ct.
+        *  Currently ts-vector as expressions is not properly supported (they need to be bound before passed to ct!)
         */
         template<class T>
         struct uniform_sum_ts {
@@ -929,30 +893,15 @@ namespace shyft{
         private:
             std::vector<T> tsv; ///< need this private to ensure consistency after creation
         public:
-            point_interpretation_policy fx_policy; // inherited from ts
-            uniform_sum_ts() :fx_policy(POINT_AVERAGE_VALUE) {}
-            uniform_sum_ts(const uniform_sum_ts& c) :tsv(c.tsv), fx_policy(c.fx_policy) {}
-            uniform_sum_ts(uniform_sum_ts&&c) :tsv(std::move(c.tsv)), fx_policy(c.fx_policy) {}
+            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
+            uniform_sum_ts() = default;
 
-            uniform_sum_ts& operator=(const uniform_sum_ts& o) {
-                if (this != &o) {
-                    tsv = o.tsv;
-                    fx_policy = o.fx_policy;
-                }
-                return *this;
-            }
-
-            uniform_sum_ts& operator=(uniform_sum_ts&& o) {
-                tsv = std::move(o.tsv);
-                fx_policy = o.fx_policy;
-                return *this;
-            }
 
             //-- useful ct goes here
             template<class A_>
-            uniform_sum_ts(A_ && tsv)
+            uniform_sum_ts(A_ && tsv,point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE)
                 :tsv(std::forward<A_>(tsv)),
-                fx_policy(tsv.size() ? tsv[0].point_interpretation() : shyft::timeseries::POINT_AVERAGE_VALUE) {
+                fx_policy(fx_policy) {
                 if (tsv.size() == 0)
                     throw std::runtime_error("vector<ts> size should be > 0");
                 for (size_t i = 1;i < tsv.size();++i)
@@ -1886,7 +1835,6 @@ namespace shyft{
         }
         template<class B, class O, class TA,class Fbind>
         void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
-            //bind_ref_ts(d_ref(ts.lhs),f_bind);
             bind_ref_ts(d_ref(ts.rhs),f_bind);
             ts.do_deferred_bind();
         }
@@ -1898,23 +1846,20 @@ namespace shyft{
         template <class Ts,class Fbind>
         void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
             bind_ref_ts(d_ref(time_shift.ts,f_bind));
+            time_shift.do_deferred_bind();
         }
         template <class Ts,class Ta,class Fbind>
         void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
             bind_ref_ts(d_ref(avg.ts),f_bind);
-            //todo avg.do_deferred_bind();
-
         }
         template <class Ts,class Ta,class Fbind>
         void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
             bind_ref_ts(d_ref(acc.ts),f_bind);
-            //todo acc.do_deferred_bind();
         }
         template <class TS_A,class TS_B,class Fbind>
         void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
             bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
             bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
-            //todo glacier_melt.do_deferred_bind();
         }
 
         /** e_needs_bind(A const&ts) specializations
@@ -1945,9 +1890,6 @@ namespace shyft{
         bool e_needs_bind( bin_op<A,B,O,TA> const &e) { return !e.bind_done;}
         template<class A, class B, class O, class TA>
         bool e_needs_bind( bin_op<A,B,O,TA> &&e) { return !e.bind_done;}
-
-
-        // maybe rhs variant &&e as well ?
 
     } // timeseries
 } // shyft

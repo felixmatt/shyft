@@ -246,6 +246,7 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    f.do_bind();
     // then retry evaluate
     try {
         double v0=f.value(0);
@@ -263,6 +264,7 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    a_f.do_bind();
     TS_ASSERT_DELTA(f.value(0), a_f.value(0), 1e-9);
 }
 
@@ -363,7 +365,7 @@ TEST_CASE("test_serialization_memcpy_performance") {
                         c++;
                         cv.notify_all();
                     }
-                    
+
                     delete y;
                 }
                 )

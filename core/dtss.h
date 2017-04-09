@@ -106,6 +106,12 @@ namespace shyft {
                             bi.ts.bind(bts[i]);
                     }
                 }
+                // step 3: after the symbolic ts are read and bound, we iterate over the
+                //         expression tree and calls .do_bind() so that
+                //         the new information is taken into account and the expression tree are
+                //         ready for evaluate with everything const so threading is safe.
+                for (auto& ats : atsv)
+                    ats.do_bind();
             }
 
             ts_vector_t

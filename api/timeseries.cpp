@@ -263,16 +263,16 @@ namespace shyft{
             //return v0;
         }
         double abin_op_scalar_ts::value_at(utctime t) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs,op,rhs(t));
         }
         double abin_op_scalar_ts::value(size_t i) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs,op,rhs.value(i));
         }
 
         std::vector<double> abin_op_scalar_ts::values() const {
-          deferred_bind();
+          bind_check();
           std::vector<double> r(rhs.values());
           for(auto& v:r)
             v=do_op(lhs,op,v);
@@ -280,15 +280,15 @@ namespace shyft{
         }
 
         double abin_op_ts_scalar::value_at(utctime t) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs(t),op,rhs);
         }
         double abin_op_ts_scalar::value(size_t i) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs.value(i),op,rhs);
         }
         std::vector<double> abin_op_ts_scalar::values() const {
-          deferred_bind();
+          bind_check();
           std::vector<double> r(lhs.values());
           for(auto& v:r)
             v=do_op(v,op,rhs);
@@ -314,20 +314,7 @@ namespace shyft{
         struct aglacier_melt_ts:ipoint_ts {
             glacier_melt_ts<std::shared_ptr<ipoint_ts>> gm;
             //-- default stuff, ct/copy etc goes here
-            aglacier_melt_ts() {}
-            aglacier_melt_ts(const aglacier_melt_ts& c):gm(c.gm) {}
-            aglacier_melt_ts(aglacier_melt_ts&&c):gm(std::move(c.gm)) {}
-            aglacier_melt_ts& operator=(const aglacier_melt_ts& o) {
-                if(this != &o) {
-                    gm=o.gm;
-                }
-                return *this;
-            }
-
-            aglacier_melt_ts& operator=(aglacier_melt_ts&& o) {
-                gm= std::move(o.gm);
-                return *this;
-            }
+            aglacier_melt_ts() =default;
 
             //-- useful ct goes here
             aglacier_melt_ts(const apoint_ts& temp,const apoint_ts& sca_m2, double glacier_area_m2,double dtf):
@@ -352,6 +339,8 @@ namespace shyft{
                 for(size_t i=0;i<size();++i) r.push_back(value(i));
                 return r;
             }
+            virtual bool needs_bind() const {return gm.temperature->needs_bind() || gm.sca_m2->needs_bind();}
+            virtual void do_bind() {gm.temperature->do_bind();gm.sca_m2->do_bind();}
 
         };
         apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf) {
