@@ -72,6 +72,17 @@ namespace shyft{
          */
         template<class T> struct is_ts {static const bool value=false;};
 
+        /** needs_bind<T> is a default place holder to support specific dispatch for
+         * time-series or expressions that might have symbolic references.
+         * We use this to deduce compile-time if an expression needs a bind
+         * cycle before being evaluated. That is; that the ref_ts get their values
+         * set by a bind-operation.
+         * By default, this is true for all types, except point_ts that we know do not need bind
+         * - all other need to turn it by specializing needs_bind similar as for point_ts
+         * \see ref_ts
+         */
+        template<class T> struct needs_bind {static const bool value=true;};
+        template<class T> bool e_needs_bind(T const&) {return false;}// run-time check on state, default false
 
         /** \brief d_ref function to d_ref object or shared_ptr
          *
@@ -304,14 +315,9 @@ namespace shyft{
                 return v[i]; // just keep current value flat to +oo or nan
             }
 
-            /**\brief value of the i'th interval fx_policy taken into account,
-             * Hmm. is that policy ever useful in this context ?
+            /**\brief i'th value of the value,
              */
-            double value(size_t i) const  {
-                //if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1]))
-                //    return 0.5*(v[i] + v[i+1]); // average of the value, linear between points(is that useful ?)
-                return v[i];
-            }
+            double value(size_t i) const  { return v[i]; }
             // BW compatiblity ?
             size_t size() const { return ta.size();}
             size_t index_of(utctime t) const {return ta.index_of(t);}
@@ -737,7 +743,6 @@ namespace shyft{
         struct ref_ts {
             typedef typename TS::ta_t ta_t;
             string ref;///< reference to time-series supporting storage
-            //fx_policy_t fx_policy=POINT_AVERAGE_VALUE;
             shared_ptr<TS> ts;
             TS& bts() {
                 if(ts==nullptr)
@@ -757,25 +762,22 @@ namespace shyft{
             }
             // std. ct/dt etc.
             ref_ts() = default;
-            ref_ts(const ref_ts &c):ref(c.ref),/*fx_policy(c.fx_policy),*/ts(c.ts) {}
-            ref_ts(ref_ts&&c):ref(std::move(c.ref)),/*fx_policy(c.fx_policy),*/ts(std::move(c.ts)) {}
+            ref_ts(const ref_ts &c):ref(c.ref),ts(c.ts) {}
+            ref_ts(ref_ts&&c):ref(std::move(c.ref)),ts(std::move(c.ts)) {}
             ref_ts& operator=(const ref_ts& c) {
                 if(this != &c ) {
                     ref=c.ref;
-                    //fx_policy=c.fx_policy;
                     ts=c.ts;
                 }
                 return *this;
             }
             ref_ts& operator=(ref_ts&& c) {
                 ref=std::move(c.ref);
-                //fx_policy=c.fx_policy;
                 ts=std::move(c.ts);
                 return *this;
             }
             void set_ts(shared_ptr<TS>const &tsn) {
                 ts = tsn;
-                //fx_policy = ts?point_interpretation():POINT_AVERAGE_VALUE;
             }
             // useful constructors goes here:
             ref_ts(string sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
@@ -785,8 +787,7 @@ namespace shyft{
                 return bts()(t);
             }
 
-            /**\brief value of the i'th interval fx_policy taken into account,
-             * Hmm. is that policy ever useful in this context ?
+            /**\brief the i'th value of ts
              */
             double value(size_t i) const  {
                 return bts().value(i);
@@ -817,7 +818,6 @@ namespace shyft{
  			    bts().scale_by(value);
             }
             x_serialize_decl();
-
         };
 
 
@@ -988,6 +988,9 @@ namespace shyft{
             }
         };
 
+        template <class A>
+        constexpr void dbind_ts(A&) {}
+
         /** \brief Basic math operators
          *
          * Here we take a very direct approach, just create a bin_op object for
@@ -1003,24 +1006,32 @@ namespace shyft{
             A lhs;
             B rhs;
             TA ta;
-            mutex bind_once;
-            volatile bool bind_done = false;
+            bool bind_done = false;
             point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
             bin_op() = default;
-            bin_op(bin_op && c) : op(std::move(c.op)),lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op(bin_op const&c) :op(c.op),lhs(c.lhs), rhs(c.rhs),  ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = std::move(c.rhs);op = std::move(c.op);bind_done = c.bind_done;return *this; }
-            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op = c.op;bind_done = c.bind_done; }return *this; }
+
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
+                //-- if lhs and rhs allows us (i.e) !needs_bind, we do the binding now
+                if(  !(needs_bind<typename d_ref_t<A>::type >::value && e_needs_bind(d_ref(lhs)))
+                   &&!(needs_bind<typename d_ref_t<B>::type >::value && e_needs_bind(d_ref(rhs))) )
+                   do_deferred_bind();
+            }
+
             void deferred_bind() const {
+                if(!bind_done)
+                    throw runtime_error("bin_op: access to not yet bound attempted");
+            }
+            void do_deferred_bind()  {
                 if(!bind_done) {
-                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
-                    if (!bind_done) {
-                        const_cast<bin_op*>(this)->ta = time_axis::combine(d_ref(lhs).time_axis(), d_ref(rhs).time_axis());
-                        const_cast<bin_op*>(this)->fx_policy = result_policy(d_ref(lhs).point_interpretation(), d_ref(rhs).point_interpretation());
-                        const_cast<bin_op*>(this)->bind_done = true;
-                    }
+                    dbind_ts(d_ref(lhs));
+                    dbind_ts(d_ref(rhs));
+                    ta = time_axis::combine(d_ref(lhs).time_axis(), d_ref(rhs).time_axis());
+                    fx_policy = result_policy(d_ref(lhs).point_interpretation(), d_ref(rhs).point_interpretation());
+                    bind_done = true;
                 }
             }
+
             const TA& time_axis() const {
                 deferred_bind();
                 return ta;
@@ -1032,26 +1043,18 @@ namespace shyft{
             void set_point_interpretation(point_interpretation_policy point_interpretation) {
                 fx_policy=point_interpretation;
             }
-
-
-            template<class A_,class B_>
-            bin_op(A_&& lhsx,O op,B_&& rhsx):op(op),lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)) {
+            inline double value_at(utctime t) const {
+                return op(d_ref(lhs)(t),d_ref(rhs)(t));
             }
             double operator()(utctime t) const {
                 if(!time_axis().total_period().contains(t))
                     return nan;
-                return op(d_ref(lhs)(t),d_ref(rhs)(t));
+                return value_at(t);
             }
             double value(size_t i) const {
                 if(i==string::npos || i>=time_axis().size() )
                     return nan;
-                if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
-                    return (*this)(ta.time(i));
-                utcperiod p=ta.period(i);
-                double v0= (*this)(p.start);
-                double v1= (*this)(p.end);
-                if(isfinite(v1)) return 0.5*(v0 + v1);
-                return v0;
+                return value_at(ta.time(i));
             }
             size_t size() const {
                 deferred_bind();
@@ -1059,6 +1062,11 @@ namespace shyft{
             }
             x_serialize_decl();
        };
+
+        template<class A, class B, class O, class TA>
+        void dbind_ts(bin_op<A,B,O,TA>&&ts) {
+            std::forward<bin_op<A,B,O,TA>>(ts).do_deferred_bind();
+        }
 
         /** specialize for double bin_op ts */
         template<class B,class O,class TA>
@@ -1068,25 +1076,32 @@ namespace shyft{
             B rhs;
             O op;
             TA ta;
-            mutex bind_once;
-            volatile bool bind_done = false;
+            bool bind_done = false;
             point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
-            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(std::move(c.rhs)), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs), op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = std::move(c.rhs);op = std::move(c.op);bind_done = c.bind_done;return *this; }
-            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op = c.op;bind_done = c.bind_done; }return *this; }
 
-            void deferred_bind() const {
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
+                //-- if lhs and rhs allows us (i.e) !needs_bind, we do the binding now
+                if( !(needs_bind<typename d_ref_t<B>::type >::value && e_needs_bind(d_ref(rhs))) )
+                   do_deferred_bind();
+
+            }
+
+            void do_deferred_bind()  {
                 if (!bind_done) {
-                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
-                    if (!bind_done) {
-                        const_cast<bin_op*>(this)->ta = d_ref(rhs).time_axis();
-                        const_cast<bin_op*>(this)->fx_policy = d_ref(rhs).point_interpretation();
-                        const_cast<bin_op*>(this)->bind_done = true;
-                    }
+                    dbind_ts(d_ref(rhs));
+                    ta = d_ref(rhs).time_axis();
+                    fx_policy = d_ref(rhs).point_interpretation();
+                    bind_done = true;
                 }
             }
+
+            void deferred_bind() const {
+                if(!bind_done)
+                    throw runtime_error("bin_op: access to not yet bound attempted");
+            }
+
             const TA& time_axis() const {deferred_bind();return ta;}
             point_interpretation_policy point_interpretation() const {
                 deferred_bind();
@@ -1095,9 +1110,6 @@ namespace shyft{
             void set_point_interpretation(point_interpretation_policy point_interpretation) {
                 deferred_bind();//ensure it's done
                 fx_policy=point_interpretation;
-            }
-            template<class A_,class B_>
-            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
             }
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
@@ -1117,25 +1129,30 @@ namespace shyft{
             double rhs;
             O op;
             TA ta;
-            mutex bind_once;
-            volatile bool bind_done = false;
+            bool bind_done = false;
             point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
-            bin_op(bin_op && c) :lhs(std::move(c.lhs)), rhs(c.rhs), op(std::move(c.op)), ta(std::move(c.ta)), bind_done(c.bind_done ? true : false), fx_policy(c.fx_policy) {}
-            bin_op(bin_op const&c) :lhs(c.lhs), rhs(c.rhs),op(c.op), ta(c.ta), bind_done(c.bind_done?true:false), fx_policy(c.fx_policy) {}
-            bin_op& operator=(bin_op &&c) { lhs = std::move(c.lhs);rhs = c.rhs;op = std::move(c.op);bind_done = c.bind_done?true:false;return *this; }
-            bin_op& operator=(bin_op const& c) { if (&c != this) { lhs = c.lhs;rhs = c.rhs;op =c.op;bind_done = c.bind_done?true:false; }return *this; }
 
-            void deferred_bind() const {
+            template<class A_,class B_>
+            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
+                //-- if hs allows us (i.e) !needs_bind, we do the binding now
+                if( !(needs_bind<typename d_ref_t<A>::type >::value && e_needs_bind(d_ref(lhs))) )
+                   do_deferred_bind();
+            }
+
+            void do_deferred_bind()  {
                 if (!bind_done) {
-                    lock_guard<mutex> lock{ const_cast<bin_op*>(this)->bind_once };
-                    if (!bind_done) {
-                        const_cast<bin_op*>(this)->ta = d_ref(lhs).time_axis();
-                        const_cast<bin_op*>(this)->fx_policy = d_ref(lhs).point_interpretation();
-                        const_cast<bin_op*>(this)->bind_done = true;
-                    }
+                    dbind_ts(d_ref(lhs));
+                    ta = d_ref(lhs).time_axis();
+                    fx_policy = d_ref(lhs).point_interpretation();
+                    bind_done = true;
                 }
             }
+            void deferred_bind() const {
+                if(!bind_done)
+                    throw runtime_error("bin_op: access to not yet bound attempted");
+            }
+
             const TA& time_axis() const {deferred_bind();return ta;}
             point_interpretation_policy point_interpretation() const {
                 deferred_bind();
@@ -1144,9 +1161,6 @@ namespace shyft{
             void set_point_interpretation(point_interpretation_policy point_interpretation) {
                 deferred_bind();//ensure it's done
                 fx_policy=point_interpretation;
-            }
-            template<class A_,class B_>
-            bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
@@ -1160,7 +1174,7 @@ namespace shyft{
 
         /** \brief op_axis is about deriving the time-axis of a result
          *
-         * When doing binary-ts operations, we need to deduce at runtime what will be the
+         * When doing binary-ts operations, we need to deduce at run-time what will be the
          *  most efficient time-axis type of the binary result
          * We use time_axis::combine_type<..> if we have two time-series
          * otherwise we specialize for double binop ts, and ts binop double.
@@ -1580,6 +1594,8 @@ namespace shyft{
             double value(const size_t i) const { return _value; }
         };
 
+        /**specialization of hint-based search for all time-axis that merely can calculate the index from time t
+         */
         template<>
         inline size_t hint_based_search<point_ts<time_axis::fixed_dt>>(const point_ts<time_axis::fixed_dt>& source, const utcperiod& p, size_t i) {
             return source.ta.open_range_index_of(p.start);
@@ -1866,16 +1882,18 @@ namespace shyft{
         void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
             bind_ref_ts(d_ref(ts.lhs),f_bind);
             bind_ref_ts(d_ref(ts.rhs),f_bind);
+            ts.do_deferred_bind();
         }
         template<class B, class O, class TA,class Fbind>
         void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
             //bind_ref_ts(d_ref(ts.lhs),f_bind);
             bind_ref_ts(d_ref(ts.rhs),f_bind);
+            ts.do_deferred_bind();
         }
         template<class A, class O, class TA,class Fbind>
         void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
             bind_ref_ts(d_ref(ts.lhs),f_bind);
-            //bind_ref_ts(d_ref(ts.rhs),f_bind);
+            ts.do_deferred_bind();
         }
         template <class Ts,class Fbind>
         void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
@@ -1884,16 +1902,53 @@ namespace shyft{
         template <class Ts,class Ta,class Fbind>
         void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
             bind_ref_ts(d_ref(avg.ts),f_bind);
+            //todo avg.do_deferred_bind();
+
         }
         template <class Ts,class Ta,class Fbind>
         void bind_ref_ts(accumulate_ts<Ts,Ta>& acc,Fbind&& f_bind) {
             bind_ref_ts(d_ref(acc.ts),f_bind);
+            //todo acc.do_deferred_bind();
         }
         template <class TS_A,class TS_B,class Fbind>
         void bind_ref_ts(glacier_melt_ts<TS_A,TS_B>& glacier_melt,Fbind&& f_bind) {
             bind_ref_ts(d_ref(glacier_melt.temperature),f_bind);
             bind_ref_ts(d_ref(glacier_melt.sca_m2),f_bind);
+            //todo glacier_melt.do_deferred_bind();
         }
+
+        /** e_needs_bind(A const&ts) specializations
+         *  recall that e_needs_bind(..) is called at run-time to
+         *  determine if a ts needs bind before use of any evaluation method.
+         *
+         *  point_ts<ta> is known to not need bind (so we have to override needs_bind->false
+         *   the default value is true.
+         *  all others that can be a part of an expression
+         *  are candidates, and needs to be visited.
+         * this includes
+         *  ref_ts : first and foremost, this is the *one* that is the root cause for bind-stuff
+         *  bin_op : obvious, the rhs and lhs could contain a  ref_ts
+         *  average_ts .. and family : less obvious, but they refer a ts like bin-op
+         */
+
+        template<class Ta>
+        struct needs_bind<point_ts<Ta>> {static bool const value=false;};
+
+        // the ref_ts conditionally needs a bind, depending on if it has a ts or not
+        template<class Ts>
+        bool e_needs_bind( ref_ts<Ts> const& rts) {
+            return rts.ts==nullptr;
+        }
+
+        // the bin_op conditionally needs a bind, depending on their siblings(lhs,rhs)
+        template<class A, class B, class O, class TA>
+        bool e_needs_bind( bin_op<A,B,O,TA> const &e) { return !e.bind_done;}
+        template<class A, class B, class O, class TA>
+        bool e_needs_bind( bin_op<A,B,O,TA> &&e) { return !e.bind_done;}
+
+
+        // maybe rhs variant &&e as well ?
+
     } // timeseries
 } // shyft
 //-- serialization support

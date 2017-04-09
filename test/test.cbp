@@ -31,7 +31,6 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-tc=test_ts_statistics_speed" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -41,7 +40,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=dlib_server_basics" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_binary_operator" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

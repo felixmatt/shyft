@@ -1,7 +1,7 @@
 # CMake build system for SHyFT
 # ============================
 #
-# This requires SWIG and NumPy installed as well as a C++11 compliant compiler.
+# This requires boost, numpy installed as well as a C++11/C++14 compliant compiler.
 #
 # Available options:
 #
@@ -16,11 +16,12 @@
 #
 
 
-cmake_minimum_required(VERSION 2.8.7)
-project(shyft)
+cmake_minimum_required(VERSION 3.5.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/CMakePCHCompiler")
 
+project(shyft)
 
 # Get the full version for SHyFT
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION SHYFT_VERSION_STRING)
@@ -69,12 +70,12 @@ include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/doctest ${SHYFT_DE
 
 # The versions for dependencies
 set(DLIB_PREFIX "dlib")
-set(DLIB_VERSION "19.2")
+set(DLIB_VERSION "19.4")
 set(DLIB_TARBALL ${DLIB_PREFIX}-${DLIB_VERSION}.tar.bz2)
 set(DLIB_URL http://sourceforge.net/projects/dclib/files/dlib/v${DLIB_VERSION}/${DLIB_TARBALL}/download)
 
 set(ARMADILLO_PREFIX "armadillo")
-set(ARMADILLO_VERSION "7.800.1")
+set(ARMADILLO_VERSION "7.800.2")
 set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.xz)
 set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL})
 
