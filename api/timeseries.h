@@ -8,7 +8,7 @@
 namespace shyft {
     namespace api {
         using namespace shyft::core;
-        using namespace shyft::timeseries;
+        using namespace shyft::time_series;
             /**
                 time-series math to be exposed to python
 
@@ -44,8 +44,8 @@ namespace shyft {
 
              */
             typedef shyft::time_axis::generic_dt gta_t;
-            typedef shyft::timeseries::point_ts<gta_t> gts_t;
-			typedef shyft::timeseries::point_ts<time_axis::fixed_dt> rts_t;
+            typedef shyft::time_series::point_ts<gta_t> gts_t;
+			typedef shyft::time_series::point_ts<time_axis::fixed_dt> rts_t;
             /** \brief A virtual abstract interface (thus the prefix i) base for point_ts
              *
              * There are three defining properties of a time-series:
@@ -212,7 +212,7 @@ namespace shyft {
                 static apoint_ts max(const apoint_ts& a, const apoint_ts& b);
                 static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
 				std::vector<apoint_ts> partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
-                apoint_ts convolve_w(const std::vector<double>& w, shyft::timeseries::convolve_policy conv_policy) const;
+                apoint_ts convolve_w(const std::vector<double>& w, shyft::time_series::convolve_policy conv_policy) const;
 
                 //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
                 //   we would like these to be working (exception if it's not possible,i.e. an expression)
@@ -298,7 +298,7 @@ namespace shyft {
             };
 
             struct aref_ts:ipoint_ts {
-                typedef shyft::timeseries::ref_ts<gts_t> ref_ts_t;
+                typedef shyft::time_series::ref_ts<gts_t> ref_ts_t;
                 ref_ts_t rep;
                 aref_ts(string sym_ref):rep(sym_ref) {}
                 aref_ts() = default; // default for serialization conv
@@ -317,7 +317,7 @@ namespace shyft {
                 void set(size_t i, double x) {rep.set(i,x);}
                 void fill(double x) {rep.fill(x);}
                 void scale_by(double x) {rep.scale_by(x);}
-                virtual bool needs_bind() const { return shyft::timeseries::e_needs_bind(rep);}
+                virtual bool needs_bind() const { return shyft::time_series::e_needs_bind(rep);}
                 virtual void do_bind()  {}
                 x_serialize_decl();
            };
@@ -602,7 +602,7 @@ namespace shyft {
 			*
 			*/
 			struct periodic_ts : ipoint_ts {
-				typedef shyft::timeseries::periodic_ts<gta_t> pts_t;
+				typedef shyft::time_series::periodic_ts<gta_t> pts_t;
 				pts_t ts;
 
 				periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}
@@ -644,7 +644,7 @@ namespace shyft {
             */
             struct convolve_w_ts : ipoint_ts {
                 typedef vector<double> weights_t;
-                typedef shyft::timeseries::convolve_w_ts<apoint_ts> cnv_ts_t;
+                typedef shyft::time_series::convolve_w_ts<apoint_ts> cnv_ts_t;
                 cnv_ts_t ts_impl;
 
                 convolve_w_ts(const apoint_ts& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(ats, w, conv_policy) {}
@@ -894,7 +894,7 @@ namespace shyft {
             ///< time_shift i.e. same ts values, but time-axis is time-axis + dt
             apoint_ts time_shift(const apoint_ts &ts, utctimespan dt);
     }
-    namespace timeseries {
+    namespace time_series {
         template<>
         inline size_t hint_based_search<api::apoint_ts>(const api::apoint_ts& source, const utcperiod& p, size_t i) {
             return source.open_range_index_of(p.start, i);
@@ -913,6 +913,6 @@ x_serialize_export_key(shyft::api::abin_op_scalar_ts);
 x_serialize_export_key(shyft::api::abin_op_ts);
 x_serialize_export_key(shyft::api::abin_op_ts_scalar);
 x_serialize_export_key(shyft::api::aref_ts);
-x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>); // oops need this from core
+x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>); // oops need this from core
 x_serialize_export_key(shyft::api::convolve_w_ts);
 x_serialize_export_key(shyft::api::apoint_ts);

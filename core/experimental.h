@@ -30,7 +30,7 @@ namespace shyft {
     namespace experimental {
         namespace geo = boost::geometry;///< we are using boost::geometry to take care of everything that needs geo computation
         namespace ec = shyft::core;
-        namespace et = shyft::timeseries;
+        namespace et = shyft::time_series;
         /* map geo types into this namespace,*/
         typedef geo::model::d2::point_xy<double> point_xy;
         typedef geo::model::polygon<point_xy> polygon;

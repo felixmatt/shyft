@@ -93,7 +93,7 @@ TEST_CASE("test_filter") {
 TEST_CASE("test_bias_predictor") {
     using namespace shyfttest;
     using namespace std;
-    using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
+    using pts_t=shyft::time_series::point_ts<timeaxis_t>;
     // prepare the time-dimension, using time-axis
     calendar utc;
     utctimespan dt=deltahours(1);
@@ -132,7 +132,7 @@ TEST_CASE("test_bias_predictor") {
 TEST_CASE("test_running_predictor") {
     using namespace shyfttest;
     using namespace std;
-    using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
+    using pts_t=shyft::time_series::point_ts<timeaxis_t>;
     // prepare the time-dimension, using time-axis
     calendar utc;
     utctimespan dt=deltahours(1);

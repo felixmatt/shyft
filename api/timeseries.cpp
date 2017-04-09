@@ -180,7 +180,7 @@ namespace shyft{
 			auto mk_raw_time_shift = [](const apoint_ts& ts, utctimespan dt)->apoint_ts {
 				return apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
 			};
-			return shyft::timeseries::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+			return shyft::time_series::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
 		}
 
         void apoint_ts::set(size_t i, double x) {
@@ -229,13 +229,13 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::timeseries::convolve_policy conv_policy) const {
+        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
             //-- use core calc here:
-            auto rp= shyft::timeseries::calculate_percentiles(ta,ts_list,percentile_list);
+            auto rp= shyft::time_series::calculate_percentiles(ta,ts_list,percentile_list);
             for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
             return r;
         }
@@ -302,13 +302,13 @@ namespace shyft{
 		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {
 			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
-			return 1.0 - shyft::timeseries::nash_sutcliffe_goal_function(o, m);
+			return 1.0 - shyft::time_series::nash_sutcliffe_goal_function(o, m);
 		}
 
 		double kling_gupta( const apoint_ts & observation_ts,  const apoint_ts &model_ts, const gta_t & ta, double s_r, double s_a, double s_b) {
 			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
-			return 1.0 - shyft::timeseries::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
+			return 1.0 - shyft::time_series::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
 		}
 		// glacier_melt_ts as apoint_ts with it's internal being a glacier_melt_ts
         struct aglacier_melt_ts:ipoint_ts {

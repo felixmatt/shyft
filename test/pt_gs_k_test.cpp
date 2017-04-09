@@ -10,7 +10,7 @@
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::core::pt_gs_k;
 using namespace shyfttest;
@@ -74,7 +74,7 @@ TEST_CASE("test_call_stack") {
     state state{gs_state, kirchner_state};
     parameter parameter{pt_param, gs_param, ae_param, k_param,  p_corr_param};
     geo_cell_data geo_cell;
-    pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,
+    pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor,
                          response>(geo_cell, parameter, time_axis,0,0, temp, prec, wind_speed,
                                      rel_hum, radiation, state, state_collector, response_collector);
     for(size_t i=0;i<n_ts_points+1;++i) { // state have one extra point
@@ -97,7 +97,7 @@ TEST_CASE("test_raster_call_stack") {
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    shyft::timeseries::point_timeaxis time_axis(times);
+    shyft::time_series::point_timeaxis time_axis(times);
     times.emplace_back(t1+model_dt);
     point_timeaxis state_axis(times);
 
@@ -145,7 +145,7 @@ TEST_CASE("test_raster_call_stack") {
         shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);
         //PTGSKResponseCollector rc(time_axis.size());
 
-        pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
+        pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
               d.temperature(),
               d.precipitation(),
               d.wind_speed(),

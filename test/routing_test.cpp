@@ -26,7 +26,7 @@ namespace shyft {
             template <class Ts>
             struct cell_node {
                 typedef Ts ts_t;
-                typedef typename  timeseries::convolve_w_ts<ts_t> output_m3s_t;
+                typedef typename  time_series::convolve_w_ts<ts_t> output_m3s_t;
                 std::shared_ptr<cell_parameter> parameter;
                 geo_cell_data geo;
                 //ts_t discharge_m3s;
@@ -93,7 +93,7 @@ TEST_CASE("test_build_valid_river_network") {
 TEST_CASE("test_routing_model") {
     using namespace shyft::core;
     using ta_t = shyft::time_axis::fixed_dt;
-    using ts_t = shyft::timeseries::point_ts<ta_t>;
+    using ts_t = shyft::time_series::point_ts<ta_t>;
     using cell_t = routing::cell_node<ts_t>;
     // setup a simple network
     // a->b-> d
@@ -121,19 +121,19 @@ TEST_CASE("test_routing_model") {
     cx.geo.routing.distance = 10000;
     cx.parameter = std::make_shared<routing::cell_parameter>();
     cx.parameter->routing.velocity = cx.geo.routing.distance / (10 * 3600.0);// takes 10 hours to propagate the distance
-    cx.rc.avg_discharge= ts_t(ta, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+    cx.rc.avg_discharge= ts_t(ta, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
     cx.rc.avg_discharge.set(0, 10.0);// set 10 m3/s at timestep 0.
     cells->push_back(cx); //ship it to cell-vector
     cx.parameter = std::make_shared<routing::cell_parameter>();
     cx.parameter->routing.velocity = cx.geo.routing.distance / (7 * 3600.0);// takes 7 hours to propagate the distance
-    cx.rc.avg_discharge = ts_t(ta, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+    cx.rc.avg_discharge = ts_t(ta, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
     cx.rc.avg_discharge.set(0, 7.0);
     cx.rc.avg_discharge.set(6, 6.0); // a second pulse after 6 hours
     cells->push_back(cx);
     cx.geo.routing.id = c_id;// route it to cell c
     cx.parameter = std::make_shared<routing::cell_parameter>();
     cx.parameter->routing.velocity = cx.geo.routing.distance / (24 * 3600.0);// takes 14 hours to propagate the distance
-    cx.rc.avg_discharge = ts_t(ta, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+    cx.rc.avg_discharge = ts_t(ta, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
     cx.rc.avg_discharge.set(0, 50.0);// just one large pulse, that will spread over 24 hours
     cells->push_back(cx);
 

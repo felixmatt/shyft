@@ -138,10 +138,10 @@ namespace shyft {
                 */
                 template < class TS, class TSS>
                 shared_ptr<TS> to_average(utctime start, utctimespan dt, size_t n, const TSS& src) {
-                    shyft::timeseries::timeaxis time_axis(start, dt, n);
-                    shyft::timeseries::average_accessor< TSS, shyft::timeseries::timeaxis> avg(src, time_axis);
+                    shyft::time_series::timeaxis time_axis(start, dt, n);
+                    shyft::time_series::average_accessor< TSS, shyft::time_series::timeaxis> avg(src, time_axis);
                     auto r = make_shared< TS>(time_axis, 0.0);
-                    r->set_point_interpretation(shyft::timeseries::POINT_AVERAGE_VALUE);
+                    r->set_point_interpretation(shyft::time_series::POINT_AVERAGE_VALUE);
                     for (size_t i = 0; i < avg.size(); ++i) r->set(i, avg.value(i));
                     return r;
                 }
@@ -644,7 +644,7 @@ namespace shyft {
                 pts_t compute_discharge_sum(const target_specification_t& t, vector<pts_t>& catchment_d) const {
                     if (catchment_d.empty())
                         model.catchment_discharges(catchment_d);
-                    pts_t discharge_sum(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+                    pts_t discharge_sum(model.time_axis, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
                     for (auto i : t.catchment_indexes)
                         discharge_sum.add(catchment_d[model.cix_from_cid(i)]);// important! the catchment_d(ischarge) is in internal index order
                     return discharge_sum;
@@ -652,7 +652,7 @@ namespace shyft {
                 pts_t compute_charge_sum(const target_specification_t& t, vector<pts_t>& catchment_charges) const {
                     if (catchment_charges.empty())
                         model.catchment_charges(catchment_charges);
-                    pts_t charge_sum(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+                    pts_t charge_sum(model.time_axis, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
                     for (auto i : t.catchment_indexes)
                         charge_sum.add(catchment_charges[model.cix_from_cid(i)]);// important! the catchment_charges is in internal index order
                     return charge_sum;
@@ -665,7 +665,7 @@ namespace shyft {
                  */
                 template<class property_ts_function>
                 vector<area_ts> extract_area_ts_property(property_ts_function && tsf) const {
-                    vector<area_ts> r(n_catchments, area_ts(0.0, pts_t(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE)));
+                    vector<area_ts> r(n_catchments, area_ts(0.0, pts_t(model.time_axis, 0.0, shyft::time_series::POINT_AVERAGE_VALUE)));
                     for (const auto& c : *model.get_cells()) {
                         if (model.is_calculated_by_catchment_ix(c.geo.catchment_ix)) {
                             r[c.geo.catchment_ix].ts.add_scale(tsf(c), c.geo.area());//the only ref. to snow_sca
@@ -680,7 +680,7 @@ namespace shyft {
                 /** \brief returns the area weighted sum of vector<area_ts> according to t.catchment_indexes
                 */
                 pts_t compute_weighted_area_ts_average(const target_specification_t& t, const vector<area_ts>& ats) const {
-                    pts_t ts_sum(model.time_axis, 0.0, shyft::timeseries::POINT_AVERAGE_VALUE);
+                    pts_t ts_sum(model.time_axis, 0.0, shyft::time_series::POINT_AVERAGE_VALUE);
                     double a_sum = 0.0;
                     for (auto cid : t.catchment_indexes) {
                         auto i = model.cix_from_cid(cid); // need to get the catchment zero-based index here
@@ -739,7 +739,7 @@ namespace shyft {
                     vector<pts_t> catchment_d;
                     vector<area_ts> catchment_sca, catchment_swe;// "catchment" level simulated discharge,sca,swe
                     for (const auto& t : targets) {
-                        shyft::timeseries::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.ta);
+                        shyft::time_series::direct_accessor<pts_t, timeaxis_t> target_accessor(t.ts, t.ts.ta);
                         pts_t property_sum;
                         switch (t.catchment_property) {
                         case DISCHARGE:
@@ -757,7 +757,7 @@ namespace shyft {
                         case CELL_CHARGE:
                             property_sum = compute_charge_sum(t, catchment_d);
                         }
-                        shyft::timeseries::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
+                        shyft::time_series::average_accessor<pts_t, timeaxis_t> property_sum_accessor(property_sum, t.ts.ta);
                         double partial_goal_function_value;
                         if (t.calc_mode == target_spec_calc_type::NASH_SUTCLIFFE) {
                             partial_goal_function_value = nash_sutcliffe_goal_function(target_accessor, property_sum_accessor);

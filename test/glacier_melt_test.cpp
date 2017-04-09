@@ -52,7 +52,7 @@ TEST_CASE("test_melt") {
 TEST_CASE("test_melt_ts") {
 #if 0
     using namespace shyft::core;
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     using namespace shyft::time_axis;
     typedef point_ts<fixed_dt> pts_t;
     calendar utc;

@@ -6,7 +6,7 @@
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::core::pt_ss_k;
 using namespace shyfttest;

@@ -6,7 +6,7 @@
 
 namespace shyft {
     namespace core {
-		using namespace shyft::timeseries;
+		using namespace shyft::time_series;
 
 		// and typedefs for commonly used types in the model
 		typedef point_ts<timeaxis> pts_t;
@@ -24,7 +24,7 @@ namespace shyft {
 		* \see cell
 		* \tparam timeaxis type, the ts-type should all be constructible/resetable with a timeaxis and a fill-value.
 		*
-		* \tparam temperature_ts type for the temperature ts, usually a shyft::timeseries::points_ts<TA> type
+		* \tparam temperature_ts type for the temperature ts, usually a shyft::time_series::points_ts<TA> type
 		* \tparam precipitation_ts
 		* \tparam radiation_ts
 		* \tparam relhum_ts
@@ -60,7 +60,7 @@ namespace shyft {
 
 		///< environment variant with const relative humidity and wind (speed up calc &reduce mem)
 		typedef environment<timeaxis_t, pts_t, pts_t, pts_t, cts_t, cts_t> environment_const_rhum_and_wind_t;
-		///< environment type with all properties as general timeseries
+		///< environment type with all properties as general time_series
 		typedef environment<timeaxis_t, pts_t, pts_t, pts_t, pts_t, pts_t> environment_t;
 
 		///< utility function to create an instance of a environment based on function (auto-template by arguments)

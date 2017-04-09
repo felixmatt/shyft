@@ -7,7 +7,7 @@
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 using namespace shyft::core::hbv_stack;
 
 using namespace shyfttest::mock;

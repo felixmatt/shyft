@@ -38,7 +38,7 @@ TEST_CASE("test_sih_workbench") {
 
     using ats_t = shyft::api::apoint_ts; // potential break-point time-series, irregular intervals
     using temperature_source = shyft::api::TemperatureSource;
-    typedef shyft::timeseries::average_accessor<ats_t, timeaxis_t> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
+    typedef shyft::time_series::average_accessor<ats_t, timeaxis_t> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
     typedef idw_compliant_geo_point_ts< temperature_source, atsa_t, timeaxis_t> idw_compliant_gts_t;// gts =geo located ts , and idw_compliant to!
 	typedef idw::temperature_model<idw_compliant_gts_t, mock_cell , idw::temperature_parameter, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t; // how to compensate for the height at different locations using temp.gradient
 

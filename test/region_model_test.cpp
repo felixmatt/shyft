@@ -26,7 +26,7 @@
 // define namespace shorthands
 using namespace std;
 namespace sc = shyft::core;
-namespace st = shyft::timeseries;
+namespace st = shyft::time_series;
 namespace pt = shyft::core::priestley_taylor;
 namespace pc = shyft::core::precipitation_correction;
 namespace gs = shyft::core::gamma_snow;

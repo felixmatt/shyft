@@ -409,7 +409,7 @@ TEST_CASE("test_performance") {
     }
     vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
     Parameter p(s_dxy * 2, min(4, n_sources / 2)); // for practical purposes, 8 neighbours or less.
-    typedef shyft::timeseries::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
+    typedef shyft::time_series::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
 
     typedef idw_compliant_geo_point_ts<api::TemperatureSource, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 

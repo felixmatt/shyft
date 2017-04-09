@@ -156,7 +156,7 @@ namespace shyft {
             void set_rel_hum(shared_ptr<vector<RelHumSource>> x) {rel_hum=x;}
     };
 
-    typedef shyft::timeseries::point_ts<time_axis::fixed_dt> result_ts_t;
+    typedef shyft::time_series::point_ts<time_axis::fixed_dt> result_ts_t;
     typedef std::shared_ptr<result_ts_t> result_ts_t_;
 
     /** \brief A class that facilitates fast state io, the yaml in Python is too slow

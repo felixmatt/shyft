@@ -10,7 +10,7 @@
 namespace shyfttest {
     const double EPS = 1.0e-8;
     using namespace std;
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     using namespace shyft::core;
 
         /// for testing, this one helps verifying the behavior of the algorithms.
@@ -64,7 +64,7 @@ namespace shyfttest {
 } // namespace test
 
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyfttest;
 
@@ -444,7 +444,7 @@ TEST_CASE("test_average_value_linear_between_points") {
 
 
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 /// average_value_staircase_fast:
 /// Just keept for the reference now, but
 /// the generic/complex does execute at similar speed
@@ -696,7 +696,7 @@ TEST_CASE("test_binary_operator") {
        to the test_bin_op function
 
     */
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     using namespace shyft;
     calendar utc;
     utctime start = utc.time(YMDhms(2016,3,8));
@@ -799,7 +799,7 @@ TEST_CASE("test_api_ts") {
 }
 
 typedef shyft::time_axis::fixed_dt tta_t;
-typedef shyft::timeseries::point_ts<tta_t> tts_t;
+typedef shyft::time_series::point_ts<tta_t> tts_t;
 
 template<typename Fx>
 std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
@@ -851,7 +851,7 @@ TEST_CASE("test_ts_statistics_speed") {
     tta_t tad(t0, deltahours(24), n_days);
     auto tsv = create_test_ts(n_ts, ta, fx_1);
     std::vector<shyft::api::apoint_ts> tsv1;
-    auto ts0 = shyft::api::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::timeseries::POINT_AVERAGE_VALUE);
+    auto ts0 = shyft::api::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::time_series::POINT_AVERAGE_VALUE);
 
     for (size_t i=0;i<tsv.size();++i)
         tsv1.push_back(shyft::api::apoint_ts(string("a_ref"))*ts0 - 1000.0);// make it an expression
@@ -859,7 +859,7 @@ TEST_CASE("test_ts_statistics_speed") {
     {
         std::vector<shyft::api::apoint_ts> bind_ts;
         for(auto const &ts : tsv)
-            bind_ts.push_back(shyft::api::apoint_ts(ts.time_axis(), ts.v, shyft::timeseries::POINT_AVERAGE_VALUE));
+            bind_ts.push_back(shyft::api::apoint_ts(ts.time_axis(), ts.v, shyft::time_series::POINT_AVERAGE_VALUE));
         std::vector<shyft::api::ts_bind_info> bi;
         for (auto const& ats : tsv1) {
             auto tsb = ats.find_ts_bind_info();
@@ -904,7 +904,7 @@ TEST_CASE("test_ts_statistics_speed") {
 TEST_CASE("test_timeshift_ts") {
     using namespace shyft;
     using namespace shyft::core;
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     typedef point_ts<time_axis::fixed_dt> pts_t;
     calendar utc;
     utctime t0=utc.time(2016,1,1);
@@ -1184,8 +1184,8 @@ TEST_CASE("test_unit_conversion") {
 
 TEST_CASE("test_ts_ref") {
     using ta_t=shyft::time_axis::fixed_dt;
-    using ts_t=shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>;
-    using rts_t=shyft::timeseries::ref_ts<ts_t>;
+    using ts_t=shyft::time_series::point_ts<shyft::time_axis::fixed_dt>;
+    using rts_t=shyft::time_series::ref_ts<ts_t>;
     using calendar=shyft::core::calendar;
     calendar utc;
     ta_t ta(utc.time(2016,10,1),deltahours(1),10);
@@ -1233,12 +1233,12 @@ TEST_CASE("test_convolution_w") {
     utctimespan dt=deltahours(1);
     time_axis::fixed_dt ta(t0,dt,24);
 
-    timeseries::point_ts<decltype(ta)> ts(ta,10.0,shyft::timeseries::POINT_AVERAGE_VALUE);
+    time_series::point_ts<decltype(ta)> ts(ta,10.0,shyft::time_series::POINT_AVERAGE_VALUE);
     for(size_t i=0;i<5;++i) ts.set(10+i,i);
     std::vector<double> w{0.1,0.15,0.5,0.15,0.1};
-    timeseries::convolve_w_ts<decltype(ts)> cts_first(ts,w,timeseries::convolve_policy::USE_FIRST);
-    timeseries::convolve_w_ts<decltype(ts)> cts_zero(ts,w,timeseries::convolve_policy::USE_ZERO);
-    timeseries::convolve_w_ts<decltype(ts)> cts_nan(ts,w,timeseries::convolve_policy::USE_NAN);
+    time_series::convolve_w_ts<decltype(ts)> cts_first(ts,w,time_series::convolve_policy::USE_FIRST);
+    time_series::convolve_w_ts<decltype(ts)> cts_zero(ts,w,time_series::convolve_policy::USE_ZERO);
+    time_series::convolve_w_ts<decltype(ts)> cts_nan(ts,w,time_series::convolve_policy::USE_NAN);
 
     // first policy will just repeat the first value through the filter, thus equal first 4 steps.
     TS_ASSERT_DELTA(ts.value(0),cts_first.value(0),0.0001);
@@ -1282,16 +1282,16 @@ TEST_CASE("test_uniform_sum_ts") {
 	utctimespan dt = deltahours(1);
 	time_axis::fixed_dt ta(t0, dt, 24);
 	size_t n = 10;
-	using ts_t = timeseries::point_ts<decltype(ta)>;
+	using ts_t = time_series::point_ts<decltype(ta)>;
 	vector<ts_t> tsv;
 	for (size_t i = 0;i < n;++i) {
-		tsv.emplace_back(ta, double(i), shyft::timeseries::POINT_AVERAGE_VALUE);
+		tsv.emplace_back(ta, double(i), shyft::time_series::POINT_AVERAGE_VALUE);
 		for (size_t t = 0;t < ta.size();++t) {
 			tsv.back().set(t, double(i) + double(t) / 1000.0);// just  ensure variation along time-axis as well.
 		}
 	}
 	// act
-	timeseries::uniform_sum_ts<ts_t> sum_ts(tsv);
+	time_series::uniform_sum_ts<ts_t> sum_ts(tsv);
 	//assert it works like we expect.
 	TS_ASSERT(time_axis::equivalent_time_axis(sum_ts.time_axis(), ta));
 	for (size_t t = 0;t < ta.size();++t) {

@@ -10,7 +10,7 @@
 namespace expose {
     namespace py=boost::python;
     namespace sc=shyft::core;
-    namespace ts=shyft::timeseries;
+    namespace ts=shyft::time_series;
     namespace ta=shyft::time_axis;
     namespace sa=shyft::api;
 

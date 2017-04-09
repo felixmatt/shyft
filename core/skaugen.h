@@ -137,7 +137,7 @@ namespace shyft {
                 const double snow_tol = 1.0e-10;
               public:
                 calculator() { /* Do nothing */ }
-                void step(shyft::timeseries::utctimespan dt,
+                void step(shyft::time_series::utctimespan dt,
                           const P& p,
                           const double T,
                           const double prec,

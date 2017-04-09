@@ -10,7 +10,7 @@ using namespace std;
 namespace shyfttest {
 	const double EPS = 1.0e-8;
 	using namespace shyft::core;
-	using namespace shyft::timeseries;
+	using namespace shyft::time_series;
 	using shyft::core::geo_point;
 
 	namespace btk_structs {
@@ -19,7 +19,7 @@ namespace shyfttest {
 		class Source {
 		public:
 			typedef xpts_t ts_source;
-			typedef shyft::timeseries::average_accessor<ts_source, shyfttest::point_timeaxis> source_accessor;
+			typedef shyft::time_series::average_accessor<ts_source, shyfttest::point_timeaxis> source_accessor;
 		private:
 			geo_point coord;
 			const ts_source temperature_ts;
@@ -97,17 +97,17 @@ namespace shyfttest {
 using std::begin;
 using std::end;
 using namespace shyfttest::btk_structs;
-using shyft::timeseries::point_timeaxis;
+using shyft::time_series::point_timeaxis;
 using namespace shyft::core;
 
 typedef shyfttest::xpts_t xpts_t;
 std::vector<utctime> ctimes{ 0, 3600 };
-typedef shyft::timeseries::point_timeaxis point_timeaxis;
-typedef std::vector<shyft::timeseries::point> point_vector_t;
+typedef shyft::time_series::point_timeaxis point_timeaxis;
+typedef std::vector<shyft::time_series::point> point_vector_t;
 
 void build_sources_and_dests(const size_t num_sources_x, const size_t num_sources_y,
 	const size_t num_dests_x, const size_t num_dests_y,
-	const size_t ts_size, const shyft::timeseries::utctimespan dt,
+	const size_t ts_size, const shyft::time_series::utctimespan dt,
 	const point_timeaxis& time_axis, bool insert_nans, SourceList& sources, DestinationList& dests,bool randomize=false) {
 	const double x_min = 0.0; // [m]
 	const double x_max = 100000.0; // [m]
@@ -240,13 +240,13 @@ TEST_CASE("test_interpolation") {
 	Parameter params;
 	SourceList sources;
 	DestinationList destinations;
-	using namespace shyft::timeseries;
+	using namespace shyft::time_series;
 	using namespace shyft::core;
 	using namespace shyfttest;
 	size_t n_s = 3;
 	size_t n_d = 9;
 	size_t n_times = 2;
-	shyft::timeseries::utctime dt = 10;
+	shyft::time_series::utctime dt = 10;
 	vector<utctime> times; times.reserve(n_times);
 	for (size_t i = 0; i < n_times; ++i)
 		times.emplace_back(dt*i);
@@ -275,13 +275,13 @@ TEST_CASE("test_performance") {
     Parameter params;
     SourceList sources;
     DestinationList destinations;
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     using namespace shyft::core;
     using namespace shyfttest;
     size_t n_s = 5;//(int)sqrt(5100);
     size_t n_d = 12;//(int)sqrt(3100);
     size_t n_times = 24;
-    shyft::timeseries::utctime dt = 3600;
+    shyft::time_series::utctime dt = 3600;
     vector<utctime> times; times.reserve(n_times);
     for (size_t i = 0; i < n_times; ++i)
         times.emplace_back(dt*i);

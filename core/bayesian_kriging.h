@@ -252,8 +252,8 @@ namespace shyft {
 	         * \tparam T
 	         * TimeAxis providing:
 	         *    -# T.size() const --> size_t, number of non-overlapping time intervals
-	         *    -# T(const size_t i) const --> shyft::timeseries::utctimeperiod period of a with
-	         *       shyft::timeseries::utctime start and shyft::timeseries::utctime end.
+	         *    -# T(const size_t i) const --> shyft::time_series::utctimeperiod period of a with
+	         *       shyft::time_series::utctime start and shyft::time_series::utctime end.
 	         * \tparam P
 	         * Parameters for the algorithm, that supplies:
 	         *    -# P.zscale() const --> double elevation scale factor used when computing covariances.

@@ -7,7 +7,7 @@
 
 
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 using namespace shyfttest::mock;
 using namespace std;
 
@@ -220,7 +220,7 @@ namespace shyfttest {
                 pt_gs_k::state_t s = state(i++);
                 pt_gs_k::response_t r;
 
-                pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,pt_gs_k::response_t>(
+                pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor,pt_gs_k::response_t>(
                       d.geo_cell_info(),
                       param,
                       time_axis,0,0,

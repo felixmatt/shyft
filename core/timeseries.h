@@ -12,7 +12,7 @@
 namespace shyft{
     const double nan = std::numeric_limits<double>::quiet_NaN();
 
-    /** The timeseries namespace contains all needed concepts related
+    /** The time_series namespace contains all needed concepts related
     * to representing and handling time-series concepts efficiently.
     *
     * concepts:
@@ -21,7 +21,7 @@ namespace shyft{
     *  -#: point_ts,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
     *  -#: accessor, -(A) average_accessor and direct_accessor, provides transformation from f(t) to some provide time-axis
     */
-    namespace timeseries {
+    namespace time_series {
 
         using namespace shyft::core;
         using namespace std;
@@ -1894,11 +1894,11 @@ namespace shyft{
     } // timeseries
 } // shyft
 //-- serialization support
-x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
-x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
-x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
-x_serialize_export_key(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
-x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
-x_serialize_export_key(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+x_serialize_export_key(shyft::time_series::point_ts<shyft::time_axis::fixed_dt>);
+x_serialize_export_key(shyft::time_series::point_ts<shyft::time_axis::calendar_dt>);
+x_serialize_export_key(shyft::time_series::point_ts<shyft::time_axis::point_dt>);
+x_serialize_export_key(shyft::time_series::point_ts<shyft::time_axis::generic_dt>);
+x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
 
