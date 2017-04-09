@@ -635,20 +635,18 @@ static bool is_equal_ts(const A& a,const B& b) {
 //auto do_deferred_bind(shyft::api::apoint_ts&&ts) {
 //    return ts;
 //}
-namespace shyft::api {
-constexpr void dbind_ts(apoint_ts&&){}
-}
-template <class A>
-auto bind_ts(A&&ts) {
-    dbind_ts(std::forward<A>(ts));
-    return ts;
+namespace shyft  {
+    namespace api {
+        constexpr void dbind_ts(apoint_ts&&){}
+        template <class A>
+        auto bind_ts(A&&ts) {
+            dbind_ts(std::forward<A>(ts));
+            return ts;
+        }
+    }
 }
 
-//template <class A>
-//auto bind_ts(A & ts) {
-//    do_deferred_bind(std::forward<A>(ts));
-//    return ts;
-//}
+
 
 template < class TS_E,class TS_A,class TS_B,class TA>
 static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
