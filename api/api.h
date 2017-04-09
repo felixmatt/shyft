@@ -43,7 +43,7 @@ namespace shyft {
         apoint_ts
         create_point_ts(int n, utctime tStart, utctimespan dt,
                         const std::vector<double>& values,
-                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE){
+                        ts_point_fx interpretation=POINT_INSTANT_VALUE){
             return apoint_ts( time_axis::fixed_dt(tStart,dt, n), values, interpretation);
         }
 
@@ -51,7 +51,7 @@ namespace shyft {
         apoint_ts
         create_time_point_ts(utcperiod period, const std::vector<utctime>& times,
                              const std::vector<double>& values,
-                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
+                             ts_point_fx interpretation=POINT_INSTANT_VALUE) {
             if (times.size() == values.size() + 1) {
                 return apoint_ts( time_axis::point_dt(times), values, interpretation);
             } else if (times.size() == values.size()) {

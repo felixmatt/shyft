@@ -27,7 +27,7 @@ namespace expose {
 		dst->reserve(points.size());
 		double std_nan = std::numeric_limits<double>::quiet_NaN();
 		for (const auto& gp : points)
-			dst->emplace_back(gp, sa::apoint_ts(time_axis, std_nan, shyft::time_series::point_interpretation_policy::POINT_AVERAGE_VALUE));
+			dst->emplace_back(gp, sa::apoint_ts(time_axis, std_nan, shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE));
 		return dst;
 	}
 

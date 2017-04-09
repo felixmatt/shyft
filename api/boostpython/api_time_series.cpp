@@ -31,8 +31,8 @@ namespace expose {
     static void point_ts(const char *ts_type_name,const char *doc) {
         typedef time_series::point_ts<TA> pts_t;
         class_<pts_t,bases<>,shared_ptr<pts_t>,boost::noncopyable>(ts_type_name, doc)
-            .def(init<const TA&,const vector<double>&,optional<time_series::point_interpretation_policy>>(args("ta","v","policy"),"constructs a new timeseries from timeaxis and points"))
-            .def(init<const TA&,double,optional<time_series::point_interpretation_policy>>(args("ta","fill_value","policy"),"constructs a new timeseries from timeaxis and fill-value"))
+            .def(init<const TA&,const vector<double>&,optional<time_series::ts_point_fx>>(args("ta","v","policy"),"constructs a new timeseries from timeaxis and points"))
+            .def(init<const TA&,double,optional<time_series::ts_point_fx>>(args("ta","fill_value","policy"),"constructs a new timeseries from timeaxis and fill-value"))
             DEF_STD_TS_STUFF()
             .def_readonly("v",&pts_t::v,"the point vector<double>, same as .values, kept around for backward compatibility")
 			.def("get_time_axis", &pts_t::time_axis, "returns the time-axis", return_internal_reference<>()) // have to use func plus init.py fixup due to boost py policy
@@ -124,14 +124,14 @@ namespace expose {
                 doc_see_also("TimeAxis,DoubleVector,Calendar,point_interpretation_policy")
 
             )
-			.def(init<const time_axis::generic_dt&, double, optional<time_series::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<time_series::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::generic_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-			.def(init<const time_axis::fixed_dt&, double, optional<time_series::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, optional<time_series::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-			.def(init<const time_axis::point_dt&, double, optional<time_series::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<time_series::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
             .def(init<const shyft::api::rts_t &>(args("core_result_ts"),"construct a timeseries from a shyft core time-series, to allow full ts-functionality in python"))
 
 			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
@@ -399,7 +399,7 @@ namespace expose {
 
 	}
     void timeseries() {
-        enum_<time_series::point_interpretation_policy>("point_interpretation_policy")
+        enum_<time_series::ts_point_fx>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",time_series::POINT_INSTANT_VALUE)
             .value("POINT_AVERAGE_VALUE",time_series::POINT_AVERAGE_VALUE)
             .export_values()

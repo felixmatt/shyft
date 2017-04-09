@@ -193,13 +193,13 @@ namespace shyft {
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
                     if (match_all) {
-                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                         r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                         sum_area += c.geo.area();
                     } else {
                         for (auto cid : catchment_indexes) {
                             if ( c.geo.catchment_id() == (size_t) cid) { // criteria
-                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                                 r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 sum_area += c.geo.area();
                                 break;
@@ -271,12 +271,12 @@ namespace shyft {
 
 				for (const auto& c : cells) {
                     if (match_all) {
-                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                         r->add(cell_ts(c));
                     } else {
                         for (auto cid : catchment_indexes) {
                             if (c.geo.catchment_id() == (size_t)cid) { //criteria
-                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                                 r->add(cell_ts(c));  //c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 break;
                             }

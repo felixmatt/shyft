@@ -18,9 +18,9 @@ namespace shyfttest {
             vector<point> points;
           public:
                          /** point intepretation: how we should map points to f(t) */
-            point_interpretation_policy point_fx=POINT_AVERAGE_VALUE;///< this is special for these test
-            point_interpretation_policy point_interpretation() const {return point_fx;}
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {point_fx=point_interpretation;}
+            ts_point_fx point_fx=POINT_AVERAGE_VALUE;///< this is special for these test
+            ts_point_fx point_interpretation() const {return point_fx;}
+            void set_point_interpretation(ts_point_fx point_interpretation) {point_fx=point_interpretation;}
 
             test_timeseries() {}
             // make it move-able
@@ -1015,7 +1015,7 @@ TEST_CASE("test_periodic_template_ts") {
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
 	TS_ASSERT_EQUALS(pd.size(), pv.size());
 
-	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
 	TS_ASSERT_EQUALS(fun.size(), 1000u);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0u);
@@ -1054,7 +1054,7 @@ TEST_CASE("test_periodic_ts_values") {
 	timeaxis ta(t0, deltahours(10), 1000);
 
 	profile_description pd(t0, dt, pv);
-	periodic_ts< timeaxis> fun(pd, ta, point_interpretation_policy::POINT_AVERAGE_VALUE);
+	periodic_ts< timeaxis> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
 
 	auto v = fun.values();
 	TS_ASSERT_EQUALS(v.size(), ta.size());
@@ -1071,7 +1071,7 @@ TEST_CASE("test_accumulate_value") {
 	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i!= 5?i*1.0:shyft::nan);//0, 1,2,4,nan,6..9
 	//Two equal timeaxis representations
 	timeaxis ta(t, d, n);
-	point_ts<timeaxis> a(ta, values,point_interpretation_policy::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	point_ts<timeaxis> a(ta, values,ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
 	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); // while we have the test-setup, we test both the function, the accessor
 	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
 
@@ -1096,7 +1096,7 @@ TEST_CASE("test_accumulate_ts_and_accessor") {
 	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i != 5 ? i*1.0 : shyft::nan);//0, 1,2,4,nan,6..9
 																										//Two equal timeaxis representations
 	timeaxis ta(t, d, n);
-	point_ts<timeaxis> a(ta, values, point_interpretation_policy::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	point_ts<timeaxis> a(ta, values, ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
 	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); //  the accessor
 	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
 	TS_ASSERT_DELTA(0.0, aa.value(0), 0.001);
@@ -1121,7 +1121,7 @@ TEST_CASE("test_partition_by") {
 	vector<double> values;values.reserve(n);
 	for (size_t i = 0;i < n;++i)
 		values.push_back(i);//0, 1,2,4,5,6..9
-	shyft::api::apoint_ts src_a(ta, values, point_interpretation_policy::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
+	shyft::api::apoint_ts src_a(ta, values, ts_point_fx::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
 
   // core version : auto mk_time_shift = [](const decltype(src_a)  &ts, utctimespan dt)-> time_shift_ts<decltype(src_a)> {return time_shift(ts,dt);};
 	// below is the raw- time-shift version

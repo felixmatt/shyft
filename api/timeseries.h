@@ -57,7 +57,7 @@ namespace shyft {
              * 2. The values, provided by values(),
              *    or any of the value(i),value_at(utctime t) methods.
              *
-             * 3. The \ref point_interpretation_policy
+             * 3. The \ref ts_point_fx
              *    that determines how the points should be projected to f(t)
              *
              */
@@ -66,8 +66,8 @@ namespace shyft {
                 ipoint_ts() {} // ease boost serialization
                 virtual ~ipoint_ts(){}
 
-                virtual point_interpretation_policy point_interpretation() const =0;
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) =0;
+                virtual ts_point_fx point_interpretation() const =0;
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) =0;
 
                 /** \return Returns the effective time-axis of the timeseries
                  */
@@ -149,21 +149,21 @@ namespace shyft {
                 // like
 
                 // these are for the python exposure
-                apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-                apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::fixed_dt& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
 
-                apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-                apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::point_dt& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
 				apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
 				apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta);
 				apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta);
                 // these are the one we need.
-                apoint_ts(const gta_t& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-                apoint_ts(const gta_t& ta,const std::vector<double>& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-                apoint_ts(const gta_t& ta,std::vector<double>&& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const gta_t& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const gta_t& ta,const std::vector<double>& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(const gta_t& ta,std::vector<double>&& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
 
-                apoint_ts(gta_t&& ta,std::vector<double>&& values,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
-                apoint_ts(gta_t&& ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(gta_t&& ta,std::vector<double>&& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
+                apoint_ts(gta_t&& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
                 apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
 
                 apoint_ts(std::string ref_ts_id);
@@ -187,8 +187,8 @@ namespace shyft {
 
                 // interface we want to expose
                 // the standard ipoint-ts stuff:
-                point_interpretation_policy point_interpretation() const {return ts->point_interpretation();}
-                void set_point_interpretation(point_interpretation_policy point_interpretation) { sts()->set_point_interpretation(point_interpretation); };
+                ts_point_fx point_interpretation() const {return ts->point_interpretation();}
+                void set_point_interpretation(ts_point_fx point_interpretation) { sts()->set_point_interpretation(point_interpretation); };
                 const gta_t& time_axis() const { return sts()->time_axis();};
                 utcperiod total_period() const {return ts?ts->total_period():utcperiod();};   ///< Returns period that covers points, given
                 size_t index_of(utctime t) const {return ts?ts->index_of(t):std::string::npos;};
@@ -269,17 +269,17 @@ namespace shyft {
                 gts_t rep;
                 // To create gpoint_ts, we use const ref, move ct wherever possible:
                 // note (we would normally use ct template here, but we are aiming at exposing to python)
-                gpoint_ts(const gta_t&ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,fill_value,point_fx){}
-                gpoint_ts(const gta_t&ta,const std::vector<double>& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,v,point_fx) {}
-                gpoint_ts(gta_t&&ta,double fill_value,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),fill_value,point_fx){}
-                gpoint_ts(gta_t&&ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),std::move(v),point_fx) {}
-                gpoint_ts(const gta_t& ta,std::vector<double>&& v,point_interpretation_policy point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
+                gpoint_ts(const gta_t&ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(ta,fill_value,point_fx){}
+                gpoint_ts(const gta_t&ta,const std::vector<double>& v,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(ta,v,point_fx) {}
+                gpoint_ts(gta_t&&ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),fill_value,point_fx){}
+                gpoint_ts(gta_t&&ta,std::vector<double>&& v,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(std::move(ta),std::move(v),point_fx) {}
+                gpoint_ts(const gta_t& ta,std::vector<double>&& v,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(ta,std::move(v),point_fx) {}
 
                 // now for the gpoint_ts it self, constructors incl. move
                 gpoint_ts() = default; // default for serialization conv
                 // implement ipoint_ts contract:
-                virtual point_interpretation_policy point_interpretation() const {return rep.point_interpretation();}
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {rep.set_point_interpretation(point_interpretation);}
+                virtual ts_point_fx point_interpretation() const {return rep.point_interpretation();}
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) {rep.set_point_interpretation(point_interpretation);}
                 virtual const gta_t& time_axis() const {return rep.time_axis();}
                 virtual utcperiod total_period() const {return rep.total_period();}
                 virtual size_t index_of(utctime t) const {return rep.index_of(t);}
@@ -303,8 +303,8 @@ namespace shyft {
                 aref_ts(string sym_ref):rep(sym_ref) {}
                 aref_ts() = default; // default for serialization conv
                 // implement ipoint_ts contract:
-                virtual point_interpretation_policy point_interpretation() const {return rep.point_interpretation();}
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {rep.set_point_interpretation(point_interpretation);}
+                virtual ts_point_fx point_interpretation() const {return rep.point_interpretation();}
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) {rep.set_point_interpretation(point_interpretation);}
                 virtual const gta_t& time_axis() const {return rep.time_axis();}
                 virtual utcperiod total_period() const {return rep.total_period();}
                 virtual size_t index_of(utctime t) const {return rep.index_of(t);}
@@ -333,7 +333,7 @@ namespace shyft {
              *
              * using the f(t) interpretation of the supplied ts (linear or stair case).
              *
-             * The \ref point_interpretation_policy is always POINT_AVERAGE_VALUE for the result ts.
+             * The \ref ts_point_fx is always POINT_AVERAGE_VALUE for the result ts.
              *
              * \note if a nan-value intervals are excluded from the integral and time-computations.
              *       E.g. let's say half the interval is nan, then the true average is computed for
@@ -353,8 +353,8 @@ namespace shyft {
                 // std copy ct and assign
                 average_ts()=default;
                 // implement ipoint_ts contract:
-                virtual point_interpretation_policy point_interpretation() const {return point_interpretation_policy::POINT_AVERAGE_VALUE;}
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {;}
+                virtual ts_point_fx point_interpretation() const {return ts_point_fx::POINT_AVERAGE_VALUE;}
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) {;}
                 virtual const gta_t& time_axis() const {return ta;}
                 virtual utcperiod total_period() const {return ta.total_period();}
                 virtual size_t index_of(utctime t) const {return ta.index_of(t);}
@@ -364,7 +364,7 @@ namespace shyft {
                     if(i>ta.size())
                         return nan;
                     size_t ix_hint=(i*ts->size())/ta.size();// assume almost fixed delta-t.
-                    return average_value(*ts,ta.period(i),ix_hint,ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+                    return average_value(*ts,ta.period(i),ix_hint,ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE);
                 }
                 virtual double value_at(utctime t) const {
                     // return true average at t
@@ -375,7 +375,7 @@ namespace shyft {
                 virtual std::vector<double> values() const {
                     std::vector<double> r;r.reserve(ta.size());
                     size_t ix_hint=ts->index_of(ta.time(0));
-                    bool linear_interpretation=ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE;
+                    bool linear_interpretation=ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
                     for(size_t i=0;i<ta.size();++i) {
                         r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
                     }
@@ -398,7 +398,7 @@ namespace shyft {
             *
             * using the f(t) interpretation of the supplied ts (linear or stair case).
             *
-            * The \ref point_interpretation_policy is always POINT_AVERAGE_VALUE for the result ts.
+            * The \ref ts_point_fx is always POINT_AVERAGE_VALUE for the result ts.
             *
             * \note if a nan-value intervals are excluded from the integral and time-computations.
             *       E.g. let's say half the interval is nan, then the true integral is computed for
@@ -418,8 +418,8 @@ namespace shyft {
                 // std copy ct and assign
                 integral_ts()=default;
                 // implement ipoint_ts contract:
-                virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) { ; }
+                virtual ts_point_fx point_interpretation() const { return ts_point_fx::POINT_AVERAGE_VALUE; }
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) { ; }
                 virtual const gta_t& time_axis() const { return ta; }
                 virtual utcperiod total_period() const { return ta.total_period(); }
                 virtual size_t index_of(utctime t) const { return ta.index_of(t); }
@@ -430,7 +430,7 @@ namespace shyft {
                         return nan;
                     size_t ix_hint = (i*ts->size()) / ta.size();// assume almost fixed delta-t.
                     utctimespan tsum = 0;
-                    return accumulate_value(*ts, ta.period(i), ix_hint,tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+                    return accumulate_value(*ts, ta.period(i), ix_hint,tsum, ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE);
                 }
                 virtual double value_at(utctime t) const {
                     // return true average at t
@@ -441,7 +441,7 @@ namespace shyft {
                 virtual std::vector<double> values() const {
                     std::vector<double> r;r.reserve(ta.size());
                     size_t ix_hint = ts->index_of(ta.time(0));
-                    bool linear_interpretation = ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE;
+                    bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
                     for (size_t i = 0;i<ta.size();++i) {
                         utctimespan tsum = 0;
                         r.push_back(accumulate_value(*ts, ta.period(i), ix_hint,tsum, linear_interpretation));
@@ -471,7 +471,7 @@ namespace shyft {
 			* \note The value at t=t0 is 0.0 (by definition)
 			* \note The value of t outside ta.total_period() is nan
 			*
-			* The \ref point_interpretation_policy is always POINT_INSTANT_VALUE for the result ts.
+			* The \ref ts_point_fx is always POINT_INSTANT_VALUE for the result ts.
 			*
 			* \note if a nan-value intervals are excluded from the integral and time-computations.
 			*       E.g. let's say half the interval is nan, then the true average is computed for
@@ -491,8 +491,8 @@ namespace shyft {
 				// std copy ct and assign
 				accumulate_ts()=default;
 				// implement ipoint_ts contract:
-				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_INSTANT_VALUE; }
-				virtual void set_point_interpretation(point_interpretation_policy point_interpretation) { ; }// we could throw here..
+				virtual ts_point_fx point_interpretation() const { return ts_point_fx::POINT_INSTANT_VALUE; }
+				virtual void set_point_interpretation(ts_point_fx point_interpretation) { ; }// we could throw here..
 				virtual const gta_t& time_axis() const { return ta; }
 				virtual utcperiod total_period() const { return ta.total_period(); }
 				virtual size_t index_of(utctime t) const { return ta.index_of(t); }
@@ -505,7 +505,7 @@ namespace shyft {
 						return 0.0;
 					size_t ix_hint = 0;// assume almost fixed delta-t.
 					utctimespan tsum;
-					return accumulate_value(*ts, utcperiod(ta.time(0), ta.time(i)), ix_hint, tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);
+					return accumulate_value(*ts, utcperiod(ta.time(0), ta.time(i)), ix_hint, tsum, ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE);
 				}
 				virtual double value_at(utctime t) const {
 					// return true accumulated value at t
@@ -515,7 +515,7 @@ namespace shyft {
 						return 0.0; // by definition
 					utctimespan tsum;
 					size_t ix_hint = 0;
-					return accumulate_value(*this, utcperiod(ta.time(0), t), ix_hint, tsum, ts->point_interpretation() == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+					return accumulate_value(*this, utcperiod(ta.time(0), t), ix_hint, tsum, ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
 				}
 				virtual std::vector<double> values() const {
 					std::vector<double> r;r.reserve(ta.size());
@@ -582,8 +582,8 @@ namespace shyft {
                     }
                 }
                 // implement ipoint_ts contract:
-                virtual point_interpretation_policy point_interpretation() const {return ts->point_interpretation();}
-                virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {ts->set_point_interpretation(point_interpretation);}
+                virtual ts_point_fx point_interpretation() const {return ts->point_interpretation();}
+                virtual void set_point_interpretation(ts_point_fx point_interpretation) {ts->set_point_interpretation(point_interpretation);}
                 virtual const gta_t& time_axis() const {return ta;}
                 virtual utcperiod total_period() const {return ta.total_period();}
                 virtual size_t index_of(utctime t) const {return ta.index_of(t);}
@@ -621,8 +621,8 @@ namespace shyft {
 				}
                 periodic_ts()=default;
 				// implement ipoint_ts contract
-				virtual point_interpretation_policy point_interpretation() const { return point_interpretation_policy::POINT_AVERAGE_VALUE; }
-				virtual void set_point_interpretation(point_interpretation_policy) { ; }
+				virtual ts_point_fx point_interpretation() const { return ts_point_fx::POINT_AVERAGE_VALUE; }
+				virtual void set_point_interpretation(ts_point_fx) { ; }
 				virtual const gta_t& time_axis() const { return ts.ta; }
 				virtual utcperiod total_period() const { return ts.ta.total_period(); }
 				virtual size_t index_of(utctime t) const { return ts.index_of(t); }
@@ -655,8 +655,8 @@ namespace shyft {
                 convolve_w_ts() =default;
 
                 // implement ipoint_ts contract
-                virtual point_interpretation_policy point_interpretation() const { return ts_impl.point_interpretation(); }
-                virtual void set_point_interpretation(point_interpretation_policy) { throw std::runtime_error("not implemented"); }
+                virtual ts_point_fx point_interpretation() const { return ts_impl.point_interpretation(); }
+                virtual void set_point_interpretation(ts_point_fx) { throw std::runtime_error("not implemented"); }
                 virtual const gta_t& time_axis() const { return ts_impl.time_axis(); }
                 virtual utcperiod total_period() const { return ts_impl.total_period(); }
                 virtual size_t index_of(utctime t) const { return ts_impl.index_of(t); }
@@ -709,7 +709,7 @@ namespace shyft {
              * This could take some cpu if the time-axis is of type point_dt, so we could
              * consider working some more on the internal algorithms to avoid this.
              *
-             * The \ref point_interpretation_policy is computed based on rhs,lhs. But can be overridden
+             * The \ref ts_point_fx is computed based on rhs,lhs. But can be overridden
              * by the user.
              *
              */
@@ -719,11 +719,11 @@ namespace shyft {
                   iop_t op=iop_t::OP_NONE;
                   apoint_ts rhs;
                   gta_t ta;
-                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+                  ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
                   bool bound=false;
 
-                  point_interpretation_policy point_interpretation() const {return fx_policy;}
-                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+                  ts_point_fx point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
 
                   void do_deferred_bind() {
                     if(!bound) {
@@ -764,12 +764,12 @@ namespace shyft {
                   iop_t op=iop_t::OP_NONE;
                   apoint_ts rhs;
                   gta_t ta;
-                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+                  ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
                   bool bound=false;
 
 
-                  point_interpretation_policy point_interpretation() const {return fx_policy;}
-                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+                  ts_point_fx point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
 
                   void do_deferred_bind()  {
                       if(!bound) {
@@ -810,9 +810,9 @@ namespace shyft {
                   double rhs;
                   gta_t ta;
                   bool bound=false;
-                  point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
-                  point_interpretation_policy point_interpretation() const {return fx_policy;}
-                  void set_point_interpretation(point_interpretation_policy x) {fx_policy=x;}
+                  ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
+                  ts_point_fx point_interpretation() const {return fx_policy;}
+                  void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
                   void do_deferred_bind()  {
                       if(!bound) {
                           ta=lhs.time_axis();

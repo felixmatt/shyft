@@ -68,13 +68,13 @@ namespace shyft{
         }
 
         // implement popular ct for apoint_ts to make it easy to expose & use
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,fill_value,point_fx)) {
         }
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,values,point_fx)) {
         }
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,std::move(values),point_fx)) {
         }
 
@@ -90,18 +90,18 @@ namespace shyft{
         }
 
         // and python needs these:
-        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
         }
-        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
 
         // and python needs these:
-        apoint_ts::apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,double fill_value,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
         }
-        apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
 		apoint_ts::apoint_ts(const rts_t &rts):
@@ -113,10 +113,10 @@ namespace shyft{
 		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta) :
 			apoint_ts(make_shared<periodic_ts>(pattern, dt,pattern_t0,ta)) {}
 
-        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values),point_fx)) {
         }
-        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,double fill_value,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),fill_value,point_fx))
             {
         }
@@ -254,7 +254,7 @@ namespace shyft{
             //   then we define value(t) as
             //    as the point interpretation of f(t)..
             //
-            //if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
+            //if(fx_policy==ts_point_fx::POINT_AVERAGE_VALUE)
             //    return value_at(ta.time(i));
             //utcperiod p=ta.period(i);
             //double v0= value_at(p.start);
@@ -325,8 +325,8 @@ namespace shyft{
             //aglacier_melt_ts(const std::shared_ptr<ipoint_ts> &ts, utctime dt ):ts(ts),ta(time_axis::time_shift(ts->time_axis(),dt)),dt(dt){}
 
             // implement ipoint_ts contract:
-            virtual point_interpretation_policy point_interpretation() const {return gm.fx_policy;}
-            virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {gm.fx_policy=point_interpretation;}
+            virtual ts_point_fx point_interpretation() const {return gm.fx_policy;}
+            virtual void set_point_interpretation(ts_point_fx point_interpretation) {gm.fx_policy=point_interpretation;}
             virtual const gta_t& time_axis() const {return gm.time_axis();}
             virtual utcperiod total_period() const {return gm.time_axis().total_period();}
             virtual size_t index_of(utctime t) const {return gm.time_axis().index_of(t);}

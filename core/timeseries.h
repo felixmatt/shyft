@@ -49,16 +49,16 @@ namespace shyft{
          * State-in-time values are typically POINT_INSTANT_VALUES; and we could as an approximation
          * draw a straight line between the points.
          */
-        enum point_interpretation_policy {
+        enum ts_point_fx {
             POINT_INSTANT_VALUE, ///< the point value represents the value at the specific time (or centered around that time),typically linear accessor
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
         };
-        typedef point_interpretation_policy fx_policy_t;
-        //typedef point_interpretation_policy point_interpretation_policy;// BW compatible
+        typedef ts_point_fx fx_policy_t;
+        //typedef ts_point_fx ts_point_fx;// BW compatible
 
-        inline point_interpretation_policy result_policy(point_interpretation_policy a, point_interpretation_policy b) {
-            return a==point_interpretation_policy::POINT_INSTANT_VALUE || b==point_interpretation_policy::POINT_INSTANT_VALUE?point_interpretation_policy::POINT_INSTANT_VALUE:point_interpretation_policy::POINT_AVERAGE_VALUE;
+        inline ts_point_fx result_policy(ts_point_fx a, ts_point_fx b) {
+            return a==ts_point_fx::POINT_INSTANT_VALUE || b==ts_point_fx::POINT_INSTANT_VALUE?ts_point_fx::POINT_INSTANT_VALUE:ts_point_fx::POINT_AVERAGE_VALUE;
         }
 
         //--- to avoid duplicating algorithms in classes where the stored references are
@@ -276,7 +276,7 @@ namespace shyft{
          * its
          * templated time-axis, ta
          * the values corresponding periods in time-axis (same size)
-         * the point_interpretation_policy that determine how to compute the
+         * the ts_point_fx that determine how to compute the
          * f(t) on each interval of the time-axis (linear or stair-case)
          * and
          * value of the i'th interval of the time-series.
@@ -287,14 +287,14 @@ namespace shyft{
             TA ta;
             const TA& time_axis() const {return ta;}
             vector<double> v;
-            point_interpretation_policy fx_policy;
+            ts_point_fx fx_policy;
 
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
-            point_ts():fx_policy(point_interpretation_policy::POINT_INSTANT_VALUE){}
-            point_ts(const TA& ta, double fill_value,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(ta.size(),fill_value),fx_policy(fx_policy) {}
-            point_ts(const TA& ta,const vector<double>&vx,point_interpretation_policy fx_policy=POINT_INSTANT_VALUE):ta(ta),v(vx),fx_policy(fx_policy) {
+            point_ts():fx_policy(ts_point_fx::POINT_INSTANT_VALUE){}
+            point_ts(const TA& ta, double fill_value,ts_point_fx fx_policy=POINT_INSTANT_VALUE):ta(ta),v(ta.size(),fill_value),fx_policy(fx_policy) {}
+            point_ts(const TA& ta,const vector<double>&vx,ts_point_fx fx_policy=POINT_INSTANT_VALUE):ta(ta),v(vx),fx_policy(fx_policy) {
                 if(ta.size() != v.size())
                     throw runtime_error("point_ts: time-axis size is different from value-size");
             }
@@ -306,7 +306,7 @@ namespace shyft{
             double operator()(utctime t) const {
                 size_t i = ta.index_of(t);
                 if(i == string::npos) return nan;
-                if( fx_policy==point_interpretation_policy::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1])) {
+                if( fx_policy==ts_point_fx::POINT_INSTANT_VALUE && i+1<ta.size() && isfinite(v[i+1])) {
                     utctime t1=ta.time(i);
                     utctime t2=ta.time(i+1);
                     double f= double(t2-t)/double(t2-t1);
@@ -364,11 +364,11 @@ namespace shyft{
             // need to have a time-shifted time-axis here:
             // TA, ta.timeshift(dt) -> a clone of ta...
             ta_t ta;
-            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
             utctimespan dt=0;// despite ta time-axis, we need it
             bool bound=false;
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
             //-- default stuff, ct/copy etc goes here
             time_shift_ts()=default;
@@ -418,10 +418,10 @@ namespace shyft{
             typedef TA ta_t;
             TA ta;
             TS ts;
-            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
             const TA& time_axis() const {return ta;}
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
             average_ts()=default; // allow default construct
             average_ts(const TS&ts,const TA& ta)
             :ta(ta),ts(ts) {
@@ -437,7 +437,7 @@ namespace shyft{
                     return nan;
                 size_t ix_hint=(i*d_ref(ts).ta.size())/ta.size();// assume almost fixed delta-t.
                 //TODO: make specialized pr. time-axis average_value, since average of fixed_dt is trivial compared to other ta.
-                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
             }
             double operator()(utctime t) const {
                 size_t i=ta.index_of(t);
@@ -455,7 +455,7 @@ namespace shyft{
 		 * of the underlying specified TS ts.
 		 * The i'th value in the time-axis is computed
 		 * as the sum of the previous true-averages.
-		 * The point_interpretation_policy is POINT_INSTANT_VALUE
+		 * The ts_point_fx is POINT_INSTANT_VALUE
 		 * definition:
 		 * The value of t0=time_axis(0) is zero.
 		 * The value of t1= time_axis(1) is defined as
@@ -467,10 +467,10 @@ namespace shyft{
 			typedef TA ta_t;
 			TA ta;
 			TS ts;
-			point_interpretation_policy fx_policy=POINT_INSTANT_VALUE;
+			ts_point_fx fx_policy=POINT_INSTANT_VALUE;
 			const TA& time_axis() const { return ta; }
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
             accumulate_ts()=default;
 			accumulate_ts(const TS&ts, const TA& ta)
@@ -491,7 +491,7 @@ namespace shyft{
 				size_t ix_hint = 0;// we have to start at the beginning
 				utcperiod accumulate_period(ta.time(0), ta.time(i));
 				utctimespan tsum;
-				return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+				return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
 			}
 			double operator()(utctime t) const {
 				size_t i = ta.index_of(t);
@@ -501,7 +501,7 @@ namespace shyft{
 					return 0.0; // by definition
 				utctimespan tsum;
 				size_t ix_hint = 0;
-				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == point_interpretation_policy::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
 			}
             x_serialize_decl();
 		};
@@ -558,9 +558,9 @@ namespace shyft{
 		struct profile_accessor {
 			TA ta; ///< The time-axis that we want to map/repeat the profile on to
 			profile_description profile;///<< the profile description, we use .t0, dt, duration(),.size(),op(). reset_start_time()
-			point_interpretation_policy fx_policy;
+			ts_point_fx fx_policy;
 
-			profile_accessor( const profile_description& pd, const TA& ta, point_interpretation_policy fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
+			profile_accessor( const profile_description& pd, const TA& ta, ts_point_fx fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
 				profile.reset_start(ta.time(0));
 			}
 			profile_accessor() {}
@@ -580,7 +580,7 @@ namespace shyft{
 			 */
 			double value(utctime t) const {
 				int i = map_index(t);
-				if (fx_policy == point_interpretation_policy::POINT_AVERAGE_VALUE)
+				if (fx_policy == ts_point_fx::POINT_AVERAGE_VALUE)
 					return profile(i);
 				//-- interpolate between time(i)    .. t  .. time(i+1)
 				//                       profile(i)          profile((i+1) % nt)
@@ -599,7 +599,7 @@ namespace shyft{
 			double value(size_t i) const {
 				auto p = ta.period(i);
 				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-				return average_value(*this, p, ix, point_interpretation_policy::POINT_INSTANT_VALUE == fx_policy);
+				return average_value(*this, p, ix, ts_point_fx::POINT_INSTANT_VALUE == fx_policy);
 			}
 			// provided functions to the average_value<..> function
 			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
@@ -619,13 +619,13 @@ namespace shyft{
 		struct periodic_ts {
 			TA ta;
 			profile_accessor<TA> pa;
-			point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+			ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
 			const TA& time_axis() const {return ta;}
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
             template <class PD>
-			periodic_ts(const PD& pd, const TA& ta, point_interpretation_policy policy = point_interpretation_policy::POINT_AVERAGE_VALUE) :
+			periodic_ts(const PD& pd, const TA& ta, ts_point_fx policy = ts_point_fx::POINT_AVERAGE_VALUE) :
 				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
 			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
 				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
@@ -667,10 +667,10 @@ namespace shyft{
 			TS_B sca_m2;
 			double glacier_area_m2=0.0;
 			double dtf=0.0;
-			point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+			ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
 			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy=point_interpretation;}
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
 			/** construct a glacier_melt_ts
 			 * \param temperature in [deg.C]
@@ -746,10 +746,10 @@ namespace shyft{
                     throw runtime_error("unbound access to ref_ts attempted");
                 return *ts;
             }
-            point_interpretation_policy point_interpretation() const {
+            ts_point_fx point_interpretation() const {
                 return bts().point_interpretation();
             }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            void set_point_interpretation(ts_point_fx point_interpretation) {
                 bts().set_point_interpretation(point_interpretation);
             }
             // std. ct/dt etc.
@@ -826,7 +826,7 @@ namespace shyft{
             typedef typename Ts::ta_t ta_t;
             typedef std::vector<double> W;
             Ts ts;
-            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
             W w;
             convolve_policy policy = convolve_policy::USE_FIRST;
             //-- default stuff, ct/copy etc goes here
@@ -844,8 +844,8 @@ namespace shyft{
             }
 
             const ta_t& time_axis() const { return ts.time_axis(); }
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy = point_interpretation; }
 
             point get(size_t i) const { return point(ts.time(i), value(i)); }
 
@@ -893,13 +893,13 @@ namespace shyft{
         private:
             std::vector<T> tsv; ///< need this private to ensure consistency after creation
         public:
-            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE; // inherited from ts
             uniform_sum_ts() = default;
 
 
             //-- useful ct goes here
             template<class A_>
-            uniform_sum_ts(A_ && tsv,point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE)
+            uniform_sum_ts(A_ && tsv,ts_point_fx fx_policy=POINT_AVERAGE_VALUE)
                 :tsv(std::forward<A_>(tsv)),
                 fx_policy(fx_policy) {
                 if (tsv.size() == 0)
@@ -910,8 +910,8 @@ namespace shyft{
             }
 
             const ta_t& time_axis() const { return tsv[0].time_axis(); }
-            point_interpretation_policy point_interpretation() const { return fx_policy; }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) { fx_policy = point_interpretation; }
+            ts_point_fx point_interpretation() const { return fx_policy; }
+            void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy = point_interpretation; }
 
             point get(size_t i) const { return point(tsv[0].time(i), value(i)); }
 
@@ -956,7 +956,7 @@ namespace shyft{
             B rhs;
             TA ta;
             bool bind_done = false;
-            point_interpretation_policy fx_policy=POINT_AVERAGE_VALUE;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
             bin_op() = default;
 
             template<class A_,class B_>
@@ -985,11 +985,11 @@ namespace shyft{
                 deferred_bind();
                 return ta;
             }
-            point_interpretation_policy point_interpretation() const {
+            ts_point_fx point_interpretation() const {
                 deferred_bind();
                 return fx_policy;
             }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            void set_point_interpretation(ts_point_fx point_interpretation) {
                 fx_policy=point_interpretation;
             }
             inline double value_at(utctime t) const {
@@ -1026,7 +1026,7 @@ namespace shyft{
             O op;
             TA ta;
             bool bind_done = false;
-            point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
+            ts_point_fx fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
 
             template<class A_,class B_>
@@ -1052,11 +1052,11 @@ namespace shyft{
             }
 
             const TA& time_axis() const {deferred_bind();return ta;}
-            point_interpretation_policy point_interpretation() const {
+            ts_point_fx point_interpretation() const {
                 deferred_bind();
                 return fx_policy;
             }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            void set_point_interpretation(ts_point_fx point_interpretation) {
                 deferred_bind();//ensure it's done
                 fx_policy=point_interpretation;
             }
@@ -1079,7 +1079,7 @@ namespace shyft{
             O op;
             TA ta;
             bool bind_done = false;
-            point_interpretation_policy fx_policy = POINT_AVERAGE_VALUE;
+            ts_point_fx fx_policy = POINT_AVERAGE_VALUE;
             bin_op() = default;
 
             template<class A_,class B_>
@@ -1103,11 +1103,11 @@ namespace shyft{
             }
 
             const TA& time_axis() const {deferred_bind();return ta;}
-            point_interpretation_policy point_interpretation() const {
+            ts_point_fx point_interpretation() const {
                 deferred_bind();
                 return fx_policy;
             }
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {
+            void set_point_interpretation(ts_point_fx point_interpretation) {
                 deferred_bind();//ensure it's done
                 fx_policy=point_interpretation;
             }
@@ -1262,14 +1262,14 @@ namespace shyft{
         class function_timeseries {
             TA ta;
             F fx;
-            point_interpretation_policy point_fx=POINT_INSTANT_VALUE;
+            ts_point_fx point_fx=POINT_INSTANT_VALUE;
           public:
 
              /** point interpretation: how we should map points to f(t) */
-            point_interpretation_policy point_interpretation() const {return point_fx;}
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {point_fx=point_interpretation;}
+            ts_point_fx point_interpretation() const {return point_fx;}
+            void set_point_interpretation(ts_point_fx point_interpretation) {point_fx=point_interpretation;}
 
-            function_timeseries(const TA& ta, const F& f,point_interpretation_policy point_interpretation=POINT_INSTANT_VALUE):ta(ta),fx(f) {}
+            function_timeseries(const TA& ta, const F& f,ts_point_fx point_interpretation=POINT_INSTANT_VALUE):ta(ta),fx(f) {}
             const TA& time_axis() const {return ta;}
 
             // Source read interface:
@@ -1327,8 +1327,8 @@ namespace shyft{
             double value(size_t i) const { return cvalue; }
             void fill(double v) { cvalue = v; }
             void fill_range(double v, int start_step, int n_steps) { cvalue = v; }
-            point_interpretation_policy point_interpretation() const {return POINT_AVERAGE_VALUE;}
-            void set_point_interpretation(point_interpretation_policy point_interpretation) {}///<ignored
+            ts_point_fx point_interpretation() const {return POINT_AVERAGE_VALUE;}
+            void set_point_interpretation(ts_point_fx point_interpretation) {}///<ignored
         };
 
 
