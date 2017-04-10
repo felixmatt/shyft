@@ -18,7 +18,7 @@ namespace shyfttest {
         class test_timeseries {
             vector<point> points;
           public:
-                         /** point intepretation: how we should map points to f(t) */
+                         /** point interpretation: how we should map points to f(t) */
             ts_point_fx point_fx=POINT_AVERAGE_VALUE;///< this is special for these test
             ts_point_fx point_interpretation() const {return point_fx;}
             void set_point_interpretation(ts_point_fx point_interpretation) {point_fx=point_interpretation;}
@@ -29,7 +29,7 @@ namespace shyfttest {
             test_timeseries(test_timeseries&& c) : points(std::move(c.points)) {}
             test_timeseries& operator=(test_timeseries&& c) {points=std::move(c.points);return *this;}
 
-            // constructor from interators
+            // constructor from iterators
             template< typename S>
             test_timeseries( S points_begin,  S points_end)
               : points(points_begin, points_end) {}
@@ -536,7 +536,7 @@ TEST_CASE("test_TxFxSource") {
     TS_ASSERT_EQUALS(fsin.size(), tx.size());
     TS_ASSERT_DELTA(fsin(t0 + dt), fx_sin(t0+dt), shyfttest::EPS);
     TS_ASSERT_EQUALS(fsin.get(0), point(t0, fx_sin(t0)));
-    /// Some speedtests to check/verify that even more complexity could translate into fast code:
+    /// Some speed tests to check/verify that even more complexity could translate into fast code:
 	time_axis::fixed_dt td(t0, dt * 25, n / 24);
 	average_accessor<txfx_t, time_axis::fixed_dt> favg(fsin, td);
 	average_staircase_accessor_fast<txfx_t, time_axis::fixed_dt> gavg(fsin, td);
@@ -1284,5 +1284,95 @@ TEST_CASE("test_uniform_sum_ts") {
 		TS_ASSERT_DELTA(sum_ts.value(t)*4.0 + 2.0, c.value(t), 0.0001);
 		TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
 	}
+}
+namespace shyft {
+    namespace time_axis {
+
+        /** \brief time_axis_transform finds index mapping from source to map-time-axis 
+         * 
+         * Given a source time-axis src, for each
+         * start of the map time-axis interval, find
+         * the right-most index of src (the one equal to or to the left of map time-axis period)
+         * and provide those through the .source_index() method.
+         *
+         */
+        template<class TA1, class TA2>
+        struct time_axis_transform {
+            vector<size_t> index_map;
+            time_axis_transform(TA1 const&src, TA2 const&m) {
+                index_map.reserve(m.size());
+                for (size_t i = 0;i < m.size();++i)
+                    index_map.push_back(src.index_of(m.time(i)));
+            }
+            size_t src_index(size_t i) const {
+                return index_map[i];
+            }
+        };
+
+        /** \brief auto-deduce a time-axis transform adapted to the time-axis that we have
+        */
+        template<class TA1, class TA2>
+        auto make_ta_transform(TA1 const&src, TA2 const&m) {
+            return time_axis_transform<typename TA1, typename TA2>(src, m);
+        }
+#if 0
+        /** \brief specialize for fixed_dt time-axis
+        */
+        template<>
+        struct time_axis_transform<time_axis::fixed_dt, time_axis::fixed_dt> {
+            double a;
+            double b;
+            time_axis_transform(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m) {
+                //TODO compute a,b etc.
+            }
+            size_t src_index(size_t i) const {
+                return a*i + b;
+            }
+        };
+#endif
+    }
+}
+TEST_CASE("ts_statistics") {
+    // developing ts.statistics(ta,extractor_func)-> vector<period_result>
+    // given a ts, and a time_axis, for
+    // each *period* ta.period(i) extract something
+    //  something like:
+    //  functional:
+    //     true_integral -> integral of non-nan portion of p(i)
+    //     true_time  -> non-nan portion of time-axis (so we can  calc true average)
+    //     true_min/max -> min|max f(t), t in ta.period(i)
+    //  point-wise:
+    //     min/max value -> of ts.value(i) where ts.time(i) is part of ta.period(i) or nan
+    //     count(bins) -> count of ts.value(i) in range bin[from..until>
+    // *)  indexes -> ts.index_of(ta.time(i)) , the rightmost ts.time(i) <= ta.period(i).start
+    //
+    // *) can be used to  implement fast point-wise algorithms, and is a time-axis operation only!
+    //
+    // index_map(ta1,ta2)->vector<size_t>
+    // 
+    //
+
+    using namespace shyft;
+    using namespace shyft::core;
+    using namespace std;
+    //-- can be specialized to expression for fixed_dt, maybe also calendar_dt
+    // but the generic defining algorithm is like this:
+
+
+    // 
+
+    calendar utc;
+    auto t0 = utc.time(2016, 1, 1);
+    auto dt1 = deltahours(1);
+    auto dt2 = deltahours(3);
+    time_axis::fixed_dt src(t0, dt1, 24);
+    time_axis::fixed_dt m(t0, dt2, 24/3);
+
+    auto ta_xf= time_axis::make_ta_transform(src,m);
+    for (size_t i = 0;i < m.size();++i) {
+        FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
+    }
+    //auto ix_map = tat.map(a, b);
+    //FAST_CHECK_EQ(ix_map.size(), b.size());
 }
 TEST_SUITE_END();
