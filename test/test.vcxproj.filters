@@ -54,9 +54,6 @@
     <ClCompile Include="time_axis_test.cpp">
       <Filter>time_series</Filter>
     </ClCompile>
-    <ClCompile Include="timeseries_test.cpp">
-      <Filter>time_series</Filter>
-    </ClCompile>
     <ClCompile Include="api_test.cpp">
       <Filter>usecases</Filter>
     </ClCompile>
@@ -106,6 +103,9 @@
       <Filter>routing</Filter>
     </ClCompile>
     <ClCompile Include="dtss_test.cpp" />
+    <ClCompile Include="time_series_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

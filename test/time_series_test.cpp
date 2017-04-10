@@ -630,40 +630,15 @@ static bool is_equal_ts(const A& a,const B& b) {
     return true;
 }
 
-//shyft::api::apoint_ts& do_deferred_bind(shyft::api::apoint_ts&ts) {
-//    return ts;
-//}
-//auto do_deferred_bind(shyft::api::apoint_ts&&ts) {
-//    return ts;
-//}
-namespace shyft  {
-    namespace api {
-        constexpr void dbind_ts(apoint_ts&&){}
-        template <class A>
-        auto bind_ts(A&&ts) {
-            dbind_ts(std::forward<A>(ts));
-            return ts;
-        }
-    }
-}
-
-
-
 template < class TS_E,class TS_A,class TS_B,class TA>
 static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
-    // Excpected results are time-series with ta and a constant value equal to the standard operators
+    // Expected results are time-series with ta and a constant value equal to the standard operators
     TS_E a_plus_b(ta,a_value+b_value);
     TS_E a_minus_b(ta,a_value-b_value);
     TS_E a_mult_b(ta,a_value*b_value);
     TS_E a_div_b(ta,a_value/b_value);
     TS_E max_a_b(ta,std::max(a_value,b_value));
     TS_E min_a_b(ta,std::min(a_value,b_value));
-    //dbind_ts(a_plus_b);
-    //dbind_ts(a_minus_b);
-    //dbind_ts(a_mult_b);
-    //dbind_ts(a_div_b);
-    //dbind_ts(max_a_b);
-    //bind_ts(min_a_b);
     // Step 1:   ts bin_op ts
     TS_ASSERT(is_equal_ts(a_plus_b,a+b));
     TS_ASSERT(is_equal_ts(a_minus_b,a-b));

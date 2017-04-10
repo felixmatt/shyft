@@ -178,7 +178,7 @@
 		<Unit filename="time_axis_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
-		<Unit filename="timeseries_test.cpp">
+		<Unit filename="time_series_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="utctime_utilities_test.cpp">
