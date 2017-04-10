@@ -51,10 +51,10 @@ namespace shyft {
 		template<class TA1, class TA2>
 		struct time_axis_map {
 			TA1 const src;
-			size_t src_ix;
+			size_t src_ix=string::npos;
 			TA2 const m;
 			time_axis_map(TA1 const&src, TA2 const&m)
-				:src(src), m(m), src_ix(string::npos) {}
+				:src(src),m(m)  {}
 			inline size_t src_index(size_t i) {
 				if (i > m.size())
 					return string::npos;
