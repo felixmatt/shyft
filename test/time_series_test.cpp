@@ -6,6 +6,53 @@
 #include "api/api.h"
 #include "api/time_series.h"
 
+namespace shyft {
+    namespace time_axis {
+        using namespace std;
+        /** \brief time_axis_transform finds index mapping from source to map-time-axis
+         *
+         * Given a source time-axis src, for each
+         * start of the map time-axis interval, find
+         * the right-most index of src (the one equal to or to the left of map time-axis period)
+         * and provide those through the .source_index() method.
+         *
+         */
+        template<class TA1, class TA2>
+        struct time_axis_map {
+            vector<size_t> index_map;
+            time_axis_map(TA1 const&src, TA2 const&m) {
+                index_map.reserve(m.size());
+                for (size_t i = 0;i < m.size();++i)
+                    index_map.push_back(src.index_of(m.time(i)));
+            }
+            size_t src_index(size_t i) const {
+                return index_map[i];
+            }
+        };
+
+        /** \brief auto-deduce a time-axis transform adapted to the time-axis that we have
+        */
+        template<class TA1, class TA2>
+        auto make_time_axis_map(TA1 const&src, TA2 const&m) {
+            return time_axis_map<TA1, TA2>(src, m);
+        }
+#if 0
+        /** \brief specialize for fixed_dt time-axis
+        */
+        template<>
+        struct time_axis_transform<time_axis::fixed_dt, time_axis::fixed_dt> {
+            double a;
+            double b;
+            time_axis_transform(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m) {
+                //TODO compute a,b etc.
+            }
+            size_t src_index(size_t i) const {
+                return a*i + b;
+            }
+        };
+#endif
+    }
+}
 
 namespace shyfttest {
     const double EPS = 1.0e-8;
@@ -1285,53 +1332,6 @@ TEST_CASE("test_uniform_sum_ts") {
 		TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
 	}
 }
-namespace shyft {
-    namespace time_axis {
-
-        /** \brief time_axis_transform finds index mapping from source to map-time-axis 
-         * 
-         * Given a source time-axis src, for each
-         * start of the map time-axis interval, find
-         * the right-most index of src (the one equal to or to the left of map time-axis period)
-         * and provide those through the .source_index() method.
-         *
-         */
-        template<class TA1, class TA2>
-        struct time_axis_transform {
-            vector<size_t> index_map;
-            time_axis_transform(TA1 const&src, TA2 const&m) {
-                index_map.reserve(m.size());
-                for (size_t i = 0;i < m.size();++i)
-                    index_map.push_back(src.index_of(m.time(i)));
-            }
-            size_t src_index(size_t i) const {
-                return index_map[i];
-            }
-        };
-
-        /** \brief auto-deduce a time-axis transform adapted to the time-axis that we have
-        */
-        template<class TA1, class TA2>
-        auto make_ta_transform(TA1 const&src, TA2 const&m) {
-            return time_axis_transform<typename TA1, typename TA2>(src, m);
-        }
-#if 0
-        /** \brief specialize for fixed_dt time-axis
-        */
-        template<>
-        struct time_axis_transform<time_axis::fixed_dt, time_axis::fixed_dt> {
-            double a;
-            double b;
-            time_axis_transform(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m) {
-                //TODO compute a,b etc.
-            }
-            size_t src_index(size_t i) const {
-                return a*i + b;
-            }
-        };
-#endif
-    }
-}
 TEST_CASE("ts_statistics") {
     // developing ts.statistics(ta,extractor_func)-> vector<period_result>
     // given a ts, and a time_axis, for
@@ -1349,7 +1349,7 @@ TEST_CASE("ts_statistics") {
     // *) can be used to  implement fast point-wise algorithms, and is a time-axis operation only!
     //
     // index_map(ta1,ta2)->vector<size_t>
-    // 
+    //
     //
 
     using namespace shyft;
@@ -1359,7 +1359,7 @@ TEST_CASE("ts_statistics") {
     // but the generic defining algorithm is like this:
 
 
-    // 
+    //
 
     calendar utc;
     auto t0 = utc.time(2016, 1, 1);
@@ -1368,7 +1368,7 @@ TEST_CASE("ts_statistics") {
     time_axis::fixed_dt src(t0, dt1, 24);
     time_axis::fixed_dt m(t0, dt2, 24/3);
 
-    auto ta_xf= time_axis::make_ta_transform(src,m);
+    auto ta_xf= time_axis::make_time_axis_map(src,m);
     for (size_t i = 0;i < m.size();++i) {
         FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
     }
