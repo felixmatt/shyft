@@ -63,8 +63,8 @@ TEST_CASE("test_melt_ts") {
     double dtf = 6.0;
     double glacier_fraction= 0.5;
     double area_m2 = 10 * 1000* 1000;
-    pts_t temperature(ta,10.0,fx_policy_t::POINT_AVERAGE_VALUE);
-    pts_t sca_m2(ta,0.5*area_m2,fx_policy_t::POINT_AVERAGE_VALUE);
+    pts_t temperature(ta,10.0,ts_point_fx::POINT_AVERAGE_VALUE);
+    pts_t sca_m2(ta,0.5*area_m2,ts_point_fx::POINT_AVERAGE_VALUE);
     for(size_t i=0;i<ta.size();++i)
         sca_m2.set(i,area_m2*0.5 *(1.0 - double(i)/ta.size()));
     glacier_melt_ts<pts_t> melt(temperature,sca_m2,glacier_fraction*area_m2,dtf);

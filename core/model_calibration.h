@@ -138,8 +138,8 @@ namespace shyft {
                 */
                 template < class TS, class TSS>
                 shared_ptr<TS> to_average(utctime start, utctimespan dt, size_t n, const TSS& src) {
-                    shyft::time_series::timeaxis time_axis(start, dt, n);
-                    shyft::time_series::average_accessor< TSS, shyft::time_series::timeaxis> avg(src, time_axis);
+                    shyft::time_axis::fixed_dt time_axis(start, dt, n);
+                    shyft::time_series::average_accessor< TSS, shyft::time_axis::fixed_dt> avg(src, time_axis);
                     auto r = make_shared< TS>(time_axis, 0.0);
                     r->set_point_interpretation(shyft::time_series::POINT_AVERAGE_VALUE);
                     for (size_t i = 0; i < avg.size(); ++i) r->set(i, avg.value(i));

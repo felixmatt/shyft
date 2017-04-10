@@ -7,6 +7,7 @@
 using namespace shyft::core;
 using namespace shyfttest;
 using namespace shyfttest::idw;
+namespace ta = shyft::time_axis;
 
 namespace shyfttest {
     using namespace shyft::core;
@@ -15,7 +16,7 @@ namespace shyfttest {
         geo_point location;
         const geo_point& mid_point() const {return location;}
         pts_t ts;
-        void initialize(const timeaxis_t& ta) {
+        void initialize(const ta::fixed_dt& ta) {
             ts=pts_t(ta,0.0);/// initialize and prepare cell before interpolation step, notice that the lambda to idw uses ts.set(ix,value)
         }
     };
@@ -38,8 +39,8 @@ TEST_CASE("test_sih_workbench") {
 
     using ats_t = shyft::api::apoint_ts; // potential break-point time-series, irregular intervals
     using temperature_source = shyft::api::TemperatureSource;
-    typedef shyft::time_series::average_accessor<ats_t, timeaxis_t> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
-    typedef idw_compliant_geo_point_ts< temperature_source, atsa_t, timeaxis_t> idw_compliant_gts_t;// gts =geo located ts , and idw_compliant to!
+    typedef shyft::time_series::average_accessor<ats_t, ta::fixed_dt> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
+    typedef idw_compliant_geo_point_ts< temperature_source, atsa_t, ta::fixed_dt> idw_compliant_gts_t;// gts =geo located ts , and idw_compliant to!
 	typedef idw::temperature_model<idw_compliant_gts_t, mock_cell , idw::temperature_parameter, geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t; // how to compensate for the height at different locations using temp.gradient
 
 
@@ -47,7 +48,7 @@ TEST_CASE("test_sih_workbench") {
     calendar utc;
     utctimespan dt=deltahours(1);
     size_t n=24;
-    timeaxis_t ta(utc.time(2000,1,1),dt,n); /// for the test,this is the governing time-axis (corresponding to region_model.time_axis during run/interpolation)
+    ta::fixed_dt ta(utc.time(2000,1,1),dt,n); /// for the test,this is the governing time-axis (corresponding to region_model.time_axis during run/interpolation)
 
     // prepare the geo dimension, the input(s) and the cell grid
     size_t n2_5=10;// gives nice number 25 kilometers in each direction
@@ -126,7 +127,7 @@ TEST_CASE("test_interpolate_sources_should_populate_grids") {
 	utctime Tstart = utc.time(2000, 1, 1);
 	utctimespan dt = deltahours(1);
 	const int nt = 24*36;
-	TimeAxis ta(Tstart, dt, nt);
+	ta::fixed_dt ta(Tstart, dt, nt);
 
 	const int nss = 3; // Number of source samples in each direction
 	const double dss = 3000; // Sampling distance for sources is typical 3000 m
@@ -137,7 +138,7 @@ TEST_CASE("test_interpolate_sources_should_populate_grids") {
 	auto s(move(Source::GenerateTestSourceGrid(ta, nss, nss, g0, g0, dss)));
 	auto d(move(MCell::GenerateTestGrid(ngs, ngs)));
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
 
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [nt](const MCell& d) {return d.set_count == nt; }), ngs*ngs);
@@ -148,19 +149,19 @@ TEST_CASE("test_main_workflow_should_populate_grids") {
 	// The main workflow for offset-bias is
 	// T_forecast_1x1 = IDW(T_arome_2.5x2.5, 1x1, idw-parameters) + T_bias
 	// Do the same correction for scaled-bias variables
-	// Test with fixed_dt timeaxis in Source and compare performance
+	// Test with fixed_dt ta::fixed_dt in Source and compare performance
     calendar utc;
 	utctime t0 = utc.time(2000, 1, 1);
 	utctimespan dt = deltahours(1);
 	const int nt = 24*36;
-	TimeAxis ta(t0, dt, nt);
+	ta::fixed_dt ta(t0, dt, nt);
 
 	const int nx = 2;
 	const int ny = 2;
 	const int ngx = 3 * nx;
 	const int ngy = 3 * ny;
 	const double temp = 15;
-	auto const_ts = point_ts<timeaxis>(ta, temp);
+	auto const_ts = point_ts<ta::fixed_dt>(ta, temp);
 
 	// Tsour = vector<Source(geopoint)>(ts<> = 1)
 	auto temp_set(move(PointTimeSerieSource::make_source_set(ta, nx, ny)));
@@ -172,7 +173,7 @@ TEST_CASE("test_main_workflow_should_populate_grids") {
 	// Tdest = vector<Cell(grid)>(ts<> = 0) => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
 	auto temp_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
 	Parameter p;
-	run_interpolation<TestTemperatureModel_1>(temp_set.begin(), temp_set.end(), temp_grid.begin(), temp_grid.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_1>(temp_set.begin(), temp_set.end(), temp_grid.begin(), temp_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Expected IDW result
@@ -181,7 +182,7 @@ TEST_CASE("test_main_workflow_should_populate_grids") {
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
 	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
 	const double bias = 1;
-	auto bias_ts = point_ts<timeaxis>(ta, bias);
+	auto bias_ts = point_ts<ta::fixed_dt>(ta, bias);
 	for_each(bias_grid.begin(), bias_grid.end(), [&](auto& b) { b.SetTs(bias_ts); });
 
 	// Tdest(ts) += Tbias(ts)
@@ -197,30 +198,30 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 	utctime t0 = utc.time(2000, 1, 1);
 	utctimespan dt = deltahours(1);
 	const int nt = 24*36;
-	TimeAxis ta(t0, dt, nt);
+	ta::fixed_dt ta(t0, dt, nt);
 
 	// Make observation set of 3 sources distributed in a 10 x 10 km grid
 	// Temperatures are calculated from regression test
 	vector<PointTimeSerieSource> obs_set;
 	obs_set.reserve(3);
-	obs_set.emplace_back(geo_point(100,  100, 1000), point_ts<timeaxis>(ta, 14.97));
-	obs_set.emplace_back(geo_point(5100, 100, 1150), point_ts<timeaxis>(ta, 13.12));
-	obs_set.emplace_back(geo_point(100, 5100,  850), point_ts<timeaxis>(ta, 14.92));
+	obs_set.emplace_back(geo_point(100,  100, 1000), point_ts<ta::fixed_dt>(ta, 14.97));
+	obs_set.emplace_back(geo_point(5100, 100, 1150), point_ts<ta::fixed_dt>(ta, 13.12));
+	obs_set.emplace_back(geo_point(100, 5100,  850), point_ts<ta::fixed_dt>(ta, 14.92));
 	
 	// IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
 	const int ng = 10;
 	auto fc_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
 	Parameter p;
-	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Simulate forecast offset of -2 degC 
-	auto off_ts = point_ts<timeaxis>(ta, -2.0);
+	auto off_ts = point_ts<ta::fixed_dt>(ta, -2.0);
 	for_each(fc_grid.begin(), fc_grid.end(), [&](auto& a) { a.pts.add(off_ts); });
 
 	// IDW transform forecast from frid to set
 	vector<PointTimeSerieSource> fc_set = obs_set;
-	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Calculate bias set = observation set - forecast set
@@ -230,7 +231,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 
 	// IDW transform bias from set to grid
 	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
-	run_interpolation<TestTemperatureModel_1>(bias_set.begin(), bias_set.end(), bias_grid.begin(), bias_grid.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_1>(bias_set.begin(), bias_set.end(), bias_grid.begin(), bias_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Add bias grid to forecast grid
@@ -238,7 +239,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 		(*it_fc).pts.add((*itbias).pts);
 
 	// IDW transform corrected forecast from grid to set
-	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<TimeAxis>(ta),
+	run_interpolation<TestTemperatureModel_2>(fc_grid.begin(), fc_grid.end(), fc_set.begin(), fc_set.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	// Compare forecast to observation set => differences should be close to null

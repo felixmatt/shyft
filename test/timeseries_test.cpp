@@ -12,6 +12,7 @@ namespace shyfttest {
     using namespace std;
     using namespace shyft::time_series;
     using namespace shyft::core;
+	using namespace shyft;
 
         /// for testing, this one helps verifying the behavior of the algorithms.
         class test_timeseries {
@@ -65,19 +66,19 @@ namespace shyfttest {
 
 using namespace shyft::core;
 using namespace shyft::time_series;
-
+using namespace shyft;
 using namespace shyfttest;
 
-typedef point_ts<point_timeaxis> xts_t;
+typedef point_ts<time_axis::point_dt> xts_t;
 
 TEST_SUITE("time_series");
 TEST_CASE("test_point_timeaxis") {
-    point_timeaxis ts0; //zero points
+    time_axis::point_dt ts0; //zero points
     TS_ASSERT_EQUALS(ts0.size(),0u);
     TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
     vector<utctime> t2={3600*1};//just one point
     try {
-    point_timeaxis ts1(t2);
+    time_axis::point_dt ts1(t2);
     TS_ASSERT(false);
     //TS_ASSERT_EQUALS(ts0.size(),0);
     //TS_ASSERT_EQUALS(ts0.index_of(12),std::string::npos);
@@ -85,7 +86,7 @@ TEST_CASE("test_point_timeaxis") {
 
     }
     vector<utctime> t={3600*1,3600*2,3600*3};
-    point_timeaxis tx(t);
+    time_axis::point_dt tx(t);
     TS_ASSERT_EQUALS(tx.size(),2u);// number of periods, - two .. (unless we redefined the last to be last point .. +oo)
     TS_ASSERT_EQUALS(tx.period(0),utcperiod(t[0],t[1]));
     TS_ASSERT_EQUALS(tx.period(1),utcperiod(t[1],t[2]));
@@ -102,7 +103,7 @@ TEST_CASE("test_timeaxis") {
     auto t0=calendar().time(YMDhms(2000,1,1,0,0,0));
     auto dt=deltahours(1);
     size_t n=3;
-    timeaxis tx(t0,dt,n);
+    time_axis::fixed_dt tx(t0,dt,n);
     TS_ASSERT_EQUALS(tx.size(),n);
     for(size_t i=0;i<n;++i) {
         TS_ASSERT_EQUALS(tx.period(i), utcperiod(t0+i*dt,t0+(i+1)*dt));
@@ -123,12 +124,12 @@ TEST_CASE("test_point_source_with_timeaxis") {
     size_t n=10;
     vector<utctime> time_points;for(size_t i=0;i<=n;i++)time_points.emplace_back(t+i*d);
     vector<double> values;for(size_t i=0;i<n;++i) values.emplace_back(i*1.0);
-    //Two equal timeaxis representations
-    timeaxis fixed_ta(t,d,n);
-    point_timeaxis point_ta(time_points);
+    //Two equal time_axis::fixed_dt representations
+    time_axis::fixed_dt fixed_ta(t,d,n);
+    time_axis::point_dt point_ta(time_points);
 
-    point_ts<timeaxis> a(fixed_ta,values);
-    point_ts<point_timeaxis> b(point_ta,values);
+    point_ts<time_axis::fixed_dt> a(fixed_ta,values);
+    point_ts<time_axis::point_dt> b(point_ta,values);
 
     TS_ASSERT_EQUALS(a.ta.total_period(),b.ta.total_period());
     TS_ASSERT_EQUALS(a.size(),b.size());
@@ -164,7 +165,7 @@ TEST_CASE("test_point_source_scale_by_value") {
     auto d=deltahours(1);
     size_t n=10;
     vector<double> values;for(size_t i=0;i<n;++i) values.emplace_back(i*1.0);
-    point_ts<timeaxis> a(timeaxis(t,d,n),values);
+    point_ts<time_axis::fixed_dt> a(time_axis::fixed_dt(t,d,n),values);
     auto b=a;
     a.scale_by(2.0);
     b.fill(1.0);
@@ -265,7 +266,7 @@ TEST_CASE("test_average_value_staircase") {
     auto t0=calendar().time(YMDhms(2000,1,1,0,0,0));
     auto dt=deltahours(1);
     size_t n=3;
-    timeaxis tx(t0,dt,n);
+    time_axis::fixed_dt tx(t0,dt,n);
     vector<point> points={point(t0,1.0),point(t0+dt/2,2.0),point(t0+2*dt,3)};
 
 
@@ -344,7 +345,7 @@ TEST_CASE("test_average_value_staircase") {
     TS_ASSERT_EQUALS(ps6.index_of_count,1u);
     TS_ASSERT_DELTA((7)/1.0,v,0.00001);
     ps.index_of_count=0;
-    average_accessor<shyfttest::test_timeseries,timeaxis> avg_a(ps,tx);
+    average_accessor<shyfttest::test_timeseries,time_axis::fixed_dt> avg_a(ps,tx);
     TS_ASSERT_DELTA(avg_a.value(0),(1*0.5+2*0.5)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
     TS_ASSERT_DELTA(avg_a.value(1),(2*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
     TS_ASSERT_DELTA(avg_a.value(2),(3*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
@@ -355,7 +356,7 @@ TEST_CASE("test_average_value_linear_between_points") {
 	auto t0 = calendar().time(YMDhms(2000, 1, 1, 0, 0, 0));
 	auto dt = deltahours(1);
 	size_t n = 3;
-	timeaxis tx(t0, dt, n);
+	time_axis::fixed_dt tx(t0, dt, n);
 	vector<point> points = { point(t0, 1.0), point(t0 + dt / 2, 2.0), point(t0 + 2 * dt, 3) };
 
 
@@ -435,7 +436,7 @@ TEST_CASE("test_average_value_linear_between_points") {
 	TS_ASSERT_DELTA(7.5, v, 0.00001);
 	ps.index_of_count = 0;
 	ps.set_point_interpretation(POINT_INSTANT_VALUE);
-	average_accessor<shyfttest::test_timeseries, timeaxis> avg_a(ps, tx);
+	average_accessor<shyfttest::test_timeseries, time_axis::fixed_dt> avg_a(ps, tx);
 	TS_ASSERT_DELTA(avg_a.value(0), 1.83333333333, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
 	TS_ASSERT_DELTA(avg_a.value(1), 2.6666666666, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
 	TS_ASSERT_DELTA(avg_a.value(2), (3 * 1.0) / 1.0, 0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
@@ -528,17 +529,17 @@ TEST_CASE("test_TxFxSource") {
 	size_t n = 4*100*24*365;
 	typedef std::function<double(utctime)> f_t;
     f_t fx_sin = [t0, dt](utctime t) { return 0.2*(t - t0)/dt; }; //sin(2*3.14*(t - t0)/dt);
-    typedef function_timeseries<timeaxis, f_t> txfx_t;
+    typedef function_timeseries<time_axis::fixed_dt, f_t> txfx_t;
 
-    timeaxis tx(t0, dt, n);
+    time_axis::fixed_dt tx(t0, dt, n);
     txfx_t fsin(tx, fx_sin,POINT_AVERAGE_VALUE);
     TS_ASSERT_EQUALS(fsin.size(), tx.size());
     TS_ASSERT_DELTA(fsin(t0 + dt), fx_sin(t0+dt), shyfttest::EPS);
     TS_ASSERT_EQUALS(fsin.get(0), point(t0, fx_sin(t0)));
     /// Some speedtests to check/verify that even more complexity could translate into fast code:
-	timeaxis td(t0, dt * 25, n / 24);
-	average_accessor<txfx_t, timeaxis> favg(fsin, td);
-	average_staircase_accessor_fast<txfx_t, timeaxis> gavg(fsin, td);
+	time_axis::fixed_dt td(t0, dt * 25, n / 24);
+	average_accessor<txfx_t, time_axis::fixed_dt> favg(fsin, td);
+	average_staircase_accessor_fast<txfx_t, time_axis::fixed_dt> gavg(fsin, td);
 	auto f1 = [&favg, &td](double &sum) {sum = 0.0; for (size_t i = 0; i < td.size(); ++i) sum += favg.value(i); };
 	auto f2 = [&gavg, &td](double &sum) { sum = 0.0; for (size_t i = 0; i < td.size(); ++i) sum += gavg.value(i); };
 	double s1,s2;
@@ -554,7 +555,7 @@ TEST_CASE("test_TxFxSource") {
 TEST_CASE("test_point_timeseries_with_point_timeaxis") {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
-    point_ts<point_timeaxis> ps(point_timeaxis(times),points);
+    point_ts<time_axis::point_dt> ps(time_axis::point_dt(times),points);
     TS_ASSERT_EQUALS(ps.size(),3u);
     for(size_t i=0;i<ps.size();++i) {
         TS_ASSERT_EQUALS(ps.get(i).v,points[i]);
@@ -569,17 +570,17 @@ TEST_CASE("test_time_series_difference") {
     const utctime T1 = 100;
     for (size_t i = 0; i < n; ++i)
         ta_times[i] = T0 + (T1 - T0)*i/(n - 1);
-    point_timeaxis time_axis(ta_times);
+    time_axis::point_dt time_axis(ta_times);
 
 }
 
 TEST_CASE("test_ts_weighted_average") {
-    using pts_t=point_ts<timeaxis>;
+    using pts_t=point_ts<time_axis::fixed_dt>;
 	calendar utc;
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
 	size_t n = 10;
-	timeaxis ta(start, dt, n);
+	time_axis::fixed_dt ta(start, dt, n);
 	pts_t r(ta,0.0);
 	pts_t c2(ta, 1.0); double a2 = 1.0;
 	pts_t c1(ta, 10.0); double a1 = 10.0;
@@ -606,8 +607,8 @@ TEST_CASE("test_sin_fx_ts") {
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
 	size_t n = 10;
-	timeaxis ta(start, dt, n);
-	function_timeseries<timeaxis, sin_fx> tsfx(ta, fx);
+	time_axis::fixed_dt ta(start, dt, n);
+	function_timeseries<time_axis::fixed_dt, sin_fx> tsfx(ta, fx);
 
 	TS_ASSERT_DELTA(tsfx(0), 10.0, 0.0000001);
 	TS_ASSERT_DELTA(tsfx(deltahours(24)), 10.0, 0.0000001);
@@ -931,9 +932,9 @@ TEST_CASE("test_periodic_ts_t") {
 	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
-	timeaxis ta(t0, deltahours(10), 1000);
+	time_axis::fixed_dt ta(t0, deltahours(10), 1000);
 
-	typedef periodic_ts<timeaxis> periodic_ts_t;
+	typedef periodic_ts<time_axis::fixed_dt> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000u);
@@ -944,9 +945,9 @@ TEST_CASE("test_periodic_ts_over_sampled") {
 	vector<double> v = { 1, 2, 3, 4, 5, 6, 7, 8 };
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
-	timeaxis ta(t0, deltahours(1), 1000);
+	time_axis::fixed_dt ta(t0, deltahours(1), 1000);
 
-	typedef periodic_ts<timeaxis> periodic_ts_t;
+	typedef periodic_ts<time_axis::fixed_dt> periodic_ts_t;
 	periodic_ts_t pts(v, deltahours(3), ta);
 
 	TS_ASSERT_EQUALS(pts.size(), 1000u);
@@ -1008,14 +1009,14 @@ TEST_CASE("test_periodic_template_ts") {
 	const utctimespan dt = deltahours(3);
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
-	timeaxis ta(t0, deltahours(10), 1000);
+	time_axis::fixed_dt ta(t0, deltahours(10), 1000);
 
 	profile_description pd(t0, dt, pv);
 
 	TS_ASSERT_DELTA(pd(0), pv[0], 1e-9);
 	TS_ASSERT_EQUALS(pd.size(), pv.size());
 
-	periodic_ts< timeaxis> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
+	periodic_ts< time_axis::fixed_dt> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
 	// case 0: time-axis delta t covers several steps/values of the pattern
 	TS_ASSERT_EQUALS(fun.size(), 1000u);
 	TS_ASSERT_EQUALS(fun.index_of(t0), 0u);
@@ -1027,20 +1028,20 @@ TEST_CASE("test_periodic_template_ts") {
 	// and time-of day is also different:
 	//
 	profile_description pd1(utc.time(2000,1,1,2), dt, pv);
-	periodic_ts<timeaxis> fx(pd1, ta, POINT_AVERAGE_VALUE);
+	periodic_ts<time_axis::fixed_dt> fx(pd1, ta, POINT_AVERAGE_VALUE);
 	TS_ASSERT_EQUALS(fx.value(0), 3.1);// verified using excel
 	TS_ASSERT_EQUALS(fx.value(1), 4.8);
 	TS_ASSERT_EQUALS(fx.value(2), 5.0);// overlaps next day as well
 	// case 2: now test another case where the time-axis is 1hour, and we have POINT_AVERAGE_VALUE(stair-case-type f(t))
 	// between points.
-	timeaxis ta_hour(t0, deltahours(1), 24);
-	periodic_ts<timeaxis> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
+	time_axis::fixed_dt ta_hour(t0, deltahours(1), 24);
+	periodic_ts<time_axis::fixed_dt> fs(pd1, ta_hour, POINT_AVERAGE_VALUE);
 	vector<double> expected_fs = { 8.0,8.0,1.0,1.0,1.0,2.0,2.0,2.0,3.0,3.0,3.0,4.0,4.0,4.0,5.0,5.0,5.0,6.0,6.0,6.0,7.0,7.0,7.0,8.0 };
 	for (size_t i = 0;i < expected_fs.size();++i)
 		TS_ASSERT_DELTA(expected_fs[i], fs.value(i), 0.00001);
 	// case 3: as case 2, but POINT_INSTANT_VALUE and linear-between points type of f(t)
 	//
-	periodic_ts< timeaxis> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
+	periodic_ts< time_axis::fixed_dt> fl(pd1, ta_hour, POINT_INSTANT_VALUE);
 	vector<double> expected_fl = { 4.500000,2.166667,1.166667,1.500000,1.833333,2.166667,2.500000,2.833333,3.166667,3.500000,3.833333,4.166667,4.500000,4.833333,5.166667,5.500000,5.833333,6.166667,6.500000,6.833333,	7.166667,7.500000,7.833333, 8.0 /*	ok, if we consider f(t) keep value at the end, otherwise it's 6.833333 */	};
 	for (size_t i = 0;i < expected_fl.size();++i)
 		TS_ASSERT_DELTA(expected_fl[i], fl.value(i), 0.00001);
@@ -1051,10 +1052,10 @@ TEST_CASE("test_periodic_ts_values") {
 	const utctimespan dt = deltahours(3);
 	calendar utc;
 	utctime t0 = utc.time(2015, 1, 1);
-	timeaxis ta(t0, deltahours(10), 1000);
+	time_axis::fixed_dt ta(t0, deltahours(10), 1000);
 
 	profile_description pd(t0, dt, pv);
-	periodic_ts< timeaxis> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
+	periodic_ts< time_axis::fixed_dt> fun(pd, ta, ts_point_fx::POINT_AVERAGE_VALUE);
 
 	auto v = fun.values();
 	TS_ASSERT_EQUALS(v.size(), ta.size());
@@ -1069,11 +1070,11 @@ TEST_CASE("test_accumulate_value") {
 	auto d = deltahours(1);
 	size_t n = 10;
 	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i!= 5?i*1.0:shyft::nan);//0, 1,2,4,nan,6..9
-	//Two equal timeaxis representations
-	timeaxis ta(t, d, n);
-	point_ts<timeaxis> a(ta, values,ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
-	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); // while we have the test-setup, we test both the function, the accessor
-	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
+	//Two equal time_axis::fixed_dt representations
+	time_axis::fixed_dt ta(t, d, n);
+	point_ts<time_axis::fixed_dt> a(ta, values,ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	accumulate_accessor<point_ts<time_axis::fixed_dt>, time_axis::fixed_dt> aa(a, ta); // while we have the test-setup, we test both the function, the accessor
+	accumulate_ts<point_ts<time_axis::fixed_dt>, time_axis::fixed_dt> ats(a, ta);// and even the core time-series implementation
 
 	utctimespan tsum;
 	size_t last_ix = 0;
@@ -1094,11 +1095,11 @@ TEST_CASE("test_accumulate_ts_and_accessor") {
 	auto d = deltahours(1);
 	size_t n = 10;
 	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i != 5 ? i*1.0 : shyft::nan);//0, 1,2,4,nan,6..9
-																										//Two equal timeaxis representations
-	timeaxis ta(t, d, n);
-	point_ts<timeaxis> a(ta, values, ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
-	accumulate_accessor<point_ts<timeaxis>, timeaxis> aa(a, ta); //  the accessor
-	accumulate_ts<point_ts<timeaxis>, timeaxis> ats(a, ta);// and even the core time-series implementation
+																										//Two equal time_axis::fixed_dt representations
+	time_axis::fixed_dt ta(t, d, n);
+	point_ts<time_axis::fixed_dt> a(ta, values, ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
+	accumulate_accessor<point_ts<time_axis::fixed_dt>, time_axis::fixed_dt> aa(a, ta); //  the accessor
+	accumulate_ts<point_ts<time_axis::fixed_dt>, time_axis::fixed_dt> ats(a, ta);// and even the core time-series implementation
 	TS_ASSERT_DELTA(0.0, aa.value(0), 0.001);
 	TS_ASSERT_DELTA(0.0, ats.value(0), 0.001);
 	// simple test at ix=1:
@@ -1189,7 +1190,7 @@ TEST_CASE("test_ts_ref") {
     using calendar=shyft::core::calendar;
     calendar utc;
     ta_t ta(utc.time(2016,10,1),deltahours(1),10);
-    ts_t a(ta,1.0,fx_policy_t::POINT_AVERAGE_VALUE);
+    ts_t a(ta,1.0,ts_point_fx::POINT_AVERAGE_VALUE);
     auto b=make_shared<rts_t>(); // note that ref_ts b need to be some kind of shared_ptr
     string b_ref_key("netcdf://group/a/b");
     string x_ref_key("fame://nordic_main/price_forecast_NO1_eur_MWh");
@@ -1208,8 +1209,8 @@ TEST_CASE("test_ts_ref") {
     } catch (...) {
         TS_FAIL("Expected runtime_error here");
     }
-    auto bb= make_shared<ts_t>(ta,2.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
-    auto bx= make_shared<ts_t>(ta,10.0,fx_policy_t::POINT_AVERAGE_VALUE);// this is what we would like to bind
+    auto bb= make_shared<ts_t>(ta,2.0,ts_point_fx::POINT_AVERAGE_VALUE);// this is what we would like to bind
+    auto bx= make_shared<ts_t>(ta,10.0,ts_point_fx::POINT_AVERAGE_VALUE);// this is what we would like to bind
 
     auto resolve_sym_ref = [&bb,&b_ref_key,&bx,&x_ref_key](rts_t& rts) {
         if(rts.ref == b_ref_key) // mimic of a lookup that could have been done here.

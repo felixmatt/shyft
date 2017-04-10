@@ -3,7 +3,7 @@
 
 namespace shyfttest {
 	using namespace shyft::core;
-
+	using namespace shyft;
 	void create_time_series(xpts_t& temp, xpts_t& prec, xpts_t& rel_hum, xpts_t& wind_speed, xpts_t& radiation,
 		utctime T0, utctimespan dt, size_t n_points) {
 		vector<double> temps; temps.reserve(n_points);
@@ -25,7 +25,7 @@ namespace shyfttest {
 		}
 
 		tpoints.emplace_back(T1);
-		point_timeaxis ta(tpoints);
+		time_axis::point_dt ta(tpoints);
 		temp = xpts_t(ta, temps);
 		prec = xpts_t(ta, precs);
 		rel_hum = xpts_t(ta, rel_hums);
@@ -43,14 +43,14 @@ namespace shyfttest {
 			samples.emplace_back(t);
 		}
 		samples.emplace_back(t1);
-		point_timeaxis pta(samples);
+		time_axis::point_dt pta(samples);
 		return move(xpts_t(pta, vars));
 	}
 
-	point_ts<timeaxis> create_const_time_serie(const timeaxis& ta, double v) {
+	point_ts<time_axis::fixed_dt> create_const_time_serie(const time_axis::fixed_dt& ta, double v) {
 		vector<double> vals; vals.reserve(ta.n);
 		for (size_t i = 0; i < ta.n; ++i)
 			vals.emplace_back(v);
-		return move(point_ts<timeaxis>(ta, vals));
+		return move(point_ts<time_axis::fixed_dt>(ta, vals));
 	}
 }

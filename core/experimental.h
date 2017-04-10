@@ -31,6 +31,7 @@ namespace shyft {
         namespace geo = boost::geometry;///< we are using boost::geometry to take care of everything that needs geo computation
         namespace ec = shyft::core;
         namespace et = shyft::time_series;
+		namespace ta = shyft::time_axis;
         /* map geo types into this namespace,*/
         typedef geo::model::d2::point_xy<double> point_xy;
         typedef geo::model::polygon<point_xy> polygon;
@@ -43,10 +44,10 @@ namespace shyft {
         typedef shared_ptr<multi_point> multi_point_;
 
         /// and typedefs for commonly used types in this test
-        typedef et::point_ts<et::timeaxis>      pts_t;
+        typedef et::point_ts<ta::fixed_dt>      pts_t;
         //typedef et::point_source_with_no_regularity xts_t;
-        typedef et::point_ts<et::point_timeaxis> xts_t;
-        typedef et::constant_timeseries<et::timeaxis>   cts_t;
+        typedef et::point_ts<ta::point_dt> xts_t;
+        typedef et::constant_timeseries<ta::fixed_dt>   cts_t;
 
 
         /// geolocated versions of regular fixed interval ts, irregular interval ts and constant ts
@@ -272,7 +273,7 @@ namespace shyft {
                 }
                 time_points.emplace_back(ec::max_utctime);// open-ended time-axis
 
-                et::point_timeaxis pts(time_points);
+                shyft::time_axis::point_dt pts(time_points);
                 r.ts= xts_t(pts,values);
                 return r;
             }

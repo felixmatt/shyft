@@ -18,18 +18,18 @@ namespace gm = shyft::core::glacier_melt;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
-
-typedef TSPointTarget<point_timeaxis> catchment_t;
+namespace ta = shyft::time_axis;
+typedef TSPointTarget<ta::point_dt> catchment_t;
 
 namespace shyfttest {
     namespace mock {
         // need specialization for pthsk_response_t above
         template<> template<>
-        void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+        void ResponseCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
             _snow_output.set(idx, response.snow.outflow);
         }
         template <> template <>
-        void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+        void DischargeCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
             // q_avg is given in mm, so compute the totals
             avg_discharge.set(idx, destination_area*response.kirchner.q_avg / 1000.0 / 3600.0);
         }
@@ -54,8 +54,8 @@ TEST_CASE("test_call_stack") {
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    timeaxis time_axis(t0, dt, n_ts_points);
-	timeaxis state_time_axis(t0, dt, n_ts_points + 1);
+    ta::fixed_dt time_axis(t0, dt, n_ts_points);
+	ta::fixed_dt state_time_axis(t0, dt, n_ts_points + 1);
     // Initialize parameters
     std::vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0}; // Zero cv distribution of snow (i.e. even)
     std::vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
@@ -73,8 +73,8 @@ TEST_CASE("test_call_stack") {
     response run_response;
 
     // Initialize collectors
-    shyfttest::mock::ResponseCollector<timeaxis> response_collector(1000*1000, time_axis);
-    shyfttest::mock::StateCollector<timeaxis> state_collector(state_time_axis);
+    shyfttest::mock::ResponseCollector<ta::fixed_dt> response_collector(1000*1000, time_axis);
+    shyfttest::mock::StateCollector<ta::fixed_dt> state_collector(state_time_axis);
 
     state state {snow_state, kirchner_state};
     parameter parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);

@@ -33,11 +33,12 @@ namespace gs = shyft::core::gamma_snow;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace kr = shyft::core::kirchner;
 namespace pt_gs_k = shyft::core::pt_gs_k;
+namespace ta = shyft::time_axis;
 
 // and typedefs for commonly used types in this test
-typedef st::point_ts<st::timeaxis> pts_t;
-typedef st::constant_timeseries<st::timeaxis> cts_t;
-typedef st::timeaxis ta_t;
+typedef st::point_ts<ta::fixed_dt> pts_t;
+typedef st::constant_timeseries<ta::fixed_dt> cts_t;
+typedef ta::fixed_dt ta_t;
 TEST_SUITE("region_model");
 TEST_CASE("test_build") {
 
@@ -154,7 +155,7 @@ TEST_CASE("test_build") {
         FAST_CHECK_EQ(ta, ts.ta);
         auto ta2 = ta;
         ta2.t += sc::deltahours(1);
-        sc::ts_init(ts, ta2, 0, ta.size(), sc::fx_policy_t::POINT_AVERAGE_VALUE);
+        sc::ts_init(ts, ta2, 0, ta.size(), sc::ts_point_fx::POINT_AVERAGE_VALUE);
         FAST_CHECK_EQ(ts.ta, ta2);
     }
     SUBCASE("change_ta_start_only") {

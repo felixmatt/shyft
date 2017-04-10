@@ -6,18 +6,18 @@
 #include "core/geo_cell_data.h"
 #include "core/geo_point.h"
 
-
+namespace ta = shyft::time_axis;
 namespace shyfttest {
 	using namespace shyft::core;
 	using namespace shyft::time_series;
 	using namespace std::chrono;
 
 	typedef std::vector<point> point_vector_t;
-	typedef point_ts<point_timeaxis> xpts_t;
+	typedef point_ts<ta::point_dt> xpts_t;
 
 	void create_time_series(xpts_t& temp, xpts_t& prec, xpts_t& rel_hum, xpts_t& wind_speed, xpts_t& radiation, utctime T0, utctimespan dt, size_t n_points);
 	xpts_t create_time_serie(utctime t0, utctimespan dt, size_t nt);
-	point_ts<timeaxis> create_const_time_serie(const timeaxis& ta, double v);
+	point_ts<ta::fixed_dt> create_const_time_serie(const ta::fixed_dt& ta, double v);
 
 	template<typename TimeT = milliseconds>
 	struct measure {
@@ -287,7 +287,6 @@ namespace shyfttest {
 	}; // End namespace mock
 
 	namespace idw {
-		typedef shyft::time_series::timeaxis TimeAxis;
 
 		const double TEST_EPS = 0.00000001;
 
@@ -316,7 +315,7 @@ namespace shyfttest {
 
 			void set_value_at_t(utctime tx, double vx) { t_special = tx; v_special = vx; }
 
-			static vector<Source> GenerateTestSources(const TimeAxis& time_axis, size_t n, double x, double y, double radius) {
+			static vector<Source> GenerateTestSources(const ta::fixed_dt& time_axis, size_t n, double x, double y, double radius) {
 				vector<Source> r;
 				r.reserve(n);
 				const double pi = 3.1415;
@@ -330,7 +329,7 @@ namespace shyfttest {
 				return move(r);
 			}
 
-			static vector<Source> GenerateTestSourceGrid(const TimeAxis& time_axis, size_t nx, size_t ny, double x, double y, double dxy) {
+			static vector<Source> GenerateTestSourceGrid(const ta::fixed_dt& time_axis, size_t nx, size_t ny, double x, double y, double dxy) {
 				vector<Source> r;
 				r.reserve(nx * ny);
 				const double max_dxy = dxy * (nx + ny);
@@ -355,15 +354,15 @@ namespace shyfttest {
 			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
-			point_ts<timeaxis> pts;
+			point_ts<ta::fixed_dt> pts;
 
-			PointTimeSerieSource(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
-			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
+			PointTimeSerieSource(geo_point gp, const point_ts<ta::fixed_dt>& ts) : gp(gp), pts(ts) {}
+			void SetTs(const point_ts<ta::fixed_dt>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieSource> make_source_set(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieSource> make_source_set(const ta::fixed_dt& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieSource> v;
 				v.reserve(nx * ny);
-				auto pts = point_ts<timeaxis>(ta, 0);
+				auto pts = point_ts<ta::fixed_dt>(ta, 0);
 				for (size_t x = 0; x < nx; x++)
 					for (size_t y = 0; y < ny; y++)
 						v.emplace_back(geo_point(x * 2500, y * 2500, 1000), pts);
@@ -411,15 +410,15 @@ namespace shyfttest {
 			void set_value(size_t i, double v) { pts.set(i, v); }
 
 			geo_point gp;
-			point_ts<timeaxis> pts;
+			point_ts<ta::fixed_dt> pts;
 
-			PointTimeSerieCell(geo_point gp, const point_ts<timeaxis>& ts) : gp(gp), pts(ts) {}
-			void SetTs(const point_ts<timeaxis>& ts) { pts = ts; }
+			PointTimeSerieCell(geo_point gp, const point_ts<ta::fixed_dt>& ts) : gp(gp), pts(ts) {}
+			void SetTs(const point_ts<ta::fixed_dt>& ts) { pts = ts; }
 
-			static vector<PointTimeSerieCell> make_cell_grid(const timeaxis& ta, size_t nx, size_t ny) {
+			static vector<PointTimeSerieCell> make_cell_grid(const ta::fixed_dt& ta, size_t nx, size_t ny) {
 				vector<PointTimeSerieCell> v;
 				v.reserve(nx * ny);
-				auto pts = point_ts<timeaxis>(ta, 0);
+				auto pts = point_ts<ta::fixed_dt>(ta, 0);
 				for (size_t x = 0; x < nx; ++x)
 					for (size_t y = 0; y < ny; ++y)
 						v.emplace_back(geo_point(x * 1000, y * 1000, 1000), pts);

@@ -27,7 +27,7 @@ namespace shyft{
         using namespace std;
         const double EPS=1e-12; ///< used some places for comparison to equality, \ref point
 
-		/** \brief simply a point identified by utctime t and value v */
+        /** \brief simply a point identified by utctime t and value v */
         struct point {
             utctime t;
             double v;
@@ -37,9 +37,6 @@ namespace shyft{
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
         */
         inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
-
-        typedef shyft::time_axis::fixed_dt timeaxis;
-        typedef time_axis::point_dt point_timeaxis;
 
         /** \brief Enumerates how points are mapped to f(t)
          *
@@ -54,8 +51,6 @@ namespace shyft{
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
         };
-        typedef ts_point_fx fx_policy_t;
-        //typedef ts_point_fx ts_point_fx;// BW compatible
 
         inline ts_point_fx result_policy(ts_point_fx a, ts_point_fx b) {
             return a==ts_point_fx::POINT_INSTANT_VALUE || b==ts_point_fx::POINT_INSTANT_VALUE?ts_point_fx::POINT_INSTANT_VALUE:ts_point_fx::POINT_AVERAGE_VALUE;
@@ -110,7 +105,7 @@ namespace shyft{
 
 
         /** \brief hint_based search to eliminate binary-search in irregular time-point series.
-		 *
+         *
          *  utilizing the fact that most access are periods, sequential, so the average_xxx functions
          *  can utilize this, and keep the returned index as a hint for the next request for average_xxx
          *  value.
@@ -118,13 +113,13 @@ namespace shyft{
          * \param source a point ts source as described above
          * \param p utcperiod for which we search a start point <= p.start
          * \param i the start-of-search hint, could be -1, then ts.index_of(p.start) is used to figure out the ix.
-		 * \return lowerbound index or npos if not found
-		 * \note We should specialize this for sources with computed time-axis to improve speed
+         * \return lowerbound index or npos if not found
+         * \note We should specialize this for sources with computed time-axis to improve speed
          */
         template<class S>
         size_t hint_based_search(const S& source, const utcperiod& p, size_t i) {
-			const size_t n = source.size();
-			if (n == 0)
+            const size_t n = source.size();
+            if (n == 0)
                 return std::string::npos;
             if (i != std::string::npos && i<n) { // hint-based search logic goes here:
                 const size_t max_directional_search = 5; // +-5 just a guess for what is a reasonable try upward/downward
@@ -132,117 +127,117 @@ namespace shyft{
                 if (ti == p.start) { // direct hit and extreme luck ?
                     return i; // just use it !
                 } else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
-					if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
-					size_t i_max = std::min(i + max_directional_search, n);
-					while (++i < i_max) {
-						ti = source.get(i).t;
-						if (ti < p.start )
-							continue;
-						return  ti > p.start? i - 1 : i;// we either got one to far, or direct-hit
-					}
-					return (i < n) ? source.index_of(p.start):n-1; // either local search failed->bsearch etc., or we are at the end -> n-1
+                    if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
+                    size_t i_max = std::min(i + max_directional_search, n);
+                    while (++i < i_max) {
+                        ti = source.get(i).t;
+                        if (ti < p.start )
+                            continue;
+                        return  ti > p.start? i - 1 : i;// we either got one to far, or direct-hit
+                    }
+                    return (i < n) ? source.index_of(p.start):n-1; // either local search failed->bsearch etc., or we are at the end -> n-1
                 } else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
-					if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
-						return 0;//std::string::npos;
-					size_t i_min =  (i - std::min(i, max_directional_search));
-					do {
-						ti = source.get(--i).t;//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
-						if ( ti > p.start)
-							continue;
-						return i; // we found the lower left bound (either exact, or less p.start)
-					} while (i > i_min);
+                    if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
+                        return 0;//std::string::npos;
+                    size_t i_min =  (i - std::min(i, max_directional_search));
+                    do {
+                        ti = source.get(--i).t;//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
+                        if ( ti > p.start)
+                            continue;
+                        return i; // we found the lower left bound (either exact, or less p.start)
+                    } while (i > i_min);
                     return i>0? source.index_of(p.start): std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
                 }
             }
             return source.index_of(p.start);// no hint given, just use binary search to establish the start.
         }
 
-		/** \brief accumulate_value provides a projection/interpretation
-		* of the values of a pointsource on to a time-axis as provided.
-		* This includes interpolation and true average, linear between points
-		* and nan-handling semantics.
-		* In addition the Accessor allows fast sequential access to these values
-		* using clever caching of the last position used in the underlying
-		* point source. The time axis and point source can be of any type
-		* as listed above as long as the basic type requirement as described below
-		* are satisfied.
-		* \tparam S point source, must provide:
-		*  -# .size() const               -> number of points in the source
-		*  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
-		*  -# .get(size_t i) const        -> return the i'th point  (t,v)
-		* \param source of type S
-		* \param p         the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
-		* \param last_idx  position of the last time point used on the source, updated after each call.
-		* \param tsum      the sum of time under non-nan areas of the curve
-		* \param linear    interpret points as linear between, if set to false, use stair-case start of step def
-		* \return the area under the non-nan areas of the curve, specified by tsum reference-parameter
-		*/
-		template <class S>
-		double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
-			const size_t n = source.size();
-			if (n == 0) // early exit if possible
-				return shyft::nan;
-			size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
+        /** \brief accumulate_value provides a projection/interpretation
+        * of the values of a pointsource on to a time-axis as provided.
+        * This includes interpolation and true average, linear between points
+        * and nan-handling semantics.
+        * In addition the Accessor allows fast sequential access to these values
+        * using clever caching of the last position used in the underlying
+        * point source. The time axis and point source can be of any type
+        * as listed above as long as the basic type requirement as described below
+        * are satisfied.
+        * \tparam S point source, must provide:
+        *  -# .size() const               -> number of points in the source
+        *  -# .index_of(utctime tx) const -> return lower bound index or -1 for the supplied tx
+        *  -# .get(size_t i) const        -> return the i'th point  (t,v)
+        * \param source of type S
+        * \param p         the period [start,end) on time-axis, the range where we will accumulate/integrate the f(t)
+        * \param last_idx  position of the last time point used on the source, updated after each call.
+        * \param tsum      the sum of time under non-nan areas of the curve
+        * \param linear    interpret points as linear between, if set to false, use stair-case start of step def
+        * \return the area under the non-nan areas of the curve, specified by tsum reference-parameter
+        */
+        template <class S>
+        double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
+            const size_t n = source.size();
+            if (n == 0) // early exit if possible
+                return shyft::nan;
+            size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
-			if (i == std::string::npos) { // this might be a case
-				last_idx = 0;// we update the hint to the left-most possible index
-				return shyft::nan; // and is equivalent to no points, or all points after requested period.
-			}
-			point l;// Left point
-			bool l_finite = false;
+            if (i == std::string::npos) { // this might be a case
+                last_idx = 0;// we update the hint to the left-most possible index
+                return shyft::nan; // and is equivalent to no points, or all points after requested period.
+            }
+            point l;// Left point
+            bool l_finite = false;
 
-			double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
-			tsum = 0; // length of non-nan f(t) time-axis
+            double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
+            tsum = 0; // length of non-nan f(t) time-axis
 
-			while (true) { //there are two exit criteria: no more points, or we pass the period end.
-				if (!l_finite) {//search for 'point' anchor phase
-					l = source.get(i++);
-					l_finite = std::isfinite(l.v);
-					if (i == n) { // exit condition
-						if (l_finite && l.t < p.end) {//give contribution
-							utctimespan dt = p.end - l.t;
-							tsum += dt;
-							area += dt* l.v; // extrapolate value flat
-						}
-						break;//done
-					}
-					if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
-						break;//done
-					}
-				} else { // got point anchor l, search for right point/end
-					point r = source.get(i++);// r is guaranteed > p.start due to hint-based search
-					bool r_finite = std::isfinite(r.v);
-					utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
-					utctimespan dt = px.timespan();
-					tsum += dt;
+            while (true) { //there are two exit criteria: no more points, or we pass the period end.
+                if (!l_finite) {//search for 'point' anchor phase
+                    l = source.get(i++);
+                    l_finite = std::isfinite(l.v);
+                    if (i == n) { // exit condition
+                        if (l_finite && l.t < p.end) {//give contribution
+                            utctimespan dt = p.end - l.t;
+                            tsum += dt;
+                            area += dt* l.v; // extrapolate value flat
+                        }
+                        break;//done
+                    }
+                    if (l.t >= p.end) {//also exit condition, if the point time is after period we search, then no anchor to be found
+                        break;//done
+                    }
+                } else { // got point anchor l, search for right point/end
+                    point r = source.get(i++);// r is guaranteed > p.start due to hint-based search
+                    bool r_finite = std::isfinite(r.v);
+                    utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
+                    utctimespan dt = px.timespan();
+                    tsum += dt;
 
-					// now add area contribution for l..r
-					if (linear && r_finite) {
-						double a = (r.v - l.v) / (r.t - l.t);
-						double b = r.v - a*r.t;
-						//area += dt* 0.5*( a*px.start+b + a*px.end+b);
-						area += dt * (0.5*a*(px.start + px.end) + b);
-					} else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
-						area += l.v*dt;
-					}
-					if (i == n) { // exit condition: final value in sequence, then we need to finish, but
-						if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
-							dt = p.end - r.t;
-							tsum += dt;
-							area += dt* r.v; // extrapolate value flat
-						}
-						break;//done
-					}
-					if (r.t >= p.end)
-						break;//also exit condition, done
-					l_finite = r_finite;
-					l = r;
-				}
+                    // now add area contribution for l..r
+                    if (linear && r_finite) {
+                        double a = (r.v - l.v) / (r.t - l.t);
+                        double b = r.v - a*r.t;
+                        //area += dt* 0.5*( a*px.start+b + a*px.end+b);
+                        area += dt * (0.5*a*(px.start + px.end) + b);
+                    } else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
+                        area += l.v*dt;
+                    }
+                    if (i == n) { // exit condition: final value in sequence, then we need to finish, but
+                        if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
+                            dt = p.end - r.t;
+                            tsum += dt;
+                            area += dt* r.v; // extrapolate value flat
+                        }
+                        break;//done
+                    }
+                    if (r.t >= p.end)
+                        break;//also exit condition, done
+                    l_finite = r_finite;
+                    l = r;
+                }
 
-			}
-			last_idx = i - 1;
-			return tsum ? area : shyft::nan;
-		}
+            }
+            last_idx = i - 1;
+            return tsum ? area : shyft::nan;
+        }
 
        /** \brief average_value provides a projection/interpretation
          * of the values of a pointsource on to a time-axis as provided.
@@ -265,9 +260,9 @@ namespace shyft{
          */
         template <class S>
         inline double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
-			utctimespan tsum = 0;
-			double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
-			return tsum>0?area/tsum:shyft::nan;
+            utctimespan tsum = 0;
+            double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
+            return tsum>0?area/tsum:shyft::nan;
         }
 
 
@@ -338,7 +333,7 @@ namespace shyft{
             }
             void fill(double value) { std::fill(begin(v), end(v), value); }
             void fill_range(double value, int start_step, int n_steps) { if (n_steps == 0)fill(value); else std::fill(begin(v) + start_step, begin(v) + start_step + n_steps, value); }
-			void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
+            void scale_by(double value) { std::for_each(begin(v), end(v), [value](double&v){v *= value; }); }
             x_serialize_decl();
         };
 
@@ -448,205 +443,205 @@ namespace shyft{
             x_serialize_decl();
         };
 
-		/**\brief accumulate_ts, accumulate time-series
-		 *
-		 * Represents a ts that for
-		 * the specified time-axis the accumulated sum
-		 * of the underlying specified TS ts.
-		 * The i'th value in the time-axis is computed
-		 * as the sum of the previous true-averages.
-		 * The ts_point_fx is POINT_INSTANT_VALUE
-		 * definition:
-		 * The value of t0=time_axis(0) is zero.
-		 * The value of t1= time_axis(1) is defined as
-		 * integral_of f(t) dt from t0 to t1, skipping nan-areas.
-		 *
-		 */
-		template<class TS, class TA>
-		struct accumulate_ts {
-			typedef TA ta_t;
-			TA ta;
-			TS ts;
-			ts_point_fx fx_policy=POINT_INSTANT_VALUE;
-			const TA& time_axis() const { return ta; }
+        /**\brief accumulate_ts, accumulate time-series
+         *
+         * Represents a ts that for
+         * the specified time-axis the accumulated sum
+         * of the underlying specified TS ts.
+         * The i'th value in the time-axis is computed
+         * as the sum of the previous true-averages.
+         * The ts_point_fx is POINT_INSTANT_VALUE
+         * definition:
+         * The value of t0=time_axis(0) is zero.
+         * The value of t1= time_axis(1) is defined as
+         * integral_of f(t) dt from t0 to t1, skipping nan-areas.
+         *
+         */
+        template<class TS, class TA>
+        struct accumulate_ts {
+            typedef TA ta_t;
+            TA ta;
+            TS ts;
+            ts_point_fx fx_policy=POINT_INSTANT_VALUE;
+            const TA& time_axis() const { return ta; }
             ts_point_fx point_interpretation() const { return fx_policy; }
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
             accumulate_ts()=default;
-			accumulate_ts(const TS&ts, const TA& ta)
-				:ta(ta), ts(ts)
-				 {
-			} // because accumulate represents the integral of the distance from t0 to t, valid at t
+            accumulate_ts(const TS&ts, const TA& ta)
+                :ta(ta), ts(ts)
+                 {
+            } // because accumulate represents the integral of the distance from t0 to t, valid at t
 
-			point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
-			size_t size() const { return ta.size(); }
-			size_t index_of(utctime t) const { return ta.index_of(t); }
-			utcperiod total_period()const {return ta.total_period();}
-			//--
-			double value(size_t i) const {
-				if (i >= ta.size())
-					return nan;
-				if (i == 0)
-					return 0.0;
-				size_t ix_hint = 0;// we have to start at the beginning
-				utcperiod accumulate_period(ta.time(0), ta.time(i));
-				utctimespan tsum;
-				return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
-			}
-			double operator()(utctime t) const {
-				size_t i = ta.index_of(t);
-				if (i == string::npos || ta.size()==0)
-					return nan;
-				if (t == ta.time(0))
-					return 0.0; // by definition
-				utctimespan tsum;
-				size_t ix_hint = 0;
-				return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
-			}
+            point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
+            size_t size() const { return ta.size(); }
+            size_t index_of(utctime t) const { return ta.index_of(t); }
+            utcperiod total_period()const {return ta.total_period();}
+            //--
+            double value(size_t i) const {
+                if (i >= ta.size())
+                    return nan;
+                if (i == 0)
+                    return 0.0;
+                size_t ix_hint = 0;// we have to start at the beginning
+                utcperiod accumulate_period(ta.time(0), ta.time(i));
+                utctimespan tsum;
+                return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+            }
+            double operator()(utctime t) const {
+                size_t i = ta.index_of(t);
+                if (i == string::npos || ta.size()==0)
+                    return nan;
+                if (t == ta.time(0))
+                    return 0.0; // by definition
+                utctimespan tsum;
+                size_t ix_hint = 0;
+                return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+            }
             x_serialize_decl();
-		};
+        };
 
-		/**\brief A simple profile description defined by start-time and a equidistance by delta-t value-profile.
-		 *
-		 * The profile_description is used to define the profile by a vector of double-values.
-		 * It's first use is in conjunction with creating a time-series with repeated profile
-		 * that play a role when creating daily bias-profiles for forecast predictions.
-		 * The class provides t0,dt, ,size() and operator()(i) to access profile values.
-		 *  -thus we can use other forms of profile-descriptor, not tied to providing the points
-		 * \sa profile_accessor
-		 * \sa profile_ts
-		 */
-		struct profile_description {
-			utctime t0;
-			utctimespan dt;
-			std::vector<double> profile;
+        /**\brief A simple profile description defined by start-time and a equidistance by delta-t value-profile.
+         *
+         * The profile_description is used to define the profile by a vector of double-values.
+         * It's first use is in conjunction with creating a time-series with repeated profile
+         * that play a role when creating daily bias-profiles for forecast predictions.
+         * The class provides t0,dt, ,size() and operator()(i) to access profile values.
+         *  -thus we can use other forms of profile-descriptor, not tied to providing the points
+         * \sa profile_accessor
+         * \sa profile_ts
+         */
+        struct profile_description {
+            utctime t0;
+            utctimespan dt;
+            std::vector<double> profile;
 
-			profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
-				t0(t0), dt(dt), profile(profile) {}
-			profile_description() {}
+            profile_description(utctime t0, utctimespan dt, const std::vector<double>& profile) :
+                t0(t0), dt(dt), profile(profile) {}
+            profile_description() {}
 
-			size_t size() const { return profile.size(); }
-			utctimespan duration() const { return dt * size(); }
-			void reset_start(utctime ta0) {
-				auto offset = (t0 - ta0) / duration();
-				t0 -= offset * duration();
-			}
-			double operator()(size_t i) const {
-				if (i < profile.size())
-					return profile[i];
-				return nan;
-			}
+            size_t size() const { return profile.size(); }
+            utctimespan duration() const { return dt * size(); }
+            void reset_start(utctime ta0) {
+                auto offset = (t0 - ta0) / duration();
+                t0 -= offset * duration();
+            }
+            double operator()(size_t i) const {
+                if (i < profile.size())
+                    return profile[i];
+                return nan;
+            }
             x_serialize_decl();
-		};
+        };
 
-		/** \brief profile accessor that enables use of average_value etc.
-		 *
-		 * The profile accessor provide a 'point-source' compatible interface signatures
-		 * for use by the average_value-functions.
-		 * It does so by repeating the profile-description values over the complete specified time-axis.
-		 * Each time-point within that time-axis can be mapped to an interval/index of the original
-		 * profile so that it 'appears' as the profile is repeated the number of times needed to cover
-		 * the time-axis.
-		 *
-		 * Currently we also delegate the 'hard-work' of the op(t) and value(i'th period) here so
-		 * that the periodic_ts, -using profile_accessor is at a minimun.
-		 *
-		 * \note that the profile can start anytime before or equal to the time-series time-axis.
-		 * \remark .. that we should add profile_description as template arg
-		 */
-		template<class TA>
-		struct profile_accessor {
-			TA ta; ///< The time-axis that we want to map/repeat the profile on to
-			profile_description profile;///<< the profile description, we use .t0, dt, duration(),.size(),op(). reset_start_time()
-			ts_point_fx fx_policy;
+        /** \brief profile accessor that enables use of average_value etc.
+         *
+         * The profile accessor provide a 'point-source' compatible interface signatures
+         * for use by the average_value-functions.
+         * It does so by repeating the profile-description values over the complete specified time-axis.
+         * Each time-point within that time-axis can be mapped to an interval/index of the original
+         * profile so that it 'appears' as the profile is repeated the number of times needed to cover
+         * the time-axis.
+         *
+         * Currently we also delegate the 'hard-work' of the op(t) and value(i'th period) here so
+         * that the periodic_ts, -using profile_accessor is at a minimun.
+         *
+         * \note that the profile can start anytime before or equal to the time-series time-axis.
+         * \remark .. that we should add profile_description as template arg
+         */
+        template<class TA>
+        struct profile_accessor {
+            TA ta; ///< The time-axis that we want to map/repeat the profile on to
+            profile_description profile;///<< the profile description, we use .t0, dt, duration(),.size(),op(). reset_start_time()
+            ts_point_fx fx_policy;
 
-			profile_accessor( const profile_description& pd, const TA& ta, ts_point_fx fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
-				profile.reset_start(ta.time(0));
-			}
-			profile_accessor() {}
-			/** map utctime t to the index of the profile value array/function */
-			utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
-			/** map utctime t to the profile pattern section,
-			 *  the profile is repeated n-section times to cover the complete time-axis
-			 */
-			utctimespan section_index(utctime t) const { return (t - profile.t0) / profile.duration(); }
+            profile_accessor( const profile_description& pd, const TA& ta, ts_point_fx fx_policy ) :  ta(ta),profile(pd),fx_policy(fx_policy) {
+                profile.reset_start(ta.time(0));
+            }
+            profile_accessor() {}
+            /** map utctime t to the index of the profile value array/function */
+            utctimespan map_index(utctime t) const { return ((t - profile.t0) / profile.dt) % profile.size(); }
+            /** map utctime t to the profile pattern section,
+             *  the profile is repeated n-section times to cover the complete time-axis
+             */
+            utctimespan section_index(utctime t) const { return (t - profile.t0) / profile.duration(); }
 
-			/** returns the value at time t, taking the point_interpretation policy
-			 * into account and provide the linear interpolated value between two points
-			 * in the profile if so specified.
-			 * If linear between points, and last point is nan, first point in interval-value
-			 * is returned (flatten out f(t)).
-			 * If point to the left is nan, then nan is returned.
-			 */
-			double value(utctime t) const {
-				int i = map_index(t);
-				if (fx_policy == ts_point_fx::POINT_AVERAGE_VALUE)
-					return profile(i);
-				//-- interpolate between time(i)    .. t  .. time(i+1)
-				//                       profile(i)          profile((i+1) % nt)
-				double p1 = profile(i);
-				double p2 = profile((i+1) % profile.size());
-				if (!isfinite(p1))
-					return nan;
-				if (!isfinite(p2))
-					return p1; // keep value until nan
+            /** returns the value at time t, taking the point_interpretation policy
+             * into account and provide the linear interpolated value between two points
+             * in the profile if so specified.
+             * If linear between points, and last point is nan, first point in interval-value
+             * is returned (flatten out f(t)).
+             * If point to the left is nan, then nan is returned.
+             */
+            double value(utctime t) const {
+                int i = map_index(t);
+                if (fx_policy == ts_point_fx::POINT_AVERAGE_VALUE)
+                    return profile(i);
+                //-- interpolate between time(i)    .. t  .. time(i+1)
+                //                       profile(i)          profile((i+1) % nt)
+                double p1 = profile(i);
+                double p2 = profile((i+1) % profile.size());
+                if (!isfinite(p1))
+                    return nan;
+                if (!isfinite(p2))
+                    return p1; // keep value until nan
 
-				int s = section_index(t);
-				auto ti = profile.t0 + s * profile.duration() + i * profile.dt;
-				double w1 = (t - ti) / profile.dt;
-				return p1*(1.0-w1) + p2*w1;
-			}
-			double value(size_t i) const {
-				auto p = ta.period(i);
-				size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-				return average_value(*this, p, ix, ts_point_fx::POINT_INSTANT_VALUE == fx_policy);
-			}
-			// provided functions to the average_value<..> function
-			size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
-			point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
-			size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
-			x_serialize_decl();
+                int s = section_index(t);
+                auto ti = profile.t0 + s * profile.duration() + i * profile.dt;
+                double w1 = (t - ti) / profile.dt;
+                return p1*(1.0-w1) + p2*w1;
+            }
+            double value(size_t i) const {
+                auto p = ta.period(i);
+                size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
+                return average_value(*this, p, ix, ts_point_fx::POINT_INSTANT_VALUE == fx_policy);
+            }
+            // provided functions to the average_value<..> function
+            size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
+            point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
+            size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
+            x_serialize_decl();
 
-		};
+        };
 
-		/**\brief periodic_ts, periodic pattern time-series
-		 *
-		 * Represents a ts that for the specified time-axis returns:
-		 * - either the instant value of a periodic profile
-		 * - or the average interpolated between two values of the periodic profile
-		 */
-		template<class TA>
-		struct periodic_ts {
-			TA ta;
-			profile_accessor<TA> pa;
-			ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
-			const TA& time_axis() const {return ta;}
+        /**\brief periodic_ts, periodic pattern time-series
+         *
+         * Represents a ts that for the specified time-axis returns:
+         * - either the instant value of a periodic profile
+         * - or the average interpolated between two values of the periodic profile
+         */
+        template<class TA>
+        struct periodic_ts {
+            TA ta;
+            profile_accessor<TA> pa;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
+            const TA& time_axis() const {return ta;}
             ts_point_fx point_interpretation() const { return fx_policy; }
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
             template <class PD>
-			periodic_ts(const PD& pd, const TA& ta, ts_point_fx policy = ts_point_fx::POINT_AVERAGE_VALUE) :
-				ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
-			periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
-				periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
-			periodic_ts(const vector<double>& pattern, utctimespan dt,utctime pattern_t0, const TA& ta) :
-				periodic_ts(profile_description(pattern_t0, dt, pattern), ta) {
-			}
-			periodic_ts() =default;
-			double operator() (utctime t) const { return pa.value(t); }
-			size_t size() const { return ta.size(); }
+            periodic_ts(const PD& pd, const TA& ta, ts_point_fx policy = ts_point_fx::POINT_AVERAGE_VALUE) :
+                ta(ta), pa(pd, ta,policy), fx_policy(policy) {}
+            periodic_ts(const vector<double>& pattern, utctimespan dt, const TA& ta) :
+                periodic_ts(profile_description(ta.time(0), dt, pattern), ta) {}
+            periodic_ts(const vector<double>& pattern, utctimespan dt,utctime pattern_t0, const TA& ta) :
+                periodic_ts(profile_description(pattern_t0, dt, pattern), ta) {
+            }
+            periodic_ts() =default;
+            double operator() (utctime t) const { return pa.value(t); }
+            size_t size() const { return ta.size(); }
             utcperiod total_period() const {return ta.total_period();}
-			size_t index_of(utctime t) const { return ta.index_of(t); }
-			double value(size_t i) const { return pa.value(i); }
-			std::vector<double> values() const {
-				std::vector<double> v;
-				v.reserve(ta.size());
-				for (size_t i=0; i<ta.size(); ++i)
-					v.emplace_back(value(i));
-				return v;
-			}
+            size_t index_of(utctime t) const { return ta.index_of(t); }
+            double value(size_t i) const { return pa.value(i); }
+            std::vector<double> values() const {
+                std::vector<double> v;
+                v.reserve(ta.size());
+                for (size_t i=0; i<ta.size(); ++i)
+                    v.emplace_back(value(i));
+                return v;
+            }
             x_serialize_decl();
-		};
+        };
 
         /**\brief glacier melt ts
          *
@@ -660,54 +655,54 @@ namespace shyft{
          * \note that both temperature and snow covered area (sca) TS is of same type
          * \ref shyft::core::glacier_melt::step function
          */
-		template<class TS_A,class TS_B=TS_A>
-		struct glacier_melt_ts {
-			typedef typename d_ref_t<TS_A>::type::ta_t ta_t;
-			TS_A temperature;
-			TS_B sca_m2;
-			double glacier_area_m2=0.0;
-			double dtf=0.0;
-			ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
-			const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
+        template<class TS_A,class TS_B=TS_A>
+        struct glacier_melt_ts {
+            typedef typename d_ref_t<TS_A>::type::ta_t ta_t;
+            TS_A temperature;
+            TS_B sca_m2;
+            double glacier_area_m2=0.0;
+            double dtf=0.0;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
+            const ta_t& time_axis() const { return d_ref(temperature).time_axis(); }
             ts_point_fx point_interpretation() const { return fx_policy; }
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
-			/** construct a glacier_melt_ts
-			 * \param temperature in [deg.C]
-			 * \param sca_m2 snow covered area [m2]
-			 * \param glacier_area_m2 [m2]
-			 * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
-			 */
+            /** construct a glacier_melt_ts
+             * \param temperature in [deg.C]
+             * \param sca_m2 snow covered area [m2]
+             * \param glacier_area_m2 [m2]
+             * \param dtf degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
+             */
             template<class A_,class B_>
-			glacier_melt_ts(A_&& temperature, B_&& sca_m2, double glacier_area_m2, double dtf)
-				:temperature(forward<A_>(temperature)), sca_m2(forward<B_>(sca_m2)),glacier_area_m2(glacier_area_m2),dtf(dtf)
-				{
-			}
-			// std. ct etc
+            glacier_melt_ts(A_&& temperature, B_&& sca_m2, double glacier_area_m2, double dtf)
+                :temperature(forward<A_>(temperature)), sca_m2(forward<B_>(sca_m2)),glacier_area_m2(glacier_area_m2),dtf(dtf)
+                {
+            }
+            // std. ct etc
             glacier_melt_ts()=default;
             // ts property definitions
-			point get(size_t i) const { return point(time_axis().time(i), value(i)); }
-			size_t size() const { return time_axis().size(); }
-			size_t index_of(utctime t) const { return time_axis().index_of(t); }
-			utcperiod total_period() const {return time_axis().total_period();}
-			//--
-			double value(size_t i) const {
-				if (i >= time_axis().size())
-					return nan;
+            point get(size_t i) const { return point(time_axis().time(i), value(i)); }
+            size_t size() const { return time_axis().size(); }
+            size_t index_of(utctime t) const { return time_axis().index_of(t); }
+            utcperiod total_period() const {return time_axis().total_period();}
+            //--
+            double value(size_t i) const {
+                if (i >= time_axis().size())
+                    return nan;
                 utcperiod p=time_axis().period(i);
-				double t_i = d_ref(temperature).value(i);
-				size_t ix_hint=i;// assume same indexing of sca and temperature
-				double sca_m2_i= average_value(d_ref(sca_m2),p,ix_hint,d_ref(sca_m2).point_interpretation()==fx_policy_t::POINT_INSTANT_VALUE);
-				return shyft::core::glacier_melt::step(dtf, t_i,sca_m2_i, glacier_area_m2);
-			}
-			double operator()(utctime t) const {
-				size_t i = index_of(t);
-				if (i == string::npos)
-					return nan;
+                double t_i = d_ref(temperature).value(i);
+                size_t ix_hint=i;// assume same indexing of sca and temperature
+                double sca_m2_i= average_value(d_ref(sca_m2),p,ix_hint,d_ref(sca_m2).point_interpretation()==ts_point_fx::POINT_INSTANT_VALUE);
+                return shyft::core::glacier_melt::step(dtf, t_i,sca_m2_i, glacier_area_m2);
+            }
+            double operator()(utctime t) const {
+                size_t i = index_of(t);
+                if (i == string::npos)
+                    return nan;
                 return value(i);
-			}
+            }
             x_serialize_decl();
-		};
+        };
 
         /**\brief a symbolic reference ts
          *
@@ -793,8 +788,8 @@ namespace shyft{
             void fill_range(double value, int start_step, int n_steps) {
                 bts().fill_range(value,start_step,n_steps);
             }
- 			void scale_by(double value) {
- 			    bts().scale_by(value);
+            void scale_by(double value) {
+                bts().scale_by(value);
             }
             x_serialize_decl();
         };
@@ -1155,8 +1150,8 @@ namespace shyft{
         template<class T> struct is_ts<shared_ptr<uniform_sum_ts<T>>> { static const bool value = true; };
         template<class TS> struct is_ts<convolve_w_ts<TS>> { static const bool value = true; };
         template<class TS> struct is_ts<shared_ptr<convolve_w_ts<TS>>> { static const bool value = true; };
-		// This is to allow this ts to participate in ts-math expressions
-		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
+        // This is to allow this ts to participate in ts-math expressions
+        template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
         template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
 
         template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
@@ -1284,30 +1279,30 @@ namespace shyft{
             double operator()(utctime t) const {return fx(t);}
         };
 
-		//For test&fun, a sinus function
-		// r= _y0 + _a * sin( _w * (t-t0) )
-		// r > _yMax: r=_yMax
-		// r < _yMin: r=_Ymin
-		// _w = fullPeriod/2*M_PI
-		//  a sinewave for 24 hours, fullPeriod=24*3600
-		class sin_fx {
-			double y0;
-			double y_min;
-			double y_max;
-			double a;
-			double w;
-			utctime t0;
-		public:
-			sin_fx(double y0, double y_min, double y_max, double amplitude, utctime t0, utctimespan full_period)
-				: y0(y0), y_min(y_min), y_max(y_max), a(amplitude), w(2.0*M_PI / double(full_period)), t0(t0) {}
+        //For test&fun, a sinus function
+        // r= _y0 + _a * sin( _w * (t-t0) )
+        // r > _yMax: r=_yMax
+        // r < _yMin: r=_Ymin
+        // _w = fullPeriod/2*M_PI
+        //  a sinewave for 24 hours, fullPeriod=24*3600
+        class sin_fx {
+            double y0;
+            double y_min;
+            double y_max;
+            double a;
+            double w;
+            utctime t0;
+        public:
+            sin_fx(double y0, double y_min, double y_max, double amplitude, utctime t0, utctimespan full_period)
+                : y0(y0), y_min(y_min), y_max(y_max), a(amplitude), w(2.0*M_PI / double(full_period)), t0(t0) {}
 
-			double operator()(utctime t) const {
-				double r = y0 + a*sin(w*(t - t0));
-				if (r < y_min) r = y_min;
-				if (r > y_max) r = y_max;
-				return r;
-			}
-		};
+            double operator()(utctime t) const {
+                double r = y0 + a*sin(w*(t - t0));
+                if (r < y_min) r = y_min;
+                if (r > y_max) r = y_max;
+                return r;
+            }
+        };
 
         /** \brief A constant_source, just return the same constant value for all points
          * \tparam TA time-axis
@@ -1426,49 +1421,49 @@ namespace shyft{
             size_t size() const { return time_axis.size(); }
         };
 
-		/**\brief provides the accumulated value accessor over the supplied time-axis
-		 *
-		 * Given sequential access, this accessor tries to be smart using previous
-		 * accumulated value plus the new delta to be efficient computing the
-		 * accumulated series from another kind of point source.
-		 */
-		template <class S, class TA>
-		class accumulate_accessor {
-		private:
-			static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
-			mutable size_t last_idx=-1;
-			mutable size_t q_idx=-1;// last queried index
-			mutable double q_value=nan;// outcome of
-			const TA& time_axis;
-			const S& source;
-			std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
-		public:
-			accumulate_accessor(const S& source, const TA& time_axis)
-				: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
-			}
-			accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis)// also support shared ptr. access
-				: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
-			}
+        /**\brief provides the accumulated value accessor over the supplied time-axis
+         *
+         * Given sequential access, this accessor tries to be smart using previous
+         * accumulated value plus the new delta to be efficient computing the
+         * accumulated series from another kind of point source.
+         */
+        template <class S, class TA>
+        class accumulate_accessor {
+        private:
+            static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
+            mutable size_t last_idx=-1;
+            mutable size_t q_idx=-1;// last queried index
+            mutable double q_value=nan;// outcome of
+            const TA& time_axis;
+            const S& source;
+            std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
+        public:
+            accumulate_accessor(const S& source, const TA& time_axis)
+                : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
+            }
+            accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis)// also support shared ptr. access
+                : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
+            }
 
-			size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
+            size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
 
-			double value(const size_t i) const {
-				if (i == 0)
-					return 0.0;// as defined by now, (but if ts is nan, then nan could be correct value!)
-				if (i == q_idx)
-					return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-				utctimespan tsum = 0;
-				if (i > q_idx && q_idx != npos) { // utilize the fact that we already have computed the sum up to q_idx
-					q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
-				} else { // just have to do the heavy work, calculate the entire sum again.
-					q_value = accumulate_value(source, utcperiod(time_axis.time(0), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
-				}
-				q_idx = i;
-				return q_value;
-			}
+            double value(const size_t i) const {
+                if (i == 0)
+                    return 0.0;// as defined by now, (but if ts is nan, then nan could be correct value!)
+                if (i == q_idx)
+                    return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
+                utctimespan tsum = 0;
+                if (i > q_idx && q_idx != npos) { // utilize the fact that we already have computed the sum up to q_idx
+                    q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+                } else { // just have to do the heavy work, calculate the entire sum again.
+                    q_value = accumulate_value(source, utcperiod(time_axis.time(0), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+                }
+                q_idx = i;
+                return q_value;
+            }
 
-			size_t size() const { return time_axis.size(); }
-		};
+            size_t size() const { return time_axis.size(); }
+        };
 
         /** \brief The direct_accessor template is a fast accessor
          *
@@ -1578,35 +1573,35 @@ namespace shyft{
             return sqrt(squared_sum);
         }
 
-		/**\brief Nash Sutcliffe model effiency coefficient based goal function
-		* <a ref href=http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient">NS coeffecient</a>
-		* \note throws runtime exception if supplied arguments differs in .size() or .size()==0
-		* \note if obs. is a constant, we get 1/0
-		* \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
-		* \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
-		* \param observed_ts contains the observed values for the model
-		* \param model_ts contains the (simulated) model output values
-		* \return 1- E, given E=n.s,  i.e. 0 is best performance > 0 .. +oo is less good performance.
-		*/
-		template<class TSA1, class TSA2>
-		double nash_sutcliffe_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
-			if (observed_ts.size() != model_ts.size() || observed_ts.size() == 0)
-				throw runtime_error("nash_sutcliffe needs equal sized ts accessors with elements >1");
-			double sum_of_obs_measured_diff2 = 0;
-			double obs_avg = 0;
-			for (size_t i = 0; i < observed_ts.size(); ++i) {
-				double diff_i = observed_ts.value(i) - model_ts.value(i);
-				sum_of_obs_measured_diff2 += diff_i*diff_i;
-				obs_avg += observed_ts.value(i);
-			}
-			obs_avg /= double(observed_ts.size());
-			double sum_of_obs_obs_mean_diff2 = 0;
-			for (size_t i = 0; i < observed_ts.size(); ++i) {
-				double diff_i = observed_ts.value(i) - obs_avg;
-				sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
-			}
-			return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
-		}
+        /**\brief Nash Sutcliffe model effiency coefficient based goal function
+        * <a ref href=http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient">NS coeffecient</a>
+        * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
+        * \note if obs. is a constant, we get 1/0
+        * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \param observed_ts contains the observed values for the model
+        * \param model_ts contains the (simulated) model output values
+        * \return 1- E, given E=n.s,  i.e. 0 is best performance > 0 .. +oo is less good performance.
+        */
+        template<class TSA1, class TSA2>
+        double nash_sutcliffe_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
+            if (observed_ts.size() != model_ts.size() || observed_ts.size() == 0)
+                throw runtime_error("nash_sutcliffe needs equal sized ts accessors with elements >1");
+            double sum_of_obs_measured_diff2 = 0;
+            double obs_avg = 0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double diff_i = observed_ts.value(i) - model_ts.value(i);
+                sum_of_obs_measured_diff2 += diff_i*diff_i;
+                obs_avg += observed_ts.value(i);
+            }
+            obs_avg /= double(observed_ts.size());
+            double sum_of_obs_obs_mean_diff2 = 0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double diff_i = observed_ts.value(i) - obs_avg;
+                sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
+            }
+            return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
+        }
 
         /** \brief KLING-GUPTA Journal of Hydrology 377
          *              (2009) 80–91, page 83,
@@ -1626,8 +1621,8 @@ namespace shyft{
          *
          */
 
-		template<class running_stat_calculator,class TSA1, class TSA2>
-		double kling_gupta_goal_function(const TSA1& observed_ts, const TSA2& model_ts,double s_r,double s_a,double s_b) {
+        template<class running_stat_calculator,class TSA1, class TSA2>
+        double kling_gupta_goal_function(const TSA1& observed_ts, const TSA2& model_ts,double s_r,double s_a,double s_b) {
             running_stat_calculator rs;
             for (size_t i = 0; i < observed_ts.size(); ++i) {
                 double tv = observed_ts.value(i);
@@ -1647,7 +1642,7 @@ namespace shyft{
             // We use EDs to scale, and KGEs = (1-EDs) with max at 1.0, we use 1-KGEs to get minimum as 0 for minbobyqa
             double eds2 = (s_r != 0.0 ? std::pow(s_r*(r - 1), 2) : 0.0) + (s_a != 0.0 ? std::pow(s_a*(a - 1), 2) : 0.0) + (s_b != 0.0 ? std::pow(s_b*(b - 1), 2) : 0.0);
             return /*EDs=*/ sqrt( eds2);
-		}
+        }
         template<class TSA1, class TSA2>
         double abs_diff_sum_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
             double abs_diff_sum = 0.0;
@@ -1710,33 +1705,33 @@ namespace shyft{
 
        /** \brief calculate specified percentiles for supplied list of time-series over the specified time-axis
 
-		Percentiles for a set of timeseries, over a time-axis
-		we would like to :
-		percentiles_timeseries = calculate_percentiles(ts-id-list,time-axis,percentiles={0,25,50,100})
-		done like this
-		1..m ts-id, time-axis( start,dt, n),
-		read 1..m ts into memory
-		percentiles specified is np
-		result is percentiles_timeseries
-		accessor "accumulate" on time-axis to dt, using stair-case or linear between points
-		create result vector[1..n] (the time-axis dimension)
-		where each element is vector[1..np] (for each timestep, we get the percentiles
-		for each timestep_i in timeaxis
-		for each tsa_i: accessors(timeaxis,ts)
-		samplevector[timestep_i].emplace_back( tsa_i(time_step_i) )
-		percentiles_timeseries[timestep_i]= calculate_percentiles(..)
+        Percentiles for a set of timeseries, over a time-axis
+        we would like to :
+        percentiles_timeseries = calculate_percentiles(ts-id-list,time-axis,percentiles={0,25,50,100})
+        done like this
+        1..m ts-id, time-axis( start,dt, n),
+        read 1..m ts into memory
+        percentiles specified is np
+        result is percentiles_timeseries
+        accessor "accumulate" on time-axis to dt, using stair-case or linear between points
+        create result vector[1..n] (the time-axis dimension)
+        where each element is vector[1..np] (for each timestep, we get the percentiles
+        for each timestep_i in timeaxis
+        for each tsa_i: accessors(timeaxis,ts)
+        samplevector[timestep_i].emplace_back( tsa_i(time_step_i) )
+        percentiles_timeseries[timestep_i]= calculate_percentiles(..)
 
-		\return percentiles_timeseries
+        \return percentiles_timeseries
 
-		*/
-		template <class ts_t,class ta_t>
-		inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
+        */
+        template <class ts_t,class ta_t>
+        inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles,size_t min_t_steps=1000) {
             std::vector<point_ts<ta_t>> result;
-            auto fx_p= ts_list.size()? ts_list.front().point_interpretation():fx_policy_t::POINT_AVERAGE_VALUE;
-			for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
-				result.emplace_back(ta, 0.0,fx_p);
+            auto fx_p= ts_list.size()? ts_list.front().point_interpretation():ts_point_fx::POINT_AVERAGE_VALUE;
+            for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
+                result.emplace_back(ta, 0.0,fx_p);
 
-			auto partition_calc=[&result,&ts_list,&ta,&percentiles](size_t i0,size_t n) {
+            auto partition_calc=[&result,&ts_list,&ta,&percentiles](size_t i0,size_t n) {
                 std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
                 for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
                     tsa_list.emplace_back(ts, ta);
@@ -1752,10 +1747,10 @@ namespace shyft{
                         result[p].set(t, percentiles_at_t[p]);
                 }
 
-			};
-			if(ta.size()<min_t_steps) {
+            };
+            if(ta.size()<min_t_steps) {
                 partition_calc(0,ta.size());
-			} else {
+            } else {
                 vector<future<void>> calcs;
                 //size_t n_partitions= 1+ ta.size()/min_t_steps;
                 for(size_t p=0;p<ta.size(); ) {
@@ -1766,55 +1761,55 @@ namespace shyft{
                 for(auto &f:calcs)
                     f.get();
 
-			}
+            }
 
-			return std::move(result);
-		}
+            return std::move(result);
+        }
 
-		/**\brief partition_by convert a time-series into a vector of time-shifted partitions of ts with a common time-reference
-		*
-		* The partitions are simply specified by calendar, delta_t (could be symbolic, like YEAR:MONTH:DAY) and n.
-		* To make yearly partitions, just pass calendar::YEAR as dt.
-		* The t-parameter set the start-time point in the source-time-series, like 1930.09.01
-		* The t0-parameter set the common start-time of the new partitions
-		*
-		* The typical usage will be to use this function to partition years into a vector with e.g.
-		* 80 years, where we can do statistics, percentiles to compare and see the different effects of
-		* yearly season variations.
-		* Note that the function is more general, allowing any periodic partition, like daily, weekly, monthly etc.
-		* to study any pattern or statistics that might be periodic by the partition pattern.
-		*
-		* For exposure to python, additional preparation of the partitions could be useful
-		* like .average( timeaxis(t0,deltahours(1),365*24)) to make all with an equal-sized time-axis
-		*
-		* \tparam rts_t return type time-series, equal to the return-type of the time_shift_func()
-		* \tparam time_shift_func a callable type, that accepts ts_t and utctimespan as input and return rts_t
-		* \tparam ts_t time-series type that goes into the partition algorithm
-		* \param ts of type ts_t
-		* \param cal  specifies the calendar to be used for possible calendar and time-zone semantic operations
-		* \param t specifies the time-point to start, e.g. 1930.09.01
-		* \param dt specifies the calendar-semantic length of the partitions, e.g. calendar::YEAR|MONTH|DAY|WEEK
-		* \param n number of partitions, e.g. if you would have 80 yearly partitions, set n=80
-		* \param t0 the common time-reference for the partitions, e.g. 2016.09.01 for 80 yearly partitions 1930.09.01 to 2010.09.01
-		* \param make_time_shift_fx a callable that accepts const ts_t& and utctimespan and returns a time-shifted ts of type rts_t
-		*
-		* \return the partition vector, std::vector<rts_t> of size n, where each partition ts have its start-value at t0
-		*
-		* \note t0 must align with multiple delta-t from t, e.g. if t is 1930.09.1, then t0 must have a pattern like YYYY.09.01
-		* \throw runtime_error if t0 is not aligned with t, see note above.
-		*
-		*/
-		template <class rts_t, class time_shift_func, class ts_t >
-		std::vector<rts_t> partition_by(const ts_t& ts, const calendar&cal, utctime t, utctimespan dt, size_t n, utctime t0, time_shift_func && make_time_shift_fx) {
-			utctimespan rem;
-			cal.diff_units(t, t0, dt, rem);
-			if (rem != utctimespan(0))
-				throw std::runtime_error("t0 must align with a complete calendar multiple dt from t");
-			std::vector<rts_t> r;r.reserve(n);
-			for (size_t i = 0;i<n;++i)
-				r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
-			return std::move(r);
-		}
+        /**\brief partition_by convert a time-series into a vector of time-shifted partitions of ts with a common time-reference
+        *
+        * The partitions are simply specified by calendar, delta_t (could be symbolic, like YEAR:MONTH:DAY) and n.
+        * To make yearly partitions, just pass calendar::YEAR as dt.
+        * The t-parameter set the start-time point in the source-time-series, like 1930.09.01
+        * The t0-parameter set the common start-time of the new partitions
+        *
+        * The typical usage will be to use this function to partition years into a vector with e.g.
+        * 80 years, where we can do statistics, percentiles to compare and see the different effects of
+        * yearly season variations.
+        * Note that the function is more general, allowing any periodic partition, like daily, weekly, monthly etc.
+        * to study any pattern or statistics that might be periodic by the partition pattern.
+        *
+        * For exposure to python, additional preparation of the partitions could be useful
+        * like .average( timeaxis(t0,deltahours(1),365*24)) to make all with an equal-sized time-axis
+        *
+        * \tparam rts_t return type time-series, equal to the return-type of the time_shift_func()
+        * \tparam time_shift_func a callable type, that accepts ts_t and utctimespan as input and return rts_t
+        * \tparam ts_t time-series type that goes into the partition algorithm
+        * \param ts of type ts_t
+        * \param cal  specifies the calendar to be used for possible calendar and time-zone semantic operations
+        * \param t specifies the time-point to start, e.g. 1930.09.01
+        * \param dt specifies the calendar-semantic length of the partitions, e.g. calendar::YEAR|MONTH|DAY|WEEK
+        * \param n number of partitions, e.g. if you would have 80 yearly partitions, set n=80
+        * \param t0 the common time-reference for the partitions, e.g. 2016.09.01 for 80 yearly partitions 1930.09.01 to 2010.09.01
+        * \param make_time_shift_fx a callable that accepts const ts_t& and utctimespan and returns a time-shifted ts of type rts_t
+        *
+        * \return the partition vector, std::vector<rts_t> of size n, where each partition ts have its start-value at t0
+        *
+        * \note t0 must align with multiple delta-t from t, e.g. if t is 1930.09.1, then t0 must have a pattern like YYYY.09.01
+        * \throw runtime_error if t0 is not aligned with t, see note above.
+        *
+        */
+        template <class rts_t, class time_shift_func, class ts_t >
+        std::vector<rts_t> partition_by(const ts_t& ts, const calendar&cal, utctime t, utctimespan dt, size_t n, utctime t0, time_shift_func && make_time_shift_fx) {
+            utctimespan rem;
+            cal.diff_units(t, t0, dt, rem);
+            if (rem != utctimespan(0))
+                throw std::runtime_error("t0 must align with a complete calendar multiple dt from t");
+            std::vector<rts_t> r;r.reserve(n);
+            for (size_t i = 0;i<n;++i)
+                r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
+            return std::move(r);
+        }
 
         /**bind ref_ts
          * default impl. does nothing (nothing to bind)

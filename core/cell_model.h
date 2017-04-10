@@ -7,11 +7,11 @@
 namespace shyft {
     namespace core {
 		using namespace shyft::time_series;
-
+		using namespace shyft;
 		// and typedefs for commonly used types in the model
-		typedef point_ts<timeaxis> pts_t;
-		typedef constant_timeseries<timeaxis> cts_t;
-		typedef timeaxis timeaxis_t;
+		typedef point_ts<time_axis::fixed_dt> pts_t;
+		typedef constant_timeseries<time_axis::fixed_dt> cts_t;
+		typedef time_axis::fixed_dt timeaxis_t;
 
 
 		// cell-model goes here
@@ -138,7 +138,7 @@ namespace shyft {
 		};
         /**Utility function used to  initialize a pts_t in the core, typically making space, zero fill a ts
         *  prior to a run to ensure values are zero */
-        inline void ts_init(pts_t&ts, const timeaxis&ta, int start_step, int n_steps, fx_policy_t fx_policy) {
+        inline void ts_init(pts_t&ts, time_axis::fixed_dt const& ta, int start_step, int n_steps, ts_point_fx fx_policy) {
             if (ts.ta != ta || ta.size()==0 ) {
                 ts = pts_t(ta, 0.0, fx_policy);
             } else {

@@ -120,11 +120,11 @@ TEST_CASE("test_serialization") {
     // 3. time-series
     //
 
-    time_series::point_ts<time_axis::fixed_dt> ts(ta,1.0,time_series::fx_policy_t::POINT_AVERAGE_VALUE);
+    time_series::point_ts<time_axis::fixed_dt> ts(ta,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto ts2 = serialize_loop(ts);
     TS_ASSERT(is_equal(ts,ts2));
     time_axis::point_dt tap(vector<utctime>{0,3600},3600*2);
-    auto tsp=make_shared<time_series::point_ts<time_axis::point_dt>>(tap,2.0,time_series::fx_policy_t::POINT_INSTANT_VALUE);
+    auto tsp=make_shared<time_series::point_ts<time_axis::point_dt>>(tap,2.0,time_series::ts_point_fx::POINT_INSTANT_VALUE);
     auto tsp2 = serialize_loop(tsp);
     TS_ASSERT(is_equal(*tsp,*tsp2));
 
@@ -191,7 +191,7 @@ TEST_CASE("test_serialization") {
     TS_ASSERT(is_equal(apts,apts2));
 
     api::aref_ts arts("netcdf://file.nc");
-    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,time_series::fx_policy_t::POINT_AVERAGE_VALUE);
+    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto arts2=serialize_loop(arts);
     TS_ASSERT_EQUALS(arts.rep.ref,arts2.rep.ref);
     TS_ASSERT(is_equal(arts,arts2));

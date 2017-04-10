@@ -812,7 +812,7 @@ namespace shyft {
                 return cr;
             }
             std::shared_ptr<pts_t> river_output_flow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.output_m3s(rid));
@@ -820,7 +820,7 @@ namespace shyft {
                 return r;
             }
             std::shared_ptr<pts_t> river_upstream_inflow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.upstream_inflow(rid));
@@ -828,7 +828,7 @@ namespace shyft {
                 return r;
             }
             std::shared_ptr<pts_t> river_local_inflow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.local_inflow(rid));
