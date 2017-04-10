@@ -48,6 +48,22 @@ namespace shyft {
                 return i<index_map.size()?index_map[i]:string::npos;
             }
         };
+
+        // solve problem with existence of index_hint or not for time-axis using specialization for those that have it
+        //
+        template<class TA  >
+        size_t ta_index_of(TA const&ta,utctime t,size_t ix_hint) {
+            return ta.index_of(t);
+        }
+        template<>
+        size_t ta_index_of(time_axis::point_dt const&ta,utctime t,size_t ix_hint) {
+            return ta.index_of(t,ix_hint);
+        }
+        template<>
+        size_t ta_index_of(time_axis::generic_dt const&ta,utctime t,size_t ix_hint) {
+            return ta.index_of(t,ix_hint);
+        }
+
 		template<class TA1, class TA2>
 		struct time_axis_map {
 			TA1 const src;
@@ -55,19 +71,17 @@ namespace shyft {
 			TA2 const m;
 			time_axis_map(TA1 const&src, TA2 const&m)
 				:src(src),m(m)  {}
+
 			inline size_t src_index(size_t i) {
 				if (i > m.size())
 					return string::npos;
-				src_ix = hint_based_search2(*this, m.period(i), src_ix);
+				src_ix = ta_index_of(src,m.time(i), src_ix);
 				return src_ix;
 			}
-			inline utctime time(size_t i) const {return src.time(i);}
-			inline size_t index_of(utctime t) const {return src.index_of(t);}
-			inline size_t size() const {return src.size();	}
 		};
 
 
-		/** \brief specialize for fixed_dt time-axis
+		/** \brief specialize for fixed_dt time-axis, that can be done really fast
 		*/
 		template<>
 		struct time_axis_map<time_axis::fixed_dt, time_axis::fixed_dt> {
@@ -76,7 +90,7 @@ namespace shyft {
 
 			time_axis_map(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m):src(src),m(m) {}
 			inline size_t src_index(size_t im) const {
-				auto r= utctime( (utctime(im)*m.dt + m.t - src.t) / src.dt);
+				auto r= utctime( (utctime(im)*m.dt + m.t - src.t) / src.dt);// (mis)using utctime as signed int64 here
 				if (r < 0 || r>=(utctime)src.n)
 					return std::string::npos;
 				return size_t(r);

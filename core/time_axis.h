@@ -337,7 +337,7 @@ namespace shyft {
             utcperiod total_period() const  {switch( gt ) {default: case FIXED: return f.total_period(); case CALENDAR: return c.total_period(); case POINT: return p.total_period();}}
             utcperiod period( size_t i ) const {switch( gt ) {default: case FIXED: return f.period( i ); case CALENDAR: return c.period( i ); case POINT: return p.period( i );}}
             utctime     time( size_t i ) const {switch( gt ) {default: case FIXED: return f.time( i ); case CALENDAR: return c.time( i ); case POINT: return p.time( i );}}
-            size_t index_of( utctime t ) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t );}}
+            size_t index_of( utctime t ,size_t ix_hint=std::string::npos) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t,ix_hint );}}
             size_t open_range_index_of( utctime t, size_t ix_hint = std::string::npos) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t,ix_hint );}}
             x_serialize_decl();
         };

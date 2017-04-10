@@ -151,41 +151,6 @@ namespace shyft{
             return source.index_of(p.start);// no hint given, just use binary search to establish the start.
         }
 
-		template<class S>
-		size_t hint_based_search2(S const& source, utcperiod const& p, size_t i, size_t const max_directional_search=25 ) {
-			const size_t n = source.size();
-			if (n == 0)
-				return std::string::npos;
-			if (i != std::string::npos && i<n) { // hint-based search logic goes here:
-				; // +-5 just a guess for what is a reasonable try upward/downward
-				auto ti = source.time(i);
-				if (ti == p.start) { // direct hit and extreme luck ?
-					return i; // just use it !
-				} else if (ti < p.start) { // do a local search upward to see if we find the spot we search for
-					if (i == n - 1) return i;// unless we are at the end (n-1), try to search upward
-					size_t i_max = std::min(i + max_directional_search, n);
-					while (++i < i_max) {
-						ti = source.time(i);
-						if (ti < p.start)
-							continue;
-						return  ti > p.start ? i - 1 : i;// we either got one to far, or direct-hit
-					}
-					return (i < n) ? source.index_of(p.start) : n - 1; // either local search failed->bsearch etc., or we are at the end -> n-1
-				} else if (ti > p.start) { // do a local search downwards from last index, maybe we are lucky
-					if (i == 0) // if we are at the beginning, just return npos (no left-bound index found)
-						return 0;//std::string::npos;
-					size_t i_min = (i - std::min(i, max_directional_search));
-					do {
-						ti = source.time(--i);//notice that i> 0 before we start due to if(i==0) above(needed due to unsigned i!)
-						if (ti > p.start)
-							continue;
-						return i; // we found the lower left bound (either exact, or less p.start)
-					} while (i > i_min);
-					return i>0 ? source.index_of(p.start) : std::string::npos; // i is >0, there is a hope to find the index using index_of, otherwise, no left lower bound
-				}
-			}
-			return source.index_of(p.start);// no hint given, just use binary search to establish the start.
-		}
 
         /** \brief accumulate_value provides a projection/interpretation
         * of the values of a pointsource on to a time-axis as provided.
