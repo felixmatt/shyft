@@ -32,7 +32,7 @@ dlib_include="${dlib_include:--I../../dlib}"
 shyft_march="${shyft_march:--march=native}"
 
 gcc_opt="-shared -L/usr/local/lib64  -s -pthread -fPIC -std=c++1y -Wno-deprecated-declarations -O3 $shyft_march -I.. $dlib_include $armadillo_defs $boost_include $py_include"
-shyft_common_source="../core/utctime_utilities.cpp ../core/sceua_optimizer.cpp ../core/dream_optimizer.cpp ../api/api.cpp ../api/timeseries.cpp ../core/core_serialization.cpp ../api/api_serialization.cpp"
+shyft_common_source="../core/utctime_utilities.cpp ../core/sceua_optimizer.cpp ../core/dream_optimizer.cpp ../api/api.cpp ../api/time_series.cpp ../core/core_serialization.cpp ../api/api_serialization.cpp"
 #"../api/boostpython/api.cpp ../api/boostpython/api_actual_evapotranspiration.cpp ../api/boostpython/api_cell_environment.cpp ../api/boostpython/api_gamma_snow.cpp ../api/boostpython/api_geo_cell_data.cpp ../api/boostpython/api_geo_point.cpp ../api/boostpython/api_hbv_snow.cpp ../api/boostpython/api_interpolation.cpp ../api/boostpython/api_kirchner.cpp ../api/boostpython/api_precipitation_correction.cpp ../api/boostpython/api_priestley_taylor.cpp ../api/boostpython/api_region_environment.cpp ../api/boostpython/api_skaugen.cpp ../api/boostpython/api_target_specification.cpp ../api/boostpython/api_time_axis.cpp ../api/boostpython/api_utctime.cpp ../api/boostpython/api_vectors.cpp"
 shyft_api_pch="../api/boostpython/boostpython_pch.h"
 shyft_api_pch_out="../api/boostpython/boostpython_pch.h.gch"

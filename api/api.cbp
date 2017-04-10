@@ -61,7 +61,7 @@
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
 		<Unit filename="time_series.cpp" />
-		<Unit filename="timeseries.h" />
+		<Unit filename="time_series.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
