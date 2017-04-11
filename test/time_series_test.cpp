@@ -7,109 +7,70 @@
 #include "api/time_series.h"
 
 namespace shyft {
-    namespace time_axis {
-        using namespace std;
-        /** \brief time_axis_transform finds index mapping from source to map-time-axis
-         *
-         * Given a source time-axis src, for each
-         * start of the map time-axis interval, find
-         * the right-most index of src (the one equal to or to the left of map time-axis period)
-         * and provide those through the .source_index() method.
-         *
-         */
-        template<class TA1, class TA2>
-        struct time_axis_map2 {
-            vector<size_t> index_map;
-            time_axis_map2(TA1 const&src, TA2 const&m)
-				:index_map(m.size(), string::npos) { // fill in npos at all positions(kind of waste, but hard do avoid)
-				if (m.size()) {
-					auto src_p = src.total_period();
-					auto m_p = m.total_period();
-					if (src_p.overlaps(m_p)) {// any overlap?
-						size_t is = src.index_of(m.time(0));
-						size_t i = 0;
-						size_t is_max = src.size();
-						if (is == string::npos) {
-							is = 0;// the src time-axis starts somewhere into the m-timeaxis
-							i = m.index_of(src.time(is));// start fill in here
-							if (src.time(is)>m.time(i) )
-								++i;// src.time is at least one tick after, so npos!
-						}
-						for (; i < m.size(); ++i) {
-							auto mt = m.time(i);
-							while (is + 1 < is_max && src.time(is + 1) <= mt) // advance to closest lhs src value to mt
-								++is;// ok, there might be a lot of increments, but the src.time(ix) should be very low overhead
-							index_map[i] = is;
+	namespace time_series {
+		using namespace std;
+
+		inline double nan_max(double r, double x) {
+			if (!isfinite(x))
+				return r;
+			if (!isfinite(r))
+				return x;
+			return std::max(r, x);
+		}
+		inline double nan_min(double r, double x) {
+			if (!isfinite(x))
+				return r;
+			if (!isfinite(r))
+				return x;
+			return std::min(r, x);
+		}
+
+		template <class Ts,class Ta>
+		struct statistics {
+			Ts ts;
+			Ta ta;
+			template <class Ts_,class Ta_>
+			statistics(Ts_&&tsx, Ta_&tax) :ts(forward<Ts_>(tsx)), ta(forward<Ta_>(tax)) {}
+			template <class Ts_>
+			statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
+				ta = ts.time_axis();
+			}
+			template <typename Fx>
+			vector<double> extract(Fx&& fx)const {
+				auto ix_map = time_axis::make_time_axis_map(ts.time_axis(), ta);
+				size_t is_max = ts.size();//optimize out the end index here
+				vector<double> r;
+				size_t is = ix_map.src_index(0);
+				for (size_t i = 0; i < ta.size(); ++i) {
+					auto p = ta.period(i);
+					double rv = nan;
+					if (is == string::npos) { //in the beginning of interval, nothing
+						;// maybe check if ts.time(0) is within interval, then work the way through
+						if (p.contains(ts.time(0))) {
+							is = 0; //proceed as normal in this interval
+						}  else {
+							r.push_back(rv);//emit result for this interval and go to next
+							continue;
 						}
 					}
+					// process all values relevant for this interval, 
+					// the first value could be lhs value of the interval (could be interesting)
+					// the next value could be in the interval or first on rhs(exit condition)
+					if (is<is_max && ts.time(is)<p.start) {
+						//point is left of current interval
+						++is;//now we are: a) inside interval, b) after interval or end
+					}
+					while (is < is_max && ts.time(is) < p.end) {
+						rv = fx(rv, ts.value(is));
+						++is;//advance is, next could be in a) interval, or first right of interval
+					}
+					r.push_back(rv);// we are at end of is
 				}
-            }
-            inline size_t src_index(size_t i) const {
-                return i<index_map.size()?index_map[i]:string::npos;
-            }
-        };
-
-        // solve problem with existence of index_hint or not for time-axis using specialization for those that have it
-        //
-        template<class TA  >
-        size_t ta_index_of(TA const&ta,utctime t,size_t ix_hint) {
-            return ta.index_of(t);
-        }
-        template<>
-        size_t ta_index_of(time_axis::point_dt const&ta,utctime t,size_t ix_hint) {
-            return ta.index_of(t,ix_hint);
-        }
-        template<>
-        size_t ta_index_of(time_axis::generic_dt const&ta,utctime t,size_t ix_hint) {
-            return ta.index_of(t,ix_hint);
-        }
-
-		template<class TA1, class TA2>
-		struct time_axis_map {
-			TA1 const src;
-			size_t src_ix=string::npos;
-			TA2 const m;
-			time_axis_map(TA1 const&src, TA2 const&m)
-				:src(src),m(m)  {}
-
-			inline size_t src_index(size_t i) {
-				if (i > m.size())
-					return string::npos;
-				src_ix = ta_index_of(src,m.time(i), src_ix);
-				return src_ix;
+				return r;
 			}
 		};
-
-
-		/** \brief specialize for fixed_dt time-axis, that can be done really fast
-		*/
-		template<>
-		struct time_axis_map<time_axis::fixed_dt, time_axis::fixed_dt> {
-			time_axis::fixed_dt src;
-			time_axis::fixed_dt m;
-
-			time_axis_map(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m):src(src),m(m) {}
-			inline size_t src_index(size_t im) const {
-				auto r= utctime( (utctime(im)*m.dt + m.t - src.t) / src.dt);// (mis)using utctime as signed int64 here
-				if (r < 0 || r>=(utctime)src.n)
-					return std::string::npos;
-				return size_t(r);
-			}
-		};
-
-        /** \brief auto-deduce a time-axis transform adapted to the time-axis that we have
-        */
-        template<class TA1, class TA2>
-        auto make_time_axis_map(TA1 const&src, TA2 const&m) {
-            return time_axis_map<TA1, TA2>(src, m);
-        }
-
-
-
-
-    }
+	} 
 }
-
 namespace shyfttest {
     const double EPS = 1.0e-8;
     using namespace std;
@@ -175,6 +136,23 @@ using namespace shyfttest;
 typedef point_ts<time_axis::point_dt> xts_t;
 
 TEST_SUITE("time_series");
+TEST_CASE("nan_min_max") {
+
+	FAST_CHECK_EQ(isfinite(nan_max(shyft::nan, shyft::nan)),false);
+	FAST_CHECK_EQ(isfinite(nan_max(1.0, shyft::nan)), true);
+	FAST_CHECK_EQ(isfinite(nan_max(shyft::nan, 1.0)), true);
+	FAST_CHECK_EQ(isfinite(nan_max(1.0, 1.0)), true);
+	FAST_CHECK_LE(nan_max(2.0, 1.0) - 2.0, 0.00001);
+	FAST_CHECK_LE(nan_max(1.0, 2.0) - 2.0, 0.00001);
+
+	FAST_CHECK_EQ(isfinite(nan_min(shyft::nan, shyft::nan)), false);
+	FAST_CHECK_EQ(isfinite(nan_min(1.0, shyft::nan)), true);
+	FAST_CHECK_EQ(isfinite(nan_min(shyft::nan, 1.0)), true);
+	FAST_CHECK_EQ(isfinite(nan_min(1.0, 1.0)), true);
+	FAST_CHECK_LE(nan_min(2.0, 1.0) - 1.0, 0.00001);
+	FAST_CHECK_LE(nan_min(1.0, 2.0) - 1.0, 0.00001);
+
+}
 TEST_CASE("ts_statistics") {
 	// developing ts.statistics(ta,extractor_func)-> vector<period_result>
 	// given a ts, and a time_axis, for
@@ -194,103 +172,60 @@ TEST_CASE("ts_statistics") {
 	// index_map(ta1,ta2)->vector<size_t>
 	//
 	//
-
-	using namespace shyft;
-	using namespace shyft::core;
-	using namespace std;
-	//-- can be specialized to expression for fixed_dt, maybe also calendar_dt
-	// but the generic defining algorithm is like this:
-
-
-	//
-
-	calendar utc;
-	auto t0 = utc.time(2016, 1, 1);
-	auto dt1 = deltahours(1);
-	auto dt2 = deltahours(3);
-	time_axis::fixed_dt src(t0, dt1, 24);
-	time_axis::fixed_dt m(t0, dt2, 24 / 3);
-	SUBCASE("simple reduction test") {
-		auto ta_xf = time_axis::make_time_axis_map(src, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
-		}
-		FAST_CHECK_EQ(ta_xf.src_index(300), std::string::npos);
-	}
-	SUBCASE("from coarse to fine") {
-		auto ta_xf = time_axis::make_time_axis_map(m, src);
-		for (size_t i = 0; i < src.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), i / 3);
+	auto c = calendar();
+	time_axis::fixed_dt ta(c.time(2017,3,1), deltahours(1), 6);
+	
+	point_ts<decltype(ta)> ts(ta, vector<double>{1.0,2.0,3.0,4,5,6}, POINT_AVERAGE_VALUE);
+	SUBCASE("min_max_on_same_ts") {
+		statistics<decltype(ts), decltype(ta)> s(ts);
+		auto rmin = s.extract(nan_min);
+		auto rmax = s.extract(nan_max);
+		FAST_CHECK_EQ(rmin.size(), ts.size());
+		FAST_CHECK_EQ(rmax.size(), ts.size());
+		for (size_t i= 0; i < rmin.size(); ++i) {
+			FAST_CHECK_LE(fabs(rmin[i] - i-1), 0.00001);
+			FAST_CHECK_LE(fabs(rmax[i] - i-1), 0.00001);
 		}
 	}
-	SUBCASE("src offset the time t with one delta") {
-		src.t += dt1;
-		auto ta_xf = time_axis::make_time_axis_map(src, m);
-		for (size_t i = 0; i < m.size(); ++i) {
+	SUBCASE("min_max_on_same_ts_with_nan") {
+		auto tsn = ts;
+		tsn.v[0] = shyft::nan;
+		statistics<decltype(ts), decltype(ta)> s(tsn);
+		auto rmin = s.extract(nan_min);
+		auto rmax = s.extract(nan_max);
+		FAST_CHECK_EQ(rmin.size(), ts.size());
+		FAST_CHECK_EQ(rmax.size(), ts.size());
+		for (size_t i = 0; i < rmin.size(); ++i) {
 			if (i == 0) {
-				FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+				FAST_CHECK_EQ(isfinite(rmax[i]), false);
+				FAST_CHECK_EQ(isfinite(rmin[i]), false);
 			} else {
-				FAST_CHECK_EQ(ta_xf.src_index(i), (i * 3) - 1);
+				FAST_CHECK_LE(fabs(rmin[i] - i - 1), 0.00001);
+				FAST_CHECK_LE(fabs(rmax[i] - i - 1), 0.00001);
 			}
 		}
 	}
-	SUBCASE("verify npos if entirely after") {
-		src.t = m.total_period().end;
-		auto ta_xf = time_axis::make_time_axis_map(src, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
-		}
-	}
-	SUBCASE("verify if src is entirely before") {
-		src.t = m.t - src.dt*src.n * 10;
-		auto ta_xf = time_axis::make_time_axis_map(src, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
-		}
-	}
-	time_axis::generic_dt src2(src);
-	SUBCASE("simple reduction test") {
-		auto ta_xf = time_axis::make_time_axis_map(src2, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
-		}
-		FAST_CHECK_EQ(ta_xf.src_index(300), std::string::npos);
-	}
-	SUBCASE("from coarse to fine") {
-		auto ta_xf = time_axis::make_time_axis_map(m, src2);
-		for (size_t i = 0; i < src2.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), i / 3);
-		}
-	}
-	SUBCASE("src offset the time t with one delta") {
-		src2.f.t += dt1;
-		auto ta_xf = time_axis::make_time_axis_map(src2, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			if (i == 0) {
-				FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
-			} else {
-				FAST_CHECK_EQ(ta_xf.src_index(i), (i * 3) - 1);
-			}
-		}
-	}
-	SUBCASE("verify npos if entirely after") {
-		src2.f.t = m.total_period().end;
-		auto ta_xf = time_axis::make_time_axis_map(src2, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
-		}
-	}
-	SUBCASE("verify if src is entirely before") {
-		src2.f.t = m.t - src2.f.dt*src.n * 10;
-		auto ta_xf = time_axis::make_time_axis_map(src2, m);
-		for (size_t i = 0; i < m.size(); ++i) {
-			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
-		}
-	}
+	SUBCASE("min_max_on_ts_with_partial_overlap_high_resolution_ta") {
+		time_axis::fixed_dt th(ta.start() + deltaminutes(61), deltaminutes(20), 3);
+		// 00:00       01:00               02:00       03:00
+		//   1.0       2.0                 3.0          4.0
+		//              01:01 01:21 01:41   02:01
+		// expected      nan    nan   3.0
+		statistics<decltype(ts), decltype(th)> s(ts,th);
+		auto rmin = s.extract(nan_min);
+		auto rmax = s.extract(nan_max);
+		FAST_CHECK_EQ(rmin.size(), th.size());
+		FAST_CHECK_EQ(rmax.size(), th.size());
+		FAST_CHECK_EQ(isfinite(rmin[0]), false);
+		FAST_CHECK_EQ(isfinite(rmax[0]), false);
+		FAST_CHECK_EQ(isfinite(rmin[1]), false);
+		FAST_CHECK_EQ(isfinite(rmax[1]), false);
+		FAST_CHECK_LE(fabs(rmin[2]-3.0), 0.0001);
+		FAST_CHECK_LE(fabs(rmax[2] - 3.0), 0.0001);
 
-	//auto ix_map = tat.map(a, b);
-	//FAST_CHECK_EQ(ix_map.size(), b.size());
+	}
 }
+
 TEST_CASE("test_point_timeaxis") {
     time_axis::point_dt ts0; //zero points
     TS_ASSERT_EQUALS(ts0.size(),0u);
