@@ -110,7 +110,7 @@ TEST_CASE("ts_statistics") {
 	//
 	auto c = calendar();
 	time_axis::fixed_dt ta(c.time(2017,3,1), deltahours(1), 6);
-	
+
 	point_ts<decltype(ta)> ts(ta, vector<double>{1.0,2.0,3.0,4,5,6}, POINT_AVERAGE_VALUE);
 	SUBCASE("min_max_on_same_ts") {
 		statistics<decltype(ts), decltype(ta)> s(ts);
@@ -144,7 +144,7 @@ TEST_CASE("ts_statistics") {
     SUBCASE("min_max_on_ts_no_overlap") {
         auto ta2 = ta;
         ta2.t = ta.total_period().end;
-        
+
         statistics<decltype(ts), decltype(ta)> s(ts,ta2);
         auto rmin = s.extract(nan_min);
         auto rmax = s.extract(nan_max);
@@ -921,7 +921,7 @@ TEST_CASE("test_ts_statistics_calculations") {
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, calendar::DAY, n_days);
     auto tsv1 = create_test_ts(n_ts, ta, fx_1);
-    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100,-1000,+1000});
+    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,statistics_property::AVERAGE,70,100,statistics_property::MIN_EXTREME,statistics_property::MAX_EXTREME});
     TS_ASSERT_EQUALS(size_t(8), r1.size());//, "expect ts equal to percentiles wanted");
     // using excel percentile.inc(..) as correct answer, values 0..9 incl
     TS_ASSERT_DELTA(r1[0].value(0), 0.0,0.0001);// " 0-percentile");

@@ -46,7 +46,7 @@ namespace shyft {
                         continue;
                     }
                 }
-                // process all values relevant for this interval, 
+                // process all values relevant for this interval,
                 // the first value could be lhs value of the interval (could be interesting)
                 // the next value could be in the interval or first on rhs(exit condition)
                 if (is < is_max && ts.time(is) < p.start) {
@@ -92,8 +92,12 @@ namespace shyft {
                 return extract_statistics(ts, ta, fx);
             }
         };
-
-        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, R and excel seems more natural..
+        enum statistics_property {
+            AVERAGE=-1,
+            MIN_EXTREME=-1000,
+            MAX_EXTREME=+1000
+        };
+        /// http://en.wikipedia.org/wiki/Percentile NIST definitions, we use R7, as R and excel
         /// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
         /// calculate percentile using full sort.. works nice for a larger set of percentiles.
         inline vector<double> calculate_percentiles_excel_method_full_sort(vector<double>& samples, const vector<int>& percentiles) {
@@ -108,7 +112,7 @@ namespace shyft {
                 sort(begin(samples), end(samples));
                 for (auto i : percentiles) {
                     // use NIST definition for percentile
-                    if (i == -1) { // hack: -1,  aka. the mean value..
+                    if (i == statistics_property::AVERAGE ) { // hack: -1,  aka. the mean value..
                         double sum = 0; int n = 0;
                         for (auto x : samples) {
                             if (std::isfinite(x)) { sum += x; ++n; }
@@ -136,7 +140,7 @@ namespace shyft {
                             }
                         }
                     } else {
-                        result.emplace_back(silent_nan);
+                        result.emplace_back(silent_nan);//some other statistics property we don't compute here
                     }
                 }
             }
@@ -206,9 +210,9 @@ namespace shyft {
             }
             //if mi-ma extreme calc, do it here
             for (size_t i = 0;i < percentiles.size();++i) {
-                if (percentiles[i] == -1000) {// min-extremes
+                if (percentiles[i] == statistics_property::MIN_EXTREME) {// min-extremes
                     result[i].v = extract_statistic_from_vector(ts_list, ta, nan_min);
-                } else if (percentiles[i] == 1000) {// max-extremes
+                } else if (percentiles[i] == statistics_property::MAX_EXTREME) {// max-extremes
                     result[i].v = extract_statistic_from_vector(ts_list, ta, nan_max);
                 }
             }

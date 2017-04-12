@@ -256,7 +256,11 @@ class TimeSeries(unittest.TestCase):
             timeseries.append(
                 api.TimeSeries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
-        wanted_percentiles = api.IntVector([-1000,0, 10, 50, -1, 70, 100,1000])
+        wanted_percentiles = api.IntVector([api.statistics_property.MIN_EXTREME,
+                                            0, 10, 50,
+                                            api.statistics_property.AVERAGE,
+                                            70, 100,
+                                            api.statistics_property.MAX_EXTREME])
         ta_day = api.TimeAxisFixedDeltaT(t0, dt * 24, n // 24)
         ta_day2 = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
@@ -303,7 +307,11 @@ class TimeSeries(unittest.TestCase):
             ts.set(i + 1, 1.0 + 100*i/24.0) # notice that when i==0, this gives 1.0
             ts.set(i + 2, float('nan'))  # also put in a nan, just to verify it is ignored during average processing
 
-        wanted_percentiles = api.IntVector([-1000,0, 10, 50, -1, 70, 100,1000])
+        wanted_percentiles = api.IntVector([api.statistics_property.MIN_EXTREME,
+                                            0, 10, 50,
+                                            api.statistics_property.AVERAGE,
+                                            70, 100,
+                                            api.statistics_property.MAX_EXTREME])
         ta_day = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
         for i in range(len(ta_day)):

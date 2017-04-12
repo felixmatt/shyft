@@ -404,6 +404,12 @@ namespace expose {
             .value("POINT_AVERAGE_VALUE",time_series::POINT_AVERAGE_VALUE)
             .export_values()
             ;
+        enum_<time_series::statistics_property>("statistics_property")
+            .value("AVERAGE",time_series::statistics_property::AVERAGE)
+            .value("MIN_EXTREME",time_series::statistics_property::MIN_EXTREME)
+            .value("MAX_EXTREME",time_series::statistics_property::MAX_EXTREME)
+            ;
+
         enum_<time_series::convolve_policy>(
             "convolve_policy",
             "Ref Timeseries.convolve_w function, this policy determinte how to handle initial conditions\n"
