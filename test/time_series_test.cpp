@@ -5,72 +5,8 @@
 #include "core/time_axis.h"
 #include "api/api.h"
 #include "api/time_series.h"
+#include "core/time_series_statistics.h"
 
-namespace shyft {
-	namespace time_series {
-		using namespace std;
-
-		inline double nan_max(double r, double x) {
-			if (!isfinite(x))
-				return r;
-			if (!isfinite(r))
-				return x;
-			return std::max(r, x);
-		}
-		inline double nan_min(double r, double x) {
-			if (!isfinite(x))
-				return r;
-			if (!isfinite(r))
-				return x;
-			return std::min(r, x);
-		}
-
-		template <class Ts,class Ta>
-		struct statistics {
-			Ts ts;
-			Ta ta;
-			template <class Ts_,class Ta_>
-			statistics(Ts_&&tsx, Ta_&tax) :ts(forward<Ts_>(tsx)), ta(forward<Ta_>(tax)) {}
-			template <class Ts_>
-			statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
-				ta = ts.time_axis();
-			}
-			template <typename Fx>
-			vector<double> extract(Fx&& fx)const {
-				auto ix_map = time_axis::make_time_axis_map(ts.time_axis(), ta);
-				size_t is_max = ts.size();//optimize out the end index here
-				vector<double> r;
-				size_t is = ix_map.src_index(0);
-				for (size_t i = 0; i < ta.size(); ++i) {
-					auto p = ta.period(i);
-					double rv = nan;
-					if (is == string::npos) { //in the beginning of interval, nothing
-						;// maybe check if ts.time(0) is within interval, then work the way through
-						if (p.contains(ts.time(0))) {
-							is = 0; //proceed as normal in this interval
-						}  else {
-							r.push_back(rv);//emit result for this interval and go to next
-							continue;
-						}
-					}
-					// process all values relevant for this interval, 
-					// the first value could be lhs value of the interval (could be interesting)
-					// the next value could be in the interval or first on rhs(exit condition)
-					if (is<is_max && ts.time(is)<p.start) {
-						//point is left of current interval
-						++is;//now we are: a) inside interval, b) after interval or end
-					}
-					while (is < is_max && ts.time(is) < p.end) {
-						rv = fx(rv, ts.value(is));
-						++is;//advance is, next could be in a) interval, or first right of interval
-					}
-					r.push_back(rv);// we are at end of is
-				}
-				return r;
-			}
-		};
-	} 
-}
 namespace shyfttest {
     const double EPS = 1.0e-8;
     using namespace std;
@@ -205,6 +141,20 @@ TEST_CASE("ts_statistics") {
 			}
 		}
 	}
+    SUBCASE("min_max_on_ts_no_overlap") {
+        auto ta2 = ta;
+        ta2.t = ta.total_period().end;
+        
+        statistics<decltype(ts), decltype(ta)> s(ts,ta2);
+        auto rmin = s.extract(nan_min);
+        auto rmax = s.extract(nan_max);
+        FAST_CHECK_EQ(rmin.size(), ts.size());
+        FAST_CHECK_EQ(rmax.size(), ts.size());
+        for (size_t i = 0; i < rmin.size(); ++i) {
+            FAST_CHECK_EQ(isfinite(rmax[i]), false);
+            FAST_CHECK_EQ(isfinite(rmin[i]), false);
+        }
+    }
 	SUBCASE("min_max_on_ts_with_partial_overlap_high_resolution_ta") {
 		time_axis::fixed_dt th(ta.start() + deltaminutes(61), deltaminutes(20), 3);
 		// 00:00       01:00               02:00       03:00
@@ -224,6 +174,24 @@ TEST_CASE("ts_statistics") {
 		FAST_CHECK_LE(fabs(rmax[2] - 3.0), 0.0001);
 
 	}
+    SUBCASE("min_max_on_ts_with_partial_overlap_low_resolution_ta") {
+        time_axis::fixed_dt tl(ta.start() + deltahours(1), deltahours(3), 1);
+        // 00:00       01:00    02:00     03:00    04:00
+        //  1.0         2.0      3.0       4.0      5.0
+        //             01:00......:.........:......04:00..
+        // expected      2.0 | 4.0
+        statistics<decltype(ts), decltype(tl)> s(ts, tl);
+        auto rmin = s.extract(nan_min);
+        auto rmax = s.extract(nan_max);
+        FAST_CHECK_EQ(rmin.size(), tl.size());
+        FAST_CHECK_EQ(rmax.size(), tl.size());
+        FAST_CHECK_EQ(isfinite(rmin[0]), true);
+        FAST_CHECK_EQ(isfinite(rmax[0]), true);
+        FAST_CHECK_LE(fabs(rmin[0] - 2.0), 0.0001);
+        FAST_CHECK_LE(fabs(rmax[0] - 4.0), 0.0001);
+
+    }
+
 }
 
 TEST_CASE("test_point_timeaxis") {
@@ -953,8 +921,8 @@ TEST_CASE("test_ts_statistics_calculations") {
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, calendar::DAY, n_days);
     auto tsv1 = create_test_ts(n_ts, ta, fx_1);
-    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100});
-    TS_ASSERT_EQUALS(size_t(6), r1.size());//, "expect ts equal to percentiles wanted");
+    auto r1 = calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100,-1000,+1000});
+    TS_ASSERT_EQUALS(size_t(8), r1.size());//, "expect ts equal to percentiles wanted");
     // using excel percentile.inc(..) as correct answer, values 0..9 incl
     TS_ASSERT_DELTA(r1[0].value(0), 0.0,0.0001);// " 0-percentile");
     TS_ASSERT_DELTA(r1[1].value(0), 0.9,0.0001);// "10-percentile");
@@ -962,7 +930,8 @@ TEST_CASE("test_ts_statistics_calculations") {
     TS_ASSERT_DELTA(r1[3].value(0), 4.5,0.0001);// "avg");
     TS_ASSERT_DELTA(r1[4].value(0), 6.3,0.0001);// "70-percentile");
     TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
-    //cout<<"Done statistics tests!"<<endl;
+    TS_ASSERT_DELTA(r1[6].value(0), 0.0, 0.0001);// "-1000 min xtreme");
+    TS_ASSERT_DELTA(r1[7].value(0), 9.0, 0.0001);// "+1000 max xtreme");
 }
 
 /** just verify that it calculate at full speed */
