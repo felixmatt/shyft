@@ -6,7 +6,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 using namespace std;
 using namespace shyft;

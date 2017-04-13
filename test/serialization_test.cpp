@@ -2,7 +2,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -35,7 +35,7 @@ static T serialize_loop(const T& o) {
 
 
 template<class TA>
-static bool is_equal(const timeseries::point_ts<TA>& a,const timeseries::point_ts<TA>&b) {
+static bool is_equal(const time_series::point_ts<TA>& a,const time_series::point_ts<TA>&b) {
     if(a.size()!=b.size())
         return false;
     if(a.time_axis().total_period()!=b.time_axis().total_period())
@@ -120,35 +120,35 @@ TEST_CASE("test_serialization") {
     // 3. time-series
     //
 
-    timeseries::point_ts<time_axis::fixed_dt> ts(ta,1.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+    time_series::point_ts<time_axis::fixed_dt> ts(ta,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto ts2 = serialize_loop(ts);
     TS_ASSERT(is_equal(ts,ts2));
     time_axis::point_dt tap(vector<utctime>{0,3600},3600*2);
-    auto tsp=make_shared<timeseries::point_ts<time_axis::point_dt>>(tap,2.0,timeseries::fx_policy_t::POINT_INSTANT_VALUE);
+    auto tsp=make_shared<time_series::point_ts<time_axis::point_dt>>(tap,2.0,time_series::ts_point_fx::POINT_INSTANT_VALUE);
     auto tsp2 = serialize_loop(tsp);
     TS_ASSERT(is_equal(*tsp,*tsp2));
 
-    timeseries::periodic_ts<decltype(ta)> tspp(vector<double>{1.0,10.0,2.0,3.0},deltahours(1),utc.time(2016,1,1),ta);
+    time_series::periodic_ts<decltype(ta)> tspp(vector<double>{1.0,10.0,2.0,3.0},deltahours(1),utc.time(2016,1,1),ta);
     auto tspp2=serialize_loop(tspp);
     TS_ASSERT(is_equal(tspp,tspp2));
 
 #if 0
-    timeseries::time_shift_ts<decltype(ts)> tsts(ts,deltahours(3600));
+    time_series::time_shift_ts<decltype(ts)> tsts(ts,deltahours(3600));
     auto tsts2 = serialize_loop(tsts);
     TS_ASSERT(is_equal(tsts,tsts2));
 
-    timeseries::average_ts<decltype(ts),decltype(ta) > tsavg(ts,ta);
+    time_series::average_ts<decltype(ts),decltype(ta) > tsavg(ts,ta);
     auto tsavg2=serialize_loop(tsavg);
     TS_ASSERT(is_equal(tsts,tsts2));
 
-    timeseries::accumulate_ts<decltype(ts),decltype(ta) > tsacc(ts,ta);
+    time_series::accumulate_ts<decltype(ts),decltype(ta) > tsacc(ts,ta);
     auto tsacc2=serialize_loop(tsacc);
     TS_ASSERT(is_equal(tsacc,tsacc2));
 
 
 
 
-    timeseries::glacier_melt_ts<decltype(ts)> tsgm(ts,ts,1000.0,6.2);
+    time_series::glacier_melt_ts<decltype(ts)> tsgm(ts,ts,1000.0,6.2);
     auto tsgm2=serialize_loop(tsgm);
     TS_ASSERT(is_equal(tsgm,tsgm2));
 
@@ -191,7 +191,7 @@ TEST_CASE("test_serialization") {
     TS_ASSERT(is_equal(apts,apts2));
 
     api::aref_ts arts("netcdf://file.nc");
-    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto arts2=serialize_loop(arts);
     TS_ASSERT_EQUALS(arts.rep.ref,arts2.rep.ref);
     TS_ASSERT(is_equal(arts,arts2));
@@ -246,6 +246,7 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    f.do_bind();
     // then retry evaluate
     try {
         double v0=f.value(0);
@@ -263,6 +264,7 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    a_f.do_bind();
     TS_ASSERT_DELTA(f.value(0), a_f.value(0), 1e-9);
 }
 
@@ -363,7 +365,7 @@ TEST_CASE("test_serialization_memcpy_performance") {
                         c++;
                         cv.notify_all();
                     }
-                    
+
                     delete y;
                 }
                 )

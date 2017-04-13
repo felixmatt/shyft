@@ -73,10 +73,7 @@
       <Filter>optimizers</Filter>
     </ClInclude>
     <ClInclude Include="time_axis.h">
-      <Filter>timeseries</Filter>
-    </ClInclude>
-    <ClInclude Include="timeseries.h">
-      <Filter>timeseries</Filter>
+      <Filter>time_series</Filter>
     </ClInclude>
     <ClInclude Include="experimental.h">
       <Filter>experimental</Filter>
@@ -129,6 +126,12 @@
     <ClInclude Include="unit_conversion.h" />
     <ClInclude Include="routing.h" />
     <ClInclude Include="dtss.h" />
+    <ClInclude Include="time_series.h">
+      <Filter>time_series</Filter>
+    </ClInclude>
+    <ClInclude Include="time_series_statistics.h">
+      <Filter>time_series</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -139,9 +142,6 @@
     </Filter>
     <Filter Include="optimizers">
       <UniqueIdentifier>{78462948-0cca-48de-87be-68b894e215d0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="timeseries">
-      <UniqueIdentifier>{13f6913a-d13d-40c2-9f91-4a3df6583322}</UniqueIdentifier>
     </Filter>
     <Filter Include="experimental">
       <UniqueIdentifier>{21ba19cc-d2a8-48b9-8aa3-509b9bb7fbc5}</UniqueIdentifier>
@@ -160,6 +160,9 @@
     </Filter>
     <Filter Include="serialization">
       <UniqueIdentifier>{8c1c0ee1-88a9-4160-9892-7527d60172b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time_series">
+      <UniqueIdentifier>{13f6913a-d13d-40c2-9f91-4a3df6583322}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

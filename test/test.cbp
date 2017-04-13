@@ -13,7 +13,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-tc=test_dlib_server" />
+				<Option parameters="-ts=time_series.h" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -40,7 +40,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=dlib_server_basics" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_binary_operator" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -178,7 +178,7 @@
 		<Unit filename="time_axis_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
-		<Unit filename="timeseries_test.cpp">
+		<Unit filename="time_series_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="utctime_utilities_test.cpp">

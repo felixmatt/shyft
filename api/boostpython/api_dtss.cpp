@@ -15,7 +15,7 @@
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
 
-#include "api/timeseries.h"
+#include "api/time_series.h"
 #include "core/dtss.h"
 #include "dlib/timer.h"
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
@@ -78,7 +78,7 @@ namespace shyft {
                     // for testing, just fill in constant values.
                     api::gta_t ta(p.start, core::deltahours(1), p.timespan() / core::deltahours(1));
                     for (size_t i = 0;i < ts_ids.size();++i)
-                        r.emplace_back(ta, double(i), timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                        r.emplace_back(ta, double(i), time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 }
                 return r;
             }

@@ -5,12 +5,12 @@
 #include "core/geo_cell_data.h"
 #include "core/geo_point.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::core::pt_gs_k;
 using namespace shyfttest;
@@ -21,8 +21,8 @@ namespace gs = shyft::core::gamma_snow;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
-
-typedef TSPointTarget<point_timeaxis> catchment_t;
+namespace ta = shyft::time_axis;
+typedef TSPointTarget<ta::point_dt> catchment_t;
 
 static std::ostream& operator<<(std::ostream& os, const point& pt) {
     os << calendar().to_string(pt.t) << ", " << pt.v;
@@ -48,9 +48,9 @@ TEST_CASE("test_call_stack") {
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
 
-    point_timeaxis time_axis(times);
+    ta::point_dt time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times);
+    ta::point_dt state_axis(times);
 
     // Initialize parameters
     pt::parameter pt_param;
@@ -69,12 +69,12 @@ TEST_CASE("test_call_stack") {
 
     // Initialize collectors
     shyfttest::mock::PTGSKResponseCollector response_collector(time_axis.size());
-    shyfttest::mock::StateCollector<point_timeaxis> state_collector(state_axis);
+    shyfttest::mock::StateCollector<ta::point_dt> state_collector(state_axis);
 
     state state{gs_state, kirchner_state};
     parameter parameter{pt_param, gs_param, ae_param, k_param,  p_corr_param};
     geo_cell_data geo_cell;
-    pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,
+    pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor,
                          response>(geo_cell, parameter, time_axis,0,0, temp, prec, wind_speed,
                                      rel_hum, radiation, state, state_collector, response_collector);
     for(size_t i=0;i<n_ts_points+1;++i) { // state have one extra point
@@ -97,9 +97,9 @@ TEST_CASE("test_raster_call_stack") {
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    shyft::timeseries::point_timeaxis time_axis(times);
+    ta::point_dt time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times);
+    ta::point_dt state_axis(times);
 
     // 10 catchments numbered from 0 to 9.
     std::vector<catchment_t> catchment_discharge;
@@ -141,11 +141,11 @@ TEST_CASE("test_raster_call_stack") {
     for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge,&state_axis] (PTGSKCell& d) mutable {
         auto time = time_axis.time(0);
 
-        shyfttest::mock::StateCollector<point_timeaxis> sc(state_axis);
-        shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);
+        shyfttest::mock::StateCollector<ta::point_dt> sc(state_axis);
+        shyfttest::mock::DischargeCollector<ta::point_dt> rc(1000 * 1000, time_axis);
         //PTGSKResponseCollector rc(time_axis.size());
 
-        pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
+        pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
               d.temperature(),
               d.precipitation(),
               d.wind_speed(),
@@ -176,8 +176,8 @@ TEST_CASE("test_mass_balance") {
     utctime t0 = cal.time(2014, 8, 1, 0, 0, 0);
     utctimespan dt=deltahours(1);
     const int n=1;
-    timeaxis tax(t0,dt,n);
-	timeaxis tax_state(t0, dt, n + 1);
+    ta::fixed_dt tax(t0,dt,n);
+	ta::fixed_dt tax_state(t0, dt, n + 1);
     pt::parameter pt_param;
     gs::parameter gs_param;
     ae::parameter ae_param;

@@ -27,7 +27,7 @@ namespace expose {
 		dst->reserve(points.size());
 		double std_nan = std::numeric_limits<double>::quiet_NaN();
 		for (const auto& gp : points)
-			dst->emplace_back(gp, sa::apoint_ts(time_axis, std_nan, shyft::timeseries::point_interpretation_policy::POINT_AVERAGE_VALUE));
+			dst->emplace_back(gp, sa::apoint_ts(time_axis, std_nan, shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE));
 		return dst;
 	}
 
@@ -42,7 +42,7 @@ namespace expose {
     ///< a local wrapper with api-typical checks on the input to support use from python
     static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
         using namespace std;
-        typedef shyft::timeseries::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
+        typedef shyft::time_series::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
         // 1. some minor checks to give the python user early warnings.
         validate_parameters(src, dst_points, time_axis);
         auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points, time_axis);
@@ -82,7 +82,7 @@ namespace expose {
             throw std::runtime_error("the supplied parameter z_scale used to scale vertical distance must be >= 0.0");
 
         auto dst = make_dest_geo_ts<geo_ts_vector>(dst_points,time_axis);
-        typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+        typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 
         if(src->size()>1) {
             // make accessor for the observations
@@ -210,7 +210,7 @@ namespace expose {
     }
 
 	static geo_temperature_vector_ idw_temperature(geo_temperature_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::temperature_parameter idw_temp_p) {
-		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+		typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::TemperatureSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::temperature_model<idw_gts_t, sa::TemperatureSource, idw::temperature_parameter, sc::geo_point, idw::temperature_gradient_scale_computer> idw_temperature_model_t;
 
@@ -223,7 +223,7 @@ namespace expose {
 	}
 
 	static geo_precipitation_vector_ idw_precipitation(geo_precipitation_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::precipitation_parameter idw_p) {
-		typedef shyft::timeseries::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+		typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
 		typedef sc::idw_compliant_geo_point_ts<sa::PrecipitationSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
 		typedef idw::precipitation_model<idw_gts_t, sa::PrecipitationSource, idw::precipitation_parameter, sc::geo_point> idw_precipitation_model_t;
 

@@ -14,7 +14,7 @@
 
 using namespace std;
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::api;
 

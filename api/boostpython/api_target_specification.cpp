@@ -4,7 +4,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "api/api.h"
 #include "core/model_calibration.h"
 

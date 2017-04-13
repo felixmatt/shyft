@@ -42,7 +42,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath);$(SHYFT_DEPENDENCIES)\boost;$(SHYFT_DEPENDENCIES)\armadillo\include;$(SHYFT_DEPENDENCIES)\dlib;$(BOOST_PYTHONHOME)\Include;$(BOOST_PYTHONHOME)\Lib\site-packages\numpy\core\include</IncludePath>
-    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(BOOST_PYTHONHOME)\libs;$(SHYFT_DEPENDENCIES)\blaslapack;$(SHYFT_DEPENDENCIES)\dlib\build\dlib\Release;</LibraryPath>
+    <LibraryPath>$(LibraryPath);$(SHYFT_DEPENDENCIES)\boost\stage\lib;$(BOOST_PYTHONHOME)\libs;$(SHYFT_DEPENDENCIES)\blaslapack;$(SHYFT_DEPENDENCIES)\dlib\build\dlib\Debug;</LibraryPath>
     <TargetName>_api</TargetName>
     <TargetExt>.pyd</TargetExt>
     <ExtensionsToDeleteOnClean>*.pyd;*.cdf;*.cache;*.obj;*.ilk;*.resources;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;*.tlog;*.manifest;*.res;*.pch;*.exp;*.idb;*.rep;*.xdc;*.pdb;*_manifest.rc;*.bsc;*.sbr;*.xml;*.metagen;*.bi</ExtensionsToDeleteOnClean>

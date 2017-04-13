@@ -7,9 +7,9 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 
-#include "timeseries.h"
+#include "time_series.h"
 #include "api_state.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
@@ -103,7 +103,7 @@ void shyft::api::convolve_w_ts::serialize(Archive & ar, const unsigned int versi
 // kind of special, mix core and api, hmm!
 template<>
 template <class Archive>
-void shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ts", ts)
     & make_nvp("fx_policy", fx_policy)
@@ -121,6 +121,7 @@ void shyft::api::abin_op_ts::serialize(Archive & ar, const unsigned int version)
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 
@@ -133,6 +134,7 @@ void shyft::api::abin_op_scalar_ts::serialize(Archive & ar, const unsigned int v
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 
@@ -145,6 +147,7 @@ void shyft::api::abin_op_ts_scalar::serialize(Archive & ar, const unsigned int v
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bound",bound)
     ;
 }
 
@@ -184,7 +187,7 @@ x_serialize_implement(shyft::api::integral_ts);
 x_serialize_implement(shyft::api::accumulate_ts);
 x_serialize_implement(shyft::api::time_shift_ts);
 x_serialize_implement(shyft::api::periodic_ts);
-x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>);
+x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);
 x_serialize_implement(shyft::api::convolve_w_ts);
 x_serialize_implement(shyft::api::abin_op_scalar_ts);
 x_serialize_implement(shyft::api::abin_op_ts);
@@ -213,7 +216,7 @@ x_arch(shyft::api::integral_ts);
 x_arch(shyft::api::accumulate_ts);
 x_arch(shyft::api::time_shift_ts);
 x_arch(shyft::api::periodic_ts);
-x_arch(shyft::timeseries::convolve_w_ts<shyft::api::apoint_ts>);
+x_arch(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);
 x_arch(shyft::api::convolve_w_ts);
 x_arch(shyft::api::abin_op_scalar_ts);
 x_arch(shyft::api::abin_op_ts);

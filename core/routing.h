@@ -1,7 +1,7 @@
 #pragma once
 #include "geo_cell_data.h"
 #include "time_axis.h"
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
     namespace core {
@@ -110,7 +110,7 @@ namespace shyft {
              * \tparam Ts any ts supporting .size() and .value().
              * \param ts time-series for which we extract all values
              * \return a std::vector<double> with the values
-             * \note maybe candidate for timeseries, but keep it here for now
+             * \note maybe candidate for time_series, but keep it here for now
              */
             template <class Ts>
             inline std::vector<double> ts_values(const Ts& ts) {
@@ -262,9 +262,9 @@ namespace shyft {
 
             template<class C>
             struct model {
-                typedef ::shyft::timeseries::point_ts<::shyft::time_axis::fixed_dt> rts_t; // the result computed in the cell.rc.avg_discharge [m3/s]
+                typedef ::shyft::time_series::point_ts<::shyft::time_axis::fixed_dt> rts_t; // the result computed in the cell.rc.avg_discharge [m3/s]
                 //typedef typename C::output_m3s_t ots_t; // the output result from the cell, it's a convolution_w_ts<rts_t>..
-                //typedef typename shyft::timeseries::uniform_sum_ts<ots_t> sum_ts_t; // could be possible using api::apoint_ts
+                //typedef typename shyft::time_series::uniform_sum_ts<ots_t> sum_ts_t; // could be possible using api::apoint_ts
 
                 //std::map<int, river> river_map; ///< keeps structure and routing properties
                 std::shared_ptr<river_network> rivers;
@@ -314,9 +314,9 @@ namespace shyft {
                 /** compute the cell_output, taking the cell-route to routing river into consideration
                  *
                  */
-                timeseries::convolve_w_ts<rts_t> cell_output_m3s(const C&c ) const {
+                time_series::convolve_w_ts<rts_t> cell_output_m3s(const C&c ) const {
                     // return discharge, notice that this function assumes that time_axis() do have a uniform delta() (requirement)
-                    return timeseries::convolve_w_ts<rts_t>(c.rc.avg_discharge,cell_uhg(c,ta.delta()),timeseries::convolve_policy::USE_ZERO);
+                    return time_series::convolve_w_ts<rts_t>(c.rc.avg_discharge,cell_uhg(c,ta.delta()),time_series::convolve_policy::USE_ZERO);
                 }
 
 
@@ -324,7 +324,7 @@ namespace shyft {
                  *
                  */
                 rts_t local_inflow(int node_id) const {
-                    rts_t r(ta,0.0,timeseries::POINT_AVERAGE_VALUE);// default null to null ts.
+                    rts_t r(ta,0.0,time_series::POINT_AVERAGE_VALUE);// default null to null ts.
                     for (const auto& c : *cells) {
                         if (c.geo.routing.id == node_id) {
                             auto node_output_m3s (cell_output_m3s(c));
@@ -340,7 +340,7 @@ namespace shyft {
                  * and collect *all* upstream flow
                  */
                 rts_t upstream_inflow(int node_id) const {
-                    rts_t r(ta, 0.0, timeseries::POINT_AVERAGE_VALUE);
+                    rts_t r(ta, 0.0, time_series::POINT_AVERAGE_VALUE);
                     auto upstream_ids=rivers->upstreams_by_id(node_id);
                     for(auto upstream_id:upstream_ids) {
                         auto flow_m3s= output_m3s(upstream_id);
@@ -360,8 +360,8 @@ namespace shyft {
                     utctimespan dt = ta.delta(); // for now need to pick up delta from the sources
                     std::vector<double> uhg_weights = rivers->river_by_id(node_id).uhg(dt);
                     auto sum_input_m3s = local_inflow(node_id)+ upstream_inflow(node_id);
-                    auto response = timeseries::convolve_w_ts<decltype(sum_input_m3s)>(sum_input_m3s, uhg_weights, timeseries::convolve_policy::USE_ZERO);
-                    return rts_t(ta, ts_values(response), timeseries::POINT_AVERAGE_VALUE); // flatten values
+                    auto response = time_series::convolve_w_ts<decltype(sum_input_m3s)>(sum_input_m3s, uhg_weights, time_series::convolve_policy::USE_ZERO);
+                    return rts_t(ta, ts_values(response), time_series::POINT_AVERAGE_VALUE); // flatten values
                 }
 
             };

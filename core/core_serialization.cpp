@@ -7,7 +7,7 @@
 
 #include "utctime_utilities.h"
 #include "time_axis.h"
-#include "timeseries.h"
+#include "time_series.h"
 #include "geo_cell_data.h"
 #include "hbv_snow.h"
 #include "hbv_soil.h"
@@ -113,7 +113,7 @@ void shyft::time_axis::generic_dt::serialize(Archive & ar,const unsigned int ver
 //-- time-series serialization
 template <class Ta>
 template <class Archive>
-void shyft::timeseries::point_ts<Ta>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::point_ts<Ta>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("time_axis", ta)
     & make_nvp("fx_policy", fx_policy)
@@ -122,27 +122,27 @@ void shyft::timeseries::point_ts<Ta>::serialize(Archive & ar, const unsigned int
 }
 template <class TS>
 template <class Archive>
-void shyft::timeseries::ref_ts<TS>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::ref_ts<TS>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ref", ref)
-    & make_nvp("fx_policy", fx_policy)
     & make_nvp("ts", ts)
     ;
 }
 
 template <class Ts>
 template <class Archive>
-void shyft::timeseries::time_shift_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::time_shift_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ts", ts)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
     & make_nvp("dt", dt)
+    & make_nvp("bound",bound)
     ;
 }
 template <class Ts, class Ta>
 template <class Archive>
-void shyft::timeseries::average_ts<Ts, Ta>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::average_ts<Ts, Ta>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ts", ts)
     & make_nvp("ta", ta)
@@ -152,7 +152,7 @@ void shyft::timeseries::average_ts<Ts, Ta>::serialize(Archive & ar, const unsign
 
 template <class Ts, class Ta>
 template <class Archive>
-void shyft::timeseries::accumulate_ts<Ts, Ta>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::accumulate_ts<Ts, Ta>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ts", ts)
     & make_nvp("ta", ta)
@@ -161,7 +161,7 @@ void shyft::timeseries::accumulate_ts<Ts, Ta>::serialize(Archive & ar, const uns
 }
 
 template <class Archive>
-void shyft::timeseries::profile_description::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::profile_description::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("t0", t0)
     & make_nvp("dt", dt)
@@ -170,7 +170,7 @@ void shyft::timeseries::profile_description::serialize(Archive & ar, const unsig
 }
 template <class TA>
 template <class Archive>
-void shyft::timeseries::profile_accessor<TA>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::profile_accessor<TA>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ta", ta)
     & make_nvp("profile", profile)
@@ -180,7 +180,7 @@ void shyft::timeseries::profile_accessor<TA>::serialize(Archive & ar, const unsi
 
 template <class TA>
 template <class Archive>
-void shyft::timeseries::periodic_ts<TA>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::periodic_ts<TA>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ta", ta)
     & make_nvp("pa", pa)
@@ -189,7 +189,7 @@ void shyft::timeseries::periodic_ts<TA>::serialize(Archive & ar, const unsigned 
 }
 template <class TS_A, class TS_B>
 template <class Archive>
-void shyft::timeseries::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("temperature", temperature)
     & make_nvp("sca_m2", sca_m2)
@@ -201,7 +201,7 @@ void shyft::timeseries::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, con
 
 template <class Ts>
 template <class Archive>
-void shyft::timeseries::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ts", ts)
     & make_nvp("fx_policy", fx_policy)
@@ -212,14 +212,17 @@ void shyft::timeseries::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigne
 
 template <class A, class B, class O, class TA>
 template<class Archive>
-void shyft::timeseries::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsigned int version) {
+void shyft::time_series::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsigned int version) {
+    bool bd=bind_done;
     ar
     //& make_nvp("op",o.op) // not needed yet, needed when op starts to carry data
     & make_nvp("lhs", lhs)
     & make_nvp("rhs", rhs)
     & make_nvp("ta", ta)
     & make_nvp("fx_policy", fx_policy)
+    & make_nvp("bind_done",bind_done)
     ;
+    bind_done = bd;
 }
 
 //-- basic geo stuff
@@ -362,30 +365,30 @@ x_serialize_implement(shyft::time_axis::generic_dt);
 
 //-- export core time-series (except binary-ops)
 
-x_serialize_implement(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
-x_serialize_implement(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
-x_serialize_implement(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
-x_serialize_implement(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
+x_serialize_implement(shyft::time_series::point_ts<shyft::time_axis::fixed_dt>);
+x_serialize_implement(shyft::time_series::point_ts<shyft::time_axis::calendar_dt>);
+x_serialize_implement(shyft::time_series::point_ts<shyft::time_axis::point_dt>);
+x_serialize_implement(shyft::time_series::point_ts<shyft::time_axis::generic_dt>);
 
-x_serialize_implement(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
-x_serialize_implement(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>>);
-x_serialize_implement(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>);
-x_serialize_implement(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+x_serialize_implement(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_serialize_implement(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_serialize_implement(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
-x_serialize_implement(shyft::timeseries::profile_description);
-x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::fixed_dt>);
-x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::calendar_dt>);
-x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::point_dt>);
-x_serialize_implement(shyft::timeseries::profile_accessor<shyft::time_axis::generic_dt>);
+x_serialize_implement(shyft::time_series::profile_description);
+x_serialize_implement(shyft::time_series::profile_accessor<shyft::time_axis::fixed_dt>);
+x_serialize_implement(shyft::time_series::profile_accessor<shyft::time_axis::calendar_dt>);
+x_serialize_implement(shyft::time_series::profile_accessor<shyft::time_axis::point_dt>);
+x_serialize_implement(shyft::time_series::profile_accessor<shyft::time_axis::generic_dt>);
 
-x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
-x_serialize_implement(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
 
-x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::fixed_dt>);
-x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::calendar_dt>);
-x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::point_dt>);
-x_serialize_implement(shyft::timeseries::periodic_ts<shyft::time_axis::generic_dt>);
+x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::fixed_dt>);
+x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::calendar_dt>);
+x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::point_dt>);
+x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::generic_dt>);
 
 //-- export method and method-stack state
 x_serialize_implement(shyft::core::hbv_snow::state);
@@ -418,28 +421,28 @@ x_arch(shyft::time_axis::calendar_dt);
 x_arch(shyft::time_axis::point_dt);
 x_arch(shyft::time_axis::generic_dt);
 
-x_arch(shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>);
-x_arch(shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>);
-x_arch(shyft::timeseries::point_ts<shyft::time_axis::point_dt>);
-x_arch(shyft::timeseries::point_ts<shyft::time_axis::generic_dt>);
+x_arch(shyft::time_series::point_ts<shyft::time_axis::fixed_dt>);
+x_arch(shyft::time_series::point_ts<shyft::time_axis::calendar_dt>);
+x_arch(shyft::time_series::point_ts<shyft::time_axis::point_dt>);
+x_arch(shyft::time_series::point_ts<shyft::time_axis::generic_dt>);
 
-x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
-x_arch(shyft::timeseries::convolve_w_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+x_arch(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::time_series::convolve_w_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
-x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::fixed_dt>>);
-x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::calendar_dt>>);
-x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::point_dt>>);
-x_arch(shyft::timeseries::ref_ts<shyft::timeseries::point_ts<shyft::time_axis::generic_dt>>);
+x_arch(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_arch(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_arch(shyft::time_series::ref_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
-x_arch(shyft::timeseries::profile_description);
-x_arch(shyft::timeseries::profile_accessor<shyft::time_axis::fixed_dt>);
-x_arch(shyft::timeseries::profile_accessor<shyft::time_axis::calendar_dt>);
-x_arch(shyft::timeseries::profile_accessor<shyft::time_axis::point_dt>);
-x_arch(shyft::timeseries::profile_accessor<shyft::time_axis::generic_dt>);
-x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::fixed_dt>);
-x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::calendar_dt>);
-x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::point_dt>);
-x_arch(shyft::timeseries::periodic_ts<shyft::time_axis::generic_dt>);
+x_arch(shyft::time_series::profile_description);
+x_arch(shyft::time_series::profile_accessor<shyft::time_axis::fixed_dt>);
+x_arch(shyft::time_series::profile_accessor<shyft::time_axis::calendar_dt>);
+x_arch(shyft::time_series::profile_accessor<shyft::time_axis::point_dt>);
+x_arch(shyft::time_series::profile_accessor<shyft::time_axis::generic_dt>);
+x_arch(shyft::time_series::periodic_ts<shyft::time_axis::fixed_dt>);
+x_arch(shyft::time_series::periodic_ts<shyft::time_axis::calendar_dt>);
+x_arch(shyft::time_series::periodic_ts<shyft::time_axis::point_dt>);
+x_arch(shyft::time_series::periodic_ts<shyft::time_axis::generic_dt>);
 
 x_arch(shyft::core::geo_point);
 x_arch(shyft::core::land_type_fractions);

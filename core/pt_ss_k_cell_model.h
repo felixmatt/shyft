@@ -46,13 +46,13 @@ namespace shyft {
                 /**\brief Called before run to allocate space for results */
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
-                    ts_init(avg_discharge           ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(charge_m3s              ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(snow_total_stored_water ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(snow_outflow            ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(glacier_melt            ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(ae_output               ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(pe_output               ,time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(avg_discharge           ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(charge_m3s              ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(snow_total_stored_water ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(snow_outflow            ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(glacier_melt            ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(ae_output               ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(pe_output               ,time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
                 }
 
                 /**\brief Called at each time step to collect responses
@@ -98,10 +98,10 @@ namespace shyft {
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
                     auto ta = collect_snow ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
-                    ts_init(avg_discharge, time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(charge_m3s   , time_axis, start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(snow_sca, ta,start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
-                    ts_init(snow_swe, ta,start_step, n_steps, fx_policy_t::POINT_AVERAGE_VALUE);
+                    ts_init(avg_discharge, time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(charge_m3s   , time_axis, start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(snow_sca, ta,start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
+                    ts_init(snow_swe, ta,start_step, n_steps, ts_point_fx::POINT_AVERAGE_VALUE);
                 }
 
 
@@ -166,13 +166,13 @@ namespace shyft {
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
                     timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
-                    ts_init(kirchner_discharge, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_sca, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_swe, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_alpha, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_nu, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_lwc, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
-                    ts_init(snow_residual, ta, start_step, n_steps, fx_policy_t::POINT_INSTANT_VALUE);
+                    ts_init(kirchner_discharge, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_sca, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_swe, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_alpha, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_nu, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_lwc, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    ts_init(snow_residual, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                 }
 
                 /** called by the cell.run for each new state*/
