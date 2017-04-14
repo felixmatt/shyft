@@ -178,7 +178,7 @@ TEST_CASE("test_step") {
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
 	gs::parameter param;
-    shyft::timeseries::utctime dt = shyft::core::deltahours(1);
+    shyft::time_series::utctime dt = shyft::core::deltahours(1);
 
 	gs::state states(0.0, 1.0, 0.0, 1.0 / (param.snow_cv*param.snow_cv), 10.0, -1.0, 0.0, 0.0);
 	gs::response response;

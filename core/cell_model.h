@@ -1,17 +1,17 @@
 #pragma once
 
 
-#include "timeseries.h"
+#include "time_series.h"
 #include "geo_cell_data.h"
 
 namespace shyft {
     namespace core {
-		using namespace shyft::timeseries;
-
+		using namespace shyft::time_series;
+		using namespace shyft;
 		// and typedefs for commonly used types in the model
-		typedef point_ts<timeaxis> pts_t;
-		typedef constant_timeseries<timeaxis> cts_t;
-		typedef timeaxis timeaxis_t;
+		typedef point_ts<time_axis::fixed_dt> pts_t;
+		typedef constant_timeseries<time_axis::fixed_dt> cts_t;
+		typedef time_axis::fixed_dt timeaxis_t;
 
 
 		// cell-model goes here
@@ -24,7 +24,7 @@ namespace shyft {
 		* \see cell
 		* \tparam timeaxis type, the ts-type should all be constructible/resetable with a timeaxis and a fill-value.
 		*
-		* \tparam temperature_ts type for the temperature ts, usually a shyft::timeseries::points_ts<TA> type
+		* \tparam temperature_ts type for the temperature ts, usually a shyft::time_series::points_ts<TA> type
 		* \tparam precipitation_ts
 		* \tparam radiation_ts
 		* \tparam relhum_ts
@@ -60,7 +60,7 @@ namespace shyft {
 
 		///< environment variant with const relative humidity and wind (speed up calc &reduce mem)
 		typedef environment<timeaxis_t, pts_t, pts_t, pts_t, cts_t, cts_t> environment_const_rhum_and_wind_t;
-		///< environment type with all properties as general timeseries
+		///< environment type with all properties as general time_series
 		typedef environment<timeaxis_t, pts_t, pts_t, pts_t, pts_t, pts_t> environment_t;
 
 		///< utility function to create an instance of a environment based on function (auto-template by arguments)
@@ -138,7 +138,7 @@ namespace shyft {
 		};
         /**Utility function used to  initialize a pts_t in the core, typically making space, zero fill a ts
         *  prior to a run to ensure values are zero */
-        inline void ts_init(pts_t&ts, const timeaxis&ta, int start_step, int n_steps, fx_policy_t fx_policy) {
+        inline void ts_init(pts_t&ts, time_axis::fixed_dt const& ta, int start_step, int n_steps, ts_point_fx fx_policy) {
             if (ts.ta != ta || ta.size()==0 ) {
                 ts = pts_t(ta, 0.0, fx_policy);
             } else {
@@ -193,13 +193,13 @@ namespace shyft {
 				bool match_all = catchment_indexes.size() == 0;
 				for (const auto& c : cells) {
                     if (match_all) {
-                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                         r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                         sum_area += c.geo.area();
                     } else {
                         for (auto cid : catchment_indexes) {
                             if ( c.geo.catchment_id() == (size_t) cid) { // criteria
-                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                                 r->add_scale(cell_ts(c), c.geo.area());  // c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 sum_area += c.geo.area();
                                 break;
@@ -271,12 +271,12 @@ namespace shyft {
 
 				for (const auto& c : cells) {
                     if (match_all) {
-                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                        if(!r) r= make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                         r->add(cell_ts(c));
                     } else {
                         for (auto cid : catchment_indexes) {
                             if (c.geo.catchment_id() == (size_t)cid) { //criteria
-                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, point_interpretation_policy::POINT_AVERAGE_VALUE);
+                                if (!r) r = make_shared<pts_t>(cell_ts(c).ta, 0.0, ts_point_fx::POINT_AVERAGE_VALUE);
                                 r->add(cell_ts(c));  //c.env_ts.temperature, could be a feature(c) func return ref to ts
                                 break;
                             }

@@ -177,10 +177,13 @@
 		<Unit filename="time_axis.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
-		<Unit filename="timeseries.h">
+		<Unit filename="time_series.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
-		<Unit filename="unit_conversion.h">
+    <Unit filename="time_series_statistics.h">
+      <Option virtualFolder="time_series/" />
+    </Unit>
+    <Unit filename="unit_conversion.h">
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="utctime_utilities.cpp">
