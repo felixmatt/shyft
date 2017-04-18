@@ -146,7 +146,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         else:
             raise CFDataRepositoryError("Unrecognized selection criteria.")
 
-    def _convert_to_timeseries(self, data):
+    def _convert_to_timeseries(self, data_map):
         """Convert timeseries from numpy structures to shyft.api timeseries.
 
         We assume the time axis is regular, and that we can use a point time
@@ -161,7 +161,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         """
         tsc = api.TsFactory().create_point_ts
         time_series = {}
-        for key, (data, ta) in data.items():
+        for key, (data, ta) in data_map.items():
             fslice = (len(data.shape) - 2)*[slice(None)]
             I, J = data.shape[-2:]
 
@@ -171,7 +171,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
                 return tsc(ta.size(), ta.start, ta.delta_t,
-                           api.DoubleVector.FromNdArray(d.flatten()))
+                           api.DoubleVector.FromNdArray(d.flatten()),api.POINT_AVERAGE_VALUE)
             #time_series[key] = np.array([[construct(data[fslice + [i, j]])
             #                              for j in range(J)] for i in range(I)])
             time_series[key] = np.array([construct(data[:,j]) for j in range(J)])                                
