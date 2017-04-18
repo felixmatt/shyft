@@ -33,13 +33,13 @@ class ConfigSimulationTestCase(unittest.TestCase):
         discharge = simulator.region_model.statistics.discharge(cids)
 
         # Regression tests on discharge values
-        self.assertAlmostEqual(discharge.values[0], 0.08517, 3)
-        self.assertAlmostEqual(discharge.values[3], 2.748813, 3)  #
+        self.assertAlmostEqual(discharge.values[0],  0.0812, 3)
+        self.assertAlmostEqual(discharge.values[3], 3.988, 3)  #
         # x self.assertAlmostEqual(discharge.values[6400], 58.8385, 3) # was 58.9381,3 before glacier&fractions adjustments
         # x self.assertAlmostEqual(discharge.values[3578],5.5069,3)
         # glacier_melt, not much, but enough to test
         # x self.assertAlmostEqual(simulator.region_model.gamma_snow_response.glacier_melt(cids).values.to_numpy().max(),0.201625547258,4)
-        self.assertAlmostEqual(simulator.region_model.gamma_snow_response.glacier_melt(cids).values.to_numpy().max(), 0.11938204918828155, 4)
+        self.assertAlmostEqual(simulator.region_model.gamma_snow_response.glacier_melt(cids).values.to_numpy().max(), 0.12393672891230645, 4)
         # Regression tests on geo fractions
         self.assertAlmostEqual(simulator.region_model.cells[0].geo.land_type_fractions_info().unspecified(), 1.0, 3)
         self.assertAlmostEqual(simulator.region_model.cells[2].geo.land_type_fractions_info().unspecified(), 0.1433, 3)
