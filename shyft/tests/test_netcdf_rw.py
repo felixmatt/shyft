@@ -3,11 +3,11 @@ from os import path
 import os
 import numpy as np
 from netCDF4 import Dataset
-from netCDF4 import buffer
+#from netCDF4 import buffer
 from pyproj import Proj
-from pyproj import transform
+#from pyproj import transform
 
-from shyft import shyftdata_dir
+#from shyft import shyftdata_dir
 #from shyft.repository.netcdf.geo_ts_repository import GeoTsRepository
 #from shyft.repository.netcdf.yaml_config import YamlContent
 from shyft.api import Calendar
@@ -19,8 +19,8 @@ from shyft.api import point_interpretation_policy as point_fx
 from shyft.api import deltahours
 from shyft.api import DoubleVector as dv
 from shyft.api import GeoPoint
-from shyft import api
-from shyft import shyftdata_dir
+#from shyft import api
+#from shyft import shyftdata_dir
 from shyft.repository.netcdf.time_conversion import convert_netcdf_time
 from shyft.repository.netcdf.cf_geo_ts_repository import CFDataRepository
 
