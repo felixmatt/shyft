@@ -337,7 +337,7 @@ namespace shyft {
             utcperiod total_period() const  {switch( gt ) {default: case FIXED: return f.total_period(); case CALENDAR: return c.total_period(); case POINT: return p.total_period();}}
             utcperiod period( size_t i ) const {switch( gt ) {default: case FIXED: return f.period( i ); case CALENDAR: return c.period( i ); case POINT: return p.period( i );}}
             utctime     time( size_t i ) const {switch( gt ) {default: case FIXED: return f.time( i ); case CALENDAR: return c.time( i ); case POINT: return p.time( i );}}
-            size_t index_of( utctime t ) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t );}}
+            size_t index_of( utctime t ,size_t ix_hint=std::string::npos) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t,ix_hint );}}
             size_t open_range_index_of( utctime t, size_t ix_hint = std::string::npos) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t,ix_hint );}}
             x_serialize_decl();
         };
@@ -723,6 +723,59 @@ namespace shyft {
         /** specialization for all continuous time_axis types */
         template<typename T_A, typename T_B> // then take care of all the continuous type of time-axis, they all goes into generic_dt type
         struct combine_type < T_A, T_B, typename enable_if < T_A::continuous::value && T_B::continuous::value >::type > {typedef generic_dt type;};
+
+		//-- fixup missing index-hint for some time-axis-types
+		template<class TA  > inline size_t ta_index_of(TA const&ta, utctime t, size_t ix_hint) {	return ta.index_of(t);}
+		template<> inline size_t ta_index_of(time_axis::point_dt const&ta, utctime t, size_t ix_hint) { return ta.index_of(t, ix_hint);}
+		template<> inline size_t ta_index_of(time_axis::generic_dt const&ta, utctime t, size_t ix_hint) {	return ta.index_of(t, ix_hint);	}
+
+		/** \brief time_axis_transform finds index mapping from source to map-time-axis
+		*
+		* Given a source time-axis src, for each
+		* start of the map time-axis interval, find
+		* the right-most index of src (the one equal to or to the left of map time-axis period)
+		* and provide those through the .source_index() method.
+		*
+		*/
+		template<class TA1, class TA2>
+		struct time_axis_map {
+			TA1 const src;
+			size_t src_ix = string::npos;
+			TA2 const m;
+			time_axis_map(TA1 const&src, TA2 const&m)
+				:src(src), m(m) {}
+
+			inline size_t src_index(size_t i) {
+				if (i > m.size())
+					return string::npos;
+				src_ix = ta_index_of(src, m.time(i), src_ix);
+				return src_ix;
+			}
+		};
+
+
+		/** \brief specialize for fixed_dt time-axis, that can be done really fast
+		*/
+		template<>
+		struct time_axis_map<time_axis::fixed_dt, time_axis::fixed_dt> {
+			time_axis::fixed_dt src;
+			time_axis::fixed_dt m;
+
+			time_axis_map(time_axis::fixed_dt const& src, time_axis::fixed_dt const&m) :src(src), m(m) {}
+			inline size_t src_index(size_t im) const {
+				auto r = utctime((utctime(im)*m.dt + m.t - src.t) / src.dt);// (mis)using utctime as signed int64 here
+				if (r < 0 || r >= (utctime)src.n)
+					return std::string::npos;
+				return size_t(r);
+			}
+		};
+
+		/** \brief auto-deduce a time-axis transform adapted to the time-axis that we have
+		*/
+		template<class TA1, class TA2>
+		inline auto make_time_axis_map(TA1 const&src, TA2 const&m) {
+			return time_axis_map<TA1, TA2>(src, m);
+		}
     }
 }
 //--serialization support

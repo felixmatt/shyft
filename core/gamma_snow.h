@@ -18,7 +18,7 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 
-#include "timeseries.h"
+#include "time_series.h"
 #include <boost/math/special_functions/gamma.hpp>
 #include "utctime_utilities.h"
 
@@ -271,7 +271,7 @@ namespace shyft {
                   * \param forest_fraction 0..1, influences calculation of effective snow_cv
                   * \param altitude 0..x [m], influences calculation of effective_snow_cv
                   */
-                void step(S& s, R& r, shyft::timeseries::utctime t, shyft::timeseries::utctimespan dt,
+                void step(S& s, R& r, shyft::time_series::utctime t, shyft::time_series::utctimespan dt,
                           const P& p, const double T, const double rad, const double prec_mm_h,
                           const double wind_speed, const double rel_hum, const double forest_fraction,const double altitude) const {
                     // Some special cases treated first for efficiency

@@ -1,5 +1,6 @@
 #include "core/core_pch.h"
-#include "timeseries.h"
+#include "time_series.h"
+
 #include <dlib/statistics.h>
 
 namespace shyft{
@@ -19,6 +20,8 @@ namespace shyft{
        // add operators and functions to the apoint_ts class, of all variants that we want to expose
         apoint_ts average(const apoint_ts& ts,const gta_t& ta/*fx-type */)  { return apoint_ts(std::make_shared<average_ts>(ta,ts));}
         apoint_ts average(apoint_ts&& ts,const gta_t& ta)  { return apoint_ts(std::make_shared<average_ts>(ta,std::move(ts)));}
+        apoint_ts integral(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<integral_ts>(ta, ts)); }
+        apoint_ts integral(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<integral_ts>(ta, std::move(ts))); }
 
 		apoint_ts accumulate(const apoint_ts& ts, const gta_t& ta/*fx-type */) { return apoint_ts(std::make_shared<accumulate_ts>(ta, ts)); }
 		apoint_ts accumulate(apoint_ts&& ts, const gta_t& ta) { return apoint_ts(std::make_shared<accumulate_ts>(ta, std::move(ts))); }
@@ -66,13 +69,13 @@ namespace shyft{
         }
 
         // implement popular ct for apoint_ts to make it easy to expose & use
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,fill_value,point_fx)) {
         }
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,values,point_fx)) {
         }
-        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::generic_dt& ta,std::vector<double>&& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(ta,std::move(values),point_fx)) {
         }
 
@@ -84,23 +87,22 @@ namespace shyft{
                 throw runtime_error("this time-series is not bindable");
             if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
                 throw runtime_error("the supplied argument time-series must be a point ts");
-            dynamic_cast<aref_ts*>(ts.get())->rep.ts=
-            make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep );
+            dynamic_cast<aref_ts*>(ts.get())->rep.set_ts( make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep ));
         }
 
         // and python needs these:
-        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,double fill_value,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
         }
-        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::fixed_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
 
         // and python needs these:
-        apoint_ts::apoint_ts(const time_axis::point_dt& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,double fill_value,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),fill_value,point_fx) {
         }
-        apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,ts_point_fx point_fx)
             :apoint_ts(time_axis::generic_dt(ta),values,point_fx) {
         }
 		apoint_ts::apoint_ts(const rts_t &rts):
@@ -112,15 +114,18 @@ namespace shyft{
 		apoint_ts::apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta) :
 			apoint_ts(make_shared<periodic_ts>(pattern, dt,pattern_t0,ta)) {}
 
-        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,std::vector<double>&& values,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),std::move(values),point_fx)) {
         }
-        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,double fill_value,point_interpretation_policy point_fx)
+        apoint_ts::apoint_ts(time_axis::generic_dt&& ta,double fill_value,ts_point_fx point_fx)
             :ts(std::make_shared<gpoint_ts>(std::move(ta),fill_value,point_fx))
             {
         }
         apoint_ts apoint_ts::average(const gta_t &ta) const {
             return shyft::api::average(*this,ta);
+        }
+        apoint_ts apoint_ts::integral(const gta_t &ta) const {
+            return shyft::api::integral(*this, ta);
         }
 		apoint_ts apoint_ts::accumulate(const gta_t &ta) const {
 			return shyft::api::accumulate(*this, ta);
@@ -142,7 +147,9 @@ namespace shyft{
                     ;// maybe throw ?
             } else if (dynamic_cast<const api::average_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::average_ts*>(its.get())->ts, r);
-            } else if (dynamic_cast<const api::accumulate_ts*>(its.get())) {
+            } else if (dynamic_cast<const api::integral_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const api::integral_ts*>(its.get())->ts, r);
+            } else if(dynamic_cast<const api::accumulate_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::accumulate_ts*>(its.get())->ts, r);
             } else if (dynamic_cast<const api::time_shift_ts*>(its.get())) {
                 find_ts_bind_info(dynamic_cast<const api::time_shift_ts*>(its.get())->ts, r);
@@ -174,7 +181,7 @@ namespace shyft{
 			auto mk_raw_time_shift = [](const apoint_ts& ts, utctimespan dt)->apoint_ts {
 				return apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
 			};
-			return shyft::timeseries::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+			return shyft::time_series::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
 		}
 
         void apoint_ts::set(size_t i, double x) {
@@ -223,13 +230,13 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::timeseries::convolve_policy conv_policy) const {
+        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
             //-- use core calc here:
-            auto rp= shyft::timeseries::calculate_percentiles(ta,ts_list,percentile_list);
+            auto rp= shyft::time_series::calculate_percentiles(ta,ts_list,percentile_list);
             for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
             return r;
         }
@@ -248,7 +255,7 @@ namespace shyft{
             //   then we define value(t) as
             //    as the point interpretation of f(t)..
             //
-            //if(fx_policy==point_interpretation_policy::POINT_AVERAGE_VALUE)
+            //if(fx_policy==ts_point_fx::POINT_AVERAGE_VALUE)
             //    return value_at(ta.time(i));
             //utcperiod p=ta.period(i);
             //double v0= value_at(p.start);
@@ -257,16 +264,16 @@ namespace shyft{
             //return v0;
         }
         double abin_op_scalar_ts::value_at(utctime t) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs,op,rhs(t));
         }
         double abin_op_scalar_ts::value(size_t i) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs,op,rhs.value(i));
         }
 
         std::vector<double> abin_op_scalar_ts::values() const {
-          deferred_bind();
+          bind_check();
           std::vector<double> r(rhs.values());
           for(auto& v:r)
             v=do_op(lhs,op,v);
@@ -274,15 +281,15 @@ namespace shyft{
         }
 
         double abin_op_ts_scalar::value_at(utctime t) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs(t),op,rhs);
         }
         double abin_op_ts_scalar::value(size_t i) const {
-            deferred_bind();
+            bind_check();
             return do_op(lhs.value(i),op,rhs);
         }
         std::vector<double> abin_op_ts_scalar::values() const {
-          deferred_bind();
+          bind_check();
           std::vector<double> r(lhs.values());
           for(auto& v:r)
             v=do_op(v,op,rhs);
@@ -296,32 +303,19 @@ namespace shyft{
 		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {
 			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
-			return 1.0 - shyft::timeseries::nash_sutcliffe_goal_function(o, m);
+			return 1.0 - shyft::time_series::nash_sutcliffe_goal_function(o, m);
 		}
 
 		double kling_gupta( const apoint_ts & observation_ts,  const apoint_ts &model_ts, const gta_t & ta, double s_r, double s_a, double s_b) {
 			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
-			return 1.0 - shyft::timeseries::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
+			return 1.0 - shyft::time_series::kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o, m, s_r, s_a, s_b);
 		}
 		// glacier_melt_ts as apoint_ts with it's internal being a glacier_melt_ts
         struct aglacier_melt_ts:ipoint_ts {
             glacier_melt_ts<std::shared_ptr<ipoint_ts>> gm;
             //-- default stuff, ct/copy etc goes here
-            aglacier_melt_ts() {}
-            aglacier_melt_ts(const aglacier_melt_ts& c):gm(c.gm) {}
-            aglacier_melt_ts(aglacier_melt_ts&&c):gm(std::move(c.gm)) {}
-            aglacier_melt_ts& operator=(const aglacier_melt_ts& o) {
-                if(this != &o) {
-                    gm=o.gm;
-                }
-                return *this;
-            }
-
-            aglacier_melt_ts& operator=(aglacier_melt_ts&& o) {
-                gm= std::move(o.gm);
-                return *this;
-            }
+            aglacier_melt_ts() =default;
 
             //-- useful ct goes here
             aglacier_melt_ts(const apoint_ts& temp,const apoint_ts& sca_m2, double glacier_area_m2,double dtf):
@@ -332,8 +326,8 @@ namespace shyft{
             //aglacier_melt_ts(const std::shared_ptr<ipoint_ts> &ts, utctime dt ):ts(ts),ta(time_axis::time_shift(ts->time_axis(),dt)),dt(dt){}
 
             // implement ipoint_ts contract:
-            virtual point_interpretation_policy point_interpretation() const {return gm.fx_policy;}
-            virtual void set_point_interpretation(point_interpretation_policy point_interpretation) {gm.fx_policy=point_interpretation;}
+            virtual ts_point_fx point_interpretation() const {return gm.fx_policy;}
+            virtual void set_point_interpretation(ts_point_fx point_interpretation) {gm.fx_policy=point_interpretation;}
             virtual const gta_t& time_axis() const {return gm.time_axis();}
             virtual utcperiod total_period() const {return gm.time_axis().total_period();}
             virtual size_t index_of(utctime t) const {return gm.time_axis().index_of(t);}
@@ -346,6 +340,8 @@ namespace shyft{
                 for(size_t i=0;i<size();++i) r.push_back(value(i));
                 return r;
             }
+            virtual bool needs_bind() const {return gm.temperature->needs_bind() || gm.sca_m2->needs_bind();}
+            virtual void do_bind() {gm.temperature->do_bind();gm.sca_m2->do_bind();}
 
         };
         apoint_ts create_glacier_melt_ts_m3s(const apoint_ts & temp,const apoint_ts& sca_m2,double glacier_area_m2,double dtf) {

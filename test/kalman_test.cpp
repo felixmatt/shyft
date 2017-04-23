@@ -1,7 +1,7 @@
 #include "test_pch.h"
 #include "mocks.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
-#include "api/timeseries.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
+#include "api/time_series.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
 #include "core/kalman.h"
 
 
@@ -93,7 +93,7 @@ TEST_CASE("test_filter") {
 TEST_CASE("test_bias_predictor") {
     using namespace shyfttest;
     using namespace std;
-    using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
+    using pts_t=shyft::time_series::point_ts<timeaxis_t>;
     // prepare the time-dimension, using time-axis
     calendar utc;
     utctimespan dt=deltahours(1);
@@ -132,7 +132,7 @@ TEST_CASE("test_bias_predictor") {
 TEST_CASE("test_running_predictor") {
     using namespace shyfttest;
     using namespace std;
-    using pts_t=shyft::timeseries::point_ts<timeaxis_t>;
+    using pts_t=shyft::time_series::point_ts<timeaxis_t>;
     // prepare the time-dimension, using time-axis
     calendar utc;
     utctimespan dt=deltahours(1);

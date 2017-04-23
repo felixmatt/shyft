@@ -126,6 +126,7 @@
     <ClCompile Include="calibration_test.cpp" />
     <ClCompile Include="cell_builder_test.cpp" />
     <ClCompile Include="api_test.cpp" />
+    <ClCompile Include="dtss_test.cpp" />
     <ClCompile Include="glacier_melt_test.cpp" />
     <ClCompile Include="gridpp_test.cpp" />
     <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />
@@ -155,7 +156,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="skaugen_test.cpp" />
-    <ClCompile Include="timeseries_test.cpp" />
+    <ClCompile Include="time_series_test.cpp" />
     <ClCompile Include="time_axis_test.cpp" />
     <ClCompile Include="utctime_utilities_test.cpp" />
     <ClCompile Include="serialization_test.cpp" />

@@ -52,10 +52,7 @@
       <Filter>optimizers</Filter>
     </ClCompile>
     <ClCompile Include="time_axis_test.cpp">
-      <Filter>timeseries</Filter>
-    </ClCompile>
-    <ClCompile Include="timeseries_test.cpp">
-      <Filter>timeseries</Filter>
+      <Filter>time_series</Filter>
     </ClCompile>
     <ClCompile Include="api_test.cpp">
       <Filter>usecases</Filter>
@@ -105,6 +102,10 @@
     <ClCompile Include="routing_test.cpp">
       <Filter>routing</Filter>
     </ClCompile>
+    <ClCompile Include="dtss_test.cpp" />
+    <ClCompile Include="time_series_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
@@ -122,9 +123,6 @@
     <Filter Include="optimizers">
       <UniqueIdentifier>{67c7111a-3f8e-4853-b558-d0c0f87b56b6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="timeseries">
-      <UniqueIdentifier>{1c0b9abc-7129-48cb-be5a-18e11386ec0b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="usecases">
       <UniqueIdentifier>{9fc8a5b2-3517-4157-9f25-b55f1b13be49}</UniqueIdentifier>
     </Filter>
@@ -136,6 +134,9 @@
     </Filter>
     <Filter Include="routing">
       <UniqueIdentifier>{b2995031-3646-4ed1-9f64-5bb11612f0a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="time_series">
+      <UniqueIdentifier>{1c0b9abc-7129-48cb-be5a-18e11386ec0b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

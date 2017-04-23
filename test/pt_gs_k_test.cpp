@@ -5,12 +5,12 @@
 #include "core/geo_cell_data.h"
 #include "core/geo_point.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::core::pt_gs_k;
 using namespace shyfttest;
@@ -21,8 +21,8 @@ namespace gs = shyft::core::gamma_snow;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
-
-typedef TSPointTarget<point_timeaxis> catchment_t;
+namespace ta = shyft::time_axis;
+typedef TSPointTarget<ta::point_dt> catchment_t;
 
 static std::ostream& operator<<(std::ostream& os, const point& pt) {
     os << calendar().to_string(pt.t) << ", " << pt.v;
@@ -48,9 +48,9 @@ TEST_CASE("test_call_stack") {
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
 
-    point_timeaxis time_axis(times);
+    ta::point_dt time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times);
+    ta::point_dt state_axis(times);
 
     // Initialize parameters
     pt::parameter pt_param;
@@ -69,12 +69,12 @@ TEST_CASE("test_call_stack") {
 
     // Initialize collectors
     shyfttest::mock::PTGSKResponseCollector response_collector(time_axis.size());
-    shyfttest::mock::StateCollector<point_timeaxis> state_collector(state_axis);
+    shyfttest::mock::StateCollector<ta::point_dt> state_collector(state_axis);
 
     state state{gs_state, kirchner_state};
     parameter parameter{pt_param, gs_param, ae_param, k_param,  p_corr_param};
     geo_cell_data geo_cell;
-    pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,
+    pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor,
                          response>(geo_cell, parameter, time_axis,0,0, temp, prec, wind_speed,
                                      rel_hum, radiation, state, state_collector, response_collector);
     for(size_t i=0;i<n_ts_points+1;++i) { // state have one extra point
@@ -97,9 +97,9 @@ TEST_CASE("test_raster_call_stack") {
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    shyft::timeseries::point_timeaxis time_axis(times);
+    ta::point_dt time_axis(times);
     times.emplace_back(t1+model_dt);
-    point_timeaxis state_axis(times);
+    ta::point_dt state_axis(times);
 
     // 10 catchments numbered from 0 to 9.
     std::vector<catchment_t> catchment_discharge;
@@ -141,11 +141,11 @@ TEST_CASE("test_raster_call_stack") {
     for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge,&state_axis] (PTGSKCell& d) mutable {
         auto time = time_axis.time(0);
 
-        shyfttest::mock::StateCollector<point_timeaxis> sc(state_axis);
-        shyfttest::mock::DischargeCollector<point_timeaxis> rc(1000 * 1000, time_axis);
+        shyfttest::mock::StateCollector<ta::point_dt> sc(state_axis);
+        shyfttest::mock::DischargeCollector<ta::point_dt> rc(1000 * 1000, time_axis);
         //PTGSKResponseCollector rc(time_axis.size());
 
-        pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
+        pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor, response>(d.geo_cell_info(), d.parameter(), time_axis,0,0,
               d.temperature(),
               d.precipitation(),
               d.wind_speed(),
@@ -173,11 +173,11 @@ TEST_CASE("test_raster_call_stack") {
 
 TEST_CASE("test_mass_balance") {
     calendar cal;
-    utctime t0 = cal.time(YMDhms(2014, 8, 1, 0, 0, 0));
+    utctime t0 = cal.time(2014, 8, 1, 0, 0, 0);
     utctimespan dt=deltahours(1);
     const int n=1;
-    timeaxis tax(t0,dt,n);
-	timeaxis tax_state(t0, dt, n + 1);
+    ta::fixed_dt tax(t0,dt,n);
+	ta::fixed_dt tax_state(t0, dt, n + 1);
     pt::parameter pt_param;
     gs::parameter gs_param;
     ae::parameter ae_param;
@@ -213,6 +213,36 @@ TEST_CASE("test_mass_balance") {
         pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
     }
     TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
+    SUBCASE("direct_response_on_bare_lake_only") {
+        // verify that when it rains, verify that only (1-snow.sca)*(lake+rsv).fraction * precip_mm *cell_area goes directly to response.
+        // case 1: no snow-covered area, close to zero in kirchner q, expect all rain directly
+        land_type_fractions ltf(0.0,0.5,0.5,0.0,0.0);// all is lake and reservoir
+        gcd.set_land_type_fractions(ltf);
+        state.kirchner.q=1e-4;//
+        state.gs.lwc=0.0;// no snow, should have direct response, 3 mm/h, over the cell_area
+        state.gs.acc_melt=-1;// should be no snow, should go straight through
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,prec.value(0),0.001);
+        state.gs.lwc=1.0;
+        state.gs.acc_melt=300.0;
+        temp.v[0]=-10.0;//it's cold
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        TS_ASSERT_DELTA(rc.snow_sca.value(0),0.96,0.01);// almost entirely covered by snow, so we should have 0.04 of rain direct response
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,0.04*prec.value(0),0.02);
+        temp.v[0]=10.0;// heat is on, melt snow, .9 should end up in kirchner it's cold
+        //state.gs.sdc_melt_mean=10.0;
+        state.gs.acc_melt=5.0;//simulate early autumn, melt out everything
+        state.gs.temp_swe = 3.0;//
+        state.gs.lwc = 10.0;//
+        for(size_t i=0;i<5000;++i){
+            pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+            if(rc.snow_sca.value(0)<0.1)
+                break;// melt done, everything should be in kirchner response by now
+        }
+        TS_ASSERT_DELTA(rc.snow_sca.value(0),0.0,0.1);// almost entirely covered by snow, so we should have 0.04 of rain direct response
+        TS_ASSERT_DELTA(rc.avg_discharge.value(0),0.8333,0.001);//empirical
+
+    }
 
 }
 

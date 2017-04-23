@@ -174,4 +174,97 @@ TEST_CASE("test_time_shift") {
     TS_ASSERT( test_if_equal( time_axis::fixed_dt(t1,dt, n), ta1 ) );
 
 }
+TEST_CASE("time_axis_map") {
+
+	using namespace shyft;
+	using namespace shyft::core;
+	using namespace std;
+
+	calendar utc;
+	auto t0 = utc.time(2016, 1, 1);
+	auto dt1 = deltahours(1);
+	auto dt2 = deltahours(3);
+	time_axis::fixed_dt src(t0, dt1, 24);
+	time_axis::fixed_dt m(t0, dt2, 24 / 3);
+	SUBCASE("simple reduction test") {
+		auto ta_xf = time_axis::make_time_axis_map(src, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
+		}
+		FAST_CHECK_EQ(ta_xf.src_index(300), std::string::npos);
+	}
+	SUBCASE("from coarse to fine") {
+		auto ta_xf = time_axis::make_time_axis_map(m, src);
+		for (size_t i = 0; i < src.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), i / 3);
+		}
+	}
+	SUBCASE("src offset the time t with one delta") {
+		src.t += dt1;
+		auto ta_xf = time_axis::make_time_axis_map(src, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			if (i == 0) {
+				FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+			} else {
+				FAST_CHECK_EQ(ta_xf.src_index(i), (i * 3) - 1);
+			}
+		}
+	}
+	SUBCASE("verify npos if entirely after") {
+		src.t = m.total_period().end;
+		auto ta_xf = time_axis::make_time_axis_map(src, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+		}
+	}
+	SUBCASE("verify if src is entirely before") {
+		src.t = m.t - src.dt*src.n * 10;
+		auto ta_xf = time_axis::make_time_axis_map(src, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+		}
+	}
+	time_axis::generic_dt src2(src);
+	SUBCASE("simple reduction test") {
+		auto ta_xf = time_axis::make_time_axis_map(src2, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), i * 3);
+		}
+		FAST_CHECK_EQ(ta_xf.src_index(300), std::string::npos);
+	}
+	SUBCASE("from coarse to fine") {
+		auto ta_xf = time_axis::make_time_axis_map(m, src2);
+		for (size_t i = 0; i < src2.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), i / 3);
+		}
+	}
+	SUBCASE("src offset the time t with one delta") {
+		src2.f.t += dt1;
+		auto ta_xf = time_axis::make_time_axis_map(src2, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			if (i == 0) {
+				FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+			} else {
+				FAST_CHECK_EQ(ta_xf.src_index(i), (i * 3) - 1);
+			}
+		}
+	}
+	SUBCASE("verify npos if entirely after") {
+		src2.f.t = m.total_period().end;
+		auto ta_xf = time_axis::make_time_axis_map(src2, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+		}
+	}
+	SUBCASE("verify if src is entirely before") {
+		src2.f.t = m.t - src2.f.dt*src.n * 10;
+		auto ta_xf = time_axis::make_time_axis_map(src2, m);
+		for (size_t i = 0; i < m.size(); ++i) {
+			FAST_CHECK_EQ(ta_xf.src_index(i), string::npos);
+		}
+	}
+
+	//auto ix_map = tat.map(a, b);
+	//FAST_CHECK_EQ(ix_map.size(), b.size());
+}
 TEST_SUITE_END();

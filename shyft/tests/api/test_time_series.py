@@ -193,8 +193,8 @@ class TimeSeries(unittest.TestCase):
         a = api.TimeSeries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.TimeSeries(ta=ta, fill_value=1.0)
         b.fill(2.0)  # demo how to fill a point ts
-        self.assertAlmostEquals((1.0 - b).values.to_numpy().max(), -1.0)
-        self.assertAlmostEquals((b - 1.0).values.to_numpy().max(), 1.0)
+        self.assertAlmostEqual((1.0 - b).values.to_numpy().max(), -1.0)
+        self.assertAlmostEqual((b - 1.0).values.to_numpy().max(), 1.0)
         c = a + b * 3.0 - a / 2.0  # operator + * - /
         d = -a  # unary minus
         e = a.average(ta)  # average
@@ -256,7 +256,11 @@ class TimeSeries(unittest.TestCase):
             timeseries.append(
                 api.TimeSeries(ta=ta, fill_value=i, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
-        wanted_percentiles = api.IntVector([0, 10, 50, -1, 70, 100])
+        wanted_percentiles = api.IntVector([api.statistics_property.MIN_EXTREME,
+                                            0, 10, 50,
+                                            api.statistics_property.AVERAGE,
+                                            70, 100,
+                                            api.statistics_property.MAX_EXTREME])
         ta_day = api.TimeAxisFixedDeltaT(t0, dt * 24, n // 24)
         ta_day2 = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
@@ -265,12 +269,66 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(len(percentiles2), len(percentiles))
 
         for i in range(len(ta_day)):
-            self.assertAlmostEqual(0.0, percentiles[0].value(i), 3, "  0-percentile")
-            self.assertAlmostEqual(0.9, percentiles[1].value(i), 3, " 10-percentile")
-            self.assertAlmostEqual(4.5, percentiles[2].value(i), 3, " 50-percentile")
-            self.assertAlmostEqual(4.5, percentiles[3].value(i), 3, "   -average")
-            self.assertAlmostEqual(6.3, percentiles[4].value(i), 3, " 70-percentile")
-            self.assertAlmostEqual(9.0, percentiles[5].value(i), 3, "100-percentile")
+            self.assertAlmostEqual(0.0, percentiles[0].value(i), 3, "min-extreme ")
+            self.assertAlmostEqual(0.0, percentiles[1].value(i), 3, "  0-percentile")
+            self.assertAlmostEqual(0.9, percentiles[2].value(i), 3, " 10-percentile")
+            self.assertAlmostEqual(4.5, percentiles[3].value(i), 3, " 50-percentile")
+            self.assertAlmostEqual(4.5, percentiles[4].value(i), 3, "   -average")
+            self.assertAlmostEqual(6.3, percentiles[5].value(i), 3, " 70-percentile")
+            self.assertAlmostEqual(9.0, percentiles[6].value(i), 3, "100-percentile")
+            self.assertAlmostEqual(9.0, percentiles[7].value(i), 3, "max-extreme")
+
+    def test_percentiles_with_min_max_extremes(self):
+        """ the percentiles function now also supports picking out the min-max peak value
+            within each interval.
+            Setup test-data so that we have a well known percentile result,
+            but also have peak-values within the interval that we can 
+            verify.
+            We let hour ts 0..9 have values 0..9 constant 24*10 days
+               then modify ts[1], every day first  value to a peak min value equal to - day_no*1 
+                                  every day second value to a peak max value equal to + day_no*1
+                                  every day 3rd    value to a nan value
+            ts[1] should then have same average value for each day (so same percentile)
+                                            but min-max extreme should be equal to +- day_no*1
+        """
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.TimeAxis(t0, dt, n)
+        timeseries = api.TsVector()
+        p_fx = api.point_interpretation_policy.POINT_AVERAGE_VALUE
+        for i in range(10):
+            timeseries.append(api.TimeSeries(ta=ta, fill_value=i, point_fx=p_fx))
+
+        ts=timeseries[1]  # pick this one to insert min/max extremes
+        for i in range(0,240,24):
+            ts.set(i + 0, 1.0 - 100*i/24.0)
+            ts.set(i + 1, 1.0 + 100*i/24.0) # notice that when i==0, this gives 1.0
+            ts.set(i + 2, float('nan'))  # also put in a nan, just to verify it is ignored during average processing
+
+        wanted_percentiles = api.IntVector([api.statistics_property.MIN_EXTREME,
+                                            0, 10, 50,
+                                            api.statistics_property.AVERAGE,
+                                            70, 100,
+                                            api.statistics_property.MAX_EXTREME])
+        ta_day = api.TimeAxis(t0, dt * 24, n // 24)
+        percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
+        for i in range(len(ta_day)):
+            if i == 0: # first timestep, the min/max extremes are picked from 0'th and 9'th ts.
+                self.assertAlmostEqual(0.0, percentiles[0].value(i), 3, "min-extreme ")
+                self.assertAlmostEqual(9.0, percentiles[7].value(i), 3, "min-extreme ")
+            else:
+                self.assertAlmostEqual(1.0 - 100.0*i*24.0/24.0, percentiles[0].value(i), 3, "min-extreme ")
+                self.assertAlmostEqual(1.0 + 100.0 * i * 24.0 / 24.0, percentiles[7].value(i), 3, "max-extreme")
+            self.assertAlmostEqual(0.0, percentiles[1].value(i), 3, "  0-percentile")
+            self.assertAlmostEqual(0.9, percentiles[2].value(i), 3, " 10-percentile")
+            self.assertAlmostEqual(4.5, percentiles[3].value(i), 3, " 50-percentile")
+            self.assertAlmostEqual(4.5, percentiles[4].value(i), 3, "   -average")
+            self.assertAlmostEqual(6.3, percentiles[5].value(i), 3, " 70-percentile")
+            self.assertAlmostEqual(9.0, percentiles[6].value(i), 3, "100-percentile")
+
+
 
     def test_time_shift(self):
         c = api.Calendar()
@@ -302,6 +360,23 @@ class TimeSeries(unittest.TestCase):
             expected_value = i * dt * 1.0
             self.assertAlmostEqual(expected_value, ts1.value(i), 3, "expect integral f(t)*dt")
             self.assertAlmostEqual(expected_value, ts1_values[i], 3, "expect value vector equal as well")
+
+    def test_integral(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.TimeAxis(t0, dt, n)
+        fill_value = 1.0
+        ts = api.TimeSeries(ta=ta, fill_value=fill_value, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        ts_i1 = ts.integral(ta)
+        ts_i2 = api.integral(ts,ta)
+        ts_i1_values = ts_i1.values
+        for i in range(n):
+            expected_value = dt*fill_value
+            self.assertAlmostEqual(expected_value,ts_i1.value(i),4,"expect integral of each interval")
+            self.assertAlmostEqual(expected_value,ts_i2.value(i),4,"expect integral of each interval")
+            self.assertAlmostEqual(expected_value,ts_i1_values[i],4,"expect integral of each interval")
 
     def test_kling_gupta_and_nash_sutcliffe(self):
         """
@@ -396,6 +471,19 @@ class TimeSeries(unittest.TestCase):
         percentiles = api.percentiles(ts_partitions, ta_percentiles, wanted_percentiles)
         self.assertEqual(len(percentiles), len(wanted_percentiles))
 
+    def test_empty_ts(self):
+        a = api.TimeSeries()
+        self.assertEqual(a.size(), 0)
+        self.assertEqual(a.values.size(),0)
+        self.assertEqual(len(a.values.to_numpy()), 0)
+        self.assertFalse(a.total_period().valid())
+        try:
+            a.time_axis
+            self.assertFail("Expected exception")
+        except RuntimeError as re:
+            pass
+
+
     def test_ts_reference_and_bind(self):
         c = api.Calendar()
         t0 = c.time(2016, 9, 1)
@@ -419,10 +507,11 @@ class TimeSeries(unittest.TestCase):
             self.assertFalse(True, "should not reach here!")
         except RuntimeError:
             pass
-
+        self.assertEqual(c.needs_bind(),True) # verify this expression needs binding
         # verify we can bind a ts
         bind_info[0].ts.bind(a)  # it's ok to bind same series multiple times, it takes a copy of a values
-
+        c.bind_done()
+        self.assertEqual(c.needs_bind(), False)  # verify this expression do not need binding anymore
         # and now we can use c expression as pr. usual, evaluate etc.
         self.assertAlmostEqual(c.value(10), a.value(10) * 2 * 4.0, 3)
 
@@ -430,6 +519,7 @@ class TimeSeries(unittest.TestCase):
 
         bi = c_resurrected.find_ts_bind_info()
         bi[0].ts.bind(a)
+        c_resurrected.bind_done()
         self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2 * 4.0, 3)
 
 

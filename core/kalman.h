@@ -157,9 +157,9 @@ namespace shyft {
                  */
                 template<class fc_ts,class obs_ts,class ta>
                 void update_with_forecast(const std::vector<fc_ts>& fc_ts_set,const obs_ts& observation_ts, const ta& time_axis) {
-                    shyft::timeseries::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
+                    shyft::time_series::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
                     for(const auto& fcts:fc_ts_set) {
-                        shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
+                        shyft::time_series::average_accessor<fc_ts,ta> fc(fcts,time_axis);
                         for(size_t i=0;i<time_axis.size();++i) {
                             if(!fcts.total_period().contains(time_axis.time(i)))
                                 continue;// skip when fc is not valid/available
@@ -170,7 +170,7 @@ namespace shyft {
                     }
                 }
 
-                /** compute the running bias timeseries,
+                /** compute the running bias time_series,
                  * using one 'merged'-forecasts and one observation time-series.
                  *
                  * before each day-period, the bias-values are copied out to form
@@ -187,14 +187,14 @@ namespace shyft {
                  */
                 template<class a_ts, class fc_ts,class obs_ts,class ta>
                 a_ts compute_running_bias(const fc_ts& fcts,const obs_ts& observation_ts, const ta& time_axis) {
-                    shyft::timeseries::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
-                    shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
+                    shyft::time_series::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
+                    shyft::time_series::average_accessor<fc_ts,ta> fc(fcts,time_axis);
                     std::vector<double> bias_vector;bias_vector.reserve(time_axis.size());
                     shyft::core::calendar utc;
                     utctime pd_t0 = utc.trim(time_axis.time(0),shyft::core::calendar::DAY);
                     utctime pd_dt = shyft::core::deltahours(24)/f.p.n_daily_observations;
-                    shyft::timeseries::profile_description pd(pd_t0,pd_dt,arma::conv_to<std::vector<double>>::from(s.x));
-                    shyft::timeseries::profile_accessor<ta> pa(pd,time_axis,POINT_AVERAGE_VALUE);
+                    shyft::time_series::profile_description pd(pd_t0,pd_dt,arma::conv_to<std::vector<double>>::from(s.x));
+                    shyft::time_series::profile_accessor<ta> pa(pd,time_axis,POINT_AVERAGE_VALUE);
 
                     size_t i_save_point=0; // keep track of when we extract day-bias
                     size_t i_save_point_delta = shyft::core::deltahours(24)/time_axis.dt; // ta
