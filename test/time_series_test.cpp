@@ -946,14 +946,19 @@ TEST_CASE("test_ts_statistics_speed") {
 	auto n_days = 7;// fewer for debug
 #endif
 	auto n_ts=83;
+	auto n_x=10;
     tta_t  ta(t0, calendar::HOUR, n_days*24);
     tta_t tad(t0, deltahours(24), n_days);
     auto tsv = create_test_ts(n_ts, ta, fx_1);
     std::vector<shyft::api::apoint_ts> tsv1;
     auto ts0 = shyft::api::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::time_series::POINT_AVERAGE_VALUE);
 
-    for (size_t i=0;i<tsv.size();++i)
-        tsv1.push_back(shyft::api::apoint_ts(string("a_ref"))*ts0 - 1000.0);// make it an expression
+    for (size_t i=0;i<tsv.size();++i) {
+        shyft::api::apoint_ts tsi(string("a_ref"));
+            for(int j=0;j<n_x;++j)
+               tsi = tsi+ts0*1000.0;
+        tsv1.push_back(tsi);// make it an expression
+    }
 
     {
         std::vector<shyft::api::apoint_ts> bind_ts;
@@ -977,9 +982,9 @@ TEST_CASE("test_ts_statistics_speed") {
     vector<tts_t> r1;
 #if 1
     size_t diff_count = 0;
-    auto r0 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100 });
+    auto r0 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100,1000 });
     for (size_t i = 0;i < 10;++i) {
-        r1 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100 },1+n_days/10);
+        r1 = calculate_percentiles(tad, tsv1, { 0,10,50,-1,70,100,1000 },1+n_days/10);
         for (size_t j = 0;j < r1.size();++j) {
             auto diff_ts = (r1[j] - r0[j]);
             for (size_t t = 0;t < tad.size();++t) {
@@ -990,11 +995,35 @@ TEST_CASE("test_ts_statistics_speed") {
     }
     TS_ASSERT_EQUALS(diff_count, size_t(0));
 #else
-    auto f1 = [&tad, &tsv1, &r1](int min_t_steps) {r1=calculate_percentiles(tad, tsv1, {0,10,50,-1,70,100},min_t_steps);};
-    for (int sz = tad.size(); sz > 100; sz /= 2) {
-        auto msec1 = measure<>::execution(f1,sz);
-        if(verbose) cout<<"statistics speed tests, "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
+
+    vector<api::gts_t> tsv2;
+    auto deflatten_tsv=[&tsv2,&tsv1]() {
+        tsv2=api::deflate_ts_vector<api::gts_t>(tsv1);
+    };
+    auto msec_cpy = measure<>::execution(deflatten_tsv);
+    if(verbose) cout<<"1 x flatten expression took:"<<msec_cpy<<"ms\n";
+
+    vector<vector<int>> ppx;
+    ppx.push_back( { 0,10,50,-1,70,+100});
+    ppx.push_back( {-1000,10,50,-1,70,+1000});
+    ppx.push_back( {-1000,0,10,50,-1,70,100,+1000});
+    for(size_t pi=0;pi<3;++pi) {
+        auto pct=ppx[pi];
+        auto f1 = [&tad, &tsv1, &r1,&pct](int min_t_steps) {r1=calculate_percentiles(tad, tsv1,pct,min_t_steps);};
+        for (int n_threads = 1; n_threads< 11 ; n_threads += 2) {
+            int sz=tad.size()/n_threads;
+            auto msec1 = measure<>::execution(f1,sz);
+            if(verbose) cout<<"A.statistics speed tests#"<<pi<<"[ "<<n_threads<<"] "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
+        }
+        vector<tts_t> r2;
+        auto f2 = [&tad, &tsv2, &r2,&pct](int min_t_steps) {r2=calculate_percentiles(tad, tsv2, pct,min_t_steps);};
+        for (int n_threads = 1; n_threads< 11 ; n_threads += 2) {
+            int sz=tad.size()/n_threads;
+            auto msec1 = measure<>::execution(f2,sz);
+            if(verbose) cout<<"C.statistics speed tests #"<<pi<<"[ "<<n_threads<<"] "<< tad.size() <<" steps, pr.thread = "<< sz << " steps: "<< msec1 << " ms" <<endl;
+        }
     }
+
 #endif
     //auto msec2= measure<>::execution(f1,tad.size()/4);
     //cout<<"Done statistics speed tests,2 threads "<<msec2<<" ms"<<endl;

@@ -10,7 +10,7 @@ namespace shyft {
         using namespace shyft;
 
         /** specialized max function that ignores nan*/
-        inline double nan_max(double r, double x) {
+        inline double nan_max(double const& r, double const& x) {
             if (!isfinite(x))
                 return r;
             if (!isfinite(r))
@@ -18,7 +18,7 @@ namespace shyft {
             return std::max(r, x);
         }
         /** specialized min function that ignores nan*/
-        inline double nan_min(double r, double x) {
+        inline double nan_min(double const&r, double const& x) {
             if (!isfinite(x))
                 return r;
             if (!isfinite(r))
@@ -189,32 +189,41 @@ namespace shyft {
                     // possible with pipe-line to percentile calc here !
                     std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
                     for (size_t p = 0; p < result.size(); ++p) {
+                        if(percentiles[p]==statistics_property::MAX_EXTREME || percentiles[p]==statistics_property::MIN_EXTREME)
+                            continue;
                         result[p].set(t, percentiles_at_t[p]);
                     }
                 }
             };
+            auto extreme_calc = [&result, &ts_list, &ta, &percentiles](size_t x) {
+                result[x].v = extract_statistic_from_vector(ts_list, ta, percentiles[x] == statistics_property::MIN_EXTREME?nan_min:nan_max);
+            };
 
             if (ta.size() < min_t_steps) {
                 partition_calc(0, ta.size());
+                //if mi-ma extreme calc, do it here
+                for (size_t i = 0;i < percentiles.size();++i) {
+                    if (percentiles[i] == statistics_property::MIN_EXTREME) {// min-extremes
+                        result[i].v = extract_statistic_from_vector(ts_list, ta, nan_min);
+                    } else if (percentiles[i] == statistics_property::MAX_EXTREME) {// max-extremes
+                        result[i].v = extract_statistic_from_vector(ts_list, ta, nan_max);
+                    }
+                }
             } else {
                 vector<future<void>> calcs;
-                //size_t n_partitions= 1+ ta.size()/min_t_steps;
                 for (size_t p = 0;p < ta.size(); ) {
                     size_t np = p + min_t_steps <= ta.size() ? min_t_steps : ta.size() - p;
                     calcs.push_back(std::async(std::launch::async, partition_calc, p, np));
                     p += np;
                 }
+
+                for (size_t i = 0;i < percentiles.size();++i) {
+                    if (percentiles[i] == statistics_property::MIN_EXTREME || percentiles[i] == statistics_property::MAX_EXTREME)
+                        calcs.push_back(std::async(std::launch::async,extreme_calc,i));
+                }
                 for (auto &f : calcs)
                     f.get();
 
-            }
-            //if mi-ma extreme calc, do it here
-            for (size_t i = 0;i < percentiles.size();++i) {
-                if (percentiles[i] == statistics_property::MIN_EXTREME) {// min-extremes
-                    result[i].v = extract_statistic_from_vector(ts_list, ta, nan_min);
-                } else if (percentiles[i] == statistics_property::MAX_EXTREME) {// max-extremes
-                    result[i].v = extract_statistic_from_vector(ts_list, ta, nan_max);
-                }
             }
 
             return result;
