@@ -117,11 +117,7 @@ namespace shyft {
             ts_vector_t
             do_evaluate_ts_vector(core::utcperiod bind_period, ts_vector_t& atsv) {
                 do_bind_ts(bind_period, atsv);
-                ts_vector_t evaluated_tsv;
-                for (auto &ats : atsv) // TODO: in parallel
-                   evaluated_tsv.emplace_back(ats.time_axis(), ats.values(), ats.point_interpretation());
-
-                return evaluated_tsv;
+                return api::deflate_ts_vector<api::apoint_ts>(atsv);
             }
 
             ts_vector_t

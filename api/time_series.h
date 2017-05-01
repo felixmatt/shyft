@@ -176,7 +176,12 @@ namespace shyft {
                 void do_bind() {
                     sts()->do_bind();
                 }
-                std::shared_ptr<ipoint_ts> sts() const {
+                std::shared_ptr<ipoint_ts> const& sts() const {
+                    if(!ts)
+                        throw runtime_error("TimeSeries is empty");
+                    return ts;
+                }
+                std::shared_ptr<ipoint_ts> & sts() {
                     if(!ts)
                         throw runtime_error("TimeSeries is empty");
                     return ts;
@@ -285,7 +290,7 @@ namespace shyft {
                 virtual size_t index_of(utctime t) const {return rep.index_of(t);}
                 virtual size_t size() const {return rep.size();}
                 virtual utctime time(size_t i) const {return rep.time(i);};
-                virtual double value(size_t i) const {return rep.value(i);}
+                virtual double value(size_t i) const {return rep.v[i];}
                 virtual double value_at(utctime t) const {return rep(t);}
                 virtual std::vector<double> values() const {return rep.v;}
                 // implement some extra functions to manipulate the points
@@ -361,8 +366,10 @@ namespace shyft {
                 virtual size_t size() const {return ta.size();}
                 virtual utctime time(size_t i) const {return ta.time(i);};
                 virtual double value(size_t i) const {
+                    #ifdef _DEBUG
                     if(i>ta.size())
                         return nan;
+                    #endif
                     size_t ix_hint=(i*ts->size())/ta.size();// assume almost fixed delta-t.
                     return average_value(*ts,ta.period(i),ix_hint,ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE);
                 }
@@ -893,6 +900,35 @@ namespace shyft {
 
             ///< time_shift i.e. same ts values, but time-axis is time-axis + dt
             apoint_ts time_shift(const apoint_ts &ts, utctimespan dt);
+
+            /** Given a vector of expressions, deflate(evalute) the expressions and return the
+             * equivalent concrete point-time-series of the expressions in the
+             * preferred destination type Ts
+             * Useful for the dtss,
+             * evaluates the expressions in parallell
+             */
+            template <class Ts>
+            std::vector<Ts>
+            deflate_ts_vector(std::vector<apoint_ts> const&tsv1) {
+                std::vector<Ts> tsv2(tsv1.size());
+
+                auto deflate_range=[&tsv1,&tsv2](size_t i0,size_t n) {
+                    for(size_t i=i0;i<i0+n;++i)
+                        tsv2[i]= Ts(tsv1[i].time_axis(),tsv1[i].values(),tsv1[i].point_interpretation());
+                };
+                auto n_threads = thread::hardware_concurrency();
+                if(n_threads <2) n_threads=4;// hard coded minimum
+                std::vector<std::future<void>> calcs;
+                size_t ps= 1 + tsv1.size()/n_threads;
+                for (size_t p = 0;p < tsv1.size(); ) {
+                    size_t np = p + ps <= tsv1.size() ? ps : tsv1.size() - p;
+                    calcs.push_back(std::async(std::launch::async, deflate_range, p, np));
+                    p += np;
+                }
+                for (auto &f : calcs) f.get();
+                return tsv2;
+            }
+
     }
     namespace time_series {
         template<>

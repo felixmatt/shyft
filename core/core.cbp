@@ -3,7 +3,6 @@
 	<FileVersion major="1" minor="6" />
 	<Project>
 		<Option title="core" />
-		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Option virtualFolders="methods/;interpolation/;method_stacks/;time_and_calendar/;geo/;time_series/;compiler_etc/;experimental/;optimizers/;serialization/;" />
 		<Option show_notes="0">
@@ -180,10 +179,10 @@
 		<Unit filename="time_series.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
-    <Unit filename="time_series_statistics.h">
-      <Option virtualFolder="time_series/" />
-    </Unit>
-    <Unit filename="unit_conversion.h">
+		<Unit filename="time_series_statistics.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="unit_conversion.h">
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="utctime_utilities.cpp">
