@@ -3,7 +3,6 @@
 	<FileVersion major="1" minor="6" />
 	<Project>
 		<Option title="test" />
-		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Option virtualFolders="methods/;method_stacks/;interpolation/;optimizers/;utils/;compiler_etc/;time_and_calendar/;serialization/;full_model/;api/;time_series/;routing/;dtss/;" />
 		<Build>
@@ -13,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-ts=time_series.h" />
+				<Option parameters="-nv -tc=test_ts_statistics_calculations" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>

@@ -932,6 +932,20 @@ TEST_CASE("test_ts_statistics_calculations") {
     TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
     TS_ASSERT_DELTA(r1[6].value(0), 0.0, 0.0001);// "-1000 min xtreme");
     TS_ASSERT_DELTA(r1[7].value(0), 9.0, 0.0001);// "+1000 max xtreme");
+    SUBCASE("with_nan_ts") {
+        auto ts_w_nans=tts_t(ta,shyft::nan,POINT_AVERAGE_VALUE);
+        tsv1.push_back(ts_w_nans);
+        r1 = calculate_percentiles(tad, tsv1, {0,10,50,statistics_property::AVERAGE,70,100,statistics_property::MIN_EXTREME,statistics_property::MAX_EXTREME});
+        // nan are ignored(filtered out) by default
+        TS_ASSERT_DELTA(r1[0].value(0), 0.0,0.0001);// " 0-percentile");
+        TS_ASSERT_DELTA(r1[1].value(0), 0.9,0.0001);// "10-percentile");
+        TS_ASSERT_DELTA(r1[2].value(0), 4.5,0.0001);// "50-percentile");
+        TS_ASSERT_DELTA(r1[3].value(0), 4.5,0.0001);// "avg");
+        TS_ASSERT_DELTA(r1[4].value(0), 6.3,0.0001);// "70-percentile");
+        TS_ASSERT_DELTA(r1[5].value(0), 9.0,0.0001);// "100-percentile");
+        TS_ASSERT_DELTA(r1[6].value(0), 0.0, 0.0001);// "-1000 min xtreme");
+        TS_ASSERT_DELTA(r1[7].value(0), 9.0, 0.0001);// "+1000 max xtreme");
+    }
 }
 
 /** just verify that it calculate at full speed */
