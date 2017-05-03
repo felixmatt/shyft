@@ -83,7 +83,7 @@ struct numpy_boost_from_python
         data)->storage.bytes;
 
       // in-place construct the new numpy_boost object using the character data
-      // extraced from the python object
+      // extracted from the python object
       new (storage) numpy_boost<T, NDims>(obj_ptr);
 
       // Stash the memory chunk pointer for later use by boost.python
@@ -104,11 +104,19 @@ template<class T, int NDims>
 void
 numpy_boost_python_register_type()
 {
-  boost::python::to_python_converter<
-    numpy_boost<T, NDims>,
-    numpy_boost_to_python<T, NDims> >();
+    //conditional register converter
+    const boost::python::type_info info = boost::python::type_id< numpy_boost<T, NDims> >();
+    const boost::python::converter::registration* reg = boost::python::converter::registry::query(info);
+    if (reg == NULL) {
+        boost::python::to_python_converter<numpy_boost<T, NDims>, numpy_boost_to_python<T, NDims> >();
+        numpy_boost_from_python<T, NDims> converter;
+    } else if ((*reg).m_to_python == NULL) {
+        boost::python::to_python_converter<numpy_boost<T, NDims>, numpy_boost_to_python<T, NDims> >();
+        numpy_boost_from_python<T, NDims> converter;
+    }
 
-  numpy_boost_from_python<T, NDims> converter;
+    //boost::python::to_python_converter<numpy_boost<T, NDims>, numpy_boost_to_python<T, NDims> >();
+    //numpy_boost_from_python<T, NDims> converter;
 }
 
 #endif /* __NUMPY_BOOST_PYTHON_HPP__ */
