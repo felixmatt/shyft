@@ -255,7 +255,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
             self.selection_criteria = {'bbox':geo_location_criteria}
             self._bounding_box = geo_location_criteria
         if list(self.selection_criteria)[0]=='unique_id':
-            ts_id_key = [k for (k, v) in dataset.variables.items() if getattr(v, 'cf_role',None) == 'timeseries_id'][0]
+            ts_id_key = [k for (k, v) in dataset.variables.items() if getattr(v, 'cf_role', None) == 'timeseries_id'][0]
             ts_id = dataset.variables[ts_id_key][:]
 
         raw_data = {}
@@ -266,7 +266,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         if not all([x, y, time]):
             raise CFDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
-        time = convert_netcdf_time(time.units,time)
+        time = convert_netcdf_time(time.units, time)
         data_cs = dataset.variables.get("crs", None)
         if data_cs is None:
             raise CFDataRepositoryError("No coordinate system information in dataset.")
@@ -308,7 +308,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         else:
             raise CFDataRepositoryError("No elevations found in dataset")
 
-        pts = np.dstack((x, y, z)).reshape(-1,3)
+        pts = np.dstack((x, y, z)).reshape(-1, 3)
         self.pts = pts
 
         # Make sure requested fields are valid, and that dataset contains the requested data.
