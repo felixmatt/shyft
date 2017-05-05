@@ -14,6 +14,7 @@ from shyft import shyftdata_dir
 from .. import interfaces
 from .time_conversion import convert_netcdf_time
 
+
 class CFDataRepositoryError(Exception):
     pass
 
@@ -61,7 +62,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
                               "precipitation": "precipitation",
                               "precipitation_amount_acc": "precipitation",
                               "wind_speed": "wind_speed",
-                              "global_radiation":"radiation",
+                              "global_radiation": "radiation",
                               "discharge": "discharge"}
 
         self._shift_fields = ("precipitation_amount_acc",
@@ -159,7 +160,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         timeseries: dict
             Time series arrays keyed by type
         """
-        tsc = api.TsFactory().create_point_ts
+
         time_series = {}
         for key, (data, ta) in data_map.items():
             fslice = (len(data.shape) - 2)*[slice(None)]
@@ -170,8 +171,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
                     raise CFDataRepositoryError("Time axis size {} not equal to the number of "
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
-                return tsc(ta.size(), ta.start, ta.delta_t,
-                           api.DoubleVector.FromNdArray(d.flatten()),api.POINT_AVERAGE_VALUE)
+                return api.TimeSeries(ta, api.DoubleVector.FromNdArray(d.flatten()), api.POINT_AVERAGE_VALUE)
+
             #time_series[key] = np.array([[construct(data[fslice + [i, j]])
             #                              for j in range(J)] for i in range(I)])
             time_series[key] = np.array([construct(data[:,j]) for j in range(J)])                                
@@ -325,14 +326,10 @@ class CFDataRepository(interfaces.GeoTsRepository):
         """
 
         def noop_time(t):
-            t0 = int(t[0])
-            t1 = int(t[1])
-            return api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t))
+            return api.TimeAxis(api.UtcTimeVector.from_numpy(t.astype(int)), int(2*t[-1] - t[-2]))
 
         def dacc_time(t):
-            t0 = int(t[0])
-            t1 = int(t[1])
-            return noop_time(t) if issubset else api.TimeAxisFixedDeltaT(t0, t1 - t0, len(t) - 1)
+            return noop_time(t) if issubset else api.TimeAxis(api.UtcTimeVector.from_numpy(t.astype(int)))
 
         def noop_space(x):
             return x
