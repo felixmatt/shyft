@@ -114,7 +114,7 @@ TEST_CASE("test_bias_predictor") {
         fc_set.push_back(fc);
     }
 
-    kalman::parameter p;
+    kalman::parameter p(8,0.93,0.5,2.0,0.22);
     kalman::filter f(p);
     kalman::bias_predictor bias_predictor(f);
 
