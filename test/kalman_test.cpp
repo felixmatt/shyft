@@ -72,7 +72,7 @@ TEST_CASE("test_filter") {
     for(auto i=0;i<8;++i) {
         double bias_estimate=s.x(i);
         utctime t = fx.t0 + deltahours(3*i);
-        TS_ASSERT_DELTA(fx.bias_offset(t),bias_estimate,0.2);
+        TS_ASSERT_DELTA(fx.bias_offset(t),bias_estimate,0.21);
     }
     double no_value=std::numeric_limits<double>::quiet_NaN();
     /// update//forecast up to 10 days with no observations
@@ -114,7 +114,7 @@ TEST_CASE("test_bias_predictor") {
         fc_set.push_back(fc);
     }
 
-    kalman::parameter p;
+    kalman::parameter p(8,0.93,0.5,2.0,0.22);
     kalman::filter f(p);
     kalman::bias_predictor bias_predictor(f);
 
@@ -125,7 +125,7 @@ TEST_CASE("test_bias_predictor") {
     for(auto i=0;i<8;++i) {
         double bias_estimate=bias_predictor.s.x(i);
         utctime t = fx.t0 + deltahours(3*i);
-        TS_ASSERT_DELTA(fx.bias_offset(t),bias_estimate,0.2);
+        TS_ASSERT_DELTA(fx.bias_offset(t),bias_estimate,0.4);
     }
 }
 

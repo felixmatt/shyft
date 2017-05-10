@@ -21,7 +21,7 @@ namespace shyft {
                     x = arma::vec(n_daily_observations);x.fill(0.0);
                     k = arma::vec(n_daily_observations);k.fill(0.0);
                     P = make_covariance(n_daily_observations,  covariance_init,hourly_correlation);
-                    W = make_covariance(n_daily_observations,process_noise_init,hourly_correlation);
+                    W = make_covariance(n_daily_observations,process_noise_init*process_noise_init,hourly_correlation);
                 }
                 static inline arma::mat make_covariance(int n_daily_observations,double covariance_init,double hourly_correlation) {
                     arma::mat P(n_daily_observations,n_daily_observations);
@@ -62,7 +62,7 @@ namespace shyft {
                        double hourly_correlation=0.93,
                        double covariance_init=0.5,
                        double std_error_bias_measurements=2.0,
-                       double ratio_std_w_over_v=0.06
+                       double ratio_std_w_over_v=0.15 
                        ):
                        n_daily_observations(n_daily_observations),
                        hourly_correlation(hourly_correlation),
@@ -107,7 +107,7 @@ namespace shyft {
                 /** \brief update the kalman::filter p with the observed_bias for
                  * a specific period starting with utctime t.
                  *
-                 * \param observed_bias nan if no observation is available otherwise obs-fc
+                 * \param observed_bias nan if no observation is available otherwise fc-obs
                  * \param t utctime of observation, this filter utilizes daily solar patterns, so time
                  *        in day-cycle is the only important aspect.
                  * \param s contains the kalman state x,k and P, updated at exit
@@ -117,11 +117,14 @@ namespace shyft {
                    /// Compute Pt|t-1. This increases the covariance.
                    s.P= s.P + s.W;
                    if(isfinite(observed_bias)) {
-                        /// compute Kt
+                        /// compute Kt = (Pt|t-1*Ht') / (Ht*Pt*Ht' + V^2)
                         int ix= fold_to_daily_observation(t);
-                        s.k = s.P.col(ix) / (s.P.at(ix,ix) + p.std_error_bias_measurements);
-                        /// compute Pt|t
-                        s.P = 1.0 - s.k[ix]*s.P;
+						auto tmp = (s.P.at(ix, ix) + p.std_error_bias_measurements*p.std_error_bias_measurements);
+                        s.k = s.P.col(ix) / tmp;
+                        /// compute Pt|t = (I - Kt*Ht)*Pt|t-1 = Pt|t-1 - Kt* Ht*Pk|k-1
+						// wants this:
+						s.P = s.P - s.P.col(ix)*s.P.row(ix)/tmp;//
+						// old s.P= 1.0 - s.k[ix]*s.P;
                         /// compute xt|t
                         s.x = s.x + s.k*(observed_bias - s.x[ix]);
                     } else {
