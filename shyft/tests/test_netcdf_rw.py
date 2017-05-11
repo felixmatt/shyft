@@ -110,7 +110,7 @@ class TimeSeriesStore:
             ts_id.cf_role = 'timeseries_id'
             #ts_id.units = ''
 
-            time = ds.createVariable('time', 'f8', ('time',), least_significant_digit=1, zlib=True)
+            time = ds.createVariable('time', 'i8', ('time',), least_significant_digit=1, zlib=True)
             time.long_name = 'time'
             time.units = 'seconds since 1970-01-01 00:00:00 +00:00'
             time.calendar = 'gregorian'
@@ -131,7 +131,7 @@ class TimeSeriesStore:
             z.long_name = 'height above mean sea level'
             z.units = 'm'
 
-            v = ds.createVariable(self.ts_meta_info.variable_name, 'i8',
+            v = ds.createVariable(self.ts_meta_info.variable_name, 'f8',
                                   dimensions=('time', 'station'),
                                   zlib=self.ts_meta_info.zlib)
 
@@ -253,10 +253,8 @@ class TimeSeriesStore:
                 idx_min = np.searchsorted(time_utc, period.start, side='left')
                 idx_max = np.searchsorted(time_utc, period.end, side='right')
 
-                if idx_max - idx_min == len(time):
-                    print("We need to delete everything, not possible")
-                    pass
-                else:
+                # check if there is data outside the range
+                if idx_max - idx_min != len(time):
                     print('indices ', idx_min, idx_max, len(time))
                     # 3. crop the data array
                     time_cropped = np.append(time[0:idx_min], time[idx_max:])
@@ -785,7 +783,6 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         except CFDataRepositoryError:
             pass
 
-
         # and verify that we get exactly back what we wanted.
         self.assertIsNotNone(rts_map)
         self.assertTrue('temperature' in rts_map)
@@ -803,8 +800,6 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         # delete data with range UtcPeriod everything
         print('\n\n delete data with range UtcPeriod everything')
         tp = UtcPeriod(utc.time(2016, 1, 1), utc.time(2016, 1, 10))
-        # ta = TimeAxis(utc.time(2016, 1, 1), deltahours(1), 24)
-        # ts = TimeSeries(ta, dv.from_numpy(np.arange(0, 24, dtype=np.float64)), point_fx=point_fx.POINT_AVERAGE_VALUE)
         # write the time series
         t_ds.remove_tp_data(tp)
 
@@ -814,6 +809,97 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         # now read back 'temperature' that we know should be there
         self.assertRaises(CFDataRepositoryError, ts_dr.get_timeseries, ['temperature'], tp)
 
+        # --------------------------------------
+        # insert data in between time saved data points
+        print('\n\n insert data in between time saved data points')
+        # insert first data in which we want to insert the second batch
+        utc = Calendar()
+        ta = TimeAxis(utc.time(2016, 1, 1), deltahours(24), 2)
+        data = np.arange(0, ta.size(), dtype=np.float64)
+        ts = TimeSeries(ta, dv.from_numpy(data), point_fx=point_fx.POINT_AVERAGE_VALUE)
+        # save the first batch
+        t_ds.append_ts_data(ts)
 
+        # insert first data for every hour in between
+        utc = Calendar()
+        ta = TimeAxis(utc.time(2016, 1, 1)+deltahours(1), deltahours(1), 23)
+        data = np.arange(10, 10+ta.size(), dtype=np.float64)
+        ts = TimeSeries(ta, dv.from_numpy(data), point_fx=point_fx.POINT_AVERAGE_VALUE)
+        # save the first batch
+        t_ds.append_ts_data(ts)
+
+        # expected result
+        time_points = np.array([1451606400, 1451610000, 1451613600, 1451617200, 1451620800, 1451624400, 1451628000,
+                                1451631600, 1451635200, 1451638800, 1451642400, 1451646000, 1451649600, 1451653200,
+                                1451656800, 1451660400, 1451664000, 1451667600, 1451671200, 1451674800, 1451678400,
+                                1451682000, 1451685600, 1451689200, 1451692800, 0])
+        time_points[-1] = 2 * time_points[-2] - time_points[-3]  # last time point calc
+        data = np.array([0, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+                         27, 28, 29, 30, 31, 32, 1])
+        ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+
+        # now read back the result using a *standard* shyft cf geo repository
+        selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
+        ts_dr = CFDataRepository(epsg_id, test_file, selection_criteria)
+        # now read back 'temperature' that we know should be there
+        rts_map = ts_dr.get_timeseries(['temperature'], ts_exp.total_period())
+
+        # and verify that we get exactly back what we wanted.
+        self.assertIsNotNone(rts_map)
+        self.assertTrue('temperature' in rts_map)
+        geo_temperature = rts_map['temperature']
+        self.assertEqual(len(geo_temperature), 1)
+        self.assertLessEqual(GeoPoint.distance2(geo_temperature[0].mid_point(), GeoPoint(x, y, z)), 1.0)
+        # check if time axis is as expected
+        self.assertEqual(geo_temperature[0].ts.time_axis, ts_exp.time_axis)
+        self.assertTrue(np.allclose(geo_temperature[0].ts.time_axis.time_points, ts_exp.time_axis.time_points))
+        self.assertEqual(geo_temperature[0].ts.point_interpretation(), point_fx.POINT_AVERAGE_VALUE)
+        # check if variable data is as expected
+        self.assertTrue(np.allclose(geo_temperature[0].ts.values.to_numpy(), ts_exp.values.to_numpy()))
+
+        # --------------------------------------
+        # insert data including nan
+        print('\n\n insert data including nan')
+        utc = Calendar()
+        ta = TimeAxis(utc.time(2016, 1, 1) + deltahours(1), deltahours(1), 23)
+        data = np.arange(10, 10 + ta.size(), dtype=np.float64)
+        data[4] = np.nan
+        data[6] = np.inf
+        data[8] = -np.inf
+        ts = TimeSeries(ta, dv.from_numpy(data), point_fx=point_fx.POINT_AVERAGE_VALUE)
+        # save the first batch
+        t_ds.append_ts_data(ts)
+
+        # expected result
+        time_points = np.array([1451606400, 1451610000, 1451613600, 1451617200, 1451620800, 1451624400, 1451628000,
+                                1451631600, 1451635200, 1451638800, 1451642400, 1451646000, 1451649600, 1451653200,
+                                1451656800, 1451660400, 1451664000, 1451667600, 1451671200, 1451674800, 1451678400,
+                                1451682000, 1451685600, 1451689200, 1451692800, 0])
+        time_points[-1] = 2 * time_points[-2] - time_points[-3]  # last time point calc
+
+        data = np.array([0, 10, 11, 12, 13, np.nan, 15, np.inf, 17, -np.inf, 19, 20, 21, 22, 23, 24, 25, 26,
+                         27, 28, 29, 30, 31, 32, 1])
+        ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+
+        # now read back the result using a *standard* shyft cf geo repository
+        selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
+        ts_dr = CFDataRepository(epsg_id, test_file, selection_criteria)
+        # now read back 'temperature' that we know should be there
+        rts_map = ts_dr.get_timeseries(['temperature'], ts_exp.total_period())
+
+        # and verify that we get exactly back what we wanted.
+        self.assertIsNotNone(rts_map)
+        self.assertTrue('temperature' in rts_map)
+        geo_temperature = rts_map['temperature']
+        self.assertEqual(len(geo_temperature), 1)
+        self.assertLessEqual(GeoPoint.distance2(geo_temperature[0].mid_point(), GeoPoint(x, y, z)), 1.0)
+        # check if time axis is as expected
+        self.assertEqual(geo_temperature[0].ts.time_axis, ts_exp.time_axis)
+        self.assertTrue(np.allclose(geo_temperature[0].ts.time_axis.time_points, ts_exp.time_axis.time_points))
+        self.assertEqual(geo_temperature[0].ts.point_interpretation(), point_fx.POINT_AVERAGE_VALUE)
+        # check if variable data is as expected
+        self.assertTrue(np.allclose(geo_temperature[0].ts.values.to_numpy(), ts_exp.values.to_numpy(), equal_nan=True))
 if __name__ == '__main__':
     unittest.main()
