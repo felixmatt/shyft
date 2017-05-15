@@ -233,13 +233,15 @@ namespace shyft{
         apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
-        std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const gta_t& ta, const vector<int>& percentile_list) {
+
+
+        std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& tsv1,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
-            //-- use core calc here:
-            auto rp= shyft::time_series::calculate_percentiles(ta,ts_list,percentile_list);
+            auto rp= shyft::time_series::calculate_percentiles(ta,deflate_ts_vector<gts_t>(tsv1),percentile_list);
             for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
             return r;
         }
+
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& ts_list,const time_axis::fixed_dt& ta, const vector<int>& percentile_list) {
             return percentiles(ts_list,time_axis::generic_dt(ta),percentile_list);
         }
@@ -248,20 +250,6 @@ namespace shyft{
             if(i==std::string::npos || i>=time_axis().size() )
                 return nan;
             return value_at(time_axis().time(i));
-            // Hmm! here we have to define what value(i) means
-            // .. we could define it as
-            //     the value at the beginning of the i'th period
-            //
-            //   then we define value(t) as
-            //    as the point interpretation of f(t)..
-            //
-            //if(fx_policy==ts_point_fx::POINT_AVERAGE_VALUE)
-            //    return value_at(ta.time(i));
-            //utcperiod p=ta.period(i);
-            //double v0= value_at(p.start);
-            //double v1= value_at(p.end);
-            //if(isfinite(v1)) return 0.5*(v0 + v1);
-            //return v0;
         }
         double abin_op_scalar_ts::value_at(utctime t) const {
             bind_check();

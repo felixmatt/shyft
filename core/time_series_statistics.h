@@ -10,7 +10,7 @@ namespace shyft {
         using namespace shyft;
 
         /** specialized max function that ignores nan*/
-        inline double nan_max(double r, double x) {
+        inline double nan_max(double const& r, double const& x) {
             if (!isfinite(x))
                 return r;
             if (!isfinite(r))
@@ -18,7 +18,7 @@ namespace shyft {
             return std::max(r, x);
         }
         /** specialized min function that ignores nan*/
-        inline double nan_min(double r, double x) {
+        inline double nan_min(double const&r, double const& x) {
             if (!isfinite(x))
                 return r;
             if (!isfinite(r))
@@ -160,61 +160,74 @@ namespace shyft {
         accessor "accumulate" on time-axis to dt, using stair-case or linear between points
         create result vector[1..n] (the time-axis dimension)
         where each element is vector[1..np] (for each timestep, we get the percentiles
-        for each timestep_i in time-axis
-        for each tsa_i: accessors(time-axis,ts)
-        sample vector[timestep_i].emplace_back( tsa_i(time_step_i) )
-        percentiles_timeseries[timestep_i]= calculate_percentiles(..)
+         for each timestep_i in time-axis
+          for each tsa_i: accessors(time-axis,ts)
+            sample vector[timestep_i].emplace_back( tsa_i(time_step_i) ) (possibly skipping nans if selected)
+            percentiles_timeseries[timestep_i]= calculate_percentiles(..)
+
 
         \return percentiles_timeseries
 
         */
         template <class ts_t, class ta_t>
-        inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles, size_t min_t_steps = 1000) {
+        inline std::vector< point_ts<ta_t> > calculate_percentiles(const ta_t& ta, const std::vector<ts_t>& ts_list, const std::vector<int>& percentiles, size_t min_t_steps = 1000,bool skip_nans=true) {
             std::vector<point_ts<ta_t>> result;
             auto fx_p = ts_list.size() ? ts_list.front().point_interpretation() : ts_point_fx::POINT_AVERAGE_VALUE;
             for (size_t r = 0; r < percentiles.size(); ++r) // pre-init the result ts that we are going to fill up
                 result.emplace_back(ta, 0.0, fx_p);
 
-            auto partition_calc = [&result, &ts_list, &ta, &percentiles](size_t i0, size_t n) {
+            auto partition_calc = [&result, &ts_list, &ta, &percentiles,skip_nans](size_t i0, size_t n) {
 
                 std::vector < average_accessor<ts_t, ta_t>> tsa_list; tsa_list.reserve(ts_list.size());
                 for (const auto& ts : ts_list) // initialize the ts accessors to we can accumulate to time-axis ta e.g.(hour->day)
                     tsa_list.emplace_back(ts, ta);
 
-                std::vector<double> samples(tsa_list.size(), 0.0);
+                std::vector<double> samples;samples.reserve(tsa_list.size());
 
                 for (size_t t = i0; t < i0 + n; ++t) {//each time step t in the time-axis, here we could do parallel partition
-                    for (size_t i = 0; i < tsa_list.size(); ++i) // get samples from all the "tsa"
-                        samples[i] = tsa_list[i].value(t);
+                    samples.clear();
+                    for (size_t i = 0; i < tsa_list.size(); ++i) { // get samples from all the "tsa"
+                        auto v=tsa_list[i].value(t);
+                        if(!skip_nans || isfinite(v))
+                            samples.emplace_back(v);
+                    }
                     // possible with pipe-line to percentile calc here !
                     std::vector<double> percentiles_at_t(calculate_percentiles_excel_method_full_sort(samples, percentiles));
                     for (size_t p = 0; p < result.size(); ++p) {
-                        result[p].set(t, percentiles_at_t[p]);
+                        if(!(percentiles[p]==statistics_property::MAX_EXTREME || percentiles[p]==statistics_property::MIN_EXTREME))
+                            result[p].set(t, percentiles_at_t[p]);
                     }
                 }
+            };
+            auto extreme_calc = [&result, &ts_list, &ta, &percentiles](size_t x) {
+                result[x].v = extract_statistic_from_vector(ts_list, ta, percentiles[x] == statistics_property::MIN_EXTREME?nan_min:nan_max);
             };
 
             if (ta.size() < min_t_steps) {
                 partition_calc(0, ta.size());
+                //if mi-ma extreme calc, do it here
+                for (size_t i = 0;i < percentiles.size();++i) {
+                    if (percentiles[i] == statistics_property::MIN_EXTREME) {// min-extremes
+                        result[i].v = extract_statistic_from_vector(ts_list, ta, nan_min);
+                    } else if (percentiles[i] == statistics_property::MAX_EXTREME) {// max-extremes
+                        result[i].v = extract_statistic_from_vector(ts_list, ta, nan_max);
+                    }
+                }
             } else {
                 vector<future<void>> calcs;
-                //size_t n_partitions= 1+ ta.size()/min_t_steps;
                 for (size_t p = 0;p < ta.size(); ) {
                     size_t np = p + min_t_steps <= ta.size() ? min_t_steps : ta.size() - p;
                     calcs.push_back(std::async(std::launch::async, partition_calc, p, np));
                     p += np;
                 }
+
+                for (size_t i = 0;i < percentiles.size();++i) {
+                    if (percentiles[i] == statistics_property::MIN_EXTREME || percentiles[i] == statistics_property::MAX_EXTREME)
+                        calcs.push_back(std::async(std::launch::async,extreme_calc,i));
+                }
                 for (auto &f : calcs)
                     f.get();
 
-            }
-            //if mi-ma extreme calc, do it here
-            for (size_t i = 0;i < percentiles.size();++i) {
-                if (percentiles[i] == statistics_property::MIN_EXTREME) {// min-extremes
-                    result[i].v = extract_statistic_from_vector(ts_list, ta, nan_min);
-                } else if (percentiles[i] == statistics_property::MAX_EXTREME) {// max-extremes
-                    result[i].v = extract_statistic_from_vector(ts_list, ta, nan_max);
-                }
             }
 
             return result;
