@@ -27,7 +27,7 @@ using namespace shyft::core;
 using namespace std;
 using namespace shyfttest;
 using int_t=arma::uword;
-TEST_SUITE("kriging");
+TEST_SUITE("kriging") {
 TEST_CASE("test_covariance_calculation") {
     kriging::covariance::exponential e(1.0,1000.0);
     kriging::covariance::gaussian g(1.0,1000.0);
@@ -149,4 +149,4 @@ TEST_CASE("test_interpolation") {
         // for debug/validation
         //cout<<"\ngrid values (should be between 0.6..1.2)\n"<<grid_values<<endl;
 }
-TEST_SUITE_END();
+}

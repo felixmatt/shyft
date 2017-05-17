@@ -8,7 +8,7 @@ namespace shyfttest {
 
 using namespace shyft::core;
 using namespace shyft::core::actual_evapotranspiration;
-TEST_SUITE("actual_evapotranspiration");
+TEST_SUITE("actual_evapotranspiration"){
 TEST_CASE("test_water") {
     const double sca = 0.0;
     const double pot_evap = 5.0; // [mm/h]
@@ -46,4 +46,6 @@ TEST_CASE("test_scale_factor") {
     TS_ASSERT(act_evap_small_scale > act_evap_large_scale);
 
 }
-TEST_SUITE_END();
+}
+
+

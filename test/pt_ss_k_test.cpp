@@ -39,7 +39,7 @@ namespace shyfttest {
     } // mock
 } // shyfttest
 
-TEST_SUITE("pt_ss_k");
+TEST_SUITE("pt_ss_k") {
 TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
@@ -106,4 +106,4 @@ TEST_CASE("test_call_stack") {
     for (size_t i = 0; i < snow_swe.size(); ++i)
         TS_ASSERT(std::isfinite(snow_swe.get(i).v) && snow_swe.get(i).v >= 0);
 }
-TEST_SUITE_END();
+}

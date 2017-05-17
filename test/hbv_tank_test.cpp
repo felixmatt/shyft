@@ -3,7 +3,7 @@
 
 
 using namespace shyft::core;
-TEST_SUITE("hbv_tank");
+TEST_SUITE("hbv_tank"){
 TEST_CASE("test_regression") {
 	hbv_tank::parameter p;
 	hbv_tank::calculator<hbv_tank::parameter> calc(p);
@@ -20,4 +20,4 @@ TEST_CASE("test_regression") {
 	TS_ASSERT_DELTA(s.uz, 20.8, 0.0002);
 	TS_ASSERT_DELTA(r.outflow, 11.82768, 0.00005);
 }
-TEST_SUITE_END();
+}

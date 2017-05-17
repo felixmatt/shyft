@@ -39,7 +39,8 @@ namespace ta = shyft::time_axis;
 typedef st::point_ts<ta::fixed_dt> pts_t;
 typedef st::constant_timeseries<ta::fixed_dt> cts_t;
 typedef ta::fixed_dt ta_t;
-TEST_SUITE("region_model");
+
+TEST_SUITE("region_model") {
 TEST_CASE("test_build") {
 
     // arrange
@@ -224,4 +225,5 @@ TEST_CASE("test_region_vs_catchment_parameters") {
 
 
 }
-TEST_SUITE_END();
+}
+

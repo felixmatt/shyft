@@ -2,6 +2,8 @@
 #include "mocks.h"
 
 
+#include "api/api.h"
+#include "api/time_series.h"
 
 #ifdef WIN32
 #if _MSC_VER < 1800
@@ -12,7 +14,7 @@ const double NAN = *(double*)nanx;
 
 using namespace shyft::core;
 using namespace shyfttest::idw;
-TEST_SUITE("inverse_distance");
+TEST_SUITE("inverse_distance") {
 TEST_CASE("test_temperature_model") {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
@@ -371,8 +373,6 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	double expected_v = (v1 + v2) / (w1 + w2);
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
-#include "api/api.h"
-#include "api/time_series.h"
 TEST_CASE("test_performance") {
     using namespace shyft;
     //
@@ -480,5 +480,6 @@ TEST_CASE("test_zscale_distance") {
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), pow(1+1+10*10*1,0.5), 1e-9);
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 2.0, 1.0), pow(1 + 1 + 1, 2.0 / 2.0), 1e-9);
 }
-TEST_SUITE_END();
+}
+
 /* vim: set filetype=cpp: */

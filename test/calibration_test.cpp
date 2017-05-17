@@ -291,7 +291,7 @@ namespace shyfttest {
 
 } //  shyfttest
 
-TEST_SUITE("calibration");
+TEST_SUITE("calibration") {
 TEST_CASE("test_dummy") {
     std::vector<double> target = {-5.0,1.0,1.0,1.0};
     std::vector<double> lower = {-10, 0, 0, 0};
@@ -517,4 +517,4 @@ TEST_CASE("test_abs_diff_sum_goal_function") {
     }
 }
 
-TEST_SUITE_END();
+}

@@ -18,9 +18,8 @@ using namespace shyft::time_series;
 
 using namespace shyft::api;
 
-TEST_SUITE("api");
+TEST_SUITE("api") {
 TEST_CASE("test_ptgsk_state_io") {
-	using namespace shyft::api;
 	pt_gs_k_state_t s;
 	s.gs.albedo = 0.5;
 	s.gs.alpha = 0.8;
@@ -189,4 +188,4 @@ TEST_CASE("test_state_with_id_functionality") {
     TS_ASSERT_EQUALS(m0_y.size(), 1u);
     TS_ASSERT_EQUALS(m0_y[0], 0);
 }
-TEST_SUITE_END();
+}

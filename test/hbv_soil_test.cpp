@@ -4,7 +4,7 @@
 
 
 using namespace shyft::core;
-TEST_SUITE("hbv_soil");
+TEST_SUITE("hbv_soil") {
 TEST_CASE("test_regression") {
 	hbv_soil::parameter p;
 	hbv_soil::calculator<hbv_soil::parameter> calc(p);
@@ -34,4 +34,4 @@ TEST_CASE("test_dry_soil_case") {
     TS_ASSERT_DELTA(r.outflow, 4.4444e-5, 1.0e-6);
 
 }
-TEST_SUITE_END();
+}
