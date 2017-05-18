@@ -7,7 +7,7 @@ namespace skaugen_test_constant {
 
 using namespace shyft::core::skaugen;
 typedef calculator<parameter, state, response> SkaugenModel;
-TEST_SUITE("skaugen");
+TEST_SUITE("skaugen") {
 TEST_CASE("test_accumulation") {
     // Model parameters
     const double d_range = 113.0;
@@ -164,4 +164,4 @@ TEST_CASE("test_lwc") {
 
     return;
 }
-TEST_SUITE_END();
+}

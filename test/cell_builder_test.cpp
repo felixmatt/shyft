@@ -2,6 +2,14 @@
 #include "core/experimental.h"
 #include "core/model_calibration.h"
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+
+#include <boost/filesystem.hpp>
+
 // Figure out the complete path based on rel_path to the shyft/test directory
 using namespace std;
 
@@ -59,7 +67,7 @@ namespace shyfttest {
 	}
 
 }
-TEST_SUITE("cell_builder");
+TEST_SUITE("cell_builder") {
 TEST_CASE("cell_builder_test::test_read_geo_region_data_from_files") {
 	using namespace shyft::experimental;
 	using namespace shyfttest;
@@ -155,14 +163,6 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 		os << (i == i0 ? "\n" : ",") << ts.value(i);
 	os << endl;
 }
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-
-#include <boost/filesystem.hpp>
 
 TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 
@@ -439,4 +439,5 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	}
 	cout<< "done"<<endl;
 }
-TEST_SUITE_END();
+}
+

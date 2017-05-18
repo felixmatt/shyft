@@ -3,7 +3,7 @@
 
 using namespace shyft::core;
 namespace pt = shyft::core::priestley_taylor;
-TEST_SUITE("priestley_taylor");
+TEST_SUITE("priestley_taylor") {
 TEST_CASE("priestley_taylor_test::test_regression") {
     pt::calculator pt(0.2, 1.26);
     TS_ASSERT_DELTA(pt.potential_evapotranspiration(20.5, 445, 64/100.0)*24.0*3600 , 11.0 , 1.0); //TODO: verify some more numbers
@@ -20,4 +20,4 @@ TEST_CASE("priestley_taylor_test::test_regression") {
     for(double r=10.0; r < 900.0; r += 50.0)
         TS_ASSERT(pt.potential_evapotranspiration(15, r, 60)<pt.potential_evapotranspiration(15, r + 50.0, 60));
 }
-TEST_SUITE_END();
+}

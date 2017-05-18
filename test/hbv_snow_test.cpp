@@ -6,7 +6,7 @@ using namespace shyft::core::hbv_snow;
 using namespace std;
 
 using SnowModel = calculator<parameter, state>;
-TEST_SUITE("hbv_snow");
+TEST_SUITE("hbv_snow") {
 TEST_CASE("test_integral_calculations") {
     vector<double> f = {0.0, 0.5, 1.0};
     vector<double> x = {0.0, 0.5, 1.0};
@@ -120,5 +120,5 @@ TEST_CASE("test_mass_balance_melt_no_precip") {
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
 }
 
-TEST_SUITE_END();
+}
 /* vim: set filetype=cpp: */

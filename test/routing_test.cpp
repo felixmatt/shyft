@@ -40,7 +40,7 @@ namespace shyft {
     }
 }
 
-TEST_SUITE("routing");
+TEST_SUITE("routing") {
 
 TEST_CASE("test_build_valid_river_network") {
 
@@ -168,4 +168,4 @@ TEST_CASE("test_routing_model") {
 
 
 }
-TEST_SUITE_END();
+}

@@ -49,7 +49,7 @@ namespace shyfttest {
         }
     }
 }
-TEST_SUITE("kalman");
+TEST_SUITE("kalman") {
 TEST_CASE("test_filter") {
     using namespace shyfttest;
     // prepare the time-dimension, using time-axis
@@ -162,4 +162,4 @@ TEST_CASE("test_running_predictor") {
         TS_ASSERT_DELTA(fx.bias_offset(t),bias_ts.value(i),0.2);// at the end it should have a quite correct pattern
     }
 }
-TEST_SUITE_END();
+}

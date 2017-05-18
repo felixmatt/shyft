@@ -70,8 +70,49 @@ using namespace shyft;
 using namespace shyfttest;
 
 typedef point_ts<time_axis::point_dt> xts_t;
+namespace shyfttest {
+    class ts_source {
+            utctime start;
+            utctimespan dt;
+            size_t n;
+          public:
+            ts_source(utctime start=no_utctime, utctimespan dt=0, size_t n=0) : start(start),dt(dt),n(n) {}
+            utcperiod total_period() const { return utcperiod(start,start+n*dt);}
+            size_t size() const { return n; }
+            utctimespan delta() const {return dt;}
 
-TEST_SUITE("time_series");
+            mutable size_t n_period_calls=0;
+            mutable size_t n_time_calls=0;
+            mutable size_t n_index_of_calls=0;
+            mutable size_t n_get_calls=0;
+            size_t total_calls()const {return n_get_calls+n_period_calls+n_time_calls+n_index_of_calls;}
+            void reset_call_count() {n_get_calls=n_period_calls=n_time_calls=n_index_of_calls=0;}
+
+            utcperiod operator()(size_t i) const {
+                n_period_calls++;
+                if(i>n) throw runtime_error("index out of range called");
+                return utcperiod(start + i*dt, start + (i + 1)*dt);
+            }
+            utctime   operator[](size_t i) const {
+                n_time_calls++;
+                if(i>n) throw runtime_error("index out of range called");
+                return utctime(start + i*dt);
+            }
+            point get(size_t i) const {
+                n_get_calls++;
+                if(i>n) throw runtime_error("index out of range called");
+
+                return point(start+i*dt,i);}
+            size_t index_of(utctime tx) const {
+                n_index_of_calls++;
+                if(tx < start) return string::npos;
+                auto ix = size_t((tx - start)/dt);
+                return ix < n ? ix : n - 1;
+            }
+        };
+};
+
+TEST_SUITE("time_series") {
 TEST_CASE("nan_min_max") {
 
 	FAST_CHECK_EQ(isfinite(nan_max(shyft::nan, shyft::nan)),false);
@@ -297,47 +338,6 @@ TEST_CASE("test_point_source_scale_by_value") {
     }
 }
 
-namespace shyfttest {
-    class ts_source {
-            utctime start;
-            utctimespan dt;
-            size_t n;
-          public:
-            ts_source(utctime start=no_utctime, utctimespan dt=0, size_t n=0) : start(start),dt(dt),n(n) {}
-            utcperiod total_period() const { return utcperiod(start,start+n*dt);}
-            size_t size() const { return n; }
-            utctimespan delta() const {return dt;}
-
-            mutable size_t n_period_calls=0;
-            mutable size_t n_time_calls=0;
-            mutable size_t n_index_of_calls=0;
-            mutable size_t n_get_calls=0;
-            size_t total_calls()const {return n_get_calls+n_period_calls+n_time_calls+n_index_of_calls;}
-            void reset_call_count() {n_get_calls=n_period_calls=n_time_calls=n_index_of_calls=0;}
-
-            utcperiod operator()(size_t i) const {
-                n_period_calls++;
-                if(i>n) throw runtime_error("index out of range called");
-                return utcperiod(start + i*dt, start + (i + 1)*dt);
-            }
-            utctime   operator[](size_t i) const {
-                n_time_calls++;
-                if(i>n) throw runtime_error("index out of range called");
-                return utctime(start + i*dt);
-            }
-            point get(size_t i) const {
-                n_get_calls++;
-                if(i>n) throw runtime_error("index out of range called");
-
-                return point(start+i*dt,i);}
-            size_t index_of(utctime tx) const {
-                n_index_of_calls++;
-                if(tx < start) return string::npos;
-                auto ix = size_t((tx - start)/dt);
-                return ix < n ? ix : n - 1;
-            }
-        };
-};
 TEST_CASE("test_hint_based_bsearch") {
     calendar utc;
     auto t=utc.time(YMDhms(2015,5,1,0,0,0));
@@ -1452,4 +1452,4 @@ TEST_CASE("test_uniform_sum_ts") {
 	}
 }
 
-TEST_SUITE_END();
+}

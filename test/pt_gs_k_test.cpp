@@ -28,7 +28,7 @@ static std::ostream& operator<<(std::ostream& os, const point& pt) {
     os << calendar().to_string(pt.t) << ", " << pt.v;
     return os;
 }
-TEST_SUITE("pt_gs_k");
+TEST_SUITE("pt_gs_k")  {
 TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
@@ -247,4 +247,4 @@ TEST_CASE("test_mass_balance") {
 }
 
 
-TEST_SUITE_END();
+}

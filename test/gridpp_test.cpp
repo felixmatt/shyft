@@ -27,7 +27,9 @@ namespace shyfttest {
 
 #define TS0_EQUAL(ts, v) fabs(ts.value(0) - (v)) < 1e-9
 }
-TEST_SUITE("gridpp");
+
+
+TEST_SUITE("gridpp") {
 TEST_CASE("test_sih_workbench") {
     // from region_model::run_interpolation, we copy some typedefs to setup
     // a realistic IDW run
@@ -207,7 +209,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 	obs_set.emplace_back(geo_point(100,  100, 1000), point_ts<ta::fixed_dt>(ta, 14.97));
 	obs_set.emplace_back(geo_point(5100, 100, 1150), point_ts<ta::fixed_dt>(ta, 13.12));
 	obs_set.emplace_back(geo_point(100, 5100,  850), point_ts<ta::fixed_dt>(ta, 14.92));
-	
+
 	// IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
 	const int ng = 10;
 	auto fc_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
@@ -215,7 +217,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 
-	// Simulate forecast offset of -2 degC 
+	// Simulate forecast offset of -2 degC
 	auto off_ts = point_ts<ta::fixed_dt>(ta, -2.0);
 	for_each(fc_grid.begin(), fc_grid.end(), [&](auto& a) { a.pts.add(off_ts); });
 
@@ -246,4 +248,4 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 	for (auto it_obs = obs_set.begin(), it_fc = fc_set.begin(); it_obs != obs_set.end() || it_fc != fc_set.end(); ++it_obs, ++it_fc)
 		TS_ASSERT_LESS_THAN(fabs((*it_obs).value(0) - (*it_fc).value(0)), 1e-2);
 }
-TEST_SUITE_END();
+}

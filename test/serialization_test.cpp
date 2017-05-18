@@ -65,7 +65,7 @@ static bool is_equal(const Ts& a,const Ts &b) {
     return true;
 }
 
-TEST_SUITE("serialization");
+TEST_SUITE("serialization") {
 TEST_CASE("test_serialization") {
     // testing serialization in the order of appearance/dependency
 
@@ -385,4 +385,4 @@ TEST_CASE("test_serialization_memcpy_performance") {
 
     }
 }
-TEST_SUITE_END();
+}

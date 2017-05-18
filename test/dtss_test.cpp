@@ -2,8 +2,10 @@
 
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
-#include "core/dtss.h"
+#include <dlib/logger.h>
+#include <dlib/misc_api.h>
 
+#include "core/dtss.h"
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "api/time_series.h"
@@ -21,11 +23,9 @@ api::apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
     auto a = aa*3.0 + aa;
     return a;
 }
-#include <dlib/logger.h>
-#include <dlib/misc_api.h>
 dlib::logger dlog("dlib.log");
 
-TEST_SUITE("dtss");
+TEST_SUITE("dtss") {
 
 TEST_CASE("dlib_server_basics") {
     dlog.set_level(dlib::LALL);
@@ -183,5 +183,4 @@ TEST_CASE("dlib_server_performance") {
     }
     dlog << dlib::LINFO << "done";
 }
-
-TEST_SUITE_END();
+}

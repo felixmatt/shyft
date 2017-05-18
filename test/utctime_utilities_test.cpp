@@ -5,7 +5,7 @@ using namespace std;
 using namespace shyft;
 using namespace shyft::core;
 
-TEST_SUITE("utctime_utilities");
+TEST_SUITE("utctime_utilities") {
 
 TEST_CASE("test_utctime") {
     calendar c(0);
@@ -364,4 +364,4 @@ TEST_CASE("calendar_iso_week") {
             FAST_CHECK_EQ(c.time(2015, 1, 1 + d, 0, 0, 0), c.time(YWdhms(2015, 1, 4 + d, 0, 0, 0)));
     }
 }
-TEST_SUITE_END();
+}

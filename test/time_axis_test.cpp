@@ -44,7 +44,7 @@ static bool test_if_equal( const TA& e, const TB& t ) {
 
 	return !equivalent_time_axis(u,e) && !equivalent_time_axis(u,t);
 }
-TEST_SUITE("time_axis");
+TEST_SUITE("time_axis") {
 TEST_CASE("test_all") {
     // Verify that if all types of time-axis are setup up to have the same periods
     // they all have the same properties.
@@ -267,4 +267,4 @@ TEST_CASE("time_axis_map") {
 	//auto ix_map = tat.map(a, b);
 	//FAST_CHECK_EQ(ix_map.size(), b.size());
 }
-TEST_SUITE_END();
+}

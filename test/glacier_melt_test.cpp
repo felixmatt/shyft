@@ -8,7 +8,7 @@ namespace glacier_test_constant {
 
 using namespace shyft::core;
 
-TEST_SUITE("glacier_melt");
+TEST_SUITE("glacier_melt") {
 TEST_CASE("test_melt") {
     // Model parameters
     const double dtf = 6.0;
@@ -76,4 +76,4 @@ TEST_CASE("test_melt_ts") {
     auto b = a*3.0;
 #endif
 }
-TEST_SUITE_END();
+}

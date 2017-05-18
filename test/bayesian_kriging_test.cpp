@@ -155,7 +155,8 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 	}
 }
 using namespace shyft::core::bayesian_kriging;
-TEST_SUITE("bayesian_kriging");
+TEST_SUITE("bayesian_kriging") {
+
 TEST_CASE("test_covariance_calculation") {
 	Parameter params;
 
@@ -295,7 +296,7 @@ TEST_CASE("test_performance") {
     btk_interpolation<average_accessor<shyfttest::xpts_t, time_axis::point_dt>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
     const std::clock_t total = std::clock() - start;
 
-    
+
     if (verbose) std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
      {
         if (verbose) std::cout << "\taltitude\tmax\tmin\n ";
@@ -306,4 +307,5 @@ TEST_CASE("test_performance") {
         }
     }
 }
-TEST_SUITE_END();
+}
+
