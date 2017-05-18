@@ -1,6 +1,6 @@
 #pragma once
 
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
     namespace core {
@@ -200,7 +200,7 @@ namespace shyft {
                  * \note If the supplied q (state) is less than min_q(0.00001, it represents mm water..),
                  *       it is forced to min_q to ensure numerical stability
                  */
-                void step(shyft::timeseries::utctime T0, shyft::timeseries::utctime T1, double& q, double& q_avg, double p, double e) {
+                void step(shyft::time_series::utctime T0, shyft::time_series::utctime T1, double& q, double& q_avg, double p, double e) {
                     state_type x_tmp;
                     const double min_q = 0.00001;// ref note above
                     if (q < min_q) q = min_q;

@@ -48,10 +48,17 @@ namespace expose {
         .def("to_numpy",ToNpArray<T>,"convert to numpy") // Ok, to make numpy 1-d arrays
         ;
         numpy_boost_python_register_type<T, 1>(); // register the numpy object so we can access it in C++
-        py_api::iterable_converter() // and finally ensure that lists into constructor do work
-            .from_python<XVector>()
-        ;
+        py_api::iterable_converter().from_python<XVector>();
     }
+    static void expose_str_vector(const char *name) {
+        typedef std::vector<std::string> XVector;
+        class_<XVector>(name)
+            .def(vector_indexing_suite<XVector>()) // meaning it get all it needs to appear as python list
+            .def(init<const XVector&>(args("const_ref_v"))) // so we can copy construct
+            ;
+        py_api::iterable_converter().from_python<XVector>();
+    }
+
     typedef std::vector<shyft::core::geo_point> GeoPointVector;
     static GeoPointVector create_from_x_y_z_vectors(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double> z) {
         if(!(x.size()==y.size() && y.size()==z.size()))
@@ -81,7 +88,7 @@ namespace expose {
 
     void vectors() {
         np_import();
-        expose_vector<std::string>("StringVector");
+        expose_str_vector("StringVector");
         expose_vector<double>("DoubleVector");
         expose_vector<int>("IntVector");
         expose_vector<char>("ByteVector");

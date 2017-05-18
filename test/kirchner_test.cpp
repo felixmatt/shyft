@@ -8,7 +8,7 @@ namespace shyfttest {
 
 }
 using namespace shyft::core::kirchner;
-TEST_SUITE("kirchner");
+TEST_SUITE("kirchner") {
 TEST_CASE("test_single_solve") {
     using namespace shyft::core;
     parameter p;
@@ -112,4 +112,4 @@ TEST_CASE("test_composite_average_loads") {
     }
 }
 
-TEST_SUITE_END();
+}

@@ -2,6 +2,14 @@
 #include "core/experimental.h"
 #include "core/model_calibration.h"
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+
+#include <boost/filesystem.hpp>
+
 // Figure out the complete path based on rel_path to the shyft/test directory
 using namespace std;
 
@@ -59,7 +67,7 @@ namespace shyfttest {
 	}
 
 }
-TEST_SUITE("cell_builder");
+TEST_SUITE("cell_builder") {
 TEST_CASE("cell_builder_test::test_read_geo_region_data_from_files") {
 	using namespace shyft::experimental;
 	using namespace shyfttest;
@@ -156,14 +164,6 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-
-#include <boost/filesystem.hpp>
-
 TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 
 	//
@@ -229,8 +229,8 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	auto dt = ec::deltahours(3);
 	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
 	size_t n = 24 * ndays;//365;// 365 takes 20 seconds at cell stage 8core
-	et::timeaxis ta(start, dt, n);
-    et::timeaxis ta_one_step(start, dt*n, 1);
+	ta::fixed_dt ta(start, dt, n);
+    ta::fixed_dt ta_one_step(start, dt*n, 1);
 	ec::interpolation_parameter ip;
 	ip.use_idw_for_temperature = true;
     vector<int> all_catchment_ids;// empty vector means no filtering
@@ -243,9 +243,9 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	auto ipt =elapsed_ms(ti1,timing::now());
 	cout << "3. a Done with interpolation step two catchments used = " << ipt << "[ms]" << endl;
     auto avg_precip_ip_set = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
-    auto avg_precip_ip_set_value = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_set, ta_one_step).value(0);
+    auto avg_precip_ip_set_value = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_set, ta_one_step).value(0);
     auto avg_precip_ip_o_set = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), other_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
-    auto avg_precip_ip_o_set_value = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_o_set, ta_one_step).value(0);
+    auto avg_precip_ip_o_set_value = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_o_set, ta_one_step).value(0);
     //cout << "partial:avg precip for selected    catchments is:" << avg_precip_ip_set_value << endl;
     //cout << "partial:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value << endl;
     FAST_CHECK_GT(avg_precip_ip_set_value, 0.05);
@@ -257,9 +257,9 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     cout << "3. a Done with interpolation step *all* catchments used = " << ipt << "[ms]" << endl;
     // now verify we got same results for the limited set, and non-zero for the others.
     auto avg_precip_ip_set2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
-    auto avg_precip_ip_set_value2 = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_set2, ta_one_step).value(0);
+    auto avg_precip_ip_set_value2 = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_set2, ta_one_step).value(0);
     auto avg_precip_ip_o_set2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), other_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
-    auto avg_precip_ip_o_set_value2 = et::average_accessor<et::pts_t, et::timeaxis>(avg_precip_ip_o_set2, ta_one_step).value(0);
+    auto avg_precip_ip_o_set_value2 = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_o_set2, ta_one_step).value(0);
     FAST_CHECK_LT(std::abs(avg_precip_ip_set_value - avg_precip_ip_set_value2), 0.0001);
     FAST_CHECK_GT(avg_precip_ip_o_set_value2, 0.05);
     //cout << "full:avg precip for selected    catchments is:" << avg_precip_ip_set_value2 << endl;
@@ -322,7 +322,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	rm.revert_to_initial_state();
 	rm.get_states(s0);// so that we start at same state.
     rm.set_catchment_calculation_filter(catchment_ids);
-    ec::timeaxis tax = rm.time_axis; tax.n = 0; // force zero length time-axis for non calc cells.
+    ta::fixed_dt tax = rm.time_axis; tax.n = 0; // force zero length time-axis for non calc cells.
     for (auto&c : *rm.get_cells())
         c.begin_run(tax, 0, 0);
     rm.set_snow_sca_swe_collection(-1, true);
@@ -439,4 +439,5 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	}
 	cout<< "done"<<endl;
 }
-TEST_SUITE_END();
+}
+

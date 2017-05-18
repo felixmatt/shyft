@@ -26,7 +26,7 @@ struct fx_complex:public ifx {
         return y;
     }
 };
-TEST_SUITE("sceua");
+TEST_SUITE("sceua") {
 TEST_CASE("test_basic") {
     sceua opt;
     const size_t n=2;
@@ -79,4 +79,4 @@ TEST_CASE("test_complex") {
         cout<<endl<<"2. approximate Found solution x{"<<x[0]<<","<<x[1]<<"}(r="<<rr <<") -> "<<y<<endl<<"\t n_iterations:"<<f_complex.n_eval<<endl;
     }
 }
-TEST_SUITE_END();
+}

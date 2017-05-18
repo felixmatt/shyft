@@ -1,12 +1,12 @@
 #include "test_pch.h"
 #include "core/pt_ss_k.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 
 using namespace shyft::core::pt_ss_k;
 using namespace shyfttest;
@@ -17,8 +17,9 @@ namespace ss = shyft::core::skaugen;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
+namespace ta = shyft::time_axis;
 
-typedef TSPointTarget<point_timeaxis> catchment_t;
+typedef TSPointTarget<ta::point_dt> catchment_t;
 typedef shyft::core::pt_ss_k::response response_t;
 typedef shyft::core::pt_ss_k::state state_t;
 typedef shyft::core::pt_ss_k::parameter parameter_t;
@@ -26,19 +27,19 @@ typedef shyft::core::pt_ss_k::parameter parameter_t;
 namespace shyfttest {
     namespace mock {
         template<> template<>
-        void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+        void ResponseCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
             _snow_output.set(idx, response.snow.outflow);
             _snow_swe.set(idx, response.snow.total_stored_water);
         }
 
         template <> template <>
-        void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+        void DischargeCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
             avg_discharge.set(idx, destination_area*response.kirchner.q_avg/1000.0/3600.0); // q_avg is given in mm, so compute the totals
         }
     } // mock
 } // shyfttest
 
-TEST_SUITE("pt_ss_k");
+TEST_SUITE("pt_ss_k") {
 TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
@@ -57,8 +58,8 @@ TEST_CASE("test_call_stack") {
     vector<utctime> times;
     for (utctime i=t0; i <= t1; i += model_dt)
         times.emplace_back(i);
-    timeaxis time_axis(t0, dt, n_ts_points);
-	timeaxis state_time_axis(t0, dt, n_ts_points + 1);
+    ta::fixed_dt time_axis(t0, dt, n_ts_points);
+	ta::fixed_dt state_time_axis(t0, dt, n_ts_points + 1);
     // Initialize parameters
     // Snow model parameters
     const double d_range = 113.0;
@@ -91,8 +92,8 @@ TEST_CASE("test_call_stack") {
     response_t response;
     //
     // Initialize collectors
-    shyfttest::mock::ResponseCollector<timeaxis> response_collector(1000*1000, time_axis);
-    shyfttest::mock::StateCollector<timeaxis> state_collector(state_time_axis);
+    shyfttest::mock::ResponseCollector<ta::fixed_dt> response_collector(1000*1000, time_axis);
+    shyfttest::mock::StateCollector<ta::fixed_dt> state_collector(state_time_axis);
 
     state_t state {snow_state, kirchner_state};
     parameter_t parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
@@ -105,4 +106,4 @@ TEST_CASE("test_call_stack") {
     for (size_t i = 0; i < snow_swe.size(); ++i)
         TS_ASSERT(std::isfinite(snow_swe.get(i).v) && snow_swe.get(i).v >= 0);
 }
-TEST_SUITE_END();
+}

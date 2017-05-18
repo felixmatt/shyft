@@ -17,7 +17,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         self.assertAlmostEqual(p.hourly_correlation, 0.93)
         self.assertAlmostEqual(p.covariance_init, 0.5)
         self.assertAlmostEqual(p.std_error_bias_measurements, 2.0)
-        self.assertAlmostEqual(p.ratio_std_w_over_v, 0.06)
+        self.assertAlmostEqual(p.ratio_std_w_over_v, 0.15)
         p = api.KalmanParameter(n_daily_observations=6, hourly_correlation=0.9, covariance_init=0.4,
                                 std_error_bias_measurements=1.0, ratio_std_w_over_v=0.05)
         self.assertEqual(p.n_daily_observations, 6)

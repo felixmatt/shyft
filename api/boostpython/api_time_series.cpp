@@ -2,9 +2,9 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "api/api.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 namespace expose {
     using namespace shyft;
@@ -29,10 +29,10 @@ namespace expose {
 
     template <class TA>
     static void point_ts(const char *ts_type_name,const char *doc) {
-        typedef timeseries::point_ts<TA> pts_t;
+        typedef time_series::point_ts<TA> pts_t;
         class_<pts_t,bases<>,shared_ptr<pts_t>,boost::noncopyable>(ts_type_name, doc)
-            .def(init<const TA&,const vector<double>&,optional<timeseries::point_interpretation_policy>>(args("ta","v","policy"),"constructs a new timeseries from timeaxis and points"))
-            .def(init<const TA&,double,optional<timeseries::point_interpretation_policy>>(args("ta","fill_value","policy"),"constructs a new timeseries from timeaxis and fill-value"))
+            .def(init<const TA&,const vector<double>&,optional<time_series::ts_point_fx>>(args("ta","v","policy"),"constructs a new timeseries from timeaxis and points"))
+            .def(init<const TA&,double,optional<time_series::ts_point_fx>>(args("ta","fill_value","policy"),"constructs a new timeseries from timeaxis and fill-value"))
             DEF_STD_TS_STUFF()
             .def_readonly("v",&pts_t::v,"the point vector<double>, same as .values, kept around for backward compatibility")
 			.def("get_time_axis", &pts_t::time_axis, "returns the time-axis", return_internal_reference<>()) // have to use func plus init.py fixup due to boost py policy
@@ -50,6 +50,12 @@ namespace expose {
             ;
     }
 
+    ///< extract value_at(t) for all ts in tsv
+    static std::vector<double> tsv_values(std::vector<shyft::api::apoint_ts> const &tsv,utctime t) {
+        std::vector<double> r;r.reserve(tsv.size());
+        for (auto const &ts : tsv) r.push_back(ts(t));
+        return r;
+    }
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -118,14 +124,14 @@ namespace expose {
                 doc_see_also("TimeAxis,DoubleVector,Calendar,point_interpretation_policy")
 
             )
-			.def(init<const time_axis::generic_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::generic_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::generic_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-			.def(init<const time_axis::fixed_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
 
-			.def(init<const time_axis::point_dt&, double, optional<timeseries::point_interpretation_policy> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
-			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<timeseries::point_interpretation_policy> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, double, optional<time_series::ts_point_fx> >(args("ta", "fill_value", "point_fx"), "construct a timeseries with timeaxis ta and specified fill-value, default point_fx=POINT_INSTANT_VALUE"))
+			.def(init<const time_axis::point_dt&, const std::vector<double>&, optional<time_series::ts_point_fx> >(args("ta", "values", "point_fx"), "construct a timeseries timeaxis ta and corresponding values, default point_fx=POINT_INSTANT_VALUE"))
             .def(init<const shyft::api::rts_t &>(args("core_result_ts"),"construct a timeseries from a shyft core time-series, to allow full ts-functionality in python"))
 
 			.def(init<const shyft::api::apoint_ts&>(args("clone"), "creates a shallow copy of clone"))
@@ -171,7 +177,17 @@ namespace expose {
                 doc_notes()
                 doc_note("the self point interpretation policy is used when calculating the true average")
 			)
-			.def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"),
+            .def("integral", &shyft::api::apoint_ts::integral, args("ta"),
+                doc_intro("create a new ts that is the true integral of self")
+                doc_intro("over the specified time-axis ta.")
+                doc_intro(" defined as integral of the non-nan part of each time-axis interval")
+                doc_parameters()
+                doc_parameter("ta", "TimeAxis", "time-axis that specifies the periods where true-integral is applied")
+                doc_returns("ts", "TimeSeries", "a new time-series expression, that will provide the true-integral when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the true average")
+            )
+            .def("accumulate", &shyft::api::apoint_ts::accumulate, args("ta"),
                 doc_intro("create a new ts where each i'th value is the ")
                 doc_intro("    integral f(t) *dt, from t0..ti,")
                 doc_intro("given the specified time-axis ta")
@@ -227,6 +243,20 @@ namespace expose {
                 doc_note("raises runtime_error if any of preconditions is not true")
                 doc_see_also("find_ts_bind_info,TimeSeries('a-ref-string')")
             )
+            .def("bind_done",&shyft::api::apoint_ts::do_bind,
+                 doc_intro("after bind operations on unbound time-series of an expression is done, call bind_done()")
+                 doc_intro("to prepare the expression for use")
+                 doc_notes()
+                 doc_note("Usually this is done automatically by the dtss framework, but if not using dtss")
+                 doc_note("this function is needed *after* the symbolic ts's are bound")
+                 doc_see_also(".bind(), .find_ts_bind_info(), needs_bind()")
+            )
+            .def("needs_bind",&shyft::api::apoint_ts::needs_bind,
+                 doc_intro("returns true if there are any unbound time-series in the expression")
+                 doc_intro("this time-series represent")
+                 doc_see_also(".find_ts_bind_info(),bind() and bind_done()")
+
+            )
             .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,
                 doc_intro("recursive search through the expression that this ts represents,\n")
                 doc_intro("and return a list of TsBindInfo that can be used to\n")
@@ -244,9 +274,12 @@ namespace expose {
 
         ;
         typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
+        typedef shyft::api::apoint_ts(*int_func_t)(const shyft::api::apoint_ts&, const shyft::time_axis::generic_dt&);
         avg_func_t avg=shyft::api::average;
+        int_func_t intfnc = shyft::api::integral;
 		avg_func_t acc = shyft::api::accumulate;
         def("average",avg,args("ts","time_axis"),"creates a true average time-series of ts for intervals as specified by time_axis");
+        def("integral", intfnc, args("ts", "time_axis"), "creates a true integral time-series of ts for intervals as specified by time_axis");
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",shyft::api::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
 
@@ -276,13 +309,16 @@ namespace expose {
 
         TsVector (*percentile_1)(const TsVector&,const time_axis::generic_dt&, const std::vector<int>&)=shyft::api::percentiles;
         TsVector (*percentile_2)(const TsVector&,const time_axis::fixed_dt&, const std::vector<int>&)=shyft::api::percentiles;
-        const char *percentile_doc="return the percentiles (as TsVector type) (NIST R7, excel,R definition) of the timeseries\n"
-            " over the specified time_axis.\n"
-            " the time-series point_fx interpretation is used when performing \n"
-            " the true-average over the time_axis periods\n"
-            " percentiles: 0..100, -1 means arithmetic average,e.g.\n"
-            "   [ 0, 25,50,-1,75,100] will return 6 time-series\n"
-            "";
+        const char *percentile_doc=
+            doc_intro("Calculate the percentiles, NIST R7, excel,R definition, of the timeseries")
+            doc_intro("over the specified time-axis.")
+            doc_intro("The time-series point_fx interpretation is used when performing")
+            doc_intro("the true-average over the time_axis periods.")
+            doc_parameters()
+            doc_parameter("percentiles","IntVector","A list of numbers,[ 0, 25,50,-1,75,100] will return 6 time-series, -1 -> arithmetic average")
+            doc_parameter("time_axis","TimeAxis","The time-axis used when applying true-average to the time-series")
+            doc_returns("calculated_percentiles","TsVector","Time-series list with evaluated percentile results, same length as input")
+            ;
         def("percentiles",percentile_1,args("timeseries","time_axis","percentiles"),percentile_doc);
         def("percentiles",percentile_2,args("timeseries","time_axis","percentiles"),percentile_doc);
 
@@ -291,27 +327,26 @@ namespace expose {
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        def("create_glacier_melt_ts_m3s",shyft::api::create_glacier_melt_ts_m3s,args("temperature","sca_m2","glacier_area_m2","dtf"),
-            "Parameters\n"
-            "----------\n"
-            "temperature : time-series\n"
-            "\t a temperature time-series, unit [deg.Celcius]\n"
-            "sca_m2 : time-series\n"
-            "\t a snow covered area (sca) time-series, unit [m2]\n"
-            "glacier_area_m2: float\n"
-            "\t the glacier area, unit[m2]\n"
-            "dtf : float\n"
-            "\t degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.\n"
-            "\n"
-            "Returns\n"
-            "-------\n"
-            "\t a time-series that's an expression computing the glacier melt\n"
-            "\t based on input time-series and parameters supplied\n"
+        def("create_glacier_melt_ts_m3s", shyft::api::create_glacier_melt_ts_m3s, args("temperature", "sca_m2", "glacier_area_m2", "dtf"),
+            doc_intro("create a ts that provide the glacier-melt algorithm based on the inputs")
+            doc_parameters()
+            doc_parameter("temperature", "TimeSeries", "a temperature time-series, unit [deg.Celcius]")
+            doc_parameter("sca_m2", "TimeSeries", "a snow covered area (sca) time-series, unit [m2]")
+            doc_parameter("glacier_area_m2", "float", "the glacier area, unit[m2]")
+            doc_parameter("dtf","float","degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115")
+            doc_returns("glacier_melt","TimeSeries","an expression computing the glacier melt based on the inputs")
+        );
+        def("compute_ts_values_at_time", &tsv_values, args("ts_vector", "t"),
+            doc_intro("extract values at specified time for all ts in ts_vector")
+            doc_parameters()
+            doc_parameter("ts_vector","TsVector","A list of time-series")
+            doc_parameter("t","int","utc timestamp in seconds since epoch")
+            doc_returns("ts_values","DoubleVector","a list of equal length of the input list with computed values at time t")
         );
 		/* local scope */ {
 
 			typedef shyft::time_axis::fixed_dt ta_t;
-			typedef shyft::timeseries::average_accessor<pts_t, ta_t> AverageAccessorTs;
+			typedef shyft::time_series::average_accessor<pts_t, ta_t> AverageAccessorTs;
 			class_<AverageAccessorTs>("AverageAccessorTs", "Accessor to get out true average for the time-axis intervals for a point time-series", no_init)
 				.def(init<const pts_t&, const ta_t&>(args("ts", "ta"), "construct accessor from ts and time-axis ta"))
 				.def(init<shared_ptr<pts_t>, const ta_t&>(args("ts", "ta"), "constructor from ref ts and time-axis ta"))
@@ -322,44 +357,28 @@ namespace expose {
     }
 	static void expose_correlation_functions() {
 		const char * kg_doc =
-			"Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis\n"
-			"Parameters\n"
-			"----------\n"
-			"observed_ts : Timeseries\n"
-			"\tthe observed time-series\n"
-			"model_ts : Timeseries\n"
-			"\t the time-series that is the model simulated / calculated ts\n"
-			"time_axis : Timeaxis2\n"
-			"\tthe time-axis that is used for the computation\n"
-			"s_r : float\n"
-			"\tthe kling gupta scale r factor(weight the correlation of goal function)\n"
-			"s_a : float\n"
-			"\tthe kling gupta scale a factor(weight the relative average of the goal function)\n"
-			"s_b : float\n"
-			"\tthe kling gupta scale b factor(weight the relative standard deviation of the goal function)\n"
-			"Return\n"
-			"------\n"
-			" float: The  KGEs= 1-EDs that have a maximum at 1.0\n";
-
+			doc_intro("Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis")
+			doc_parameters()
+			doc_parameter("observed_ts","TimeSeries","the observed time-series")
+			doc_parameter("model_ts","TimeSeries","the time-series that is the model simulated / calculated ts")
+			doc_parameter("time_axis","TimeAxis","the time-axis that is used for the computation")
+			doc_parameter("s_r","float","the kling gupta scale r factor(weight the correlation of goal function)")
+			doc_parameter("s_a","float","the kling gupta scale a factor(weight the relative average of the goal function)")
+			doc_parameter("s_b","float","the kling gupta scale b factor(weight the relative standard deviation of the goal function)")
+            doc_returns("KGEs","float","The  KGEs= 1-EDs that have a maximum at 1.0");
 		def("kling_gupta", shyft::api::kling_gupta, args("observation_ts", "model_ts", "time_axis", "s_r", "s_a", "s_b"),
 			kg_doc
 		);
 
-		const char *ns_doc = "Computes the Nash-Sutcliffe model effiency coefficient (n.s) \n"
-			" for the two time-series over the specified time_axis\n"
-			" Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient \n"
-
-			"Parameters\n"
-			"----------\n"
-			"observed_ts : Timeseries\n"
-			"\tthe observed time-series\n"
-			"model_ts : Timeseries\n"
-			"\t the time-series that is the model simulated / calculated ts\n"
-			"time_axis : Timeaxis2\n"
-			"\tthe time-axis that is used for the computation\n"
-			"Return\n"
-			"------\n"
-			" float: The  n.s performance, that have a maximum at 1.0\n";
+		const char *ns_doc =
+            doc_intro("Computes the Nash-Sutcliffe model effiency coefficient (n.s) ")
+			doc_intro("for the two time-series over the specified time_axis\n")
+			doc_intro("Ref:  http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient \n")
+            doc_parameters()
+			doc_parameter("observed_ts","TimeSeries","the observed time-series")
+			doc_parameter("model_ts","TimeSeries","the time-series that is the model simulated / calculated ts")
+			doc_parameter("time_axis","TimeAxis","the time-axis that is used for the computation")
+			doc_returns("ns","float","The  n.s performance, that have a maximum at 1.0");
 
 		def("nash_sutcliffe", shyft::api::nash_sutcliffe, args("observation_ts", "model_ts", "time_axis"),
 			ns_doc
@@ -369,45 +388,44 @@ namespace expose {
 	}
 	static void expose_periodic_ts() {
 		const char *docstr =
-			"Create a Timeseries by repeating the pattern-specification\n"
-			"Parameters\n"
-			"----------\n"
-			"pattern : DoubleVector\n"
-			"\tthe value-pattern as a sequence of values\n"
-			"dt : int\n"
-			"\tnumber of seconds between the pattern values, e.g. deltahours(3)\n"
-			"t0 : utctime\n"
-			"\tspecifies the starttime of the pattern\n"
-			"ta : Timeaxis\n"
-			"\tthe time-axis for which the pattern is repeated\n"
-			"\t e.g. your pattern might be 8 3h values,and you could supply\n"
-			"\ta time-axis 'ta' at hourly resolution\n"
+			doc_intro("Create a Timeseries by repeating the pattern-specification")
+			doc_parameters()
+			doc_parameter("pattern","DoubleVector","the value-pattern as a sequence of values")
+            doc_parameter("dt","int","number of seconds between the pattern values, e.g. deltahours(3)")
+            doc_parameter("t0","utctime","specifies the start-time of the pattern")
+            doc_parameter("ta","TimeAxis","the time-axis for which the pattern is repeated\n\te.g. your pattern might be 8 3h values,and you could supply\n\ta time-axis 'ta' at hourly resolution")
 			;
 		def("create_periodic_pattern_ts", shyft::api::create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
 
 	}
     void timeseries() {
-        enum_<timeseries::point_interpretation_policy>("point_interpretation_policy")
-            .value("POINT_INSTANT_VALUE",timeseries::POINT_INSTANT_VALUE)
-            .value("POINT_AVERAGE_VALUE",timeseries::POINT_AVERAGE_VALUE)
+        enum_<time_series::ts_point_fx>("point_interpretation_policy")
+            .value("POINT_INSTANT_VALUE",time_series::POINT_INSTANT_VALUE)
+            .value("POINT_AVERAGE_VALUE",time_series::POINT_AVERAGE_VALUE)
             .export_values()
             ;
-        enum_<timeseries::convolve_policy>(
+        enum_<time_series::statistics_property>("statistics_property")
+            .value("AVERAGE",time_series::statistics_property::AVERAGE)
+            .value("MIN_EXTREME",time_series::statistics_property::MIN_EXTREME)
+            .value("MAX_EXTREME",time_series::statistics_property::MAX_EXTREME)
+            ;
+
+        enum_<time_series::convolve_policy>(
             "convolve_policy",
             "Ref Timeseries.convolve_w function, this policy determinte how to handle initial conditions\n"
             "USE_FIRST: value(0) is used for all values before value(0), 'mass preserving'\n"
             "USE_ZERO : fill in zero for all values before value(0):shape preserving\n"
             "USE_NAN  : nan filled in for the first length-1 values of the filter\n"
             )
-            .value("USE_FIRST", timeseries::convolve_policy::USE_FIRST)
-            .value("USE_ZERO", timeseries::convolve_policy::USE_ZERO)
-            .value("USE_NAN", timeseries::convolve_policy::USE_NAN)
+            .value("USE_FIRST", time_series::convolve_policy::USE_FIRST)
+            .value("USE_ZERO", time_series::convolve_policy::USE_ZERO)
+            .value("USE_NAN", time_series::convolve_policy::USE_NAN)
             .export_values()
             ;
-        class_<timeseries::point> ("Point", "A timeseries point specifying utctime t and value v")
+        class_<time_series::point> ("Point", "A timeseries point specifying utctime t and value v")
             .def(init<utctime,double>(args("t","v")))
-            .def_readwrite("t",&timeseries::point::t)
-            .def_readwrite("v",&timeseries::point::v)
+            .def_readwrite("t",&time_series::point::t)
+            .def_readwrite("v",&time_series::point::v)
             ;
         point_ts<time_axis::fixed_dt>("TsFixed","A time-series with a fixed delta t time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis, used by the Shyft core,see also TimeSeries for end-user ts");

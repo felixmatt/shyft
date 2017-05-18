@@ -3,7 +3,6 @@
 	<FileVersion major="1" minor="6" />
 	<Project>
 		<Option title="api" />
-		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
@@ -60,8 +59,8 @@
 		<Unit filename="pt_gs_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
-		<Unit filename="timeseries.cpp" />
-		<Unit filename="timeseries.h" />
+		<Unit filename="time_series.cpp" />
+		<Unit filename="time_series.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

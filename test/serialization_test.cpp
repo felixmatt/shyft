@@ -2,7 +2,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "api/timeseries.h"
+#include "api/time_series.h"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -35,7 +35,7 @@ static T serialize_loop(const T& o) {
 
 
 template<class TA>
-static bool is_equal(const timeseries::point_ts<TA>& a,const timeseries::point_ts<TA>&b) {
+static bool is_equal(const time_series::point_ts<TA>& a,const time_series::point_ts<TA>&b) {
     if(a.size()!=b.size())
         return false;
     if(a.time_axis().total_period()!=b.time_axis().total_period())
@@ -65,7 +65,7 @@ static bool is_equal(const Ts& a,const Ts &b) {
     return true;
 }
 
-TEST_SUITE("serialization");
+TEST_SUITE("serialization") {
 TEST_CASE("test_serialization") {
     // testing serialization in the order of appearance/dependency
 
@@ -120,35 +120,35 @@ TEST_CASE("test_serialization") {
     // 3. time-series
     //
 
-    timeseries::point_ts<time_axis::fixed_dt> ts(ta,1.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+    time_series::point_ts<time_axis::fixed_dt> ts(ta,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto ts2 = serialize_loop(ts);
     TS_ASSERT(is_equal(ts,ts2));
     time_axis::point_dt tap(vector<utctime>{0,3600},3600*2);
-    auto tsp=make_shared<timeseries::point_ts<time_axis::point_dt>>(tap,2.0,timeseries::fx_policy_t::POINT_INSTANT_VALUE);
+    auto tsp=make_shared<time_series::point_ts<time_axis::point_dt>>(tap,2.0,time_series::ts_point_fx::POINT_INSTANT_VALUE);
     auto tsp2 = serialize_loop(tsp);
     TS_ASSERT(is_equal(*tsp,*tsp2));
 
-    timeseries::periodic_ts<decltype(ta)> tspp(vector<double>{1.0,10.0,2.0,3.0},deltahours(1),utc.time(2016,1,1),ta);
+    time_series::periodic_ts<decltype(ta)> tspp(vector<double>{1.0,10.0,2.0,3.0},deltahours(1),utc.time(2016,1,1),ta);
     auto tspp2=serialize_loop(tspp);
     TS_ASSERT(is_equal(tspp,tspp2));
 
 #if 0
-    timeseries::time_shift_ts<decltype(ts)> tsts(ts,deltahours(3600));
+    time_series::time_shift_ts<decltype(ts)> tsts(ts,deltahours(3600));
     auto tsts2 = serialize_loop(tsts);
     TS_ASSERT(is_equal(tsts,tsts2));
 
-    timeseries::average_ts<decltype(ts),decltype(ta) > tsavg(ts,ta);
+    time_series::average_ts<decltype(ts),decltype(ta) > tsavg(ts,ta);
     auto tsavg2=serialize_loop(tsavg);
     TS_ASSERT(is_equal(tsts,tsts2));
 
-    timeseries::accumulate_ts<decltype(ts),decltype(ta) > tsacc(ts,ta);
+    time_series::accumulate_ts<decltype(ts),decltype(ta) > tsacc(ts,ta);
     auto tsacc2=serialize_loop(tsacc);
     TS_ASSERT(is_equal(tsacc,tsacc2));
 
 
 
 
-    timeseries::glacier_melt_ts<decltype(ts)> tsgm(ts,ts,1000.0,6.2);
+    time_series::glacier_melt_ts<decltype(ts)> tsgm(ts,ts,1000.0,6.2);
     auto tsgm2=serialize_loop(tsgm);
     TS_ASSERT(is_equal(tsgm,tsgm2));
 
@@ -191,7 +191,7 @@ TEST_CASE("test_serialization") {
     TS_ASSERT(is_equal(apts,apts2));
 
     api::aref_ts arts("netcdf://file.nc");
-    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto arts2=serialize_loop(arts);
     TS_ASSERT_EQUALS(arts.rep.ref,arts2.rep.ref);
     TS_ASSERT(is_equal(arts,arts2));
@@ -246,6 +246,7 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    f.do_bind();
     // then retry evaluate
     try {
         double v0=f.value(0);
@@ -263,163 +264,125 @@ TEST_CASE("test_api_ts_ref_binding") {
         else
             TS_FAIL("ref not found");
     }
+    a_f.do_bind();
     TS_ASSERT_DELTA(f.value(0), a_f.value(0), 1e-9);
 }
 
 TEST_CASE("test_serialization_performance") {
+    //ostringstream os;
+    //os.seekp(1000);
+    //os.put('\a');
+    //string oss = os.str();
+    //FAST_CHECK_EQ(oss.size(), 1001);
     bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
     //
     // 1. create one large ts, do loop it.
     //
-    calendar utc;
-    size_t n = 10*1000*1000;// gives 80 Mb memory
-    vector<double> x(n,0.0);//x.reserve(n);
-    //for (size_t i = 0;i < n;++i)
-    //    x.push_back(-double(n)/2.0 + i);
-    api::apoint_ts aa(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), x);
-    auto a = aa*3.0 + aa;
-    //
-    // 2. serialize it
-    //
-    clock_t t0 = clock();
-    auto xmls = a.serialize();
-    auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
-    if(verbose)cout << "\nserialization took " << ms << "ms\n";
-    TS_ASSERT_LESS_THAN(ms, 1200.0); // i7 ~ 10 ms
-    t0 = clock();
-    auto b = api::apoint_ts::deserialize(xmls);
-    ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
-    TS_ASSERT_LESS_THAN(ms, 200.0);// i7 ~ 10 ms
-    if(verbose) cout  << "de-serialization took " << ms << "ms\n\tsize:"<<xmls.size()<<" bytes \n\t number of doubles is "<<b.size()<<"\n";
-    //TS_ASSERT(is_equal(a, b));
-}
+    for (size_t n_threads = 1;n_threads < (verbose?6:1);++n_threads) {
+        calendar utc;
+        size_t n = 10 * 1000 * 1000;// gives 80 Mb memory
+        vector<double> x(n, 0.0);
+        vector<api::apoint_ts> av;
+        for (size_t i = 0;i < n_threads;++i)
+            av.emplace_back(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), x);
 
-#include <dlib/server.h>
-#include <dlib/iosockstream.h>
-
-using namespace dlib;
-using namespace std;
-
-
-template<class T>
-static api::apoint_ts read_ts(T& in) {
-    int sz;
-    in.read((char*)&sz,sizeof(sz));
-    std::vector<char> blob(sz,0);
-    in.read((char*)blob.data(),sz);
-    return api::apoint_ts::deserialize_from_bytes(blob);
-}
-
-template <class T>
-static void  write_ts( const api::apoint_ts& ats,T& out) {
-    auto blob= ats.serialize_to_bytes();
-    int sz=blob.size();
-    out.write((const char*)&sz,sizeof(sz));
-    out.write((const char*)blob.data(),sz);
-}
-
-template <class T>
-static void write_ts_vector(const std::vector<api::apoint_ts> &ats,T & out) {
-    int sz=ats.size();
-    out.write((const char*)&sz,sizeof(sz));
-    for(const auto & ts:ats)
-        write_ts(ts,out);
-}
-
-template<class T>
-static std::vector<api::apoint_ts> read_ts_vector(T& in) {
-    int sz;
-    in.read((char*)&sz,sizeof(sz));
-    std::vector<api::apoint_ts> r;
-    r.reserve(sz);
-    for(int i=0;i<sz;++i)
-        r.push_back(read_ts(in));
-    return r;
-}
-
-class shyft_server : public server_iostream {
-
-    void on_connect  (
-        std::istream& in,
-        std::ostream& out,
-        const std::string& foreign_ip,
-        const std::string& local_ip,
-        unsigned short foreign_port,
-        unsigned short local_port,
-        uint64 connection_id
-    ) {
-        // The details of the connection are contained in the last few arguments to
-        // on_connect().  For more information, see the documentation for the
-        // server_iostream.  However, the main arguments of interest are the two streams.
-        // Here we also print the IP address of the remote machine.
-        cout << "Got a connection from " << foreign_ip << endl;
-
-        // Loop until we hit the end of the stream.  This happens when the connection
-        // terminates.
-        core::calendar utc;
-        time_axis::generic_dt ta(utc.time(2016,1,1),core::deltahours(1),365*24);
-        api::apoint_ts dummy_ts(ta,1.0,timeseries::POINT_AVERAGE_VALUE);
-        while (in.peek() != EOF) {
-            auto atsv= read_ts_vector(in);
-            // find stuff to bind, read and bind, then:
-            for(auto& ats:atsv) {
-                auto ts_refs=ats.find_ts_bind_info();
-                // read all tsr here, then:
-                for (auto&bind_info : ts_refs) {
-                    cout<<"bind:"<<bind_info.reference<<endl;
-                    bind_info.ts.bind(dummy_ts);
-                }
+        //auto a = aa*3.0 + aa;
+        //
+        // 2. serialize it
+        //
+        clock_t t0 = clock();
+        // -multi-thread this to n threads:
+        vector<future<void>> calcs1;
+        for (size_t i = 0;i < n_threads;++i) {
+            calcs1.emplace_back(
+                async(launch::async, [&av, i]() {
+                auto xmls = av[i].serialize();
             }
-            //-- evaluate, when all binding is done (vectorized calc.
-            std::vector<api::apoint_ts> evaluated_tsv;
-            for(auto &ats:atsv)
-                evaluated_tsv.emplace_back(ats.time_axis(),ats.values(),ats.point_interpretation());
-            write_ts_vector(evaluated_tsv,out);
+                )
+            );
         }
-    }
+        for (auto &f : calcs1) f.get();
 
-};
-api::apoint_ts mk_expression(int kb=1000) {
-    calendar utc;
-    size_t n = 1*kb*1000;// gives 8 Mb memory
-    std::vector<double> x;x.reserve(n);
-    for (size_t i = 0;i < n;++i)
-        x.push_back(-double(n)/2.0 + i);
-    api::apoint_ts aa(api::gta_t(utc.time(2016, 1, 1), deltahours(1), n), x);
-    auto a = aa*3.0 + aa;
-    return a;
+        auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+
+        if (verbose)cout << "\nserialization took " << ms << "ms\n";
+        TS_ASSERT_LESS_THAN(ms, 1200.0); // i7 ~ 10 ms
+        auto xmls = av[0].serialize();
+        vector<string> xmlsv;
+        for (size_t i = 0;i < n_threads;++i)
+            xmlsv.push_back(xmls);
+
+        auto b = api::apoint_ts::deserialize(xmls);
+        t0 = clock();
+        vector<future<void>> calcs2;
+        for (size_t i = 0;i < n_threads;++i) {
+            calcs2.emplace_back(
+                async(launch::async, [&xmlsv, i]() {
+                auto b = api::apoint_ts::deserialize(xmlsv[i]);
+            }
+                )
+            );
+        }
+        for (auto &f : calcs2) f.get();
+        ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+        TS_ASSERT_LESS_THAN(ms, 1200.0);// i7 ~ 10 ms
+        if (verbose) cout << "de-serialization took " << ms
+            << "ms\n\tsize:" << n_threads*xmls.size()
+            << " bytes \n\t number of doubles is " << n_threads *double(b.size()) / 1e6 << "mill 8byte size\n"
+            << "performance:" << n_threads *double(b.size())*8 / 1e6 / (ms / 1000.0) << " [MB/s]\n";
+    }
 }
 
-TEST_CASE("test_dlib_server") {
-   try
-    {
-        shyft_server our_server;
+TEST_CASE("test_serialization_memcpy_performance") {
 
-        // set up the server object we have made
-        int port_no=1234;
-        our_server.set_listening_port(port_no);
-        // Tell the server to begin accepting connections.
-        our_server.start_async();
+    bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
+    //
+    // 1. create one large ts, do loop it.
+    //
+    for (size_t n_threads = 1;n_threads < (verbose ? 6 : 1);++n_threads) {
+        calendar utc;
+        size_t n = 10 * 1000 * 1000;// gives 80 Mb memory
+        vector<double> x(n, 0.0);
+        vector<vector<double>> av;
+        for (size_t i = 0;i < n_threads;++i)
+            av.emplace_back(x);
+
+
+        clock_t t0 = clock();
+        // -multi-thread this to n threads:
+        mutex c_mx;
+        condition_variable cv;
+        vector<future<void>> calcs1;
+        size_t c = 0;
+        for (size_t i = 0;i < n_threads;++i) {
+            calcs1.emplace_back(
+                async(launch::async, [&av, i,n,&c,&c_mx,&cv]() {
+                    double *y= new double[n];
+                    memcpy(y, av[i].data(), n * sizeof(double));
+                    //copy(av[i].begin(),av[i].end(),back_inserter(y));
+                    {
+                        unique_lock<mutex> sl(c_mx);
+                        c++;
+                        cv.notify_all();
+                    }
+
+                    delete y;
+                }
+                )
+            );
+        }
         {
-            cout << "sending an expression ts:\n";
-            iosockstream s0(string("localhost:")+to_string(port_no));
-
-            std::vector<api::apoint_ts> tsl;
-            for(size_t kb=4;kb<16;kb+=2)
-                tsl.push_back(mk_expression(kb)*api::apoint_ts(string("netcdf://group/path/ts")+ std::to_string(kb)));
-            write_ts_vector(tsl,s0);
-            auto ts_b=read_ts_vector(s0);
-            cout<<"Got vector back, size= "<<ts_b.size()<<"\n";
-            for(const auto& ts:ts_b)
-                cout<<"\n\t ts.size()"<<ts.size();
-            cout<<"done"<<endl;
+            unique_lock<mutex> m_lck(c_mx);
+            while (c != n_threads)cv.wait(m_lck);
         }
+        auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+        size_t mcpy_size = 8 * n_threads*n;
+        if (verbose) cout << "memcpy-serialization took " << ms
+            << "ms\n\tsize:" << mcpy_size
+            << " bytes \n\t number of doubles is " << mcpy_size / 1e6/8 << "mill 8byte size\n"
+            << "performance:" << mcpy_size / 1e6 / (ms / 1000.0) << " [MB/s]\n";
+        for (auto &f : calcs1) f.get();
 
-    }
-    catch (exception& e)
-    {
-        cout << e.what() << endl;
     }
 }
-
-TEST_SUITE_END();
+}

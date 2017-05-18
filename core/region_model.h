@@ -78,8 +78,8 @@ namespace shyft {
 
         /** \brief point_source contains common properties,functions
         * for the point sources in Enki.
-        * Typically it contains a geo_point (3d position),plus a timeseries
-        * \tparam T a timeseries, that supplies:
+        * Typically it contains a geo_point (3d position),plus a time_series
+        * \tparam T a time_series, that supplies:
         *  -# type T::timeaxis_t
         *  -# double .value(size_t i)
         *  and we need that the ts-type
@@ -112,7 +112,7 @@ namespace shyft {
         * This allows us to use direct_accessor in the run_cell processing step
         * \tparam GPTS \ref geo_point_ts the supplied geo located time-series.
         * \tparam TSA  time-series accessor to use for converting the ts to the execution time-axis.
-        * \tparam TA   time-axis \ref shyft::timeseries::timeaxis that goes into the constructor of TSA object
+        * \tparam TA   time-axis \ref shyft::time_series::timeaxis that goes into the constructor of TSA object
         */
         template <class GPTS, class TSA, class TA>
         class idw_compliant_geo_point_ts {
@@ -165,7 +165,7 @@ namespace shyft {
 
         };
         ///< needs definition of the core time-series
-        typedef shyft::timeseries::point_ts<shyft::time_axis::fixed_dt> pts_t;
+        typedef shyft::time_series::point_ts<shyft::time_axis::fixed_dt> pts_t;
         /** \brief region_model is the calculation model for a region, where we can have
         * one or more catchments.
         * The role of the region_model is to describe region, so that we can run the
@@ -388,11 +388,11 @@ namespace shyft {
                         cell_ps.emplace_back(&c);
 
 
-				typedef shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename region_env_t::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename region_env_t::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename region_env_t::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
-				typedef shyft::timeseries::average_accessor<typename region_env_t::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
+				typedef shyft::time_series::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> temperature_tsa_t;
+				typedef shyft::time_series::average_accessor<typename region_env_t::precipitation_t::ts_t, timeaxis_t> precipitation_tsa_t;
+				typedef shyft::time_series::average_accessor<typename region_env_t::radiation_t::ts_t, timeaxis_t> radiation_tsa_t;
+				typedef shyft::time_series::average_accessor<typename region_env_t::wind_speed_t::ts_t, timeaxis_t> wind_speed_tsa_t;
+				typedef shyft::time_series::average_accessor<typename region_env_t::rel_hum_t::ts_t, timeaxis_t> rel_hum_tsa_t;
 
 
 				typedef idw_compliant_geo_point_ts<typename region_env_t::temperature_t, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
@@ -408,7 +408,7 @@ namespace shyft {
 				typedef idw::wind_speed_model   <idw_compliant_wind_speed_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_windspeed_model_t;
 				typedef idw::rel_hum_model      <idw_compliant_rel_hum_gts_t, cell_proxy, typename interpolation_parameter::idw_parameter_t, geo_point> idw_relhum_model_t;
 
-				typedef  shyft::timeseries::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
+				typedef  shyft::time_series::average_accessor<typename region_env_t::temperature_t::ts_t, timeaxis_t> btk_tsa_t;
 				this->ip_parameter = ip_parameter;// keep the most recently used ip_parameter
                 this->region_env = env;// this could be a shallow copy
 				// Allocate memory for the source_destinations, put in the reference to the parameters:
@@ -486,7 +486,7 @@ namespace shyft {
 				idw_rel_hum.get();
 			}
 
-            /** \brief initializes cell.env and project region env. timeseries to cells.
+            /** \brief initializes cell.env and project region env. time_series to cells.
             *
             * \note Prior to running all cell.env_ts.xxx are reset to zero, and have a length of time_axis.size().
             *
@@ -751,7 +751,7 @@ namespace shyft {
             size_t size() const { return distance(begin(*cells), end(*cells)); }
 
             /** \brief catchment_discharges, vital for calibration
-             * \tparam TSV a vector<timeseries> type, where timeseries supports:
+             * \tparam TSV a vector<time_series> type, where time_series supports:
              *  -# .ct(timeaxis_t, double) fills a series with 0.0 for all time_axis elements
              *  -# .add( const some_ts & ts)
              * \param cr catchment result vector to be filled in
@@ -812,7 +812,7 @@ namespace shyft {
                 return cr;
             }
             std::shared_ptr<pts_t> river_output_flow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.output_m3s(rid));
@@ -820,7 +820,7 @@ namespace shyft {
                 return r;
             }
             std::shared_ptr<pts_t> river_upstream_inflow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.upstream_inflow(rid));
@@ -828,7 +828,7 @@ namespace shyft {
                 return r;
             }
             std::shared_ptr<pts_t> river_local_inflow_m3s(int rid) const {
-                auto r= std::make_shared<pts_t>(time_axis,0.0,timeseries::fx_policy_t::POINT_AVERAGE_VALUE);
+                auto r= std::make_shared<pts_t>(time_axis,0.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
                 if(has_routing()) {
                     routing::model<C> rn(river_network,cells,time_axis);
                     r=std::make_shared<pts_t>(rn.local_inflow(rid));

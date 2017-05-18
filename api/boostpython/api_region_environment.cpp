@@ -4,16 +4,26 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "api/api.h"
 
 namespace expose {
     namespace py=boost::python;
     namespace sc=shyft::core;
-    namespace ts=shyft::timeseries;
+    namespace ts=shyft::time_series;
     namespace ta=shyft::time_axis;
     namespace sa=shyft::api;
 
+    template <class S>
+    static std::vector<double> geo_tsv_values(std::shared_ptr<std::vector<S>> const &geo_tsv, sc::utctime t) {
+        std::vector<double> r;
+        if (geo_tsv) {
+            r.reserve(geo_tsv->size());
+            for (auto const &gts : *geo_tsv)
+                r.push_back(gts.ts(t));
+        }
+        return r;
+    }
     template<class T>
     static void GeoPointSourceX(const char *py_name,const char *py_vector,const char *py_doc) {
         py::class_<T,py::bases<sa::GeoPointSource>>(py_name,py_doc)
@@ -24,6 +34,14 @@ namespace expose {
             .def(py::vector_indexing_suite<TSourceVector>())
             .def(py::init<const TSourceVector&>(py::args("src"),"clone src"))
             ;
+
+        py::def("compute_geo_ts_values_at_time", &geo_tsv_values<T>, py::args("geo_ts_vector", "t"),
+            doc_intro("compute the ts-values of the GeoPointSourceVector type for the specified time t and return DoubleVector")
+            doc_parameters()
+            doc_parameter("geo_ts_vector", "GeoPointSourceVector", "Any kind of GeoPointSource vector")
+            doc_parameter("t", "int", "timestamp in utc seconds since epoch")
+            doc_returns("values", "DoubleValue", "List of extracted values at same size/position as the geo_ts_vector")
+        );
     }
 
     static void GeoPointSource(void) {
@@ -46,6 +64,14 @@ namespace expose {
             .def(py::vector_indexing_suite<GeoPointSourceVector>())
             .def(py::init<const GeoPointSourceVector&>(py::args("src"),"clone src"))
             ;
+        py::def("compute_geo_ts_values_at_time", &geo_tsv_values<sa::GeoPointSource>, py::args("geo_ts_vector", "t"),
+            doc_intro("compute the ts-values of the GeoPointSourceVector for the specified time t and return DoubleVector")
+            doc_parameters()
+            doc_parameter("geo_ts_vector","GeoPointSourceVector","Any kind of GeoPointSource vector")
+            doc_parameter("t","int","timestamp in utc seconds since epoch")
+            doc_returns("values","DoubleValue","List of extracted values at same size/position as the geo_ts_vector")
+            );
+
         py::register_ptr_to_python<std::shared_ptr<sa::GeoPointSource>>();
         GeoPointSourceX<sa::TemperatureSource>("TemperatureSource","TemperatureSourceVector","geo located temperatures[deg Celcius]");
         GeoPointSourceX<sa::PrecipitationSource>("PrecipitationSource","PrecipitationSourceVector","geo located precipitation[mm/h]");

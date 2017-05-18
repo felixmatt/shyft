@@ -11,8 +11,19 @@ from setuptools import setup, find_packages
 print('Building SHyFT')
 
 if "Windows" in platform.platform():
-    msbuild = r'C:\Program Files (x86)\MSBuild\14.0\Bin\amd64\MSBuild.exe'
-    cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64', '/m']
+    msbuild_2015 = r'C:\Program Files (x86)\MSBuild\14.0\Bin\amd64\MSBuild.exe' if 'MSBUILD_2015_PATH' not in os.environ else os.environ['MSBUILD_2015_PATH']
+    msbuild_2017 = r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\Bin\amd64\MSBuild.exe' if 'MSBUILD_2017_PATH' not in os.environ else os.environ['MSBUILD_2017_PATH']
+    if path.exists(msbuild_2017):
+        msbuild = msbuild_2017
+        cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64','/p:PlatformToolset=v141', '/p:WindowsTargetPlatformVersion=10.0.14393.0', '/m']
+    elif path.exists(msbuild_2015):
+        msbuild = msbuild_2015
+        cmd = [msbuild, '/p:Configuration=Release', '/p:Platform=x64', '/m']
+    else:
+        print("Sorry, but this setup only supports ms c++ installed to standard locations")
+        print(" you can set MSBUILD_2015_PATH or MSBUILD_2017_PATH specific to your installation and restart.")
+        exit()
+    
     if '--rebuild' in sys.argv:
         cmd.append('/t:Rebuild')
         sys.argv.remove('--rebuild')
@@ -76,5 +87,5 @@ setup(
         'tests/netcdf/*', 'lib/*.dll']},
     entry_points={},
     requires= requires,
-	install_requires=requires
+    install_requires=requires
 )

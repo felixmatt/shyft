@@ -2,12 +2,12 @@
 #include "core/hbv_stack.h"
 #include "core/hbv_stack_cell_model.h"
 #include "mocks.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/utctime_utilities.h"
 
 // Some typedefs for clarity
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 using namespace shyft::core::hbv_stack;
 
 using namespace shyfttest::mock;
@@ -19,24 +19,25 @@ namespace soil = shyft::core::hbv_soil;
 namespace tank = shyft::core::hbv_tank;
 namespace ae = shyft::core::hbv_actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
+namespace ta = shyft::time_axis;
 
-typedef TSPointTarget<point_timeaxis> catchment_t;
+typedef TSPointTarget<ta::point_dt> catchment_t;
 
 namespace shyfttest {
 	namespace mock {
 		// need specialization for hbv_stack_response_t above
 		template<> template<>
-		void ResponseCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+		void ResponseCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
 			_snow_output.set(idx, response.snow.outflow);
 		}
 		template <> template <>
-		void DischargeCollector<timeaxis>::collect<response>(size_t idx, const response& response) {
+		void DischargeCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
 			// hbv_outflow is given in mm, so compute the totals
 			avg_discharge.set(idx, destination_area*response.tank.outflow / 1000.0 / 3600.0);
 		}
 	};
 }; // End namespace shyfttest
-TEST_SUITE("hbv_stack");
+TEST_SUITE("hbv_stack") {
 TEST_CASE("test_call_stack") {
 	xpts_t temp;
 	xpts_t prec;
@@ -55,8 +56,8 @@ TEST_CASE("test_call_stack") {
 	vector<utctime> times;
 	for (utctime i = t0; i <= t1; i += model_dt)
 		times.emplace_back(i);
-	timeaxis time_axis(t0, dt, n_ts_points);
-	timeaxis state_time_axis(t0, dt, n_ts_points + 1);
+	ta::fixed_dt time_axis(t0, dt, n_ts_points);
+	ta::fixed_dt state_time_axis(t0, dt, n_ts_points + 1);
 	// Initialize parameters
 	std::vector<double> s = { 1.0, 1.0, 1.0, 1.0, 1.0 }; // Zero cv distribution of snow (i.e. even)
 	std::vector<double> a = { 0.0, 0.25, 0.5, 0.75, 1.0 };
@@ -90,4 +91,4 @@ TEST_CASE("test_call_stack") {
 	for (size_t i = 0; i < snow_swe.size(); ++i)
 		TS_ASSERT(std::isfinite(snow_swe.get(i).v) && snow_swe.get(i).v >= 0);
 }
-TEST_SUITE_END();
+}

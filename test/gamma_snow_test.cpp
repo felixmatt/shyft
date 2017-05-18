@@ -30,7 +30,7 @@ public:
     }
 };
 static gamma_snow_test fix; // access to private scope
-TEST_SUITE("actual_evapotranspiration");
+TEST_SUITE("actual_evapotranspiration") {
 TEST_CASE("test_reset_snow_pack_zero_storage") {
 
     gs::calculator<gs::parameter, gs::state, gs::response> gs;
@@ -178,7 +178,7 @@ TEST_CASE("test_step") {
 
 	gs::calculator<gs::parameter, gs::state, gs::response> gs;
 	gs::parameter param;
-    shyft::timeseries::utctime dt = shyft::core::deltahours(1);
+    shyft::time_series::utctime dt = shyft::core::deltahours(1);
 
 	gs::state states(0.0, 1.0, 0.0, 1.0 / (param.snow_cv*param.snow_cv), 10.0, -1.0, 0.0, 0.0);
 	gs::response response;
@@ -245,4 +245,4 @@ TEST_CASE("test_forest_altitude_dependent_snow_cv") {
     TS_ASSERT_DELTA(p.effective_snow_cv(1.0,0.0),p.snow_cv+0.1,0.0000001);// verify increase in forest direction
     TS_ASSERT_DELTA(p.effective_snow_cv(0.0,1000.0),p.snow_cv +0.1, 0.0000001);// verify increase in altitude direction
 }
-TEST_SUITE_END();
+}

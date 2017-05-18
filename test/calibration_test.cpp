@@ -7,7 +7,7 @@
 
 
 using namespace shyft::core;
-using namespace shyft::timeseries;
+using namespace shyft::time_series;
 using namespace shyfttest::mock;
 using namespace std;
 
@@ -16,11 +16,12 @@ namespace gs = shyft::core::gamma_snow;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
 namespace pc = shyft::core::precipitation_correction;
+namespace ta = shyft::time_axis;
 
 
 
-typedef point_ts<point_timeaxis> xpts_t;
-typedef point_ts<timeaxis> catchment_t;
+typedef point_ts<ta::point_dt> xpts_t;
+typedef point_ts<ta::fixed_dt> catchment_t;
 typedef MCell<pt_gs_k::response_t, pt_gs_k::state_t, pt_gs_k::parameter_t, xpts_t> PTGSKCell;
 
 
@@ -151,7 +152,7 @@ namespace shyfttest {
         parameter_t parameter;
         PTGSKCell::state_t s0;
         std::vector<PTGSKCell> model_cells;
-        timeaxis time_axis;
+        ta::fixed_dt time_axis;
         PTGSKTestModel(utctime t0,
                   utctimespan dt,
                   size_t n_times,
@@ -194,7 +195,7 @@ namespace shyfttest {
             return s;
         }
 
-        void init(size_t n_dests, timeaxis& time_axis) {
+        void init(size_t n_dests, ta::fixed_dt& time_axis) {
             this->time_axis = time_axis;
             xpts_t temp;
             xpts_t prec;
@@ -215,12 +216,12 @@ namespace shyfttest {
 			state_time_axis.n++;//add room for end-state
             size_t i = 0;
             for_each(model_cells.cbegin(), model_cells.cend(), [this, &i, &param, &catchment_discharge,&state_time_axis] (PTGSKCell d) {
-                StateCollector<timeaxis> sc(state_time_axis);
-                DischargeCollector<timeaxis> rc(1000*1000, time_axis);
+                StateCollector<ta::fixed_dt> sc(state_time_axis);
+                DischargeCollector<ta::fixed_dt> rc(1000*1000, time_axis);
                 pt_gs_k::state_t s = state(i++);
                 pt_gs_k::response_t r;
 
-                pt_gs_k::run_pt_gs_k<shyft::timeseries::direct_accessor,pt_gs_k::response_t>(
+                pt_gs_k::run_pt_gs_k<shyft::time_series::direct_accessor,pt_gs_k::response_t>(
                       d.geo_cell_info(),
                       param,
                       time_axis,0,0,
@@ -290,7 +291,7 @@ namespace shyfttest {
 
 } //  shyfttest
 
-TEST_SUITE("calibration");
+TEST_SUITE("calibration") {
 TEST_CASE("test_dummy") {
     std::vector<double> target = {-5.0,1.0,1.0,1.0};
     std::vector<double> lower = {-10, 0, 0, 0};
@@ -331,7 +332,7 @@ TEST_CASE("test_simple") {
     const int nhours=1;
     utctimespan dt = 1*deltahours(nhours);
     size_t num_days= 10;
-    timeaxis time_axis(t0, dt, 24*num_days);
+    ta::fixed_dt time_axis(t0, dt, 24*num_days);
 
     size_t n_dests = 10*10;
     std::vector<PTGSKCell> destinations;
@@ -439,7 +440,7 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
 	size_t n = 1000;
-	timeaxis ta(start, dt, n);
+	ta::fixed_dt ta(start, dt, n);
 
 	pts_t obs(ta, 0.0);
 	pts_t sim(ta, 0.0);
@@ -455,7 +456,7 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 	TS_ASSERT_DELTA(nsg_ok, 4.5, 0.000001);// because obs and obs are equal, 0.0
 
 	// manually testing with two values, and hardcoded formula
-	timeaxis ta1(start, dt, 2);
+	ta::fixed_dt ta1(start, dt, 2);
 	pts_t o1(ta1, 1.0); o1.set(1, 10.0);
 	pts_t s1(ta1, 2.0);
 	double nsg1 = nash_sutcliffe_goal_function(o1, s1);
@@ -470,7 +471,7 @@ TEST_CASE("test_kling_gupta_goal_function") {
 	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
 	utctimespan dt = deltahours(1);
 	size_t n = 1000;
-	timeaxis ta(start, dt, n);
+	ta::fixed_dt ta(start, dt, n);
 
 	pts_t obs(ta, 0.0);
 	pts_t sim(ta, 0.0);
@@ -486,7 +487,7 @@ TEST_CASE("test_kling_gupta_goal_function") {
 	TS_ASSERT_DELTA(nsg_ok, 1.0272, 0.0001);// because obs and obs are equal, 0.0
 
 	// manually testing with two values, and hardcoded formula
-	timeaxis ta1(start, dt, 3);
+	ta::fixed_dt ta1(start, dt, 3);
 	pts_t o1(ta1, 1.0); o1.set(1, 10.0);
 	pts_t s1(ta1, 2.0); s1.set(2, 7.0);
 	double nsg1 = kling_gupta_goal_function<dlib::running_scalar_covariance<double>>(o1, s1,1.0,1.0,1.0);
@@ -503,7 +504,7 @@ TEST_CASE("test_abs_diff_sum_goal_function") {
     calendar utc;
     utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
     utctimespan dt = deltahours(1);
-    timeaxis ta1(start, dt, 3);
+    ta::fixed_dt ta1(start, dt, 3);
     pts_t o1(ta1, 1.0); o1.set(1, 10.0);
     pts_t s1(ta1, 2.0); s1.set(2, 7.0);
     double ads1 = abs_diff_sum_goal_function(o1, s1);
@@ -516,4 +517,4 @@ TEST_CASE("test_abs_diff_sum_goal_function") {
     }
 }
 
-TEST_SUITE_END();
+}

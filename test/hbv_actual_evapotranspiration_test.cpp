@@ -8,7 +8,7 @@ namespace shyfttest {
 
 using namespace shyft::core;
 using namespace shyft::core::hbv_actual_evapotranspiration;
-TEST_SUITE("hbv_actual_evapotranspiration");
+TEST_SUITE("hbv_actual_evapotranspiration") {
 TEST_CASE("test_soil_moisture") {
 	const double sca = 0.0;
 	const double pot_evap = 5.0; // [mm/h]
@@ -55,4 +55,4 @@ TEST_CASE("test_soil_moisture_threshold") {
 	TS_ASSERT(act_evap_less_moisture < act_evap_more_moisture);
 
 }
-TEST_SUITE_END();
+}

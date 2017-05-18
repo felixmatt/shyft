@@ -2,6 +2,8 @@
 #include "mocks.h"
 
 
+#include "api/api.h"
+#include "api/time_series.h"
 
 #ifdef WIN32
 #if _MSC_VER < 1800
@@ -12,7 +14,7 @@ const double NAN = *(double*)nanx;
 
 using namespace shyft::core;
 using namespace shyfttest::idw;
-TEST_SUITE("inverse_distance");
+TEST_SUITE("inverse_distance") {
 TEST_CASE("test_temperature_model") {
 	//
 	// Verify temperature gradient calculator, needs to be robust ...
@@ -155,7 +157,7 @@ TEST_CASE("test_one_source_one_dest_calculation") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 1;
-	TimeAxis ta(Tstart, dt, n); // hour, 10 steps
+	ta::fixed_dt ta(Tstart, dt, n); // hour, 10 steps
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// 40 sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, max(8, 1 + n_sources / 2));
@@ -164,7 +166,7 @@ TEST_CASE("test_one_source_one_dest_calculation") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	//
@@ -186,7 +188,7 @@ TEST_CASE("test_two_sources_one_dest_calculation") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 2;
-	TimeAxis ta(Tstart, dt, n);
+	ta::fixed_dt ta(Tstart, dt, n);
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5 * nx * 1000, 0.5 * ny * 1000, 0.25*0.5*(nx + ny) * 1000)); // n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, 1 + n_sources / 2);
@@ -195,7 +197,7 @@ TEST_CASE("test_two_sources_one_dest_calculation") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	//
@@ -225,7 +227,7 @@ TEST_CASE("test_using_finite_sources_only") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 3;
-	TimeAxis ta(Tstart, dt, n); // hour, 10 steps
+	ta::fixed_dt ta(Tstart, dt, n); // hour, 10 steps
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, n_sources);
@@ -235,7 +237,7 @@ TEST_CASE("test_using_finite_sources_only") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	//
@@ -264,7 +266,7 @@ TEST_CASE("test_eliminate_far_away_sources") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 3;
-	TimeAxis ta(Tstart, dt, n);
+	ta::fixed_dt ta(Tstart, dt, n);
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75*0.5*(nx + ny) * 1000, n_sources);
@@ -273,7 +275,7 @@ TEST_CASE("test_eliminate_far_away_sources") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	//
@@ -302,7 +304,7 @@ TEST_CASE("test_using_up_to_max_sources") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 3;
-	TimeAxis ta(Tstart, dt, n); //hour, 10 steps
+	ta::fixed_dt ta(Tstart, dt, n); //hour, 10 steps
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75*0.5*(nx + ny) * 1000, n_sources - 1);
@@ -310,7 +312,7 @@ TEST_CASE("test_using_up_to_max_sources") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
 
 	//
@@ -339,7 +341,7 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	const int nx = 1;
 	const int ny = 1;
 	const int n_sources = 3;
-	TimeAxis ta(Tstart, dt, n);
+	ta::fixed_dt ta(Tstart, dt, n);
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, n_sources);
@@ -353,7 +355,7 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	// Act
 	//
 
-	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<TimeAxis>(ta), p,
+	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta), p,
 		[](MCell& d, size_t ix, double v) { d.set_value(ix, v); });
 
 	//
@@ -371,8 +373,6 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	double expected_v = (v1 + v2) / (w1 + w2);
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
-#include "api/api.h"
-#include "api/timeseries.h"
 TEST_CASE("test_performance") {
     using namespace shyft;
     //
@@ -396,7 +396,7 @@ TEST_CASE("test_performance") {
     const int s_ny = n_xy;
     const int n_sources = s_nx * s_ny;
     double s_dxy = 3 * 1000; // arome typical 3 km.
-    TimeAxis ta(Tstart, dt, n);
+    ta::fixed_dt ta(Tstart, dt, n);
     api::gta_t gta(ta);
     api::a_region_environment re;
     std::vector<double> v(n, 0.0);
@@ -409,7 +409,7 @@ TEST_CASE("test_performance") {
     }
     vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
     Parameter p(s_dxy * 2, min(4, n_sources / 2)); // for practical purposes, 8 neighbours or less.
-    typedef shyft::timeseries::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
+    typedef shyft::time_series::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
 
     typedef idw_compliant_geo_point_ts<api::TemperatureSource, temperature_tsa_t, timeaxis_t> idw_compliant_temperature_gts_t;
 
@@ -480,5 +480,6 @@ TEST_CASE("test_zscale_distance") {
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 1, 10), pow(1+1+10*10*1,0.5), 1e-9);
 	TS_ASSERT_DELTA(geo_point::distance_measure(p0, p1, 2.0, 1.0), pow(1 + 1 + 1, 2.0 / 2.0), 1e-9);
 }
-TEST_SUITE_END();
+}
+
 /* vim: set filetype=cpp: */

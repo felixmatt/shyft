@@ -21,7 +21,7 @@ namespace shyft {
                     x = arma::vec(n_daily_observations);x.fill(0.0);
                     k = arma::vec(n_daily_observations);k.fill(0.0);
                     P = make_covariance(n_daily_observations,  covariance_init,hourly_correlation);
-                    W = make_covariance(n_daily_observations,process_noise_init,hourly_correlation);
+                    W = make_covariance(n_daily_observations,process_noise_init*process_noise_init,hourly_correlation);
                 }
                 static inline arma::mat make_covariance(int n_daily_observations,double covariance_init,double hourly_correlation) {
                     arma::mat P(n_daily_observations,n_daily_observations);
@@ -62,7 +62,7 @@ namespace shyft {
                        double hourly_correlation=0.93,
                        double covariance_init=0.5,
                        double std_error_bias_measurements=2.0,
-                       double ratio_std_w_over_v=0.06
+                       double ratio_std_w_over_v=0.15 
                        ):
                        n_daily_observations(n_daily_observations),
                        hourly_correlation(hourly_correlation),
@@ -107,7 +107,7 @@ namespace shyft {
                 /** \brief update the kalman::filter p with the observed_bias for
                  * a specific period starting with utctime t.
                  *
-                 * \param observed_bias nan if no observation is available otherwise obs-fc
+                 * \param observed_bias nan if no observation is available otherwise fc-obs
                  * \param t utctime of observation, this filter utilizes daily solar patterns, so time
                  *        in day-cycle is the only important aspect.
                  * \param s contains the kalman state x,k and P, updated at exit
@@ -117,11 +117,14 @@ namespace shyft {
                    /// Compute Pt|t-1. This increases the covariance.
                    s.P= s.P + s.W;
                    if(isfinite(observed_bias)) {
-                        /// compute Kt
+                        /// compute Kt = (Pt|t-1*Ht') / (Ht*Pt*Ht' + V^2)
                         int ix= fold_to_daily_observation(t);
-                        s.k = s.P.col(ix) / (s.P.at(ix,ix) + p.std_error_bias_measurements);
-                        /// compute Pt|t
-                        s.P = 1.0 - s.k[ix]*s.P;
+						auto tmp = (s.P.at(ix, ix) + p.std_error_bias_measurements*p.std_error_bias_measurements);
+                        s.k = s.P.col(ix) / tmp;
+                        /// compute Pt|t = (I - Kt*Ht)*Pt|t-1 = Pt|t-1 - Kt* Ht*Pk|k-1
+						// wants this:
+						s.P = s.P - s.P.col(ix)*s.P.row(ix)/tmp;//
+						// old s.P= 1.0 - s.k[ix]*s.P;
                         /// compute xt|t
                         s.x = s.x + s.k*(observed_bias - s.x[ix]);
                     } else {
@@ -157,9 +160,9 @@ namespace shyft {
                  */
                 template<class fc_ts,class obs_ts,class ta>
                 void update_with_forecast(const std::vector<fc_ts>& fc_ts_set,const obs_ts& observation_ts, const ta& time_axis) {
-                    shyft::timeseries::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
+                    shyft::time_series::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
                     for(const auto& fcts:fc_ts_set) {
-                        shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
+                        shyft::time_series::average_accessor<fc_ts,ta> fc(fcts,time_axis);
                         for(size_t i=0;i<time_axis.size();++i) {
                             if(!fcts.total_period().contains(time_axis.time(i)))
                                 continue;// skip when fc is not valid/available
@@ -170,7 +173,7 @@ namespace shyft {
                     }
                 }
 
-                /** compute the running bias timeseries,
+                /** compute the running bias time_series,
                  * using one 'merged'-forecasts and one observation time-series.
                  *
                  * before each day-period, the bias-values are copied out to form
@@ -187,14 +190,14 @@ namespace shyft {
                  */
                 template<class a_ts, class fc_ts,class obs_ts,class ta>
                 a_ts compute_running_bias(const fc_ts& fcts,const obs_ts& observation_ts, const ta& time_axis) {
-                    shyft::timeseries::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
-                    shyft::timeseries::average_accessor<fc_ts,ta> fc(fcts,time_axis);
+                    shyft::time_series::average_accessor<obs_ts,ta> obs(observation_ts,time_axis);
+                    shyft::time_series::average_accessor<fc_ts,ta> fc(fcts,time_axis);
                     std::vector<double> bias_vector;bias_vector.reserve(time_axis.size());
                     shyft::core::calendar utc;
                     utctime pd_t0 = utc.trim(time_axis.time(0),shyft::core::calendar::DAY);
                     utctime pd_dt = shyft::core::deltahours(24)/f.p.n_daily_observations;
-                    shyft::timeseries::profile_description pd(pd_t0,pd_dt,arma::conv_to<std::vector<double>>::from(s.x));
-                    shyft::timeseries::profile_accessor<ta> pa(pd,time_axis,POINT_AVERAGE_VALUE);
+                    shyft::time_series::profile_description pd(pd_t0,pd_dt,arma::conv_to<std::vector<double>>::from(s.x));
+                    shyft::time_series::profile_accessor<ta> pa(pd,time_axis,POINT_AVERAGE_VALUE);
 
                     size_t i_save_point=0; // keep track of when we extract day-bias
                     size_t i_save_point_delta = shyft::core::deltahours(24)/time_axis.dt; // ta

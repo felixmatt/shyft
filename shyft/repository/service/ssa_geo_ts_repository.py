@@ -8,6 +8,8 @@ from abc import ABCMeta,abstractmethod
 
 from shyft import api
 from shyft.repository import interfaces
+from shapely.geometry import Point, Polygon, MultiPolygon
+
 
 class MetStationConfig(object):
     """
@@ -244,6 +246,31 @@ class GeoTsRepository(interfaces.GeoTsRepository):
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
 
+    def _validate_geo_location_criteria(self, geo_location_criteria):
+        if geo_location_criteria is not None:
+            k, v = list(geo_location_criteria.items())[0]
+            if k == 'polygon':
+                if not isinstance(v, (Polygon, MultiPolygon)):
+                    raise GeoTsRepositoryError("polygon selection criteria should be one of these shapley objects: (Polygon, MultiPolygon).")
+            elif k == 'bbox':
+                if not all([isinstance(v, (tuple, list)), len(v) == 2]):
+                    raise GeoTsRepositoryError("bbox selection criteria should be a tuple with two numpy arrays.")
+            else:
+                raise GeoTsRepositoryError("Unrecognized selection criteria.")
+
+    def geo_match(self, geo_location_criteria):
+        self._validate_geo_location_criteria(geo_location_criteria)
+        k, v = list(geo_location_criteria.items())[0]
+        if (k == 'bbox'):
+            x_min, x_max = min(v[0]), max(v[0])
+            y_min, y_max = min(v[1]), max(v[1])
+            geo_match_func = lambda location: (x_min<=location[0]<=x_max)&(y_min<=location[1]<=y_max)
+        elif (k == 'polygon'):
+            geo_match_func = lambda location: v.contains(Point(location[0],location[1]))
+        else:
+            geo_match_func = lambda location: True
+        return geo_match_func
+
     def _get_ts_to_geo_ts_result(self,input_source_types,geo_match):
         """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
         # 1 get the station-> location map
@@ -333,8 +360,8 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         #if geo_location_criteria is not None:
         #    raise GeoTsRepositoryError("geo_location_criteria is not yet implemented")
-        geo_match= lambda location: True #geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
-        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
+        #geo_match= lambda location: True #geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,self.geo_match(geo_location_criteria))
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         read_ts_map=self.ts_repository.read(ts_list,utc_period)
         return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
@@ -352,8 +379,8 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         forecast: same layout/type as for get_timeseries
         """
         if t_c is not None: raise("t_c, time created spec is not yet implemented")
-        geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
-        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,geo_match)
+        #geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,self.geo_match(geo_location_criteria))
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
         return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
@@ -380,9 +407,9 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         """
         if t_c is not None: raise("t_c, time created spec is not yet implemented")
         #if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
-        geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        #geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         # get the remap back to result[i], and the empty, but initialized result list.
-        ts_to_geo_ts_info,ens_result= self._get_ts_to_geo_ts_ensemble_result(input_source_types,geo_match)
+        ts_to_geo_ts_info,ens_result= self._get_ts_to_geo_ts_ensemble_result(input_source_types,self.geo_match(geo_location_criteria))
         ts_list=ts_to_geo_ts_info.keys() # these we are going to read
         read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
         return self._remap_to_ensemble_result(read_ts_map,ens_result,ts_to_geo_ts_info) # map back to result

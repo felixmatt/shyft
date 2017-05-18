@@ -17,7 +17,7 @@
 #include "core/time_axis.h"
 #include "core/geo_point.h"
 #include "core/geo_cell_data.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
 #include "core/bayesian_kriging.h"
@@ -28,7 +28,7 @@
 #include "core/pt_ss_k_cell_model.h"
 #include "core/hbv_stack_cell_model.h"
 
-#include "timeseries.h"
+#include "time_series.h"
 
 namespace shyft {
   using namespace shyft::core;
@@ -43,7 +43,7 @@ namespace shyft {
         apoint_ts
         create_point_ts(int n, utctime tStart, utctimespan dt,
                         const std::vector<double>& values,
-                        point_interpretation_policy interpretation=POINT_INSTANT_VALUE){
+                        ts_point_fx interpretation=POINT_INSTANT_VALUE){
             return apoint_ts( time_axis::fixed_dt(tStart,dt, n), values, interpretation);
         }
 
@@ -51,7 +51,7 @@ namespace shyft {
         apoint_ts
         create_time_point_ts(utcperiod period, const std::vector<utctime>& times,
                              const std::vector<double>& values,
-                             point_interpretation_policy interpretation=POINT_INSTANT_VALUE) {
+                             ts_point_fx interpretation=POINT_INSTANT_VALUE) {
             if (times.size() == values.size() + 1) {
                 return apoint_ts( time_axis::point_dt(times), values, interpretation);
             } else if (times.size() == values.size()) {
@@ -73,7 +73,7 @@ namespace shyft {
       public:
         GeoPointSource(geo_point midpoint=geo_point(), apoint_ts ts=apoint_ts())
           : mid_point_(midpoint), ts(ts) {}
-
+        virtual ~GeoPointSource() {}
         typedef apoint_ts ts_t;
         typedef geo_point geo_point_t;
 
@@ -156,7 +156,7 @@ namespace shyft {
             void set_rel_hum(shared_ptr<vector<RelHumSource>> x) {rel_hum=x;}
     };
 
-    typedef shyft::timeseries::point_ts<time_axis::fixed_dt> result_ts_t;
+    typedef shyft::time_series::point_ts<time_axis::fixed_dt> result_ts_t;
     typedef std::shared_ptr<result_ts_t> result_ts_t_;
 
     /** \brief A class that facilitates fast state io, the yaml in Python is too slow

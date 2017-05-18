@@ -2,7 +2,7 @@
 #include "mocks.h"
 #include "core/inverse_distance.h"
 #include "core/bayesian_kriging.h"
-#include "core/timeseries.h"
+#include "core/time_series.h"
 #include "core/geo_point.h"
 
 
@@ -10,7 +10,8 @@ using namespace std;
 namespace shyfttest {
 	const double EPS = 1.0e-8;
 	using namespace shyft::core;
-	using namespace shyft::timeseries;
+	using namespace shyft::time_series;
+	using namespace shyft;
 	using shyft::core::geo_point;
 
 	namespace btk_structs {
@@ -19,7 +20,7 @@ namespace shyfttest {
 		class Source {
 		public:
 			typedef xpts_t ts_source;
-			typedef shyft::timeseries::average_accessor<ts_source, shyfttest::point_timeaxis> source_accessor;
+			typedef shyft::time_series::average_accessor<ts_source, time_axis::point_dt> source_accessor;
 		private:
 			geo_point coord;
 			const ts_source temperature_ts;
@@ -30,7 +31,7 @@ namespace shyfttest {
 			}
 			const geo_point& mid_point() const { return coord; }
 			const ts_source& temperatures() const { return temperature_ts; }
-			source_accessor temperature_accessor(const shyfttest::point_timeaxis& time_axis) const { return source_accessor(temperature_ts, time_axis); }
+			source_accessor temperature_accessor(const time_axis::point_dt& time_axis) const { return source_accessor(temperature_ts, time_axis); }
 		};
 
 		//! Simple destination class for use in the IWD algorithms to represent a cell that can have temperature,
@@ -97,18 +98,17 @@ namespace shyfttest {
 using std::begin;
 using std::end;
 using namespace shyfttest::btk_structs;
-using shyft::timeseries::point_timeaxis;
 using namespace shyft::core;
+using namespace shyft;
 
 typedef shyfttest::xpts_t xpts_t;
 std::vector<utctime> ctimes{ 0, 3600 };
-typedef shyft::timeseries::point_timeaxis point_timeaxis;
-typedef std::vector<shyft::timeseries::point> point_vector_t;
+typedef std::vector<shyft::time_series::point> point_vector_t;
 
 void build_sources_and_dests(const size_t num_sources_x, const size_t num_sources_y,
 	const size_t num_dests_x, const size_t num_dests_y,
-	const size_t ts_size, const shyft::timeseries::utctimespan dt,
-	const point_timeaxis& time_axis, bool insert_nans, SourceList& sources, DestinationList& dests,bool randomize=false) {
+	const size_t ts_size, const shyft::time_series::utctimespan dt,
+	const time_axis::point_dt& time_axis, bool insert_nans, SourceList& sources, DestinationList& dests,bool randomize=false) {
 	const double x_min = 0.0; // [m]
 	const double x_max = 100000.0; // [m]
 	const double y_min = 0.0; // [m]
@@ -125,7 +125,7 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
     for (size_t l = 0; l < ts_size; ++l)
         times.emplace_back(l*dt);
     times.emplace_back(shyft::core::max_utctime);
-    point_timeaxis dta(times);
+    time_axis::point_dt dta(times);
     geo_point p0(x_min,y_min,0.0);
     const double max_distance=geo_point::xy_distance(p0,geo_point(x_max,y_max,0.0));
     auto base_temp=[&unif,&re,randomize,&p0,max_distance](geo_point p1)->double {
@@ -155,7 +155,8 @@ void build_sources_and_dests(const size_t num_sources_x, const size_t num_source
 	}
 }
 using namespace shyft::core::bayesian_kriging;
-TEST_SUITE("bayesian_kriging");
+TEST_SUITE("bayesian_kriging") {
+
 TEST_CASE("test_covariance_calculation") {
 	Parameter params;
 
@@ -197,7 +198,7 @@ TEST_CASE("test_covariance_calculation") {
 
 TEST_CASE("test_build_covariance_matrices") {
 	Parameter params;
-	const point_timeaxis time_axis(ctimes);
+	const time_axis::point_dt time_axis(ctimes);
 	SourceList sources;
 	DestinationList destinations;
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
@@ -224,7 +225,7 @@ TEST_CASE("test_build_covariance_matrices") {
 
 TEST_CASE("test_build_elevation_matrices") {
 	Parameter params;
-	const point_timeaxis time_axis(ctimes);
+	const time_axis::point_dt time_axis(ctimes);
 	SourceList sources;
 	DestinationList destinations;
 	build_sources_and_dests(3, 3, 15, 15, 2, 10, time_axis, false, sources, destinations);
@@ -240,20 +241,20 @@ TEST_CASE("test_interpolation") {
 	Parameter params;
 	SourceList sources;
 	DestinationList destinations;
-	using namespace shyft::timeseries;
+	using namespace shyft::time_series;
 	using namespace shyft::core;
 	using namespace shyfttest;
 	size_t n_s = 3;
 	size_t n_d = 9;
 	size_t n_times = 2;
-	shyft::timeseries::utctime dt = 10;
+	shyft::time_series::utctime dt = 10;
 	vector<utctime> times; times.reserve(n_times);
 	for (size_t i = 0; i < n_times; ++i)
 		times.emplace_back(dt*i);
-	const point_timeaxis time_axis(times);
+	const time_axis::point_dt time_axis(times);
 	build_sources_and_dests(n_s, n_s, n_d, n_d, n_times, dt, time_axis, true, sources, destinations);
 	const std::clock_t start = std::clock();
-	btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
+	btk_interpolation<average_accessor<shyfttest::xpts_t, time_axis::point_dt>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
 	const std::clock_t total = std::clock() - start;
     double e_temp[6]{ 10.0,11.9918,12.3670,12.1815,10.5669,12.2066 };
     for(size_t i=0;i<6;++i)
@@ -275,27 +276,27 @@ TEST_CASE("test_performance") {
     Parameter params;
     SourceList sources;
     DestinationList destinations;
-    using namespace shyft::timeseries;
+    using namespace shyft::time_series;
     using namespace shyft::core;
     using namespace shyfttest;
     size_t n_s = 5;//(int)sqrt(5100);
     size_t n_d = 12;//(int)sqrt(3100);
     size_t n_times = 24;
-    shyft::timeseries::utctime dt = 3600;
+    shyft::time_series::utctime dt = 3600;
     vector<utctime> times; times.reserve(n_times);
     for (size_t i = 0; i < n_times; ++i)
         times.emplace_back(dt*i);
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     if(verbose) cout << "start building interpolation " << n_s << " sources to " << n_d << "destination cells, timesteps is "<<n_times<<endl;
-    const point_timeaxis time_axis(times);
+    const time_axis::point_dt time_axis(times);
     build_sources_and_dests(n_s, n_s, n_d, n_d, n_times, dt, time_axis, true, sources, destinations);
     if (verbose) cout << "done building, running real-case now:" << endl;
     const std::clock_t start = std::clock();
 
-    btk_interpolation<average_accessor<shyfttest::xpts_t, point_timeaxis>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
+    btk_interpolation<average_accessor<shyfttest::xpts_t, time_axis::point_dt>>(begin(sources), end(sources), begin(destinations), end(destinations), time_axis, params);
     const std::clock_t total = std::clock() - start;
 
-    
+
     if (verbose) std::cout << "Calling compute with n_sources, n_dests, and n_times = " << n_s*n_s << ", " << n_d*n_d << ", " << n_times << " took: " << 1000 * (total) / (double)(CLOCKS_PER_SEC) << " ms" << std::endl;
      {
         if (verbose) std::cout << "\taltitude\tmax\tmin\n ";
@@ -306,4 +307,5 @@ TEST_CASE("test_performance") {
         }
     }
 }
-TEST_SUITE_END();
+}
+
