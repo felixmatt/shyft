@@ -65,7 +65,8 @@ namespace shyft {
 
         }
 
-        typedef std::vector<api::apoint_ts> ts_vector_t;
+        //typedef std::vector<api::apoint_ts> ts_vector_t;
+        typedef api::ats_vector ts_vector_t;
         typedef std::vector<std::string> id_vector_t;
         typedef std::function< ts_vector_t (id_vector_t const& ts_ids,core::utcperiod p)> call_back_t;
 
@@ -117,7 +118,7 @@ namespace shyft {
             ts_vector_t
             do_evaluate_ts_vector(core::utcperiod bind_period, ts_vector_t& atsv) {
                 do_bind_ts(bind_period, atsv);
-                return api::deflate_ts_vector<api::apoint_ts>(atsv);
+                return ts_vector_t(api::deflate_ts_vector<api::apoint_ts>(atsv));
             }
 
             ts_vector_t

@@ -66,8 +66,9 @@ StringVector.size = lambda self: len(self)
 
 TsVector.size = lambda self: len(self)
 TsVector.push_back = lambda self, ts: self.append(ts)
-# and this is for easy syntax:
-TsVector.percentiles = lambda self, ta, percentile_list: percentiles(self, ta, percentile_list)
+# and this is for bw.compat
+def percentiles(tsv:TsVector,time_axis:TimeAxis,percentile_list:IntVector)->TsVector:
+    return tsv.percentiles(time_axis,percentile_list)
 
 TargetSpecificationVector.size = lambda self: len(self)
 
@@ -381,12 +382,12 @@ def ts_vector_values_at_time(tsv:TsVector, t:int):
         tsv = TsVector()
         for ts in list_of_ts:
             tsv.append(ts)
-    return compute_ts_values_at_time(tsv, t).to_numpy()
+    return tsv.values_at(t).to_numpy()
 
-ts_vector_values_at_time.__doc__ = compute_ts_values_at_time.__doc__.replace('DoubleVector','ndarray').replace('TsVector','TsVector or list(TimeSeries)')
+ts_vector_values_at_time.__doc__ = TsVector.values_at.__doc__.replace('DoubleVector','ndarray').replace('TsVector','TsVector or list(TimeSeries)')
 
 TsVector.values_at_time = ts_vector_values_at_time
-TsVector.values_at_time.__doc__ = compute_ts_values_at_time.__doc__.replace('DoubleVector','ndarray')
+TsVector.values_at_time.__doc__ = TsVector.values_at.__doc__.replace('DoubleVector','ndarray')
 
 
 

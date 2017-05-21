@@ -172,7 +172,7 @@ namespace shyft{
             return r;
         }
 
-		std::vector<apoint_ts> apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
+		ats_vector apoint_ts::partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const {
 			// some very rudimentary argument checks:
 			if (n_partitions < 1)
 				throw std::runtime_error("n_partitions should be > 0");
@@ -181,7 +181,8 @@ namespace shyft{
 			auto mk_raw_time_shift = [](const apoint_ts& ts, utctimespan dt)->apoint_ts {
 				return apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
 			};
-			return shyft::time_series::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+			auto r=shyft::time_series::partition_by<apoint_ts>(*this, cal, t,partition_interval, n_partitions, common_t0, mk_raw_time_shift);
+			return ats_vector(r.begin(),r.end());
 		}
 
         void apoint_ts::set(size_t i, double x) {
@@ -345,6 +346,54 @@ namespace shyft{
         apoint_ts apoint_ts::deserialize_from_bytes(const std::vector<char>&ss) {
             return deserialize(std::string(ss.data(), ss.size()));
         }
+
+        //--ats_vector impl.
+        // multiply operators
+        ats_vector operator*(ats_vector const &a,double b) { ats_vector r;r.reserve(a.size());for(auto const&ts:a) r.push_back(ts*b);return r;}
+        ats_vector operator*(double a,ats_vector const &b) { return b*a;}
+        ats_vector operator*(ats_vector const &a,ats_vector const& b) {
+            if(a.size()!=b.size()) throw runtime_error(string("ts-vector multiply require same sizes: lhs.size=")+std::to_string(a.size())+string(",rhs.size=")+std::to_string(b.size()));
+            ats_vector r;r.reserve(a.size());for(size_t i=0;i<a.size();++i) r.push_back(a[i]*b[i]);
+            return r;
+        }
+        ats_vector operator*(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a*b[i]);return r;}
+        ats_vector operator*(ats_vector const& b,ats_vector::value_type const &a) {return a*b;}
+
+
+        // divide operators
+        ats_vector operator/(ats_vector const &a,double b) { return a*(1.0/b);}
+        ats_vector operator/(double a,ats_vector const &b) { ats_vector r;r.reserve(b.size());for(auto const&ts:b) r.push_back(a/ts);return r;}
+        ats_vector operator/(ats_vector const &a,ats_vector const& b) {
+            if(a.size()!=b.size()) throw runtime_error(string("ts-vector divide require same sizes: lhs.size=")+std::to_string(a.size())+string(",rhs.size=")+std::to_string(b.size()));
+            ats_vector r;r.reserve(a.size());for(size_t i=0;i<a.size();++i) r.push_back(a[i]/b[i]);
+            return r;
+        }
+        ats_vector operator/(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a/b[i]);return r;}
+        ats_vector operator/(ats_vector const& b,ats_vector::value_type const &a) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(b[i]/a);return r;}
+
+        // add operators
+        ats_vector operator+(ats_vector const &a,double b) { ats_vector r;r.reserve(a.size());for(auto const&ts:a) r.push_back(ts+b);return r;}
+        ats_vector operator+(double a,ats_vector const &b) { return b+a;}
+        ats_vector operator+(ats_vector const &a,ats_vector const& b) {
+            if(a.size()!=b.size()) throw runtime_error(string("ts-vector add require same sizes: lhs.size=")+std::to_string(a.size())+string(",rhs.size=")+std::to_string(b.size()));
+            ats_vector r;r.reserve(a.size());for(size_t i=0;i<a.size();++i) r.push_back(a[i]+b[i]);
+            return r;
+        }
+        ats_vector operator+(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a+b[i]);return r;}
+        ats_vector operator+(ats_vector const& b,ats_vector::value_type const &a) {return a+b;}
+
+        // sub operators
+        ats_vector operator-(const ats_vector& a) {ats_vector r;r.reserve(a.size());for(auto const&ts:a) r.push_back(-ts);return r;}
+
+        ats_vector operator-(ats_vector const &a,double b) { ats_vector r;r.reserve(a.size());for(auto const&ts:a) r.push_back(ts-b);return r;}
+        ats_vector operator-(double a,ats_vector const &b) { ats_vector r;r.reserve(b.size());for(auto const&ts:b) r.push_back(a-ts);return r;}
+        ats_vector operator-(ats_vector const &a,ats_vector const& b) {
+            if(a.size()!=b.size()) throw runtime_error(string("ts-vector sub require same sizes: lhs.size=")+std::to_string(a.size())+string(",rhs.size=")+std::to_string(b.size()));
+            ats_vector r;r.reserve(a.size());for(size_t i=0;i<a.size();++i) r.push_back(a[i]-b[i]);
+            return r;
+        }
+        ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a-b[i]);return r;}
+        ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(b[i]-a);return r;}
 
     }
 }

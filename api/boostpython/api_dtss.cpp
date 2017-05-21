@@ -69,16 +69,16 @@ namespace shyft {
 
             ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
                 //std::cout << "cb("<<ts_ids.size()<<")\n";
-                std::vector<api::apoint_ts> r;
+                api::ats_vector r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
                     //std::cout<<" py cb.."<<std::endl;std::cout.flush();
-                    r = boost::python::call<std::vector<api::apoint_ts>>(cb.ptr(), ts_ids, p);
+                    r = boost::python::call<ts_vector_t>(cb.ptr(), ts_ids, p);
                 } else {
                     // for testing, just fill in constant values.
                     api::gta_t ta(p.start, core::deltahours(1), p.timespan() / core::deltahours(1));
                     for (size_t i = 0;i < ts_ids.size();++i)
-                        r.emplace_back(ta, double(i), time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+                        r.push_back(api::apoint_ts(ta, double(i), time_series::ts_point_fx::POINT_AVERAGE_VALUE));
                 }
                 return r;
             }
@@ -110,7 +110,7 @@ namespace shyft {
             }
             ts_vector_t evaluate(ts_vector_t const& tsv, core::utcperiod p) {
                 scoped_gil_release gil;
-                return impl.evaluate(tsv,p);
+                return ts_vector_t(impl.evaluate(tsv,p));
             }
 
         };
@@ -123,7 +123,7 @@ namespace expose {
     using namespace boost::python;
     void dtss_finalize() {
 #ifdef _WIN32
-        //to avoid infinite hang at exit on win, you need git clone https://github.com/sigbjorn/dlib 
+        //to avoid infinite hang at exit on win, you need git clone https://github.com/sigbjorn/dlib
         WSACleanup();
 #endif
     }
