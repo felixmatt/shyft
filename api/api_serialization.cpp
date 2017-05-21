@@ -100,6 +100,13 @@ void shyft::api::convolve_w_ts::serialize(Archive & ar, const unsigned int versi
     ;
 }
 
+template<class Archive>
+void shyft::api::ats_vector::serialize(Archive& ar, const unsigned int version) {
+    ar
+    & make_nvp("ats_vec",base_object<shyft::api::ats_vec>(*this))
+    ;
+}
+
 // kind of special, mix core and api, hmm!
 template<>
 template <class Archive>
@@ -198,7 +205,7 @@ x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::hbv_stack::sta
 x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_gs_k::state>);
 x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_ss_k::state>);
 x_serialize_implement(shyft::api::cell_state_with_id<shyft::core::pt_hs_k::state>);
-
+x_serialize_implement(shyft::api::ats_vector);
 //
 // 4. Then include the archive supported
 //
@@ -227,7 +234,7 @@ x_arch(shyft::api::cell_state_with_id<shyft::core::hbv_stack::state>);
 x_arch(shyft::api::cell_state_with_id<shyft::core::pt_gs_k::state>);
 x_arch(shyft::api::cell_state_with_id<shyft::core::pt_ss_k::state>);
 x_arch(shyft::api::cell_state_with_id<shyft::core::pt_hs_k::state>);
-
+x_arch(shyft::api::ats_vector);
 
 std::string shyft::api::apoint_ts::serialize() const {
     using namespace std;

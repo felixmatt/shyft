@@ -12,6 +12,118 @@ namespace expose {
     using namespace boost::python;
     using namespace std;
 
+    static void expose_ats_vector() {
+        using namespace shyft::api;
+        class_<ats_vector>("TsVector",
+                doc_intro("A vector of time-series that supports ts-math operations.")
+                doc_intro("")
+                doc_intro("Like:")
+                doc_intro("  number bin_op ts_vector -> ts_vector")
+                doc_intro("  ts_vector bin_op ts_vector -> ts_vector ")
+                doc_intro("  ts bin_op ts_vector -> ts_vector")
+                doc_intro("  where bin_op is any of (*,/,+,-)")
+                doc_intro("")
+                doc_intro("In addition, .average(..),.integral(..),.accumulate(..),.time_shift(..), .percentiles(..)")
+                doc_intro("  is also supported")
+                doc_intro("")
+                doc_intro("All operation returns a *new* ts-vector, containing the resulting expressions")
+            )
+            .def(vector_indexing_suite<ats_vector>())
+            .def(init<ats_vector const&>(args("clone_me")))
+            .def("values_at",&ats_vector::values_at_time,args("t"),
+                 doc_intro("Computes the value at specified time t for all time-series")
+                 doc_parameters()
+                 doc_parameter("t","int","seconds since epoch 1970 UTC")
+            )
+            .def("percentiles",&ats_vector::percentiles,args("time_axis","percentiles"),
+                doc_intro("Calculate the percentiles, NIST R7, excel,R definition, of the timeseries")
+                doc_intro("over the specified time-axis.")
+                doc_intro("The time-series point_fx interpretation is used when performing")
+                doc_intro("the true-average over the time_axis periods.")
+                doc_parameters()
+                doc_parameter("percentiles","IntVector","A list of numbers,[ 0, 25,50,-1,75,100] will return 6 time-series,\n -1 -> arithmetic average\n -1000 -> min extreme value\n +1000 max extreme value")
+                doc_parameter("time_axis","TimeAxis","The time-axis used when applying true-average to the time-series")
+                doc_returns("calculated_percentiles","TsVector","Time-series list with evaluated percentile results, same length as input")
+            )
+            .def("percentiles",&ats_vector::percentiles_f,args("time_axis","percentiles"),
+                doc_intro("Calculate the percentiles, NIST R7, excel,R definition, of the timeseries")
+                doc_intro("over the specified time-axis.")
+                doc_intro("The time-series point_fx interpretation is used when performing")
+                doc_intro("the true-average over the time_axis periods.")
+                doc_parameters()
+                doc_parameter("percentiles","IntVector","A list of numbers,[ 0, 25,50,-1,75,100] will return 6 time-series,\n -1 -> arithmetic average\n -1000 -> min extreme value\n +1000 max extreme value")
+                doc_parameter("time_axis","TimeAxisFixedDeltaT","The time-axis used when applying true-average to the time-series")
+                doc_returns("calculated_percentiles","TsVector","Time-series list with evaluated percentile results, same length as input")
+            )
+            .def("slice",&ats_vector::slice,args("indexes"),
+                 doc_intro("returns a slice of self, specified by indexes")
+                 doc_parameters()
+                 doc_parameter("indexes","IntVector","the indicies to pick out from self, if indexes is empty, then all is returned")
+                 doc_returns("slice","TsVector","a new TsVector, with content according to indexes specified")
+            )
+            .def("average", &ats_vector::average, args("ta"),
+                doc_intro("create a new vector of ts that is the true average of self")
+                doc_intro("over the specified time-axis ta.")
+                doc_parameters()
+                doc_parameter("ta","TimeAxis","time-axis that specifies the periods where true-average is applied")
+                doc_returns("tsv","TsVector","a new time-series expression, that will provide the true-average when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the true average")
+			)
+            .def("integral", &ats_vector::integral, args("ta"),
+                doc_intro("create a new vector of ts that is the true integral of self")
+                doc_intro("over the specified time-axis ta.")
+                doc_intro(" defined as integral of the non-nan part of each time-axis interval")
+                doc_parameters()
+                doc_parameter("ta", "TimeAxis", "time-axis that specifies the periods where true-integral is applied")
+                doc_returns("tsv", "TsVector", "a new time-series expression, that will provide the true-integral when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the true average")
+            )
+            .def("accumulate", &ats_vector::accumulate, args("ta"),
+                doc_intro("create a new  vector of ts where each i'th value is the ")
+                doc_intro("    integral f(t) *dt, from t0..ti,")
+                doc_intro("given the specified time-axis ta")
+                doc_parameters()
+                doc_parameter("ta","TimeAxis","time-axis that specifies the periods where accumulated integral is applied")
+                doc_returns("tsv","TsVector","a new time-series expression, that will provide the accumulated values when requested")
+                doc_notes()
+                doc_note("the self point interpretation policy is used when calculating the accumulated values")
+            )
+			.def("time_shift", &ats_vector::time_shift,args("delta_t"),
+				doc_intro("create a new vector of ts that is a the time-shift'ed  version of self")
+				doc_parameters()
+                doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
+				doc_returns("tsv","TsVector",	"a new time-series, that appears as time-shifted version of self")
+			)
+            // defining vector math-operations goes here
+            .def(-self)
+            .def(self*double())
+            .def(double()*self)
+            .def(self*self)
+            .def(shyft::api::apoint_ts()*self)
+            .def(self*shyft::api::apoint_ts())
+
+            .def(self/double())
+            .def(double()/self)
+            .def(self/self)
+            .def(shyft::api::apoint_ts()/self)
+            .def(self/shyft::api::apoint_ts())
+
+            .def(self+double())
+            .def(double()+self)
+            .def(self+self)
+            .def(shyft::api::apoint_ts()+self)
+            .def(self+shyft::api::apoint_ts())
+
+            .def(self-double())
+            .def(double()-self)
+            .def(self-self)
+            .def(shyft::api::apoint_ts()-self)
+            .def(self-shyft::api::apoint_ts())
+            ;
+    }
+
     #define DEF_STD_TS_STUFF() \
             .def("point_interpretation",&pts_t::point_interpretation,"returns the point interpretation policy")\
             .def("set_point_interpretation",&pts_t::set_point_interpretation,args("policy"),"set new policy")\
@@ -50,12 +162,6 @@ namespace expose {
             ;
     }
 
-    ///< extract value_at(t) for all ts in tsv
-    static std::vector<double> tsv_values(std::vector<shyft::api::apoint_ts> const &tsv,utctime t) {
-        std::vector<double> r;r.reserve(tsv.size());
-        for (auto const &ts : tsv) r.push_back(ts(t));
-        return r;
-    }
 
     static void expose_apoint_ts() {
         typedef shyft::api::apoint_ts pts_t;
@@ -301,27 +407,6 @@ namespace expose {
         def("min",min_double_ts,args("a"   ,"ts_b"),"returns a new ts as min(a,ts_b)");
         def("min",min_ts_double,args("ts_a","b"   ),"returns a new ts as min(ts_a,b)");
 
-
-        typedef vector<pts_t> TsVector;
-        class_<TsVector>("TsVector","A vector of Ts")
-            .def(vector_indexing_suite<TsVector>())
-            ;
-
-        TsVector (*percentile_1)(const TsVector&,const time_axis::generic_dt&, const std::vector<int>&)=shyft::api::percentiles;
-        TsVector (*percentile_2)(const TsVector&,const time_axis::fixed_dt&, const std::vector<int>&)=shyft::api::percentiles;
-        const char *percentile_doc=
-            doc_intro("Calculate the percentiles, NIST R7, excel,R definition, of the timeseries")
-            doc_intro("over the specified time-axis.")
-            doc_intro("The time-series point_fx interpretation is used when performing")
-            doc_intro("the true-average over the time_axis periods.")
-            doc_parameters()
-            doc_parameter("percentiles","IntVector","A list of numbers,[ 0, 25,50,-1,75,100] will return 6 time-series, -1 -> arithmetic average")
-            doc_parameter("time_axis","TimeAxis","The time-axis used when applying true-average to the time-series")
-            doc_returns("calculated_percentiles","TsVector","Time-series list with evaluated percentile results, same length as input")
-            ;
-        def("percentiles",percentile_1,args("timeseries","time_axis","percentiles"),percentile_doc);
-        def("percentiles",percentile_2,args("timeseries","time_axis","percentiles"),percentile_doc);
-
         def("time_shift", shyft::api::time_shift,args("timeseries","delta_t"),
             "returns a delta_t time-shifted time-series\n"
             " the values are the same as the original,\n"
@@ -335,13 +420,6 @@ namespace expose {
             doc_parameter("glacier_area_m2", "float", "the glacier area, unit[m2]")
             doc_parameter("dtf","float","degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115")
             doc_returns("glacier_melt","TimeSeries","an expression computing the glacier melt based on the inputs")
-        );
-        def("compute_ts_values_at_time", &tsv_values, args("ts_vector", "t"),
-            doc_intro("extract values at specified time for all ts in ts_vector")
-            doc_parameters()
-            doc_parameter("ts_vector","TsVector","A list of time-series")
-            doc_parameter("t","int","utc timestamp in seconds since epoch")
-            doc_returns("ts_values","DoubleVector","a list of equal length of the input list with computed values at time t")
         );
 		/* local scope */ {
 
@@ -433,5 +511,6 @@ namespace expose {
         expose_apoint_ts();
 		expose_periodic_ts();
 		expose_correlation_functions();
+		expose_ats_vector();
     }
 }

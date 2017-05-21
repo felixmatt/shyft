@@ -1451,5 +1451,7 @@ TEST_CASE("test_uniform_sum_ts") {
 		TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
 	}
 }
+TEST_CASE("ts_vector_operations") {
 
+}
 }

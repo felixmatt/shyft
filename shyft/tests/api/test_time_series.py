@@ -522,6 +522,159 @@ class TimeSeries(unittest.TestCase):
         c_resurrected.bind_done()
         self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2 * 4.0, 3)
 
+    def test_a_time_series_vector(self):
+        c = api.Calendar()
+        t0 = api.utctime_now()
+        dt = api.deltahours(1)
+        n = 240
+        ta = api.TimeAxisFixedDeltaT(t0, dt, n)
+
+        a = api.TimeSeries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        b = api.TimeSeries(ta=ta, fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        c = api.TimeSeries(ta=ta, fill_value=10.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        v = api.TsVector()
+        v.append(a)
+        v.append(b)
+
+        self.assertEqual(len(v), 2)
+        self.assertAlmostEqual(v[0].value(0), 3.0, "expect first ts to be 3.0")
+        aa = api.TimeSeries(ta=a.time_axis, values=a.values,
+                            point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)  # copy construct (really copy the values!)
+        a.fill(1.0)
+        self.assertAlmostEqual(v[0].value(0), 1.0, "expect first ts to be 1.0, because the vector keeps a reference ")
+        self.assertAlmostEqual(aa.value(0), 3.0)
+
+        vt = v.values_at(t0).to_numpy()
+        self.assertEqual(len(vt),len(v))
+        v1 = v[0:1]
+        self.assertEqual(len(v1),1)
+        self.assertAlmostEqual(v1[0].value(0),1.0)
+        v_clone = api.TsVector(v)
+        self.assertEqual(len(v_clone),len(v))
+        del v_clone[-1]
+        self.assertEqual(len(v_clone),1)
+        self.assertEqual(len(v), 2)
+        v_slice_all = v.slice(api.IntVector())
+        v_slice_1 = v.slice(api.IntVector([1]))
+        v_slice_12 = v.slice(api.IntVector([0, 1]))
+        self.assertEqual(len(v_slice_all), 2)
+        self.assertEqual(len(v_slice_1), 1)
+        self.assertAlmostEqual(v_slice_1[0].value(0), 2.0)
+        self.assertEqual(len(v_slice_12), 2)
+        self.assertAlmostEqual(v_slice_12[0].value(0), 1.0)
+
+        # multiplication by scalar
+        v_x_2a = v*2.0
+        v_x_2b = 2.0*v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_x_2a[i].value(0),2*v[i].value(0))
+            self.assertAlmostEqual(v_x_2b[i].value(0),2*v[i].value(0))
+
+        # division by scalar
+        v_d_a = v/3.0
+        v_d_b = 3.0/v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_d_a[i].value(0),v[i].value(0)/3.0)
+            self.assertAlmostEqual(v_d_b[i].value(0),3.0/v[i].value(0))
+
+        # addition by scalar
+        v_a_a = v + 3.0
+        v_a_b = 3.0 + v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_a_a[i].value(0),v[i].value(0)+3.0)
+            self.assertAlmostEqual(v_a_b[i].value(0),3.0+v[i].value(0))
+
+        # sub by scalar
+        v_s_a = v - 3.0
+        v_s_b = 3.0 - v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_s_a[i].value(0),v[i].value(0) - 3.0)
+            self.assertAlmostEqual(v_s_b[i].value(0),3.0 - v[i].value(0))
+
+        # multiplication vector by ts
+        v_x_ts = v*c
+        ts_x_v = c*v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_x_ts[i].value(0),v[i].value(0)*c.value(0))
+            self.assertAlmostEqual(ts_x_v[i].value(0),c.value(0)*v[i].value(0))
+
+        # division vector by ts
+        v_d_ts = v/c
+        ts_d_v = c/v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_d_ts[i].value(0),v[i].value(0)/c.value(0))
+            self.assertAlmostEqual(ts_d_v[i].value(0),c.value(0)/v[i].value(0))
+
+        # add vector by ts
+        v_a_ts = v + c
+        ts_a_v = c + v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_a_ts[i].value(0),v[i].value(0) + c.value(0))
+            self.assertAlmostEqual(ts_a_v[i].value(0),c.value(0) + v[i].value(0))
+
+        # sub vector by ts
+        v_s_ts = v - c
+        ts_s_v = c - v
+        for i in range(len(v)):
+            self.assertAlmostEqual(v_s_ts[i].value(0),v[i].value(0) - c.value(0))
+            self.assertAlmostEqual(ts_s_v[i].value(0),c.value(0) - v[i].value(0))
+
+        # vector mult vector
+        va = v
+        vb = 2.0*v
+
+        v_m_v = va * vb
+        self.assertEqual(len(v_m_v),len(va))
+        for i in range(len(va)):
+            self.assertAlmostEqual(v_m_v[i].value(0), va[i].value(0)*vb[i].value(0))
+
+        # vector div vector
+        v_d_v = va / vb
+        self.assertEqual(len(v_d_v),len(va))
+        for i in range(len(va)):
+            self.assertAlmostEqual(v_d_v[i].value(0), va[i].value(0)/vb[i].value(0))
+
+        # vector add vector
+        v_a_v = va + vb
+        self.assertEqual(len(v_a_v),len(va))
+        for i in range(len(va)):
+            self.assertAlmostEqual(v_a_v[i].value(0), va[i].value(0) + vb[i].value(0))
+
+        # vector sub vector
+        v_s_v = va - vb
+        self.assertEqual(len(v_s_v),len(va))
+        for i in range(len(va)):
+            self.assertAlmostEqual(v_s_v[i].value(0), va[i].value(0) - vb[i].value(0))
+
+        # vector unary minus
+        v_u = - va
+        self.assertEqual(len(v_u), len(va))
+        for i in range(len(va)):
+            self.assertAlmostEqual(v_u[i].value(0), -va[i].value(0))
+
+        # integral functions, just to verify exposure works, and one value is according to spec.
+        ta2 = api.TimeAxis(t0, dt*24, n//24)
+        v_avg = v.average(ta2)
+        v_int = v.integral(ta2)
+        v_acc = v.accumulate(ta2)
+        v_sft = v.time_shift(dt*24)
+        self.assertIsNotNone(v_avg)
+        self.assertIsNotNone(v_int)
+        self.assertIsNotNone(v_acc)
+        self.assertIsNotNone(v_sft)
+        self.assertAlmostEqual(v_avg[0].value(0),1.0)
+        self.assertAlmostEqual(v_int[0].value(0), 86400.0)
+        self.assertAlmostEqual(v_acc[0].value(0), 0.0)
+        self.assertAlmostEqual(v_sft[0].time(0), t0+dt*24)
+
+        # finally, test that exception is raised if we try to multiply two unequal sized vectors
+
+        try:
+            x= v_clone*va
+            self.assertTrue(False,'We expected exception for unequal sized ts-vector op')
+        except RuntimeError as re:
+            pass
+
 
 if __name__ == "__main__":
     unittest.main()

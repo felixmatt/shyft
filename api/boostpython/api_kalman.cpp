@@ -14,7 +14,7 @@ namespace expose {
 	typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
 	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
-    typedef std::vector<sa::apoint_ts> apoint_ts_vector; // this type is already exposed in api, so we can use it directly
+    typedef sa::ats_vector apoint_ts_vector; // this type is already exposed in api, so we can use it directly
 
 
 	static void kalman_parameter() {
