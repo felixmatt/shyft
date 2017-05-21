@@ -667,5 +667,14 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(v_acc[0].value(0), 0.0)
         self.assertAlmostEqual(v_sft[0].time(0), t0+dt*24)
 
+        # finally, test that exception is raised if we try to multiply two unequal sized vectors
+
+        try:
+            x= v_clone*va
+            self.assertTrue(False,'We expected exception for unequal sized ts-vector op')
+        except RuntimeError as re:
+            pass
+
+
 if __name__ == "__main__":
     unittest.main()
