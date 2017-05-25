@@ -40,20 +40,20 @@ namespace shyft {
 			relhum_ts        rel_hum;
 			windspeed_ts     wind_speed;
 
-			//< reset/initializes all series with 0.0 and reserves size to ta. size.
+			//< reset/initializes all series with nan and reserves size to ta. size.
 			void init(const timeaxis& ta) {
                 if (ta != temperature.ta) {
-                    temperature = temperature_ts(ta, 0.0);
-                    precipitation = precipitation_ts(ta, 0.0);
-                    rel_hum = relhum_ts(ta, 0.0);
-                    radiation = radiation_ts(ta, 0.0);
-                    wind_speed = windspeed_ts(ta, 0.0);
+                    temperature = temperature_ts(ta, shyft::nan);
+                    precipitation = precipitation_ts(ta, shyft::nan);
+                    rel_hum = relhum_ts(ta, shyft::nan);
+                    radiation = radiation_ts(ta, shyft::nan);
+                    wind_speed = windspeed_ts(ta, shyft::nan);
                 } else {
-                    temperature.fill(0.0);
-                    precipitation.fill(0.0);
-                    rel_hum.fill( 0.0);
-                    radiation.fill(0.0);
-                    wind_speed.fill(0.0);
+                    temperature.fill(shyft::nan);
+                    precipitation.fill(shyft::nan);
+                    rel_hum.fill( shyft::nan);
+                    radiation.fill(shyft::nan);
+                    wind_speed.fill(shyft::nan);
                 }
 			}
 		};
@@ -136,13 +136,14 @@ namespace shyft {
 			    return geo.mid_point()==x.geo.mid_point()&& geo.catchment_id()==x.geo.catchment_id();
 			}
 		};
-        /**Utility function used to  initialize a pts_t in the core, typically making space, zero fill a ts
+        /**Utility function used to  initialize a pts_t in the core, typically making space, fill a ts
         *  prior to a run to ensure values are zero */
         inline void ts_init(pts_t&ts, time_axis::fixed_dt const& ta, int start_step, int n_steps, ts_point_fx fx_policy) {
+            double const fill_value=shyft::nan;
             if (ts.ta != ta || ta.size()==0 ) {
-                ts = pts_t(ta, 0.0, fx_policy);
+                ts = pts_t(ta, fill_value, fx_policy);
             } else {
-                ts.fill_range(0.0, start_step, n_steps);
+                ts.fill_range(fill_value, start_step, n_steps);
             }
         }
 

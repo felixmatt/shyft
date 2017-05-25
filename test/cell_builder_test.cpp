@@ -213,24 +213,32 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         }
     }
 
+    auto cal = ec::calendar();
+	auto start = cal.time(2010, 9, 1, 0, 0, 0);
+	auto dt = ec::deltahours(3);
+	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
+	size_t n = 24 * ndays;//365;// 365 takes 20 seconds at cell stage 8core
+	ta::fixed_dt ta(start, dt, n);
+    ta::fixed_dt ta_one_step(start, dt*n, 1);
+
     // Step 2: read geo located ts
 	cout << "2. Reading geo-located time-series from file (could take a short time)" << endl;
 	geo_located_ts_file_repository geo_f_ts(test_path);
 	region_environment_t re;
 	TS_ASSERT(geo_f_ts.read(re));
+	if(!re.rel_hum) {
+        re.rel_hum=make_shared<vector<geo_cts_t>>();
+        re.wind_speed= make_shared<vector<geo_cts_t>>();
+        auto gp = (*re.temperature)[0].location;
+        re.rel_hum->push_back(geo_cts_t{ gp,cts_t(ta,0.8)});
+        re.wind_speed->push_back(geo_cts_t{gp,cts_t(ta,2.0)});
+	}
     //return;
 	// Step 3: make a region model
 	cout << "3. creating a region model and run it for a short period" << endl;
 	region_model_t rm(cells, *global_parameter);
 	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "8");
 	cout << " - ncore set to " << rm.ncore << endl;
-	auto cal = ec::calendar();
-	auto start = cal.time(ec::YMDhms(2010, 9, 1, 0, 0, 0));
-	auto dt = ec::deltahours(3);
-	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
-	size_t n = 24 * ndays;//365;// 365 takes 20 seconds at cell stage 8core
-	ta::fixed_dt ta(start, dt, n);
-    ta::fixed_dt ta_one_step(start, dt*n, 1);
 	ec::interpolation_parameter ip;
 	ip.use_idw_for_temperature = true;
     vector<int> all_catchment_ids;// empty vector means no filtering
@@ -249,7 +257,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     //cout << "partial:avg precip for selected    catchments is:" << avg_precip_ip_set_value << endl;
     //cout << "partial:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value << endl;
     FAST_CHECK_GT(avg_precip_ip_set_value, 0.05);
-    FAST_CHECK_EQ(avg_precip_ip_o_set_value, 0.00);
+    FAST_CHECK_EQ(finite(avg_precip_ip_o_set_value),false);
     rm.set_catchment_calculation_filter(all_catchment_ids);
     ti1 = timing::now();
     rm.interpolate(ip, re);
