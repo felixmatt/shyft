@@ -175,71 +175,60 @@ namespace expose {
              "be passed into a the constructor of a new region-model (clone-operation)\n"
          )
          .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
-			 "Initializes the cell enviroment (cell.env.ts* )\n"
-			 "\n"
-			 "The method initializes the cell environment, that keeps temperature, precipitation etc\n"
-			 "that is local to the cell.The initial values of these time - series is set to zero.\n"
-			 "The region-model time-axis is set to the supplied time-axis, so that\n"
-			 "the any calculation steps will use the supplied time-axis.\n"
-			 "This call is needed once prior to call to the .interpolate() or .run_cells() methods\n"
-			 "\n"
-			 "The call ensures that all cells.env ts are reset to zero, with a time-axis and\n"
-			 " value-vectors according to the supplied time-axis.\n"
-			 " Also note that the region-model.time_axis is set to the supplied time-axis.\n"
-			 "\n"
-			 "Parameters\n"
-			 "----------\n"
-			 " time_axis: Timeaxis\n"
-			 "    specifies the time-axis for the region-model, and thus the cells\n"
-			 "Returns\n"
-			 "-------\n"
-			 "Nothing\n"
+                doc_intro("Initializes the cell enviroment (cell.env.ts* )")
+                doc_intro("")
+                doc_intro("The method initializes the cell environment, that keeps temperature, precipitation etc")
+                doc_intro("that is local to the cell.The initial values of these time - series is set to zero.")
+                doc_intro("The region-model time-axis is set to the supplied time-axis, so that")
+                doc_intro("the any calculation steps will use the supplied time-axis.")
+                doc_intro("This call is needed once prior to call to the .interpolate() or .run_cells() methods")
+                doc_intro("")
+                doc_intro("The call ensures that all cells.env ts are reset to zero, with a time-axis and")
+                doc_intro(" value-vectors according to the supplied time-axis.")
+                doc_intro(" Also note that the region-model.time_axis is set to the supplied time-axis.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("time_axis","TimeAxis","specifies the time-axis for the region-model, and thus the cells")
+                doc_returns("nothing","","")
 		 )
-		 .def("interpolate", interpolate_f, args("interpolation_parameter", "env"),
-				"do interpolation interpolates region_environment temp,precip,rad.. point sources\n"
-				"to a value representative for the cell.mid_point().\n"
-				"\n"
-				"note: initialize_cell_environment should be called once prior to this function\n"
-				"\n"
-				"Only supplied vectors of temp, precip etc. are interpolated, thus\n"
-				"the user of the class can choose to put in place distributed series in stead.\n"
-				"\n"
-				"Parameters\n"
-				"----------\n"
-				" interpolation_parameter : InterpolationParameter\n"
-				"     contains wanted parameters for the interpolation\n"
-				" env: RegionEnvironemnt\n"
-				"     contains the ref: region_environment type\n"
+		 .def("interpolate", interpolate_f, (boost::python::arg("interpolation_parameter"),boost::python::arg("env"),boost::python::arg("best_effort")=true),
+                doc_intro("do interpolation interpolates region_environment temp,precip,rad.. point sources")
+                doc_intro("to a value representative for the cell.mid_point().")
+                doc_intro("")
+                doc_intro("note: initialize_cell_environment should be called once prior to this function")
+                doc_intro("")
+                doc_intro("Only supplied vectors of temp, precip etc. are interpolated, thus")
+                doc_intro("the user of the class can choose to put in place distributed series in stead.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("interpolation_parameter","InterpolationParameter","contains wanted parameters for the interpolation")
+                doc_parameter("env","RegionEnvironment","contains the region environment with geo-localized time-series for P,T,R,W,Rh")
+                doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
+                doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
 		 )
          .def("run_cells",&M::run_cells,(boost::python::arg("use_ncore")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
-             "run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps\n"
-             "require that initialize(time_axis) or run_interpolation is done first\n"
-             "If start_step and n_steps are specified, only the specified part of the time-axis is covered.\n"
-             "notice that in any case, the current model state is used as a starting point\n"
-             "Parameters\n"
-             "----------\n"
-             "use_ncore : int\n"
-             "\t number of worker threads, or cores to use, if 0 is passed, the the core-count is used to determine the count\n"
-             "start_step : int\n"
-             "\t start_step in the time-axis to start at, default=0, meaning start at the beginning\n"
-             "n_steps :int\n"
-             "\t number of steps to run in a partial run, default=0 indicating the complete time-axis is covered\n"
+                doc_intro("run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps")
+                doc_intro("require that initialize(time_axis) or run_interpolation is done first")
+                doc_intro("If start_step and n_steps are specified, only the specified part of the time-axis is covered.")
+                doc_intro("notice that in any case, the current model state is used as a starting point")
+                doc_parameters()
+                doc_parameter("use_ncore","int","number of worker threads, or cores to use, if 0 is passed, the the core-count is used to determine the count")
+                doc_parameter("start_step","int","start_step in the time-axis to start at, default=0, meaning start at the beginning")
+                doc_parameter("n_steps","int","number of steps to run in a partial run, default=0 indicating the complete time-axis is covered")
          )
-         .def("run_interpolation",run_interpolation_f,args("interpolation_parameter","time_axis","env"),
-                    "run_interpolation interpolates region_environment temp,precip,rad.. point sources\n"
-                    "to a value representative for the cell.mid_point().\n"
-                    "\n"
-                    "note: This function is equivalent to\n"
-					"    self.initialize_cell_environment(time_axis)\n"
-					"    self.interpolate(interpolation_parameter,env)\n"
-				    "Parameters\n"
-					"----------\n"
-					" interpolation_parameter: InterpolationParameter\n"
-					"   contains wanted parameters for the interpolation\n"
-					" time_axis : Timeaxis\n"
-					"    should be equal to the ref: timeaxis the ref: region_model is prepared running for.\n"
-					" env : RegionEnvironment\n"
-					"    contains the ref: region_environment type\n"
+         .def("run_interpolation",run_interpolation_f,(boost::python::arg("interpolation_parameter"),boost::python::arg("time_axis"),boost::python::arg("env"),boost::python::arg("best_effort")=true),
+                doc_intro("run_interpolation interpolates region_environment temp,precip,rad.. point sources")
+                doc_intro("to a value representative for the cell.mid_point().")
+                doc_intro("")
+                doc_intro("note: This function is equivalent to")
+                doc_intro("    self.initialize_cell_environment(time_axis)")
+                doc_intro("    self.interpolate(interpolation_parameter,env)")
+                doc_parameters()
+                doc_parameter("interpolation_parameter","InterpolationParameter","contains wanted parameters for the interpolation")
+                doc_parameter("time_axis","TimeAxis","should be equal to the time-axis the region_model is prepared running for")
+                doc_parameter("env","RegionEnvironment","contains the ref: region_environment type")
+                doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
+                doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
             )
          .def("set_region_parameter",&M::set_region_parameter,args("p"),
                     "set the region parameter, apply it to all cells \n"
