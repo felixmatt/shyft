@@ -257,7 +257,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     //cout << "partial:avg precip for selected    catchments is:" << avg_precip_ip_set_value << endl;
     //cout << "partial:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value << endl;
     FAST_CHECK_GT(avg_precip_ip_set_value, 0.05);
-    FAST_CHECK_EQ(finite(avg_precip_ip_o_set_value),false);
+    FAST_CHECK_EQ(std::isfinite(avg_precip_ip_o_set_value),false);
     rm.set_catchment_calculation_filter(all_catchment_ids);
     ti1 = timing::now();
     rm.interpolate(ip, re);
