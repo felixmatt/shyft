@@ -117,20 +117,22 @@ TEST_CASE("dlib_server_performance") {
         auto dt24 = deltahours(24);
         int n = 24 * 365 * 5;//24*365*5;
         int n24 = n / 24;
+		int n_ts = 83;
         shyft::time_axis::fixed_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
-        call_back_t cb = [ta, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
+		ts_vector_t from_disk; from_disk.reserve(n_ts);
+		double fv = 1.0;
+		for (size_t i = 0; i < n_ts; ++i)
+			from_disk.emplace_back(ta, fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+
+        call_back_t cb = [&from_disk, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
             ->ts_vector_t {
-            ts_vector_t r;r.reserve(ts_ids.size());
-            double fv = 1.0;
-            for (size_t i = 0;i < ts_ids.size();++i)
-                r.emplace_back(ta, fv += 1.0);
             if (throw_exception) {
                 dlog << dlib::LINFO << "Throw from inside dtss executes!";
                 throw std::runtime_error("test exception");
             }
-            return r;
+            return from_disk;
         };
         server our_server(cb);
 
@@ -144,17 +146,27 @@ TEST_CASE("dlib_server_performance") {
         vector<future<void>> clients;
         for (size_t i = 0;i < n_threads;++i) {
             clients.emplace_back(
-                    async(launch::async, [port_no,ta,ta24,i]()         /** thread this */ {
+                    async(launch::async, [port_no,ta,ta24,i,n_ts]()         /** thread this */ {
                     string host_port = string("localhost:") + to_string(port_no);
                     dlog << dlib::LINFO << "sending an expression ts to " << host_port;
                     std::vector<api::apoint_ts> tsl;
-                    for (size_t x = 1;x <= 83;++x) // just make a  very thin request, that get loads of data back
-                        tsl.push_back(api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x)));
+					for (size_t x = 1; x <= n_ts; ++x) {// just make a  very thin request, that get loads of data back
+#if 0
+						auto ts_expr = api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
+						tsl.push_back(ts_expr);
+#else
+						auto ts_expr = 10.0 + 3.0*api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
+						if (x > 1) {
+							ts_expr = ts_expr - 3.0*api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x - 1));
+						}
+						tsl.push_back(ts_expr.average(ta));
+#endif
+					}
 
                     client dtss(host_port);
                     auto t0 = timing::now();
                     size_t eval_count = 0;
-                    int test_duration_ms = 10000;
+                    int test_duration_ms = 5000;
                     int kilo_points= tsl.size()*ta.size()/1000;
                     while (elapsed_ms(t0, timing::now()) < test_duration_ms) {
                         // burn cpu server side, save time on serialization

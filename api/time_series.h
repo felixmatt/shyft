@@ -916,7 +916,7 @@ namespace shyft {
                 for(size_t i=i0;i<i0+n;++i)
                     tsv2[i]= Ts(tsv1[i].time_axis(),tsv1[i].values(),tsv1[i].point_interpretation());
             };
-            auto n_threads = thread::hardware_concurrency();
+            auto n_threads =  thread::hardware_concurrency();
             if(n_threads <2) n_threads=4;// hard coded minimum
             std::vector<std::future<void>> calcs;
             size_t ps= 1 + tsv1.size()/n_threads;
@@ -1037,7 +1037,11 @@ namespace shyft {
         inline size_t hint_based_search<api::apoint_ts>(const api::apoint_ts& source, const utcperiod& p, size_t i) {
             return source.open_range_index_of(p.start, i);
         }
-    }
+		template<>
+		inline size_t hint_based_search<api::ipoint_ts>(const api::ipoint_ts& source, const utcperiod& p, size_t i) {
+			return source.time_axis().open_range_index_of(p.start, i);
+		}
+	}
 }
 //-- serialization support
 x_serialize_export_key(shyft::api::ipoint_ts);
