@@ -123,7 +123,7 @@ TEST_CASE("dlib_server_performance") {
         bool throw_exception = false;
 		ts_vector_t from_disk; from_disk.reserve(n_ts);
 		double fv = 1.0;
-		for (size_t i = 0; i < n_ts; ++i)
+		for (int i = 0; i < n_ts; ++i)
 			from_disk.emplace_back(ta, fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
 
         call_back_t cb = [&from_disk, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
@@ -150,7 +150,7 @@ TEST_CASE("dlib_server_performance") {
                     string host_port = string("localhost:") + to_string(port_no);
                     dlog << dlib::LINFO << "sending an expression ts to " << host_port;
                     std::vector<api::apoint_ts> tsl;
-					for (size_t x = 1; x <= n_ts; ++x) {// just make a  very thin request, that get loads of data back
+					for (int x = 1; x <= n_ts; ++x) {// just make a  very thin request, that get loads of data back
 #if 0
 						auto ts_expr = api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
 						tsl.push_back(ts_expr);
