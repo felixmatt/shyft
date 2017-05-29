@@ -200,8 +200,9 @@ class TimeSeries(unittest.TestCase):
         e = a.average(ta)  # average
         f = api.max(c, 300.0)
         g = api.min(c, -300.0)
-        h = a.max(c, 300)
-        k = a.min(c, -300)
+        #h = a.max(c, 300) # class static method not supported
+        h = c.max(300.0)
+        k = c.min( -300)
 
         self.assertEqual(a.size(), n)
         self.assertEqual(b.size(), n)

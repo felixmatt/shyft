@@ -323,8 +323,8 @@ namespace expose {
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
             .def("max",max_ts_f,args("ts_other"),"create a new ts that contains the max of self and ts_other")
-            .def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
-            .def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
+            //.def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
+            //.def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
 			.def("partition_by",&shyft::api::apoint_ts::partition_by,
                 args("calendar","t", "partition_interval", "n_partitions","common_t0"),
 				doc_intro("convert ts to a list of n_partitions partition-ts.")
