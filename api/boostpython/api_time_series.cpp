@@ -167,9 +167,6 @@ namespace expose {
         typedef shyft::api::apoint_ts pts_t;
         typedef pts_t (pts_t::*self_dbl_t)(double) const;
         typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
-        typedef  pts_t ( *static_ts_ts_t)(const pts_t&,const pts_t&);
-        static_ts_ts_t min_stat_ts_ts_f=&pts_t::min;
-        static_ts_ts_t max_stat_ts_ts_f=&pts_t::max;
 
         self_dbl_t min_double_f=&pts_t::min;
         self_ts_t  min_ts_f =&pts_t::min;
