@@ -668,6 +668,36 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(v_acc[0].value(0), 0.0)
         self.assertAlmostEqual(v_sft[0].time(0), t0+dt*24)
 
+        # min/max functions
+        min_v_double = va.min(-1000.0)
+        max_v_double = va.max(1000.0)
+        self.assertAlmostEqual(min_v_double[0].value(0), -1000.0)
+        self.assertAlmostEqual(max_v_double[0].value(0), +1000.0)
+        min_v_double = api.min(va, -1000.0)
+        max_v_double = api.max(va, +1000.0)
+        self.assertAlmostEqual(min_v_double[0].value(0), -1000.0)
+        self.assertAlmostEqual(max_v_double[0].value(0), +1000.0)
+        # c = 10.0
+        c1000= 100.0*c
+        min_v_double = va.min(-c1000)
+        max_v_double = va.max(c1000)
+        self.assertAlmostEqual(min_v_double[0].value(0), -c1000.value(0))
+        self.assertAlmostEqual(max_v_double[0].value(0), c1000.value(0))
+        min_v_double = api.min(va, -c1000)
+        max_v_double = api.max(va, c1000)
+        self.assertAlmostEqual(min_v_double[0].value(0), -c1000.value(0))
+        self.assertAlmostEqual(max_v_double[0].value(0), c1000.value(0))
+
+        v1000 = va*1000.0
+        min_v_double = va.min(-v1000)
+        max_v_double = va.max(v1000)
+        self.assertAlmostEqual(min_v_double[0].value(0), -v1000[0].value(0))
+        self.assertAlmostEqual(max_v_double[0].value(0), v1000[0].value(0))
+        min_v_double = api.min(va, -v1000)
+        max_v_double = api.max(va, v1000)
+        self.assertAlmostEqual(min_v_double[0].value(0), -v1000[0].value(0))
+        self.assertAlmostEqual(max_v_double[0].value(0), v1000[0].value(0))
+
         # finally, test that exception is raised if we try to multiply two unequal sized vectors
 
         try:

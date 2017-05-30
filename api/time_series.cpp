@@ -395,6 +395,29 @@ namespace shyft{
         ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a-b[i]);return r;}
         ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(b[i]-a);return r;}
 
+        // max/min operators
+        ats_vector ats_vector::min(ats_vector const& x) const {
+            if (size() != x.size()) throw runtime_error(string("ts-vector min require same sizes: lhs.size=") + std::to_string(size()) + string(",rhs.size=") + std::to_string(x.size()));
+            ats_vector r;r.reserve(size());for (size_t i = 0;i < size();++i) r.push_back((*this)[i].min(x[i]));
+            return r;
+        }
+        ats_vector ats_vector::max(ats_vector const& x) const {
+            if (size() != x.size()) throw runtime_error(string("ts-vector max require same sizes: lhs.size=") + std::to_string(size()) + string(",rhs.size=") + std::to_string(x.size()));
+            ats_vector r;r.reserve(size());for (size_t i = 0;i < size();++i) r.push_back((*this)[i].max(x[i]));
+            return r;
+        }
+        ats_vector min(ats_vector const &a, double b) { return a.min(b); }
+        ats_vector min(double b, ats_vector const &a) { return a.min(b); }
+        ats_vector min(ats_vector const &a, apoint_ts const& b) { return a.min(b); }
+        ats_vector min(apoint_ts const &b, ats_vector const& a) { return a.min(b); }
+        ats_vector min(ats_vector const &a, ats_vector const &b) { return a.min(b); }
+
+        ats_vector max(ats_vector const &a, double b) { return a.max(b); }
+        ats_vector max(double b, ats_vector const &a) { return a.max(b); }
+        ats_vector max(ats_vector const &a, apoint_ts const & b) { return a.max(b); }
+        ats_vector max(apoint_ts const &b, ats_vector const &a) { return a.max(b); }
+        ats_vector max(ats_vector const &a, ats_vector const & b) { return a.max(b); }
+
     }
 }
 

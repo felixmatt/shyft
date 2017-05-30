@@ -986,18 +986,33 @@ namespace shyft {
                 }
             }
 
-            ats_vector average(gta_t const&ta) {
+            ats_vector average(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.average(ta)); return r;
             }
-            ats_vector integral(gta_t const&ta) {
+            ats_vector integral(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.integral(ta)); return r;
             }
-            ats_vector accumulate(gta_t const&ta) {
+            ats_vector accumulate(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.accumulate(ta)); return r;
             }
-            ats_vector time_shift(utctimespan delta_t) {
+            ats_vector time_shift(utctimespan delta_t) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.time_shift(delta_t)); return r;
             }
+            ats_vector min(double x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.min(x)); return r;
+            }
+            ats_vector max(double x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.max(x)); return r;
+            }
+            ats_vector min(apoint_ts const& x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.min(x)); return r;
+            }
+            ats_vector max(apoint_ts const& x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.max(x)); return r;
+            }
+            ats_vector min(ats_vector const& x) const;
+            ats_vector max(ats_vector const& x) const;
+
             x_serialize_decl();
         };
 
@@ -1031,6 +1046,19 @@ namespace shyft {
         ats_vector operator-(ats_vector const &a,ats_vector const& b);
         ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b);
         ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a);
+        
+        // max-min func overloads (2x!)
+        ats_vector min(ats_vector const &a, double b);
+        ats_vector min(double b, ats_vector const &a);
+        ats_vector min(ats_vector const &a, apoint_ts const& b);
+        ats_vector min(apoint_ts const &b, ats_vector const& a);
+        ats_vector min(ats_vector const &a, ats_vector const &b);
+
+        ats_vector max(ats_vector const &a, double b);
+        ats_vector max(double b, ats_vector const &a);
+        ats_vector max(ats_vector const &a, apoint_ts const & b);
+        ats_vector max(apoint_ts const &b, ats_vector const &a);
+        ats_vector max(ats_vector const &a, ats_vector const & b);
     }
     namespace time_series {
         template<>
