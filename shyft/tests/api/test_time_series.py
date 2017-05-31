@@ -191,6 +191,7 @@ class TimeSeries(unittest.TestCase):
         ta = api.TimeAxis(t0, dt, n)
 
         a = api.TimeSeries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        self.assertTrue(a) # should evaluate to true
         b = api.TimeSeries(ta=ta, fill_value=1.0)
         b.fill(2.0)  # demo how to fill a point ts
         self.assertAlmostEqual((1.0 - b).values.to_numpy().max(), -1.0)
@@ -478,6 +479,7 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(a.values.size(),0)
         self.assertEqual(len(a.values.to_numpy()), 0)
         self.assertFalse(a.total_period().valid())
+        self.assertFalse(a) # evaluate to false
         try:
             a.time_axis
             self.assertFail("Expected exception")

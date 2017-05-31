@@ -186,7 +186,10 @@ namespace shyft {
                     throw runtime_error("TimeSeries is empty");
                 return ts;
             }
-
+            /** support operator! bool  to let an empty ts evaluate to */
+            bool operator !() const { // can't expose it as op, due to math promotion
+                return !(  ts && ts->size() > 0);
+            }
             /**\brief Easy to compare for equality, but tricky if performance needed */
             bool operator==(const apoint_ts& other) const;
 

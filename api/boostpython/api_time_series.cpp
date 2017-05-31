@@ -298,6 +298,8 @@ namespace expose {
 			.def(self - double())
 
 			.def(-self)
+            .def(operator!(self))
+
 			.def("average", &shyft::api::apoint_ts::average, args("ta"),
                 doc_intro("create a new ts that is the true average of self")
                 doc_intro("over the specified time-axis ta.")
