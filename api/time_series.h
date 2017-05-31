@@ -382,15 +382,7 @@ namespace shyft {
                     return nan;
                 return value(index_of(t));
             }
-            virtual std::vector<double> values() const {
-                std::vector<double> r;r.reserve(ta.size());
-                size_t ix_hint=ts->index_of(ta.time(0));
-                bool linear_interpretation=ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
-                for(size_t i=0;i<ta.size();++i) {
-                    r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
-                }
-                return r;
-            }
+			virtual std::vector<double> values() const;
             virtual bool needs_bind() const { return ts->needs_bind();}
             virtual void do_bind() {ts->do_bind();}
             x_serialize_decl();

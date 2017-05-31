@@ -61,12 +61,40 @@ namespace shyft{
         }
 
         std::vector<double> abin_op_ts::values() const {
-            std::vector<double> r;r.reserve(time_axis().size());
-            for(size_t i=0;i<time_axis().size();++i) {
-                r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
-            }
-            return r;
+            
+			if (lhs.time_axis() == rhs.time_axis()) {
+				auto r = rhs.values();
+				auto l = lhs.values();
+				switch (op) {
+				case OP_ADD:for (size_t i = 0; i < r.size(); ++i) l[i] += r[i]; return l;
+				case OP_SUB:for (size_t i = 0; i < r.size(); ++i) l[i] -= r[i]; return l;
+				case OP_MUL:for (size_t i = 0; i < r.size(); ++i) l[i] *= r[i]; return l;
+				case OP_DIV:for (size_t i = 0; i < r.size(); ++i) l[i] /= r[i]; return l;
+				case OP_MAX:for (size_t i = 0; i < r.size(); ++i) l[i] =std::max(l[i], r[i]); return l;
+				case OP_MIN:for (size_t i = 0; i < r.size(); ++i) l[i] = std::min(l[i], r[i]); return l;
+				default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+				}
+			} else {
+				std::vector<double> r; r.reserve(time_axis().size());
+				for (size_t i = 0; i < time_axis().size(); ++i) {
+					r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
+				}
+				return r;
+			}
         }
+		std::vector<double> average_ts::values() const {
+			if (ts->time_axis()== ta && ts->point_interpretation()==ts_point_fx::POINT_AVERAGE_VALUE) {
+				return ts->values();
+			} else {
+				std::vector<double> r; r.reserve(ta.size());
+				size_t ix_hint = ts->index_of(ta.time(0));
+				bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
+				for (size_t i = 0; i < ta.size(); ++i) {
+					r.push_back(average_value(*ts, ta.period(i), ix_hint, linear_interpretation));
+				}
+				return r;
+			}
+		}
 
         // implement popular ct for apoint_ts to make it easy to expose & use
         apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,ts_point_fx point_fx)
@@ -263,10 +291,17 @@ namespace shyft{
 
         std::vector<double> abin_op_scalar_ts::values() const {
           bind_check();
-          std::vector<double> r(rhs.values());
-          for(auto& v:r)
-            v=do_op(lhs,op,v);
-          return r;
+		  std::vector<double> r(rhs.values());
+		  auto l = lhs;
+		  switch (op) {
+		  case OP_ADD:for (size_t i = 0; i < r.size(); ++i) r[i] += l; return r;
+		  case OP_SUB:for (size_t i = 0; i < r.size(); ++i) r[i] = l- r[i]; return r;
+		  case OP_MUL:for (size_t i = 0; i < r.size(); ++i) r[i] *= l; return r;
+		  case OP_DIV:for (size_t i = 0; i < r.size(); ++i) r[i] = l/r[i]; return r;
+		  case OP_MAX:for (size_t i = 0; i < r.size(); ++i) r[i] = std::max(r[i],l); return r;
+		  case OP_MIN:for (size_t i = 0; i < r.size(); ++i) r[i] = std::min(r[i], l); return r;
+		  default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+		  }
         }
 
         double abin_op_ts_scalar::value_at(utctime t) const {
@@ -279,10 +314,17 @@ namespace shyft{
         }
         std::vector<double> abin_op_ts_scalar::values() const {
           bind_check();
-          std::vector<double> r(lhs.values());
-          for(auto& v:r)
-            v=do_op(v,op,rhs);
-          return r;
+          std::vector<double> l(lhs.values());
+		  auto r = rhs;
+		  switch (op) {
+		  case OP_ADD:for (size_t i = 0; i < l.size(); ++i) l[i] += r; return l;
+		  case OP_SUB:for (size_t i = 0; i < l.size(); ++i) l[i] -= r; return l;
+		  case OP_MUL:for (size_t i = 0; i < l.size(); ++i) l[i] *= r; return l;
+		  case OP_DIV:for (size_t i = 0; i < l.size(); ++i) l[i] /= r; return l;
+		  case OP_MAX:for (size_t i = 0; i < l.size(); ++i) l[i] = std::max(l[i], r); return l;
+		  case OP_MIN:for (size_t i = 0; i < l.size(); ++i) l[i] = std::min(l[i], r); return l;
+		  default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+		  }
         }
 
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
