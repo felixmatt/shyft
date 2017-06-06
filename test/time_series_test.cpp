@@ -1254,6 +1254,39 @@ TEST_CASE("test_accumulate_ts_and_accessor") {
 	// the accessor should be smart, trying to re-use prior computation, I verify the result here,
 	TS_ASSERT_DELTA(1.0*deltahours(2), aa.value(2), 0.0001);// and using step-debug to verify it's really doing the right thing
 }
+TEST_CASE("core_average_ts") {
+	calendar utc;
+	auto t = utc.time(2015, 5, 1, 0, 0, 0);
+	auto d = deltahours(3);
+	size_t n = 10;
+	vector<double> values;for (size_t i = 0;i < n;++i) values.emplace_back(i != 5 ? i*1.0 : shyft::nan);//0, 1,2,4,nan,6..9
+																										//Two equal time_axis::fixed_dt representations
+	time_axis::fixed_dt ta(t, d, n);
+	point_ts<time_axis::fixed_dt> a(ta, values, ts_point_fx::POINT_INSTANT_VALUE);// so a is a straight increasing line
+
+	time_axis::fixed_dt ta3(t,d/3,n*3);//hourly time-axis
+	average_ts<point_ts<time_axis::fixed_dt>, time_axis::fixed_dt> ats(a, ta3);
+    FAST_REQUIRE_EQ(ta3.size(),ats.size());
+    vector<double> expected{
+    0.0 + 0.166666, 0.0 + 0.5, 0.0 + 0.833333,
+    1.0 + 0.166666, 1.0 + 0.5, 1.0 + 0.833333,
+    2.0 + 0.166666, 2.0 + 0.5, 2.0 + 0.833333,
+    3.0 + 0.166666, 3.0 + 0.5, 3.0 + 0.833333,
+    4.0, 4.0, 4.0,
+    shyft::nan, shyft::nan, shyft::nan,
+    6.0 + 0.166666, 6.0 + 0.5, 6.0 + 0.833333,
+    7.0 + 0.166666, 7.0 + 0.5, 7.0 + 0.833333,
+    8.0 + 0.166666, 8.0 + 0.5, 8.0 + 0.833333,
+    9.0, 9.0, 9.0
+    };
+    for(size_t i=0;i<ats.size();++i) {
+        if(i/3==5) {
+            FAST_CHECK_EQ(std::isfinite(ats.value(i)),false);
+        } else {
+            TS_ASSERT_DELTA(ats.value(i) , expected[i], 0.001);
+        }
+    }
+}
 
 TEST_CASE("test_partition_by") {
 	calendar utc;

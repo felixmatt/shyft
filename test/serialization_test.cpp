@@ -385,4 +385,38 @@ TEST_CASE("test_serialization_memcpy_performance") {
 
     }
 }
+TEST_CASE("apoint_ts_expression_speed") {
+    // case from LTM: 200 time-series, each with 5 years 3h data, reduce(add,..) -> 1 ts.
+    // optimal speed using vector + vector show that this is a memory-bus limited operation
+    // (so multiple threads on same memory system do not scale)
+    bool verbose = getenv("SHYFT_VERBOSE") ? true : false;
+    calendar utc;
+    auto dt=deltahours(3);
+    size_t n = 5*365*deltahours(24)/dt;
+    size_t n_ts= 200;
+    time_axis::generic_dt ta(utc.time(2016,1,1),dt,n);
+    time_axis::generic_dt ta24(utc.time(2016,1,1),deltahours(24),n/8);
+
+    api::apoint_ts ts_expr(ta,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+    for(size_t i=0;i<n_ts;++i)
+        ts_expr = ts_expr + 3.14*api::apoint_ts (ta,double((i+1)*1.0),time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+
+    ts_expr = ts_expr.average(ta24);
+    std::vector<double> avg_v;avg_v.reserve(n);
+    double xz;
+    clock_t t0 = clock();
+    typedef shyft::time_series::point_ts<time_axis::generic_dt> core_ts;
+    core_ts r(ts_expr.time_axis(),ts_expr.values(),ts_expr.point_interpretation());
+    avg_v.push_back(r.value(0));
+    avg_v.push_back(r.value(1));
+    avg_v.push_back(r.value(2));
+    auto ms = (clock() - t0)*1000.0 / double(CLOCKS_PER_SEC);
+    xz=avg_v[0]+avg_v[2];
+    if(verbose) {
+        cout<<"deflate "<<n_ts<<" ts, each with "
+        <<n<<" values to one ts took "<<ms<<" ms"<<" xz="<<xz
+        <<",\nsize of final result is "<<avg_v.size()
+        <<endl;
+    }
+}
 }

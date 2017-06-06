@@ -440,16 +440,7 @@ namespace shyft {
                     return nan;
                 return value(index_of(t));
             }
-            virtual std::vector<double> values() const {
-                std::vector<double> r;r.reserve(ta.size());
-                size_t ix_hint = ts->index_of(ta.time(0));
-                bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
-                for (size_t i = 0;i<ta.size();++i) {
-                    utctimespan tsum = 0;
-                    r.push_back(accumulate_value(*ts, ta.period(i), ix_hint,tsum, linear_interpretation));
-                }
-                return r;
-            }
+            virtual std::vector<double> values() const ;
             virtual bool needs_bind() const { return ts->needs_bind();}
             virtual void do_bind() {ts->do_bind();}
             x_serialize_decl();
@@ -1041,7 +1032,7 @@ namespace shyft {
         ats_vector operator-(ats_vector const &a,ats_vector const& b);
         ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b);
         ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a);
-        
+
         // max-min func overloads (2x!)
         ats_vector min(ats_vector const &a, double b);
         ats_vector min(double b, ats_vector const &a);

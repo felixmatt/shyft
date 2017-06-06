@@ -170,10 +170,10 @@ TEST_CASE("dlib_server_performance") {
                     int kilo_points= tsl.size()*ta.size()/1000;
                     while (elapsed_ms(t0, timing::now()) < test_duration_ms) {
                         // burn cpu server side, save time on serialization
-                        //std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
-                        //auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
+                        std::vector<int> percentile_spec{ -1 };
+                        auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
                         //slower due to serialization:
-                        auto ts_b = dtss.evaluate(tsl, ta.total_period());
+                        //auto ts_b = dtss.evaluate(tsl, ta.total_period());
                         ++eval_count;
                     }
                     auto total_ms = double(elapsed_ms(t0, timing::now()));

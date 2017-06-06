@@ -61,7 +61,7 @@ namespace shyft{
         }
 
         std::vector<double> abin_op_ts::values() const {
-            
+
 			if (lhs.time_axis() == rhs.time_axis()) {
 				auto r = rhs.values();
 				auto l = lhs.values();
@@ -82,19 +82,30 @@ namespace shyft{
 				return r;
 			}
         }
+		typedef shyft::time_series::point_ts<time_axis::generic_dt> core_ts;
 		std::vector<double> average_ts::values() const {
 			if (ts->time_axis()== ta && ts->point_interpretation()==ts_point_fx::POINT_AVERAGE_VALUE) {
 				return ts->values();
 			} else {
-				std::vector<double> r; r.reserve(ta.size());
-				size_t ix_hint = ts->index_of(ta.time(0));
-				bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
-				for (size_t i = 0; i < ta.size(); ++i) {
-					r.push_back(average_value(*ts, ta.period(i), ix_hint, linear_interpretation));
-				}
+                core_ts rts(ts->time_axis(),ts->values(),ts->point_interpretation());// first make a core-ts
+                time_series::average_ts<core_ts,time_axis::generic_dt> avg_ts(rts,ta);// flatten the source
+				std::vector<double> r; r.reserve(ta.size()); // then pull out the result
+                for(size_t i=0;i<ta.size();++i) // consider: direct use of average func with hint-update
+                    r.push_back(avg_ts.value(i));
 				return r;
 			}
 		}
+         std::vector<double> integral_ts::values() const {
+            core_ts rts(ts->time_axis(),ts->values(),ts->point_interpretation());// first make a core-ts
+            std::vector<double> r;r.reserve(ta.size());
+            size_t ix_hint = ts->index_of(ta.time(0));
+            bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
+            for (size_t i = 0;i<ta.size();++i) {
+                utctimespan tsum = 0;
+                r.push_back(accumulate_value(rts, ta.period(i), ix_hint,tsum, linear_interpretation));
+            }
+            return r;
+        }
 
         // implement popular ct for apoint_ts to make it easy to expose & use
         apoint_ts::apoint_ts(const time_axis::generic_dt& ta,double fill_value,ts_point_fx point_fx)

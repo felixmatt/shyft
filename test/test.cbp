@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=cell_builder_test::test_read_and_run_region_model" />
+				<Option parameters="-nv -tc=core_average_ts" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
