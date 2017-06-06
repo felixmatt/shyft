@@ -71,6 +71,8 @@
 			<Add library="blas" />
 			<Add library="lapack" />
 			<Add library="dlib" />
+			<Add directory="$(#dlib.lib)" />
+			<Add directory="$(#boost.lib)" />
 			<Add directory="/usr/local/lib64" />
 			<Add directory="/usr/local/lib" />
 		</Linker>

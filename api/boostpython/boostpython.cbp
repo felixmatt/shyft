@@ -160,6 +160,8 @@
 			<Add library="boost_serialization" />
 			<Add library="dlib" />
 			<Add directory="$(#python.lib)" />
+			<Add directory="$(#dlib.lib)" />
+			<Add directory="$(#boost.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
 			<Option virtualFolder="api/" />
