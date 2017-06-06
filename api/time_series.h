@@ -186,7 +186,10 @@ namespace shyft {
                     throw runtime_error("TimeSeries is empty");
                 return ts;
             }
-
+            /** support operator! bool  to let an empty ts evaluate to */
+            bool operator !() const { // can't expose it as op, due to math promotion
+                return !(  ts && ts->size() > 0);
+            }
             /**\brief Easy to compare for equality, but tricky if performance needed */
             bool operator==(const apoint_ts& other) const;
 
@@ -379,15 +382,7 @@ namespace shyft {
                     return nan;
                 return value(index_of(t));
             }
-            virtual std::vector<double> values() const {
-                std::vector<double> r;r.reserve(ta.size());
-                size_t ix_hint=ts->index_of(ta.time(0));
-                bool linear_interpretation=ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
-                for(size_t i=0;i<ta.size();++i) {
-                    r.push_back(average_value(*ts,ta.period(i),ix_hint,linear_interpretation));
-                }
-                return r;
-            }
+			virtual std::vector<double> values() const;
             virtual bool needs_bind() const { return ts->needs_bind();}
             virtual void do_bind() {ts->do_bind();}
             x_serialize_decl();
@@ -445,16 +440,7 @@ namespace shyft {
                     return nan;
                 return value(index_of(t));
             }
-            virtual std::vector<double> values() const {
-                std::vector<double> r;r.reserve(ta.size());
-                size_t ix_hint = ts->index_of(ta.time(0));
-                bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
-                for (size_t i = 0;i<ta.size();++i) {
-                    utctimespan tsum = 0;
-                    r.push_back(accumulate_value(*ts, ta.period(i), ix_hint,tsum, linear_interpretation));
-                }
-                return r;
-            }
+            virtual std::vector<double> values() const ;
             virtual bool needs_bind() const { return ts->needs_bind();}
             virtual void do_bind() {ts->do_bind();}
             x_serialize_decl();
@@ -916,7 +902,7 @@ namespace shyft {
                 for(size_t i=i0;i<i0+n;++i)
                     tsv2[i]= Ts(tsv1[i].time_axis(),tsv1[i].values(),tsv1[i].point_interpretation());
             };
-            auto n_threads = thread::hardware_concurrency();
+            auto n_threads =  thread::hardware_concurrency();
             if(n_threads <2) n_threads=4;// hard coded minimum
             std::vector<std::future<void>> calcs;
             size_t ps= 1 + tsv1.size()/n_threads;
@@ -986,18 +972,33 @@ namespace shyft {
                 }
             }
 
-            ats_vector average(gta_t const&ta) {
+            ats_vector average(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.average(ta)); return r;
             }
-            ats_vector integral(gta_t const&ta) {
+            ats_vector integral(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.integral(ta)); return r;
             }
-            ats_vector accumulate(gta_t const&ta) {
+            ats_vector accumulate(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.accumulate(ta)); return r;
             }
-            ats_vector time_shift(utctimespan delta_t) {
+            ats_vector time_shift(utctimespan delta_t) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.time_shift(delta_t)); return r;
             }
+            ats_vector min(double x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.min(x)); return r;
+            }
+            ats_vector max(double x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.max(x)); return r;
+            }
+            ats_vector min(apoint_ts const& x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.min(x)); return r;
+            }
+            ats_vector max(apoint_ts const& x) const {
+                ats_vector r;r.reserve(size());for (auto const &ts : *this) r.push_back(ts.max(x)); return r;
+            }
+            ats_vector min(ats_vector const& x) const;
+            ats_vector max(ats_vector const& x) const;
+
             x_serialize_decl();
         };
 
@@ -1031,13 +1032,30 @@ namespace shyft {
         ats_vector operator-(ats_vector const &a,ats_vector const& b);
         ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b);
         ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a);
+
+        // max-min func overloads (2x!)
+        ats_vector min(ats_vector const &a, double b);
+        ats_vector min(double b, ats_vector const &a);
+        ats_vector min(ats_vector const &a, apoint_ts const& b);
+        ats_vector min(apoint_ts const &b, ats_vector const& a);
+        ats_vector min(ats_vector const &a, ats_vector const &b);
+
+        ats_vector max(ats_vector const &a, double b);
+        ats_vector max(double b, ats_vector const &a);
+        ats_vector max(ats_vector const &a, apoint_ts const & b);
+        ats_vector max(apoint_ts const &b, ats_vector const &a);
+        ats_vector max(ats_vector const &a, ats_vector const & b);
     }
     namespace time_series {
         template<>
         inline size_t hint_based_search<api::apoint_ts>(const api::apoint_ts& source, const utcperiod& p, size_t i) {
             return source.open_range_index_of(p.start, i);
         }
-    }
+		template<>
+		inline size_t hint_based_search<api::ipoint_ts>(const api::ipoint_ts& source, const utcperiod& p, size_t i) {
+			return source.time_axis().open_range_index_of(p.start, i);
+		}
+	}
 }
 //-- serialization support
 x_serialize_export_key(shyft::api::ipoint_ts);

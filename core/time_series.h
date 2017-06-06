@@ -423,7 +423,7 @@ namespace shyft{
 
             } // because true-average of periods is per def. POINT_AVERAGE_VALUE
             // to help average_value method for now!
-            point get(size_t i) const {return point(ta.time(i),ts.value(i));}
+            point get(size_t i) const {return point(ta.time(i),value(i));}
             size_t size() const { return ta.size();}
             size_t index_of(utctime t) const {return ta.index_of(t);}
             //--
@@ -432,7 +432,7 @@ namespace shyft{
                     return nan;
                 size_t ix_hint=(i*d_ref(ts).ta.size())/ta.size();// assume almost fixed delta-t.
                 //TODO: make specialized pr. time-axis average_value, since average of fixed_dt is trivial compared to other ta.
-                return average_value(*this,ta.period(i),ix_hint,d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+                return average_value(ts,ta.period(i),ix_hint,d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
             }
             double operator()(utctime t) const {
                 size_t i=ta.index_of(t);
@@ -473,7 +473,7 @@ namespace shyft{
                  {
             } // because accumulate represents the integral of the distance from t0 to t, valid at t
 
-            point get(size_t i) const { return point(ta.time(i), ts.value(i)); }
+            point get(size_t i) const { return point(ta.time(i), value(i)); }
             size_t size() const { return ta.size(); }
             size_t index_of(utctime t) const { return ta.index_of(t); }
             utcperiod total_period()const {return ta.total_period();}
@@ -486,7 +486,7 @@ namespace shyft{
                 size_t ix_hint = 0;// we have to start at the beginning
                 utcperiod accumulate_period(ta.time(0), ta.time(i));
                 utctimespan tsum;
-                return accumulate_value(*this, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
+                return accumulate_value(ts, accumulate_period, ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !
             }
             double operator()(utctime t) const {
                 size_t i = ta.index_of(t);
@@ -496,7 +496,7 @@ namespace shyft{
                     return 0.0; // by definition
                 utctimespan tsum;
                 size_t ix_hint = 0;
-                return accumulate_value(*this, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
+                return accumulate_value(ts, utcperiod(ta.time(0),t), ix_hint,tsum, d_ref(ts).fx_policy == ts_point_fx::POINT_INSTANT_VALUE);// also note: average of non-nan areas !;
             }
             x_serialize_decl();
         };
@@ -1654,7 +1654,7 @@ namespace shyft{
             }
             return abs_diff_sum;
         }
- 
+
 
         /**\brief partition_by convert a time-series into a vector of time-shifted partitions of ts with a common time-reference
         *

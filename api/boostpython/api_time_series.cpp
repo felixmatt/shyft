@@ -14,6 +14,10 @@ namespace expose {
 
     static void expose_ats_vector() {
         using namespace shyft::api;
+        typedef ats_vector(ats_vector::*m_double)(double)const;
+        typedef ats_vector(ats_vector::*m_ts)(apoint_ts const&)const;
+        typedef ats_vector(ats_vector::*m_tsv) (ats_vector const&)const;
+
         class_<ats_vector>("TsVector",
                 doc_intro("A vector of time-series that supports ts-math operations.")
                 doc_intro("")
@@ -96,6 +100,12 @@ namespace expose {
                 doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
 				doc_returns("tsv","TsVector",	"a new time-series, that appears as time-shifted version of self")
 			)
+            .def("min",(m_double)&ats_vector::min,args("number"),"returns min of vector and a number")
+            .def("min", (m_ts)&ats_vector::min, args("ts"), "returns min of ts-vector and a ts")
+            .def("min", (m_tsv)&ats_vector::min, args("tsv"), "returns min of ts-vector and another ts-vector")
+            .def("max", (m_double)&ats_vector::max, args("number"), "returns max of vector and a number")
+            .def("max", (m_ts)&ats_vector::max, args("ts"), "returns max of ts-vector and a ts")
+            .def("max", (m_tsv)&ats_vector::max, args("tsv"), "returns max of ts-vector and another ts-vector")
             // defining vector math-operations goes here
             .def(-self)
             .def(self*double())
@@ -122,6 +132,23 @@ namespace expose {
             .def(shyft::api::apoint_ts()-self)
             .def(self-shyft::api::apoint_ts())
             ;
+            // expose min-max functions:
+            typedef ats_vector(*f_atsv_double)(ats_vector const &, double b);
+            typedef ats_vector(*f_double_atsv)(double b, ats_vector const &a);
+            typedef ats_vector(*f_atsv_ats)(ats_vector const &, apoint_ts const& );
+            typedef ats_vector(*f_ats_atsv)(apoint_ts const &b, ats_vector const& a);
+            typedef ats_vector(*f_atsv_atsv)(ats_vector const &b, ats_vector const &a);
+            
+            def("min", (f_ats_atsv)min, args("ts", "ts_vector"), "return minimum of ts and ts_vector");
+            def("min", (f_atsv_ats)min, args("ts_vector", "ts"), "return minimum of ts_vector and ts");
+            def("min", (f_atsv_double)min, args("ts_vector", "number"), "return minimum of ts_vector and number");
+            def("min", (f_double_atsv)min, args("number","ts_vector"), "return minimum of number and ts_vector");
+            def("min", (f_atsv_atsv)min, args("a", "b"), "return minimum of ts_vectors a and b (requires equal size!)");
+            def("max", (f_ats_atsv)max, args("ts", "ts_vector"), "return max of ts and ts_vector");
+            def("max", (f_atsv_ats)max, args("ts_vector", "ts"), "return max of ts_vector and ts");
+            def("max", (f_atsv_double)max, args("ts_vector", "number"), "return max of ts_vector and number");
+            def("max", (f_double_atsv)max, args("number", "ts_vector"), "return max of number and ts_vector");
+            def("max", (f_atsv_atsv)max, args("a", "b"), "return max of ts_vectors a and b (requires equal size!)");
     }
 
     #define DEF_STD_TS_STUFF() \
@@ -167,9 +194,6 @@ namespace expose {
         typedef shyft::api::apoint_ts pts_t;
         typedef pts_t (pts_t::*self_dbl_t)(double) const;
         typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
-        typedef  pts_t ( *static_ts_ts_t)(const pts_t&,const pts_t&);
-        static_ts_ts_t min_stat_ts_ts_f=&pts_t::min;
-        static_ts_ts_t max_stat_ts_ts_f=&pts_t::max;
 
         self_dbl_t min_double_f=&pts_t::min;
         self_ts_t  min_ts_f =&pts_t::min;
@@ -274,6 +298,8 @@ namespace expose {
 			.def(self - double())
 
 			.def(-self)
+            .def(operator!(self))
+
 			.def("average", &shyft::api::apoint_ts::average, args("ta"),
                 doc_intro("create a new ts that is the true average of self")
                 doc_intro("over the specified time-axis ta.")
@@ -323,8 +349,8 @@ namespace expose {
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,args("number"),"create a new ts that contains the max of self and number for each time-step")
             .def("max",max_ts_f,args("ts_other"),"create a new ts that contains the max of self and ts_other")
-            .def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
-            .def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
+            //.def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
+            //.def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
 			.def("partition_by",&shyft::api::apoint_ts::partition_by,
                 args("calendar","t", "partition_interval", "n_partitions","common_t0"),
 				doc_intro("convert ts to a list of n_partitions partition-ts.")

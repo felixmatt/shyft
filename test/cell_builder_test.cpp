@@ -213,26 +213,35 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         }
     }
 
+    auto cal = ec::calendar();
+	auto start = cal.time(2010, 9, 1, 0, 0, 0);
+	auto dt_hours=3;
+	auto dt = ec::deltahours(dt_hours);
+	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
+	size_t n = 24 * ndays/dt_hours;//365;// 365 takes 20 seconds at cell stage 8core
+	ta::fixed_dt ta(start, dt, n);
+    ta::fixed_dt ta_one_step(start, dt*n, 1);
+
     // Step 2: read geo located ts
 	cout << "2. Reading geo-located time-series from file (could take a short time)" << endl;
 	geo_located_ts_file_repository geo_f_ts(test_path);
 	region_environment_t re;
 	TS_ASSERT(geo_f_ts.read(re));
+	if(!re.rel_hum) {
+        re.rel_hum=make_shared<vector<geo_cts_t>>();
+        re.wind_speed= make_shared<vector<geo_cts_t>>();
+        auto gp = (*re.temperature)[0].location;
+        re.rel_hum->push_back(geo_cts_t{ gp,cts_t(ta,0.8)});
+        re.wind_speed->push_back(geo_cts_t{gp,cts_t(ta,2.0)});
+	}
     //return;
 	// Step 3: make a region model
-	cout << "3. creating a region model and run it for a short period" << endl;
+	cout << "3. creating a region model and run t0="<<cal.to_string(start)<<",dt="<<dt_hours<<"h, n= "<<n<<" ~"<<ndays<<" days" << endl;
 	region_model_t rm(cells, *global_parameter);
 	rm.ncore = atoi(getenv("NCORE") ? getenv("NCORE") : "8");
 	cout << " - ncore set to " << rm.ncore << endl;
-	auto cal = ec::calendar();
-	auto start = cal.time(ec::YMDhms(2010, 9, 1, 0, 0, 0));
-	auto dt = ec::deltahours(3);
-	auto ndays = atoi(getenv("NDAYS") ? getenv("NDAYS") : "90");
-	size_t n = 24 * ndays;//365;// 365 takes 20 seconds at cell stage 8core
-	ta::fixed_dt ta(start, dt, n);
-    ta::fixed_dt ta_one_step(start, dt*n, 1);
 	ec::interpolation_parameter ip;
-	ip.use_idw_for_temperature = true;
+	ip.use_idw_for_temperature = false;
     vector<int> all_catchment_ids;// empty vector means no filtering
     vector<int> catchment_ids{ 87,115 };
     vector<int> other_ids{ 38,188,259,295,389,465,496,516,551,780 };
@@ -249,12 +258,13 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     //cout << "partial:avg precip for selected    catchments is:" << avg_precip_ip_set_value << endl;
     //cout << "partial:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value << endl;
     FAST_CHECK_GT(avg_precip_ip_set_value, 0.05);
-    FAST_CHECK_EQ(avg_precip_ip_o_set_value, 0.00);
+    FAST_CHECK_EQ(std::isfinite(avg_precip_ip_o_set_value),false);
     rm.set_catchment_calculation_filter(all_catchment_ids);
     ti1 = timing::now();
-    rm.interpolate(ip, re);
+    auto ok_ip = rm.interpolate(ip, re);
     ipt = elapsed_ms(ti1, timing::now());
-    cout << "3. a Done with interpolation step *all* catchments used = " << ipt << "[ms]" << endl;
+    cout << "3. b Done with interpolation step *all* catchments used = " << ipt << "[ms]" << endl;
+    REQUIRE(ok_ip);
     // now verify we got same results for the limited set, and non-zero for the others.
     auto avg_precip_ip_set2 = ec::cell_statistics::average_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.env_ts.precipitation; });
     auto avg_precip_ip_set_value2 = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_set2, ta_one_step).value(0);
@@ -264,8 +274,35 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     FAST_CHECK_GT(avg_precip_ip_o_set_value2, 0.05);
     //cout << "full:avg precip for selected    catchments is:" << avg_precip_ip_set_value2 << endl;
     //cout << "full:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value2 << endl;
+    cout << "3. c Verify best_effort interpolation";
+    auto re_temperature = *(re.temperature);
+    for(auto& gts:*(re.temperature)) {
+        for(size_t i=100;i<gts.ts.size();++i)
+            gts.ts.set(i,shyft::nan);
+    }
+    auto ok=rm.interpolate(ip,re);
+    cout<<"\ndone "<<(ok?", all ok":", with problems")<<", exit"<<endl;
+    REQUIRE(!ok);
+    try {
+        ok=rm.interpolate(ip,re,false);
+        REQUIRE(false);// REQUIRE the above to throw
+    } catch(exception const &ex) {
+        // we should get an exception here
+        if(verbose) cout<<"ok, got expected exception : "<<ex.what()<<endl;
+    }
+    ip.use_idw_for_temperature = true;// test for idw (more forgiving)
+    try {
+        ok=rm.interpolate(ip,re,false);
+    } catch(exception const &ex) {
+        // we should get an exception here
+        if(verbose) cout<<"ok, got expected exception : "<<ex.what()<<endl;
+        REQUIRE(false);// REQUIRE the above to not throw (idw is best effort by design)
+    }
+    *re.temperature = re_temperature; // restore ok temperatures
     if (getenv("SHYFT_IP_ONLY"))
 		return;
+	ok_ip = rm.interpolate(ip, re);
+	REQUIRE(ok_ip);
 	vector<shyft::core::pt_gs_k::state_t> s0;
 	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
     //

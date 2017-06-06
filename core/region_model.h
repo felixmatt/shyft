@@ -355,11 +355,12 @@ namespace shyft {
 			*
 			* \param ip_parameter contains wanted parameters for the interpolation
 			* \param env contains the \ref region_environment type
-			* \return void
+			* \param best_effort controls if the entire calculation should be aborted in case of one ip-going wrong(leaving nans @ cells)
+			* \return true if everything went ok, false if exceptions, doing best effort
 			*
 			*/
 
-			void interpolate(const interpolation_parameter& ip_parameter, const region_env_t& env) {
+			bool interpolate(const interpolation_parameter& ip_parameter, const region_env_t& env, bool best_effort=true) {
 				using namespace shyft::core;
 				using namespace std;
 				namespace idw = shyft::core::inverse_distance;
@@ -413,7 +414,7 @@ namespace shyft {
                 this->region_env = env;// this could be a shallow copy
 				// Allocate memory for the source_destinations, put in the reference to the parameters:
 				// Run one thread for each optional interpolation
-				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fill-value 0.0
+				//  notice that if a source is nullptr, then we leave the allocated cell.level signal to fill-value nan
 				//  the intention is that the orchestrator at the outside could provide it's own ready-made
 				//  interpolated/distributed signal, e.g. temperature input from arome-data
 
@@ -479,11 +480,16 @@ namespace shyft {
 					);
 				});
 
-				btkx.get();
-				idw_precip.get();
-				idw_radiation.get();
-				idw_wind_speed.get();
-				idw_rel_hum.get();
+                bool btkx_ok=true,precip_ok=true,radiation_ok=true,wind_speed_ok=true,rel_hum_ok=true;
+                exception_ptr p_ex;
+				try {btkx.get();} catch(...) {p_ex=current_exception();btkx_ok=false;}
+				try {idw_precip.get();} catch(...) {p_ex=current_exception();precip_ok=false;}
+				try {idw_radiation.get();} catch(...) {p_ex=current_exception();radiation_ok=false;}
+				try {idw_wind_speed.get();} catch(...) {p_ex=current_exception();wind_speed_ok=false;}
+				try {idw_rel_hum.get();} catch(...) {p_ex=current_exception();rel_hum_ok=false;}
+				if(!best_effort && p_ex)
+				    rethrow_exception(p_ex);
+				return btkx_ok && precip_ok && radiation_ok && wind_speed_ok && rel_hum_ok;
 			}
 
             /** \brief initializes cell.env and project region env. time_series to cells.
@@ -499,12 +505,13 @@ namespace shyft {
             * \param ip_parameter contains wanted parameters for the interpolation
             * \param time_axis should be equal to the \ref shyft::time_axis the \ref region_model is prepared running for.
             * \param env contains the \ref region_environment type
-            * \return void
+            * \param best_effort (default=true)
+            * \return true if entire process was done with no exceptions raised
             *
             */
-            void run_interpolation(const interpolation_parameter& ip_parameter, const timeaxis_t& time_axis, const region_env_t& env) {
+            bool run_interpolation(const interpolation_parameter& ip_parameter, const timeaxis_t& time_axis, const region_env_t& env, bool best_effort=true) {
 				initialize_cell_environment(time_axis);
-				interpolate(ip_parameter, env);
+				return interpolate(ip_parameter, env);
             }
 
             /** \brief run_cells calculations over specified time_axis

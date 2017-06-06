@@ -61,9 +61,48 @@ namespace shyft{
         }
 
         std::vector<double> abin_op_ts::values() const {
-            std::vector<double> r;r.reserve(time_axis().size());
-            for(size_t i=0;i<time_axis().size();++i) {
-                r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
+
+			if (lhs.time_axis() == rhs.time_axis()) {
+				auto r = rhs.values();
+				auto l = lhs.values();
+				switch (op) {
+				case OP_ADD:for (size_t i = 0; i < r.size(); ++i) l[i] += r[i]; return l;
+				case OP_SUB:for (size_t i = 0; i < r.size(); ++i) l[i] -= r[i]; return l;
+				case OP_MUL:for (size_t i = 0; i < r.size(); ++i) l[i] *= r[i]; return l;
+				case OP_DIV:for (size_t i = 0; i < r.size(); ++i) l[i] /= r[i]; return l;
+				case OP_MAX:for (size_t i = 0; i < r.size(); ++i) l[i] =std::max(l[i], r[i]); return l;
+				case OP_MIN:for (size_t i = 0; i < r.size(); ++i) l[i] = std::min(l[i], r[i]); return l;
+				default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+				}
+			} else {
+				std::vector<double> r; r.reserve(time_axis().size());
+				for (size_t i = 0; i < time_axis().size(); ++i) {
+					r.push_back(value(i));//TODO: improve speed using accessors with ix-hint for lhs/rhs stepwise traversal
+				}
+				return r;
+			}
+        }
+		typedef shyft::time_series::point_ts<time_axis::generic_dt> core_ts;
+		std::vector<double> average_ts::values() const {
+			if (ts->time_axis()== ta && ts->point_interpretation()==ts_point_fx::POINT_AVERAGE_VALUE) {
+				return ts->values();
+			} else {
+                core_ts rts(ts->time_axis(),ts->values(),ts->point_interpretation());// first make a core-ts
+                time_series::average_ts<core_ts,time_axis::generic_dt> avg_ts(rts,ta);// flatten the source
+				std::vector<double> r; r.reserve(ta.size()); // then pull out the result
+                for(size_t i=0;i<ta.size();++i) // consider: direct use of average func with hint-update
+                    r.push_back(avg_ts.value(i));
+				return r;
+			}
+		}
+         std::vector<double> integral_ts::values() const {
+            core_ts rts(ts->time_axis(),ts->values(),ts->point_interpretation());// first make a core-ts
+            std::vector<double> r;r.reserve(ta.size());
+            size_t ix_hint = ts->index_of(ta.time(0));
+            bool linear_interpretation = ts->point_interpretation() == ts_point_fx::POINT_INSTANT_VALUE;
+            for (size_t i = 0;i<ta.size();++i) {
+                utctimespan tsum = 0;
+                r.push_back(accumulate_value(rts, ta.period(i), ix_hint,tsum, linear_interpretation));
             }
             return r;
         }
@@ -263,10 +302,17 @@ namespace shyft{
 
         std::vector<double> abin_op_scalar_ts::values() const {
           bind_check();
-          std::vector<double> r(rhs.values());
-          for(auto& v:r)
-            v=do_op(lhs,op,v);
-          return r;
+		  std::vector<double> r(rhs.values());
+		  auto l = lhs;
+		  switch (op) {
+		  case OP_ADD:for (size_t i = 0; i < r.size(); ++i) r[i] += l; return r;
+		  case OP_SUB:for (size_t i = 0; i < r.size(); ++i) r[i] = l- r[i]; return r;
+		  case OP_MUL:for (size_t i = 0; i < r.size(); ++i) r[i] *= l; return r;
+		  case OP_DIV:for (size_t i = 0; i < r.size(); ++i) r[i] = l/r[i]; return r;
+		  case OP_MAX:for (size_t i = 0; i < r.size(); ++i) r[i] = std::max(r[i],l); return r;
+		  case OP_MIN:for (size_t i = 0; i < r.size(); ++i) r[i] = std::min(r[i], l); return r;
+		  default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+		  }
         }
 
         double abin_op_ts_scalar::value_at(utctime t) const {
@@ -279,10 +325,17 @@ namespace shyft{
         }
         std::vector<double> abin_op_ts_scalar::values() const {
           bind_check();
-          std::vector<double> r(lhs.values());
-          for(auto& v:r)
-            v=do_op(v,op,rhs);
-          return r;
+          std::vector<double> l(lhs.values());
+		  auto r = rhs;
+		  switch (op) {
+		  case OP_ADD:for (size_t i = 0; i < l.size(); ++i) l[i] += r; return l;
+		  case OP_SUB:for (size_t i = 0; i < l.size(); ++i) l[i] -= r; return l;
+		  case OP_MUL:for (size_t i = 0; i < l.size(); ++i) l[i] *= r; return l;
+		  case OP_DIV:for (size_t i = 0; i < l.size(); ++i) l[i] /= r; return l;
+		  case OP_MAX:for (size_t i = 0; i < l.size(); ++i) l[i] = std::max(l[i], r); return l;
+		  case OP_MIN:for (size_t i = 0; i < l.size(); ++i) l[i] = std::min(l[i], r); return l;
+		  default: throw runtime_error("Unsupported operation " + to_string(int(op)));
+		  }
         }
 
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
@@ -394,6 +447,29 @@ namespace shyft{
         }
         ats_vector operator-(ats_vector::value_type const &a,ats_vector const& b) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(a-b[i]);return r;}
         ats_vector operator-(ats_vector const& b,ats_vector::value_type const &a) {ats_vector r;r.reserve(b.size());for(size_t i=0;i<b.size();++i) r.push_back(b[i]-a);return r;}
+
+        // max/min operators
+        ats_vector ats_vector::min(ats_vector const& x) const {
+            if (size() != x.size()) throw runtime_error(string("ts-vector min require same sizes: lhs.size=") + std::to_string(size()) + string(",rhs.size=") + std::to_string(x.size()));
+            ats_vector r;r.reserve(size());for (size_t i = 0;i < size();++i) r.push_back((*this)[i].min(x[i]));
+            return r;
+        }
+        ats_vector ats_vector::max(ats_vector const& x) const {
+            if (size() != x.size()) throw runtime_error(string("ts-vector max require same sizes: lhs.size=") + std::to_string(size()) + string(",rhs.size=") + std::to_string(x.size()));
+            ats_vector r;r.reserve(size());for (size_t i = 0;i < size();++i) r.push_back((*this)[i].max(x[i]));
+            return r;
+        }
+        ats_vector min(ats_vector const &a, double b) { return a.min(b); }
+        ats_vector min(double b, ats_vector const &a) { return a.min(b); }
+        ats_vector min(ats_vector const &a, apoint_ts const& b) { return a.min(b); }
+        ats_vector min(apoint_ts const &b, ats_vector const& a) { return a.min(b); }
+        ats_vector min(ats_vector const &a, ats_vector const &b) { return a.min(b); }
+
+        ats_vector max(ats_vector const &a, double b) { return a.max(b); }
+        ats_vector max(double b, ats_vector const &a) { return a.max(b); }
+        ats_vector max(ats_vector const &a, apoint_ts const & b) { return a.max(b); }
+        ats_vector max(apoint_ts const &b, ats_vector const &a) { return a.max(b); }
+        ats_vector max(ats_vector const &a, ats_vector const & b) { return a.max(b); }
 
     }
 }
