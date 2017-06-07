@@ -30,7 +30,7 @@ public:
     }
 };
 static gamma_snow_test fix; // access to private scope
-TEST_SUITE("actual_evapotranspiration") {
+TEST_SUITE("gamma_snow") {
 TEST_CASE("test_reset_snow_pack_zero_storage") {
 
     gs::calculator<gs::parameter, gs::state, gs::response> gs;
