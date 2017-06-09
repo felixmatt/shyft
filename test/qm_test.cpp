@@ -24,17 +24,42 @@ namespace shyft {
          * \tparam ta_t time-axis type, require .size() (the tsa_t hides other methods required)
          * \param tsv time-series vector that keeps .size() time-series
          * \param ta time-axis
-         * \return vector<vector<int>> that have dimension [ta.size()][tsv.size()] holding the indexes of the by-value in time-step ordered list
+         * \param weights The weights for each time-series. Same size as tsv_t, or size zero (unity weights).
+         * \return vector<vector<int>> that have dimension [ta.size()][tsv.size() or accumulated sum of weights] holding the indexes of the by-value in time-step ordered list
          *
          */
-        template <class tsa_t,class tsv_t,class ta_t>
-        vector<vector<int>> quantile_index(tsv_t const &tsv,ta_t const &ta ) {
-            vector < tsa_t> tsa; tsa.reserve(tsv.size()); // create ts-accessors to enable fast thread-safe access to ts value aspect
-            for (const auto& ts : tsv) tsa.emplace_back(ts, ta);
+        template <class tsa_t, class tsv_t, class ta_t>
+        vector<vector<int>> quantile_index(tsv_t const &tsv, ta_t const &ta, vector<int> const &weights) {
+
+            bool unity_weights = false;
+            if (weights.size() == 0) {
+                unity_weights = true;
+            }
+            if (!unity_weights && weights.size() != tsv.size()) {
+                throw runtime_error("Weights and time series are not equal length");
+            }
+
+            size_t final_size = unity_weights ? tsv.size() : std::accumulate(weights.begin(), weights.end(), 0);
+
+            vector <tsa_t> tsa; tsa.reserve(final_size); // create ts-accessors to enable fast thread-safe access to ts value aspect
+            vector<int> pi(final_size);
+            size_t currind = 0;
+            for (size_t i=0; i < tsv.size(); i++) {
+                if (unity_weights) {
+                    tsa.emplace_back(tsv[i], ta);
+                    pi[currind] = currind;
+                    currind++;
+                } else {
+                    for (size_t j=0; j < weights[i]; j++) {
+                        tsa.emplace_back(tsv[i], ta);
+                        pi[currind] = currind;
+                        currind++;
+                    }
+                }
+            }
 
             vector<vector<int>> qi(ta.size()); // result vector, qi[i] -> a vector of index-order tsv[i].value(t)
-            vector<int> pi(tsv.size());for(size_t i=0;i<tsv.size();++i) pi[i]=i;//initial order 0..n-1, and we re-use it in the loop
-            for(size_t t=0;t<ta.size();++t) {
+            for(size_t t = 0; t<ta.size(); ++t) {
                 sort(begin(pi),end(pi),[&tsa,t](int a,int b)->int {return tsa[a].value(t)<tsa[b].value(t);});
                 qi[t]=pi; // it's a copy assignment, ok, since sort above will start out with previous time-step order
             }
@@ -64,9 +89,10 @@ TEST_SUITE("qm") {
                 v.push_back(double((i+t)%n_prior));
             prior.emplace_back(ta,v,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
         }
+        vector<int> weights;
 
         // #2: Act
-        auto qi=qm::quantile_index<tsa_t>(prior,ta);
+        auto qi=qm::quantile_index<tsa_t>(prior, ta, weights);
 
         // #3: Assert
         FAST_REQUIRE_EQ(qi.size(),ta.size());
