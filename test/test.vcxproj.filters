@@ -107,6 +107,9 @@
       <Filter>time_series</Filter>
     </ClCompile>
     <ClCompile Include="qm_test.cpp" />
+    <ClCompile Include="merge_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

@@ -151,6 +151,7 @@
     <ClInclude Include="time_series.h" />
     <ClInclude Include="region_model.h" />
     <ClInclude Include="time_axis.h" />
+    <ClInclude Include="time_series_merge.h" />
     <ClInclude Include="time_series_statistics.h" />
     <ClInclude Include="unit_conversion.h" />
     <ClInclude Include="utctime_utilities.h" />

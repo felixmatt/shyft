@@ -132,6 +132,9 @@
     <ClInclude Include="time_series_statistics.h">
       <Filter>time_series</Filter>
     </ClInclude>
+    <ClInclude Include="time_series_merge.h">
+      <Filter>time_series</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">
