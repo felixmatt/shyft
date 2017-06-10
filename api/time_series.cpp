@@ -1,5 +1,6 @@
 #include "core/core_pch.h"
 #include "time_series.h"
+#include "core/time_series_merge.h"
 
 #include <dlib/statistics.h>
 
@@ -470,7 +471,23 @@ namespace shyft{
         ats_vector max(ats_vector const &a, apoint_ts const & b) { return a.max(b); }
         ats_vector max(apoint_ts const &b, ats_vector const &a) { return a.max(b); }
         ats_vector max(ats_vector const &a, ats_vector const & b) { return a.max(b); }
+        apoint_ts  ats_vector::forecast_merge(utctimespan lead_time,utctimespan fc_interval) const {
+            //verify arguments
+            if(lead_time < 0)
+                throw runtime_error("lead_time parameter should be 0 or a positive number giving number of seconds into each forecast to start the merge slice");
+            if(fc_interval <=0)
+                throw runtime_error("fc_interval parameter should be positive number giving number of seconds between first time point in each of the supplied forecast");
+            for(size_t i=1;i<size();++i) {
+                if( (*this)[i-1].total_period().start + fc_interval > (*this)[i].total_period().start) {
+                    throw runtime_error(
+                        string("The suplied forecast vector should be strictly ordered by increasing t0 by length at least fc_interval: requirement broken at index:")
+                            + std::to_string(i)
+                        );
+                }
+            }
+            return time_series::forecast_merge<apoint_ts>(*this,lead_time,fc_interval);
 
+        }
     }
 }
 

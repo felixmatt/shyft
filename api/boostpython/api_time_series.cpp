@@ -106,6 +106,19 @@ namespace expose {
             .def("max", (m_double)&ats_vector::max, args("number"), "returns max of vector and a number")
             .def("max", (m_ts)&ats_vector::max, args("ts"), "returns max of ts-vector and a ts")
             .def("max", (m_tsv)&ats_vector::max, args("tsv"), "returns max of ts-vector and another ts-vector")
+            .def("forecast_merge",&ats_vector::forecast_merge,args("lead_time","fc_interval"),
+                 doc_intro("merge the forecasts in this vector into a time-series that is constructed")
+                 doc_intro("taking a slice of length fc_interval starting lead_time into each of the forecasts")
+                 doc_intro("of this time-series vector.")
+                 doc_intro("The content of the vector should be ordered in forecast-time, each entry at least")
+                 doc_intro("fc_interval separated from the previous.")
+                 doc_intro("If there is missing forecasts (larger than fc_interval between two forecasts) this is")
+                 doc_intro("automagically repaired using extended slices from the existing forecasts")
+                 doc_parameters()
+                 doc_parameter("lead_time","int","start slice number of seconds from t0 of each forecast")
+                 doc_parameter("fc_interval","int","length of each slice in seconds, and thus also gives the forecast-interval separation")
+                 doc_returns("merged time-series","TimeSeries","A merged forecast time-series")
+                 )
             // defining vector math-operations goes here
             .def(-self)
             .def(self*double())
@@ -138,7 +151,7 @@ namespace expose {
             typedef ats_vector(*f_atsv_ats)(ats_vector const &, apoint_ts const& );
             typedef ats_vector(*f_ats_atsv)(apoint_ts const &b, ats_vector const& a);
             typedef ats_vector(*f_atsv_atsv)(ats_vector const &b, ats_vector const &a);
-            
+
             def("min", (f_ats_atsv)min, args("ts", "ts_vector"), "return minimum of ts and ts_vector");
             def("min", (f_atsv_ats)min, args("ts_vector", "ts"), "return minimum of ts_vector and ts");
             def("min", (f_atsv_double)min, args("ts_vector", "number"), "return minimum of ts_vector and number");

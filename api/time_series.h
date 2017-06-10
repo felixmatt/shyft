@@ -999,6 +999,8 @@ namespace shyft {
             ats_vector min(ats_vector const& x) const;
             ats_vector max(ats_vector const& x) const;
 
+            apoint_ts forecast_merge(utctimespan lead_time,utctimespan fc_interval) const;
+
             x_serialize_decl();
         };
 

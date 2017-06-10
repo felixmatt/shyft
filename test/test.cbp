@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=ts_vector_to_quantile_ix_list" />
+				<Option parameters="-nv -tc=ts_merge" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -126,6 +126,7 @@
 		<Unit filename="kriging_test.cpp">
 			<Option virtualFolder="interpolation/" />
 		</Unit>
+		<Unit filename="merge_test.cpp" />
 		<Unit filename="mocks.cpp">
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
