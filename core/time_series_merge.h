@@ -77,7 +77,7 @@ namespace shyft {
                 // if forecasts is missing, we might also need to fill *after* the slice
                 // from this fc time-series, and we try to compute the amount extra here:
                 utctimespan dt_extra(0);
-                if(ix<tsv[i].size()) {
+                if(i+1<tsv.size()) {
                     if(tsv[i+1].size()) {
                         auto t_0_next=tsv[i+1].time(0); // pick next ts first time-point
                         dt_extra = std::max(utctimespan(0),t_0_next-(t_start+dt));//
