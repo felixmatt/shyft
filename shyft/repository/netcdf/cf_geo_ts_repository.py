@@ -35,7 +35,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
         #filename = params["stations_met"]
         #self.selection_criteria = params["selection_criteria"]
 
-        filename = stations_met
+        filename = path.expandvars(stations_met)
         self.selection_criteria = selection_criteria
 
         if not path.isabs(filename):
