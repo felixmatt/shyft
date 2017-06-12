@@ -48,6 +48,7 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         self._mask = None
         self._epsg = self._rconf.domain()["EPSG"] # epsg
         filename = self._rconf.repository()["params"]["data_file"]
+        filename = path.expandvars(filename)
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
             filename = path.join(shyftdata_dir, filename)
