@@ -33,9 +33,10 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
     __T0=273.16 # K
     __Tice=205.16 # K
 
-    def __init__(self, epsg, filename, nb_pads=0, nb_fc_to_drop=None, nb_fc_interval_to_concat=None, selection_criteria=None, padding=5000.):
+    def __init__(self, epsg, filename, nb_pads=0, nb_fc_to_drop=0, selection_criteria=None, padding=5000.):
         self.selection_criteria = selection_criteria
-        filename = filename.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
+        # filename = filename.replace('${SHYFTDATA}', os.getenv('SHYFTDATA', '.'))
+        filename = path.expandvars(filename)
         if not path.isabs(filename):
             # Relative paths will be prepended the data_dir
             filename = path.join(shyftdata_dir, filename)
@@ -45,7 +46,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
         self._filename = filename
         self.nb_pads = nb_pads
         self.nb_fc_to_drop = nb_fc_to_drop  # index of first lead time: starts from 0
-        self.nb_fc_interval_to_concat = nb_fc_interval_to_concat  # given as number of forecast intervals
+        self.nb_fc_interval_to_concat = 1  # given as number of forecast intervals
         self.shyft_cs = "+init=EPSG:{}".format(epsg)
         self.padding = padding
         
@@ -59,6 +60,14 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                                  "x_wind_10m": "x_wind",
                                  "y_wind_10m": "y_wind",
                                  "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": "radiation"}
+
+        self.var_units = {'dew_point_temperature_2m': ['K'],
+                          'surface_air_pressure': ['Pa'],
+                          "air_temperature_2m": ['K'],
+                          "precipitation_amount_acc": ['kg/m^2'],
+                          "x_wind_10m": ['m/s'],
+                          "y_wind_10m": ['m/s'],
+                          "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": ['W s/m^2']}
 
         self._shift_fields = ("precipitation_amount_acc",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
@@ -270,19 +279,19 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
         if concat: # make continuous timeseries
             self.fc_len_to_concat = self.nb_fc_interval_to_concat * self.fc_interval
             utc_period = v  # TODO: verify that fc_selection_criteria_v is of type api.UtcPeriod
+            time_after_drop = time + lead_times_in_sec[self.nb_fc_to_drop]
             # idx_min = np.searchsorted(time, utc_period.start, side='left')
-            idx_min = np.argmin(time <= utc_period.start) - 1  # raise error if result is -1
+            idx_min = np.argmin(time_after_drop <= utc_period.start) - 1  # raise error if result is -1
             #idx_max = np.searchsorted(time, utc_period.end, side='right')
-            idx_max = np.argmax(time >= utc_period.end)  # raise error if result is 0
-
+            idx_max = np.argmax(time_after_drop >= utc_period.end)  # raise error if result is 0
             if idx_min<0:
-                first_lead_time_of_last_fc = int(time[-1])
+                first_lead_time_of_last_fc = int(time_after_drop[-1])
                 if first_lead_time_of_last_fc <= utc_period.start:
                     idx_min = len(time)-1
                 else:
                     raise ECConcatDataRepositoryError(
                         "The earliest time in repository ({}) is later than the start of the period for which data is "
-                        "requested ({})".format(UTC.to_string(int(time[0])), UTC.to_string(utc_period.start)))
+                        "requested ({})".format(UTC.to_string(int(time_after_drop[0])), UTC.to_string(utc_period.start)))
             if idx_max == 0:
                 last_lead_time_of_last_fc = int(time[-1] + lead_times_in_sec[-1])
                 if last_lead_time_of_last_fc < utc_period.end:
@@ -292,17 +301,21 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
                 else:
                     idx_max = len(time)-1
 
+            #issubset = True if idx_max < len(time) - 1 else False # For a concat repo 'issubset' is related to the lead_time axis and not the main time axis
             issubset = True if self.nb_fc_to_drop + self.fc_len_to_concat < len(lead_time)-1 else False
             time_slice = slice(idx_min, idx_max+1)
             last_time = int(time[idx_max]+lead_times_in_sec[self.nb_fc_to_drop + self.fc_len_to_concat - 1])
             if utc_period.end > last_time:
                 nb_extra_intervals = int(0.5+(utc_period.end-last_time)/(self.fc_len_to_concat*self.fc_time_res))
         else:
-            self.fc_len_to_concat = len(lead_time)  # Take all lead_times for now
-            self.nb_fc_to_drop = 0  # Take all lead_times for now
+            #self.fc_len_to_concat = len(lead_time)  # Take all lead_times for now
+            #self.nb_fc_to_drop = 0  # Take all lead_times for now
+            self.fc_len_to_concat = len(lead_time) - self.nb_fc_to_drop
             if isinstance(v, api.UtcPeriod):
-                raise ECConcatDataRepositoryError(
-                        "'forecasts_within_period' selection criteria not supported yet.")
+                time_slice = ((time >= v.start) & (time <= v.end))
+                if not any(time_slice):
+                    raise ECConcatDataRepositoryError(
+                        "No forecasts found with start time within period {}.".format(v.to_string()))
             elif isinstance(v, list):
                 raise ECConcatDataRepositoryError(
                         "'forecasts_at_reference_times' selection criteria not supported yet.")
@@ -353,6 +366,12 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
             input_source_types.remove("relative_humidity")
             input_source_types.extend(["surface_air_pressure", "dew_point_temperature_2m"])
             if no_temp: input_source_types.extend(["temperature"])
+
+        unit_ok = {k:dataset.variables[k].units in self.var_units[k]
+                      for k in dataset.variables.keys() if self._arome_shyft_map.get(k, None) in input_source_types}
+        if not all(unit_ok.values()):
+            raise ECConcatDataRepositoryError("The following variables have wrong unit: {}.".format(
+                ', '.join([k for k, v in unit_ok.items() if not v])))
 
         raw_data = {}
         x = dataset.variables.get("x", None)
@@ -503,7 +522,7 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
             return fcn(T - 273.15)
 
         def prec_acc_conv(p, fcn):
-            f = 1000. * api.deltahours(1) / (lead_time[1:]-lead_time[:-1]) # conversion from m/delta_t to mm/1hour
+            f = api.deltahours(1) / (lead_time[1:]-lead_time[:-1]) # conversion from mm/delta_t to mm/1hour
             return fcn(np.clip((p[:, 1:, :] - p[:, :-1, :])*f[np.newaxis,:,np.newaxis], 0.0, 1000.0))
 
         def rad_conv(r, fcn):

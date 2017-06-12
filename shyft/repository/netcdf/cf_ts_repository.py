@@ -31,7 +31,7 @@ class CFTsRepository(TsRepository):
         and initialize data retrieval.
         """
         #directory = params['data_dir']
-        filename = file
+        filename = path.expandvars(file)
         self.var_name = var_type
         
         #if not path.isdir(directory):
