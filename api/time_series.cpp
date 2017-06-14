@@ -488,6 +488,16 @@ namespace shyft{
             return time_series::forecast_merge<apoint_ts>(*this,lead_time,fc_interval);
 
         }
+        double ats_vector::nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n) {
+            if(n<0)
+                throw runtime_error("n, number of intervals, must be specified as > 0");
+            if(dt<=0)
+                throw runtime_error("dt, average interval, must be specified as > 0 s");
+            if(t0_offset<0)
+                throw runtime_error("lead_time,t0_offset,must be specified  >= 0 s");
+            return time_series::nash_sutcliffe(*this,obs,t0_offset,dt,(size_t)n);
+        }
+
     }
 }
 

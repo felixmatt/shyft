@@ -8,6 +8,7 @@
 #include "core/time_series_merge.h"
 
 
+
 using namespace shyft;
 using namespace std;
 using ta_t = time_axis::fixed_dt;
@@ -77,6 +78,34 @@ TEST_SUITE("ts_merge") {
             }
 
         }
+    }
+    TEST_CASE("tsv_nash_sutcliffe") {
+        // arrange
+        size_t n_fc=100;
+        size_t fc_steps =66;
+
+        core::calendar utc;
+        auto t0 = utc.time(2017,1,1,0,0,0);
+        auto dt=deltahours(1);
+        size_t n_dt_fc =6;
+        auto dt_fc= deltahours(n_dt_fc); // typical arome
+        tsv_t fc;
+        auto point_fx= time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        for(size_t i=0;i<n_fc;++i) {
+            vector<double> v;
+            for(size_t t=0;t<fc_steps;++t) {
+                auto tt= i*n_dt_fc+t;
+                v.push_back( tt + sin(0.314+ 3.14*tt/240.0));
+            }
+            fc.emplace_back(ta_t(t0+i*dt_fc,dt,fc_steps),v,point_fx);
+        }
+        ts_t obs_ts(ta_t(t0,dt,n_dt_fc*n_fc+fc_steps),0.0,point_fx);
+        for(size_t i=0;i<obs_ts.size();++i)
+            obs_ts.set(i,i+1.5*cos(3.1415*i/240.0));
+        auto  ns=time_series::nash_sutcliffe(fc,obs_ts,0,deltahours(1),6);
+        FAST_CHECK_LE(ns,1.0);
+        FAST_CHECK_GE(ns,0.99996);
+        cout<<"ns:"<<ns<<endl;
     }
 }
 

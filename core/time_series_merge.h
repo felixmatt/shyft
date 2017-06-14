@@ -92,5 +92,36 @@ namespace shyft {
             }
             return ts_t(ta_t(tv,t_previous_end),vv,tsv.front().point_interpretation());
         }
+
+        /** \brief nash-sutcliffe evaluate slices from a set of forecast against observed
+         *
+         *  Given a ts-vector, and an observed ts, run nash-sutcliffe
+         *  over each forecast, using specified slice specified as (lead-time, dt, n)
+         *  return n.s (1-E)
+         * \see shyft::time_series::nash_sutcliffe_goal_function
+         */
+        template< class ts_t,class tsv_t>
+        double nash_sutcliffe(tsv_t const& tsv,ts_t const &obs, utctimespan t0_offset,utctimespan dt,size_t n) {
+            using namespace std;
+            if(tsv.size()==0 ||obs.size()==0)
+                return shyft::nan;
+            typedef typename ts_t::ta_t ta_t;
+            vector<double> vs;vs.reserve(n*tsv.size());
+            vector<double> vo;vo.reserve(n*tsv.size());
+            for(auto const&ts:tsv) {
+                ta_t ta(ts.time_axis().time(0) + t0_offset, dt, n);
+                average_accessor<ts_t,ta_t> s_ts(ts,ta);
+                average_accessor<ts_t,ta_t> o_ts(obs,ta);
+                for(size_t i=0;i<ta.size();++i) {
+                    vs.push_back(s_ts.value(i));
+                    vo.push_back(o_ts.value(i));
+                }
+            }
+            ta_t txa(0,dt,vs.size());// just a fake time-axis to resolve nash_sutcliffe_goal function
+            ts_t ss(txa,vs,ts_point_fx::POINT_AVERAGE_VALUE);
+            ts_t os(txa,vo,ts_point_fx::POINT_AVERAGE_VALUE);
+            return 1.0-nash_sutcliffe_goal_function(os,ss); // 1-E -> n.s
+        }
+
     }
 }

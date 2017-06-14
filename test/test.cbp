@@ -26,6 +26,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-tc=tsv_nash_sutcliffe" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -35,7 +36,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=ts_vector_to_quantile_ix_list" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=tsv_nash_sutcliffe" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
