@@ -181,9 +181,16 @@ class SimulationTestCase(unittest.TestCase):
                                                  1.0, api.KLING_GUPTA)
         target_spec_vec = api.TargetSpecificationVector() #([target_spec]) does not yet work
         target_spec_vec.append(target_spec)
+        self.assertEqual(simulator.optimizer.trace_size,0)  # before optmize, trace_size should be 0
         p_opt = simulator.optimize(time_axis, state_repos.get_state(0),
                                    target_spec_vec, p_guess, p_min, p_max)
-
+        self.assertGreater(simulator.optimizer.trace_size,0)  # after opt, some trace values should be there
+        # the trace values are in the order of appearance 0...trace_size-1
+        #
+        goal_fn_values = simulator.optimizer.trace_goal_function_values.to_numpy()  # all of them, as np array
+        self.assertEqual(len(goal_fn_values),simulator.optimizer.trace_size)
+        p_last = simulator.optimizer.trace_parameter(simulator.optimizer.trace_size-1)  # get out the last (not neccessary the best)
+        self.assertIsNotNone(p_last)
         simulator.region_model.set_catchment_parameter(cid, p_opt)
         simulator.run(time_axis, state_repos.get_state(0))
         found_discharge = simulator.region_model.statistics.discharge([cid])
