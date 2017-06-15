@@ -135,6 +135,18 @@ namespace expose {
                   doc_notes()
                   doc_see_also("nash_sutcliffe_goal_function")
              )
+             .def("average_slice",&ats_vector::average_slice,args("lead_time","delta_t","n"),
+                doc_intro("Returns a ts-vector with the average time-series of the specified slice")
+                doc_intro("The slice for each ts is specified by the lead_time, delta_t and n")
+                doc_intro("parameters. ")
+                doc_parameters()
+                doc_parameter("lead_time","int","number of seconds lead-time offset from each ts .time(0)")
+                doc_parameter("delta_t","int","delta-time seconds to average as basis for n.s. simulation and observation values")
+                doc_parameter("n","int","number of time-steps of length delta_t to slice out of each forecast/simulation ts")
+                doc_returns("ts_vector_sliced","TsVector","a ts-vector with average ts of each slice specified.")
+                  doc_notes()
+                  doc_see_also("nash_sutcliffe,forecast_merge")
+             )
             // defining vector math-operations goes here
             .def(-self)
             .def(self*double())

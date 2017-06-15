@@ -1000,7 +1000,8 @@ namespace shyft {
             ats_vector max(ats_vector const& x) const;
 
             apoint_ts forecast_merge(utctimespan lead_time,utctimespan fc_interval) const;
-            double nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n);
+            ats_vector average_slice(utctimespan t0_offset,utctimespan dt, int n) const ;
+            double nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n)const ;
             x_serialize_decl();
         };
 

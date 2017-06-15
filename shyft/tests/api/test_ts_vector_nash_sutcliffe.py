@@ -1,5 +1,6 @@
 import unittest
 import math
+import numpy as np
 from shyft.api import Calendar
 from shyft.api import TsVector
 from shyft.api import TimeSeries
@@ -51,3 +52,33 @@ class TsVectorNashSutcliffe(unittest.TestCase):
                                            'should match close to 1.0 for lead_hour= {},dt={},n={}'.format(
                                                lead_time_hours, dt_hours, slice_length_units)
                                            )
+
+    def test_forecast_average_slice(self):
+        """
+        Demo and test TsVector.average_slice(lead_time,dt,n)
+        """
+        utc = Calendar()
+        t0 = utc.time(2017, 1, 1)
+        dt = deltahours(1)
+        n = 66  # typical arome
+        fc_dt_n_hours = 6
+        fc_dt = deltahours(fc_dt_n_hours)
+        fc_n = 4 * 10  # 4 each day 10 days
+        fc_v = self._create_forecasts(t0, dt, n, fc_dt, fc_n)
+        for lead_time_hours in range(12):
+            for slice_length_units in [1, 2, 3, 4, 6, 12]:
+                for dt_hours in [1, 2, 3]:
+                    slice_v = fc_v.average_slice(
+                        deltahours(lead_time_hours),
+                        deltahours(dt_hours),
+                        slice_length_units
+                    )
+                    self.assertEqual(len(slice_v),len(fc_v))
+                    # then loop over the slice_v and prove it's equal
+                    # to the average of the same portion on the originalj
+                    for s,f in zip(slice_v,fc_v):
+                        ta=TimeAxis(f.time_axis.time(0)+deltahours(lead_time_hours),deltahours(dt_hours),slice_length_units)
+                        ts_expected = f.average(ta)
+                        self.assertTrue(s.time_axis == ts_expected.time_axis)
+                        self.assertTrue(np.allclose(s.values.to_numpy(),ts_expected.values.to_numpy()))
+        pass

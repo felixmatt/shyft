@@ -488,7 +488,7 @@ namespace shyft{
             return time_series::forecast_merge<apoint_ts>(*this,lead_time,fc_interval);
 
         }
-        double ats_vector::nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n) {
+        double ats_vector::nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n) const {
             if(n<0)
                 throw runtime_error("n, number of intervals, must be specified as > 0");
             if(dt<=0)
@@ -497,7 +497,25 @@ namespace shyft{
                 throw runtime_error("lead_time,t0_offset,must be specified  >= 0 s");
             return time_series::nash_sutcliffe(*this,obs,t0_offset,dt,(size_t)n);
         }
-
+        ats_vector ats_vector::average_slice(utctimespan t0_offset,utctimespan dt, int n) const {
+            if(n<0)
+                throw runtime_error("n, number of intervals, must be specified as > 0");
+            if(dt<=0)
+                throw runtime_error("dt, average interval, must be specified as > 0 s");
+            if(t0_offset<0)
+                throw runtime_error("lead_time,t0_offset,must be specified  >= 0 s");
+            ats_vector r;
+            for(size_t i=0;i<size();++i) {
+                auto const& ts =(*this)[i];
+                if(ts.size()) {
+                    gta_t ta(ts.time_axis().time(0) + t0_offset, dt, n);
+                    r.push_back((*this)[i].average(ta));
+                } else {
+                    r.push_back(ts);
+                }
+            }
+            return r;
+        }
     }
 }
 
