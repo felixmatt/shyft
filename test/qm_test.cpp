@@ -40,6 +40,50 @@ namespace shyft {
             }
             return qi;
         }
+
+
+        template <class tsa_t>
+        vector<double> get_sample_quantiles(size_t num_pri_cases,
+                                            vector<int> const &quantile_indices,
+                                            vector<double> const &weights,
+                                            vector<tsa_t> const &accessor_vec,
+                                            size_t time_idx) {
+            // This function does not interpolate at all, simply does the 
+            // nearest-rank assignment.
+            vector<double> cumsum;
+            for (size_t i=0; i<weights.size(); ++i) {
+                if (i == 0) {
+                    cumsum.emplace_back(weights[quantile_indices[i]]);
+                } else {
+                    cumsum.emplace_back(cumsum[i-1] + weights[quantile_indices[i]]);
+                }
+            }
+            for (size_t i=0; i<cumsum.size(); ++i) {
+                cumsum[i] = cumsum[i] / cumsum.back();
+            }
+            double curr_quantile = 0.0;
+            double quantile_inc = 1.0 / (num_pri_cases - 1);
+            int currind = 0;
+            vector<double> quantile_values;
+            quantile_values.reserve(num_pri_cases);
+            double const eps = std::numeric_limits<double>::epsilon();
+            while (curr_quantile <= 1.0 || abs(curr_quantile - 1.0) < eps) {
+                // This is not the best way of comparing floating points,
+                // see e.g. https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+                // but it seems a bit overkill for this case, so we just
+                // add epsilon.
+                while (cumsum[currind] + eps < curr_quantile) {
+                    ++currind;
+                }
+                quantile_values.emplace_back(
+                        accessor_vec[quantile_indices[currind]].value(time_idx));
+                curr_quantile += quantile_inc;
+            }
+            return quantile_values;
+        }
+
+
+
     }
 }
 using namespace shyft;
@@ -76,6 +120,53 @@ TEST_SUITE("qm") {
                 double v1 = prior[qi[t][i]].value(t);
                 double v2 = prior[qi[t][i+1]].value(t);
                 FAST_CHECK_LE(v1 ,v2 ); // just ensure all values are ordered in ascending order, based on index-lookup and original ts.
+            }
+        }
+    }
+
+    TEST_CASE("weighted_sample_quantiles") {
+        // Arrange
+        size_t num_priors = 73;
+        core::calendar utc;
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 2);
+        vector<int> quantile_indices_firststep {3, 1, 0, 2};
+        vector<int> quantile_indices_secondstep {1, 0, 3, 2};
+        vector<double> weights {100.0, 32.0, 48.0, 90.0};
+
+        tsv_t weighted_prognoses;
+        vector<double> firststep {14.2, 13.0, 15.8, 9.1};
+        vector<double> secondstep {4.1, 2.9, 20.4, 11.2};
+        for (size_t i=0; i<firststep.size(); ++i) {
+            vector<double> insertvec {firststep[i], secondstep[i]};
+            weighted_prognoses.emplace_back(
+                ta, insertvec, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+        }
+        vector<tsa_t> wp_accessors;
+        wp_accessors.reserve(weights.size());
+        for (const auto& ts : weighted_prognoses) 
+            wp_accessors.emplace_back(ts, ta);
+
+
+        // Act
+        vector<double> result = qm::get_sample_quantiles(
+                num_priors,
+                quantile_indices_firststep,
+                weights,
+                wp_accessors,
+                0);
+
+        // Assert
+        FAST_REQUIRE_EQ(result.size(), num_priors);
+        for (size_t i=0; i<num_priors; ++i) {
+            double curres = result[i];
+            if (i <= 24) {
+                FAST_REQUIRE_EQ(result[i], 9.1);
+            } else if (i <= 32) {
+                FAST_REQUIRE_EQ(result[i], 13.0);
+            } else if (i <= 59) {
+                FAST_REQUIRE_EQ(result[i], 14.2);
+            } else {
+                FAST_REQUIRE_EQ(result[i], 15.8);
             }
         }
     }
