@@ -42,46 +42,83 @@ namespace shyft {
         }
 
 
-        template <class tsa_t>
-        vector<double> get_sample_quantiles(size_t num_pri_cases,
-                                            vector<int> const &quantile_indices,
-                                            vector<double> const &weights,
-                                            vector<tsa_t> const &accessor_vec,
-                                            size_t time_idx) {
-            // This function does not interpolate at all, simply does the 
-            // nearest-rank assignment.
-            vector<double> cumsum;
-            for (size_t i=0; i<weights.size(); ++i) {
-                if (i == 0) {
-                    cumsum.emplace_back(weights[quantile_indices[i]]);
-                } else {
-                    cumsum.emplace_back(cumsum[i-1] + weights[quantile_indices[i]]);
+        /** \brief compute quantile-values based on weigh_value ordered (wvo) items
+         *
+         *
+         * \note The requirement to the wvo_accessor
+         *  (1) sum weights == 1.0
+         *  (2) weight(i), value(i) are already ordered by value asc
+         *   are the callers responsibility
+         *   no checks/asserts are done
+         *
+         *  TODO: we might want to rework the output of this algorithm
+         *        so that it streams/put data directly into the
+         *        target-time-series (instead of building a vector
+         *        and then spread that across time-series)
+         *
+         *
+         * \tparam WVO Weight Value Ordered accessor, see also wvo_accessor
+         *  .size() -> number of weight,value items
+         *  .value(i)-> double the i'th value
+         *  .weight(i)-> double the i'th weight
+         * \param n_q number of quantiles,>1, evenly distributed over 0..1.0
+         * \param items the weighted items, weight,value, ordered asc value by i'th index,
+         *        assuming that sum weights = 1.0
+         * \return vector<double> of size n_q, where the i'th value is the i'th computed quantile
+         */
+        template <class WVO> // to-consider: maybe just iterators to weight-value pairs ?
+        vector<double> compute_weighted_quantiles(size_t n_q,WVO const& wv ) {
+            const double q_step= 1.0/(n_q - 1); // iteration is 0-based..
+            vector<double> q;q.reserve(n_q);
+            // tip: 'j' denotes the 'source' quantile material, 'i' denotes the wanted quantiles
+            size_t j=0;// the j'th item in wv
+            double q_j=0.0;// since the 'weights' are normalized, each weight represent the length of quantile-segment the value is valid for
+            double w_j=wv.weight(j);// We try to have only one access for each indexed element
+            double v_j=wv.value(j); // (we *could* trust the compiler optimizer here)
+            for(size_t i=0;i<n_q;++i) { // ensure we are precise on number of quantiles we provide
+                double q_i = q_step*i;  // multiplication or addition, almost same performance(?)
+                while(q_j + w_j  < q_i ) { //  as long as current q_j+w_j are LESS than target q_i
+                    q_j += w_j;            // climb along the 'j' quantile axis until we reach wanted level
+                    if( j + 1 < wv.size()) {  // only get next element if there are more left
+                        w_j=wv.weight(++j);
+                        v_j=wv.value(j);
+                    }
                 }
+                q.emplace_back(v_j);// note: we *could* do weighted interpolation q_j < q_i <q_j+1, but we do simple rank here
             }
-            for (size_t i=0; i<cumsum.size(); ++i) {
-                cumsum[i] = cumsum[i] / cumsum.back();
-            }
-            double curr_quantile = 0.0;
-            double quantile_inc = 1.0 / (num_pri_cases - 1);
-            int currind = 0;
-            vector<double> quantile_values;
-            quantile_values.reserve(num_pri_cases);
-            double const eps = std::numeric_limits<double>::epsilon();
-            while (curr_quantile <= 1.0 || abs(curr_quantile - 1.0) < eps) {
-                // This is not the best way of comparing floating points,
-                // see e.g. https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-                // but it seems a bit overkill for this case, so we just
-                // add epsilon.
-                while (cumsum[currind] + eps < curr_quantile) {
-                    ++currind;
-                }
-                quantile_values.emplace_back(
-                        accessor_vec[quantile_indices[currind]].value(time_idx));
-                curr_quantile += quantile_inc;
-            }
-            return quantile_values;
+            return q;
         }
 
+        /**\brief a Weight Value Ordered collection for ts-vector type
+         *
+         * This type is a stack-context only, light weight wrapper,
+         *  for ts-vector type, to be feed into the
+         * computed_weighted_quantiles algorithm.
+         *
+         * The idea here is to give a class that is useful for
+         * anything that resembles typical shyft time-series or time-series accessor
+         * Note that we hide the mechanism for how 'things' are sorted
+         * keeping the indirect-indexing array an internal detail away from the
+         * compute_weighted_quantile function.
+         *
+         * \see computed_weighted_quantiles
+         */
+        template <class tsa_t>
+        struct wvo_accessor {
+            vector<vector<int>>const& ordered_ix; ///<index ordering of the i'th timestep
+            vector<double>const & w;///< weights of each ts
+            vector<tsa_t>const& tsv;///< access to .value(t), where t is size_t
+            size_t t_ix=0;///< current time step index
+            double w_sum;///< sum of weights so we can return normalized .weight(i)
+            //-------------------
+            wvo_accessor(vector<vector<int>> const&ordered_ix,vector<double> const&w,vector<tsa_t> const &tsv)
+            :ordered_ix(ordered_ix),w(w),tsv(tsv),w_sum(accumulate(begin(w),end(w),0.0)) {}
+
+            //-- here goes the template contract requirements
+            size_t size() const { return tsv.size();}
+            double weight(size_t i ) const {return w[ordered_ix[t_ix][i]]/w_sum;}
+            double value(size_t i ) const { return tsv[ordered_ix[t_ix][i]].value(t_ix);}
+        };
 
 
     }
@@ -124,51 +161,55 @@ TEST_SUITE("qm") {
         }
     }
 
-    TEST_CASE("weighted_sample_quantiles") {
+    TEST_CASE("compute_weighted_quantiles") {
         // Arrange
-        size_t num_priors = 73;
+        const auto fx_avg= time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        size_t n_quantiles = 100;
         core::calendar utc;
         ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 2);
-        vector<int> quantile_indices_firststep {3, 1, 0, 2};
-        vector<int> quantile_indices_secondstep {1, 0, 3, 2};
-        vector<double> weights {100.0, 32.0, 48.0, 90.0};
+        //-----------------
+        vector<double> weights;//weight of each forecast below,two with equal weights
+        tsv_t fcv;// forecast-vector, there are 4 of them in this case, with two values each
+        weights.push_back(5.0);fcv.emplace_back(ta,vector<double>{14.2,  4.1},fx_avg);
+        weights.push_back(2.0);fcv.emplace_back(ta,vector<double>{13.0,  2.9},fx_avg);
+        weights.push_back(2.0);fcv.emplace_back(ta,vector<double>{15.8, 20.4},fx_avg);
+        weights.push_back(1.0);fcv.emplace_back(ta,vector<double>{ 9.1, 11.2},fx_avg);
 
-        tsv_t weighted_prognoses;
-        vector<double> firststep {14.2, 13.0, 15.8, 9.1};
-        vector<double> secondstep {4.1, 2.9, 20.4, 11.2};
-        for (size_t i=0; i<firststep.size(); ++i) {
-            vector<double> insertvec {firststep[i], secondstep[i]};
-            weighted_prognoses.emplace_back(
-                ta, insertvec, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-        }
-        vector<tsa_t> wp_accessors;
-        wp_accessors.reserve(weights.size());
-        for (const auto& ts : weighted_prognoses) 
-            wp_accessors.emplace_back(ts, ta);
-
+        auto q_order = qm::quantile_index<tsa_t>(fcv,ta); // here we use already tested function to get ordering, all steps
+        qm::wvo_accessor<ts_t> wvo(q_order,weights,fcv);// stash it into wvo_accessor, so we are ready to go
 
         // Act
-        vector<double> result = qm::get_sample_quantiles(
-                num_priors,
-                quantile_indices_firststep,
-                weights,
-                wp_accessors,
-                0);
+        vector<double> q0 = qm::compute_weighted_quantiles(n_quantiles,wvo);
+        wvo.t_ix++; // increment to next time-step
+        vector<double> q1 = qm::compute_weighted_quantiles(n_quantiles,wvo);
 
         // Assert
-        FAST_REQUIRE_EQ(result.size(), num_priors);
-        for (size_t i=0; i<num_priors; ++i) {
-            double curres = result[i];
-            if (i <= 24) {
-                FAST_REQUIRE_EQ(result[i], 9.1);
-            } else if (i <= 32) {
-                FAST_REQUIRE_EQ(result[i], 13.0);
-            } else if (i <= 59) {
-                FAST_REQUIRE_EQ(result[i], 14.2);
+        // to consider: could we select values etc. to make a data-driven approach?
+        FAST_REQUIRE_EQ(q0.size(), n_quantiles);
+        for (size_t i=0; i<n_quantiles; ++i) {
+            if (i <= 9) {
+                FAST_CHECK_EQ(q0[i], 9.1);
+            } else if (i <= 29) {
+                FAST_CHECK_EQ(q0[i], 13.0);
+            } else if (i <= 79) {
+                FAST_CHECK_EQ(q0[i], 14.2);
             } else {
-                FAST_REQUIRE_EQ(result[i], 15.8);
+                FAST_CHECK_EQ(q0[i], 15.8);
+            }
+        }
+        FAST_REQUIRE_EQ(q1.size(), n_quantiles);
+        for (size_t i=0; i<n_quantiles; ++i) {
+            if (i <= 19) {
+                FAST_CHECK_EQ(q1[i], 2.9);
+            } else if (i <= 69) {
+                FAST_CHECK_EQ(q1[i], 4.1);
+            } else if (i <= 79) {
+                FAST_CHECK_EQ(q1[i], 11.2);
+            } else {
+                FAST_CHECK_EQ(q1[i], 20.4);
             }
         }
     }
+
 }
 

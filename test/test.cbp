@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=ts_merge" />
+				<Option parameters="-nv -tc=compute_weighted_quantiles" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -36,7 +36,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=tsv_nash_sutcliffe" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=compute_weighted_quantiles" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
