@@ -362,6 +362,14 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
         if not all([x, y, time, lead_time]):
             raise AromeConcatDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
+        if not all([x, y, time]):
+            raise AromeConcatDataRepositoryError("Something is wrong with the dataset."
+                                           " x/y coords or time not found.")
+        if not all([var.units in ['km', 'm'] for var in [x, y]]) and x.units == y.units:
+            raise AromeConcatDataRepositoryError("The unit for x and y coordinates should be either m or km.")
+        coord_conv = 1.
+        if x.units == 'km':
+            coord_conv = 1000.
         data_cs = dataset.variables.get("crs", None)
         if data_cs is None:
             raise AromeConcatDataRepositoryError("No coordinate system information in dataset.")
@@ -381,7 +389,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             time_ext = np.concatenate((time_ext, time_extra))
             # print('Extra time:', time_ext)
 
-        x, y, m_xy, xy_slice = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs, ts_id)
+        x, y, m_xy, xy_slice = self._limit(x[:]*coord_conv, y[:]*coord_conv, data_cs.proj4, self.shyft_cs, ts_id)
         for k in dataset.variables.keys():
             if self._arome_shyft_map.get(k, None) in input_source_types:
 

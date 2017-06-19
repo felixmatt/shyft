@@ -128,6 +128,14 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                  "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time":
                                  "radiation"}
 
+        self.var_units = {"air_temperature_2m": ['K'],
+                          "relative_humidity_2m": ['1'],
+                          "precipitation_amount_acc": ['kg/m^2'],
+                          "precipitation_amount": ['kg/m^2'],
+                          "x_wind_10m": ['m/s'],
+                          "y_wind_10m": ['m/s'],
+                          "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time": ['W s/m^2']}
+
         self._shift_fields = ("precipitation_amount", "precipitation_amount_acc",
                               "integral_of_surface_downwelling_shortwave_flux_in_air_wrt_time")
 
@@ -347,6 +355,12 @@ class AromeDataRepository(interfaces.GeoTsRepository):
             input_source_types.append("x_wind")
             input_source_types.append("y_wind")
 
+        unit_ok = {k: dataset.variables[k].units in self.var_units[k]
+                   for k in dataset.variables.keys() if self._arome_shyft_map.get(k, None) in input_source_types}
+        if not all(unit_ok.values()):
+            raise AromeDataRepositoryError("The following variables have wrong unit: {}.".format(
+                ', '.join([k for k, v in unit_ok.items() if not v])))
+
         raw_data = {}
         x = dataset.variables.get("x", None)
         y = dataset.variables.get("y", None)
@@ -354,6 +368,11 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         if not all([x, y, time]):
             raise AromeDataRepositoryError("Something is wrong with the dataset."
                                            " x/y coords or time not found.")
+        if not all([var.units in ['km', 'm'] for var in [x, y]]) and x.units == y.units:
+            raise AromeDataRepositoryError("The unit for x and y coordinates should be either m or km.")
+        coord_conv = 1.
+        if x.units == 'km':
+            coord_conv = 1000.
         time = convert_netcdf_time(time.units,time)
         data_cs = dataset.variables.get("projection_lambert", None)
         if data_cs is None:
@@ -363,7 +382,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
         idx_max = np.searchsorted(time, utc_period.end, side='right')
         issubset = True if idx_max < len(time) - 1 else False
         time_slice = slice(idx_min, idx_max)
-        x, y, (m_x, m_y), _ = self._limit(x[:], y[:], data_cs.proj4, self.shyft_cs)
+        x, y, (m_x, m_y), _ = self._limit(x[:]*coord_conv, y[:]*coord_conv, data_cs.proj4, self.shyft_cs)
         for k in dataset.variables.keys():
             if self._arome_shyft_map.get(k, None) in input_source_types:
                 if k in self._shift_fields and issubset:  # Add one to time slice
