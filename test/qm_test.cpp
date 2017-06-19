@@ -120,6 +120,58 @@ namespace shyft {
             double value(size_t i ) const { return tsv[ordered_ix[t_ix][i]].value(t_ix);}
         };
 
+        /**\brief The main quantile mapping function, which, using quantile
+         * calculations, maps the values of the weighted 'prognosis' time
+         * series vectors onto the 'prior' time series. This mapping is done
+         * for each time step in the specified time axis.
+         * \tparam tsa_t The time-series accessor type.
+         * \tparam tsv_t The time-series vector type.
+         * \tparam ta_t The time-axis type.
+         * \param pri_tsv The time-series vector containing the 'prior'
+         *      observations. The values in this vector will be overwritten by
+         *      the values in prog_tsv that, using the quantile mapping,
+         *      correspond to the values in pri_tsv.
+         * \param prog_tsv The time-series vector containing the 'prognosis'.
+         *      The values in this vector will overwrite the corresponding ones
+         *      (in the quantile mapping sense) in pri_tsv.
+         * \param pri_idx_v The vector containing the indices that will order
+         *      the observations in pri_tsv according to their value, so that
+         *      if the current time axis index is t, then pri_idx_v[t] will
+         *      give a vector sorting pri_tsv for that timestep.
+         * \param prog_idx_v Same as pri_idx_v, but applies to prog_tsv.
+         * \param prog_weights Contains the weights to apply to each
+         *      value in prog_tsv. Assumed to be the same for all timesteps.
+         * \param time_axis The time axis over which to perform the mapping,
+         *      and upon which the pri_tsv and prog_tsv time series are based.
+        **/
+        template <class tsa_t, class tsv_t, class ta_t>
+        void quantile_mapping(tsv_t &pri_tsv, tsv_t const &prog_tsv,
+                               vector<vector<int>> const &pri_idx_v,
+                               vector<vector<int>> const &prog_idx_v,
+                               vector<double> const &prog_weights,
+                               ta_t const &time_axis) {
+            vector<tsa_t> accessor_vec;
+            accessor_vec.reserve(prog_tsv.size());
+            for (const auto& ts : prog_tsv) 
+                accessor_vec.emplace_back(ts, time_axis);
+
+            auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v,
+                    prog_weights, prog_tsv);
+
+            for (size_t t=0; t<time_axis.size(); ++t) {
+                wvo_prog.t_ix = t;
+                size_t num_pri_cases = pri_idx_v[t].size();
+                vector<double> quantile_vals = compute_weighted_quantiles(
+                        num_pri_cases,
+                        wvo_prog);
+
+                for (size_t i=0; i<num_pri_cases; ++i) {
+                    pri_tsv[pri_idx_v[t][i]].set(t, quantile_vals[i]);
+                }
+            }
+        }
+
+
 
     }
 }
@@ -211,5 +263,68 @@ TEST_SUITE("qm") {
         }
     }
 
+    TEST_CASE("quantile_mapping") {
+
+        const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        // Arrange
+        core::calendar utc;
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 2);
+        tsv_t prior_ts_v;
+        tsv_t forecast_ts_v;
+
+        vector<double> weights;//weight of each forecast below,two with equal weights
+        weights.push_back(39.0); forecast_ts_v.emplace_back(ta,vector<double>{32.1,  1.2},fx_avg);
+        weights.push_back(32.0); forecast_ts_v.emplace_back(ta,vector<double>{21.0,  34.2},fx_avg);
+        weights.push_back(8.0); forecast_ts_v.emplace_back(ta,vector<double>{ 10.2, 12.4},fx_avg);
+        weights.push_back(73.0); forecast_ts_v.emplace_back(ta,vector<double>{ 71.0, 89.2},fx_avg);
+        weights.push_back(14.0); forecast_ts_v.emplace_back(ta,vector<double>{ 35.4, 83.4},fx_avg);
+        auto q_order = qm::quantile_index<tsa_t>(forecast_ts_v, ta); // here we use already tested function to get ordering, all steps
+
+        // We now just create a random prior time series vector. The values
+        // that we put in do not matter, since they will be overwritten if
+        // everything works. However, the ordering matters when we are going to
+        // compare so we have to keep track of the ordering.
+
+        size_t num_priors = 43;
+        for (size_t i=0; i<num_priors; ++i) {
+            // Generate random no between 0 and 50
+            vector<double> insertvec { (double)std::rand()/RAND_MAX * 50.0,
+                                       (double)std::rand()/RAND_MAX * 50.0 };
+            prior_ts_v.emplace_back(ta, insertvec, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+        }
+
+        auto pri_q_order = qm::quantile_index<tsa_t>(prior_ts_v, ta);
+
+        // Act
+        qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
+                pri_q_order, q_order, weights, ta);
+
+        // Assert
+        for (size_t i=0; i<num_priors; ++i) {
+            if (i < 3) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 10.2);
+            } else if (i < 11) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 21.0);
+            } else if (i < 20) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 32.1);
+            } else if (i < 24) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 35.4);
+            } else {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 71.0);
+            }
+
+            if (i < 10) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 1.2);
+            } else if (i < 12) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 12.4);
+            } else if (i < 20) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 34.2);
+            } else if (i < 24) {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 83.4);
+            } else {
+                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 89.2);
+            }
+        }
+    }
 }
 
