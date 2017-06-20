@@ -2,6 +2,7 @@
 #define _USE_MATH_DEFINES
 #include "core/time_series.h"
 #include "core/time_axis.h"
+#include "core/utctime_utilities.h"
 //#include "api/api.h"
 //#include "api/time_series.h"
 //#include "core/time_series_statistics.h"
@@ -128,9 +129,9 @@ namespace shyft {
          * \tparam tsv_t The time-series vector type.
          * \tparam ta_t The time-axis type.
          * \param pri_tsv The time-series vector containing the 'prior'
-         *      observations. The values in this vector will be overwritten by
-         *      the values in prog_tsv that, using the quantile mapping,
-         *      correspond to the values in pri_tsv.
+         *      observations. The values in this vector will be more or less
+         *      overwritten by the values in prog_tsv that, using the quantile
+         *      mapping, correspond to the values in pri_tsv.
          * \param prog_tsv The time-series vector containing the 'prognosis'.
          *      The values in this vector will overwrite the corresponding ones
          *      (in the quantile mapping sense) in pri_tsv.
@@ -143,13 +144,25 @@ namespace shyft {
          *      value in prog_tsv. Assumed to be the same for all timesteps.
          * \param time_axis The time axis over which to perform the mapping,
          *      and upon which the pri_tsv and prog_tsv time series are based.
-        **/
+         * \param interpolation_start The start of the period over which we
+         *      want to interpolate between the prognosis and prior. We assume
+         *      that the end of the interpolation period coincides with the
+         *      last point of time_axis. For all times before
+         *      interpolation_start, the corresponding value in pri_tsv will
+         *      only contain the corresponding quantile-mapped value in
+         *      prog_tsv, while for times after interpolation_start, the value
+         *      in pri_tsv will contain a linearly interpolated mix of the
+         *      value already in pri_tsv and the corresponding quantile-mapped
+         *      value in prog_tsv. If this parameter is set to
+         *      core::no_utctime, interpolation will not take place.
+         **/
         template <class tsa_t, class tsv_t, class ta_t>
         void quantile_mapping(tsv_t &pri_tsv, tsv_t const &prog_tsv,
                                vector<vector<int>> const &pri_idx_v,
                                vector<vector<int>> const &prog_idx_v,
                                vector<double> const &prog_weights,
-                               ta_t const &time_axis) {
+                               ta_t const &time_axis,
+                               core::utctime const &interpolation_start) {
             vector<tsa_t> accessor_vec;
             accessor_vec.reserve(prog_tsv.size());
             for (const auto& ts : prog_tsv) 
@@ -158,15 +171,42 @@ namespace shyft {
             auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v,
                     prog_weights, prog_tsv);
 
+            core::utcperiod interpolation_period;
+            if (core::is_valid(interpolation_start)) {
+                interpolation_period = core::utcperiod(
+                        interpolation_start,
+                        time_axis.time(time_axis.size()-1)
+                        );
+            } else {
+                interpolation_period = core::utcperiod();
+            }
+
             for (size_t t=0; t<time_axis.size(); ++t) {
                 wvo_prog.t_ix = t;
                 size_t num_pri_cases = pri_idx_v[t].size();
                 vector<double> quantile_vals = compute_weighted_quantiles(
                         num_pri_cases,
                         wvo_prog);
+                double interp_weight = 0.0;
+                if (interpolation_period.valid() && 
+                        (interpolation_period.contains(time_axis.time(t)) ||
+                         interpolation_period.end == time_axis.time(t))) {
+                    core::utctime start = interpolation_period.start;
+                    core::utctime end = interpolation_period.end;
+                    interp_weight = (
+                            static_cast<double>(time_axis.time(t) - start) /
+                            (end - start));
+                }
 
                 for (size_t i=0; i<num_pri_cases; ++i) {
-                    pri_tsv[pri_idx_v[t][i]].set(t, quantile_vals[i]);
+                    double setval;
+                    if (interp_weight != 0.0) {
+                        setval = ((1.0 - interp_weight) * quantile_vals[i] +
+                                  interp_weight * pri_tsv[pri_idx_v[t][i]](time_axis.time(t)));
+                    } else {
+                        setval = quantile_vals[i];
+                    }
+                    pri_tsv[pri_idx_v[t][i]].set(t, setval);
                 }
             }
         }
@@ -288,16 +328,20 @@ TEST_SUITE("qm") {
         size_t num_priors = 43;
         for (size_t i=0; i<num_priors; ++i) {
             // Generate random no between 0 and 50
-            vector<double> insertvec { (double)std::rand()/RAND_MAX * 50.0,
-                                       (double)std::rand()/RAND_MAX * 50.0 };
-            prior_ts_v.emplace_back(ta, insertvec, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            vector<double> insertvec { static_cast<double>(std::rand())/RAND_MAX * 50.0,
+                                       static_cast<double>(std::rand())/RAND_MAX * 50.0 };
+            prior_ts_v.emplace_back(ta, insertvec, fx_avg);
         }
 
         auto pri_q_order = qm::quantile_index<tsa_t>(prior_ts_v, ta);
 
+        // We're not testing interpolation here, so just make a start time that
+        // will give a non-valid interpolation period
+        core::utctime interp_start(core::no_utctime);
+
         // Act
         qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
-                pri_q_order, q_order, weights, ta);
+                pri_q_order, q_order, weights, ta, interp_start);
 
         // Assert
         for (size_t i=0; i<num_priors; ++i) {
@@ -323,6 +367,76 @@ TEST_SUITE("qm") {
                 FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 83.4);
             } else {
                 FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 89.2);
+            }
+        }
+    }
+
+    TEST_CASE("quantile_mapping_interp") {
+        const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        //Arrange
+
+        // This time we want a longer time series so that we can examine the interpolation
+        core::calendar utc;
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 14);
+        tsv_t prior_ts_v;
+        tsv_t forecast_ts_v;
+        core::utctime interp_start(utc.time(2017, 1, 10, 0, 0, 0));
+        vector<double> weights;
+        // We make only two time series for the forecast, with unity weights.
+        for (size_t i=0; i<2; ++i) {
+            weights.push_back(1.0);
+            vector<double> currvals;
+            for (size_t j=0; j<14; ++j) {
+                if (i == 0) {
+                    currvals.emplace_back(5.0);
+                } else if (i == 1) {
+                    currvals.emplace_back(20.0);
+                }
+            }
+            forecast_ts_v.emplace_back(ta, currvals, fx_avg);
+        }
+        auto q_order = qm::quantile_index<tsa_t>(forecast_ts_v, ta);
+
+        size_t num_priors = 18;
+        for (size_t i=0; i<num_priors; ++i) {
+            vector<double> insertvec;
+            for (size_t t=0; t<14; ++t) {
+                // Just give the prior the same value as its index
+                insertvec.emplace_back(i);
+            }
+            prior_ts_v.emplace_back(ta, insertvec, fx_avg);
+        }
+        auto pri_q_order = qm::quantile_index<tsa_t>(prior_ts_v, ta);
+
+        // Act
+        qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
+                pri_q_order, q_order, weights, ta, interp_start);
+
+        // Assert
+        for (size_t i=0; i<num_priors; ++i) {
+            for (size_t t=0; t<14; ++t) {
+                // The first half of the priors should have been mapped to 5,
+                // and interpolated between 5 and i during the interpolation
+                // period. For the second half, the value is 20.
+                if (i < num_priors / 2) {
+                    if (t < 9) {
+                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                                      5.0);
+                    } else {
+                        double weight = (t - 9) / 4.0;
+                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                                      ((1.0 - weight) * 5.0 + weight * i));
+                    }
+                } else {
+                    if (t < 9) {
+                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                                      20.0);
+                    } else {
+                        double weight = (t - 9) / 4.0;
+                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                                      ((1.0 - weight) * 20.0 + weight * i));
+                    }
+                }
             }
         }
     }
