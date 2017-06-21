@@ -142,8 +142,7 @@ namespace shyft {
          * \param prog_idx_v Same as pri_idx_v, but applies to prog_tsv.
          * \param prog_weights Contains the weights to apply to each
          *      value in prog_tsv. Assumed to be the same for all timesteps.
-         * \param time_axis The time axis over which to perform the mapping,
-         *      and upon which the pri_tsv and prog_tsv time series are based.
+         * \param time_axis The time axis over which to perform the mapping.
          * \param interpolation_start The start of the period over which we
          *      want to interpolate between the prognosis and prior. We assume
          *      that the end of the interpolation period coincides with the
@@ -155,18 +154,21 @@ namespace shyft {
          *      value already in pri_tsv and the corresponding quantile-mapped
          *      value in prog_tsv. If this parameter is set to
          *      core::no_utctime, interpolation will not take place.
+         * \return tsv_t Containing the quantile mapped values at the times
+         *      indicated by time_axis, and interpolated after
+         *      interpolation_start.
          **/
         template <class tsa_t, class tsv_t, class ta_t>
-        void quantile_mapping(tsv_t &pri_tsv, tsv_t const &prog_tsv,
+        tsv_t quantile_mapping(tsv_t const &pri_tsv, tsv_t const &prog_tsv,
                                vector<vector<int>> const &pri_idx_v,
                                vector<vector<int>> const &prog_idx_v,
                                vector<double> const &prog_weights,
                                ta_t const &time_axis,
                                core::utctime const &interpolation_start) {
-            vector<tsa_t> accessor_vec;
-            accessor_vec.reserve(prog_tsv.size());
-            for (const auto& ts : prog_tsv) 
-                accessor_vec.emplace_back(ts, time_axis);
+            vector<tsa_t> pri_accessor_vec;
+            pri_accessor_vec.reserve(pri_tsv.size());
+            for (const auto& ts : pri_tsv) 
+                pri_accessor_vec.emplace_back(ts, time_axis);
 
             auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v,
                     prog_weights, prog_tsv);
@@ -181,6 +183,11 @@ namespace shyft {
                 interpolation_period = core::utcperiod();
             }
 
+            vector<vector<double>> output_vals;
+            for (size_t i=0; i<pri_tsv.size(); ++i) {
+                vector<double> currout(time_axis.size());
+                output_vals.emplace_back(currout);
+            }
             for (size_t t=0; t<time_axis.size(); ++t) {
                 wvo_prog.t_ix = t;
                 size_t num_pri_cases = pri_idx_v[t].size();
@@ -202,16 +209,23 @@ namespace shyft {
                     double setval;
                     if (interp_weight != 0.0) {
                         setval = ((1.0 - interp_weight) * quantile_vals[i] +
-                                  interp_weight * pri_tsv[pri_idx_v[t][i]](time_axis.time(t)));
+                                  interp_weight * 
+                                  pri_accessor_vec[pri_idx_v[t][i]].value(t));
                     } else {
                         setval = quantile_vals[i];
                     }
-                    pri_tsv[pri_idx_v[t][i]].set(t, setval);
+                    output_vals[pri_idx_v[t][i]][t] = setval;
                 }
             }
+            tsv_t output;
+            output.reserve(pri_tsv.size());
+            for (size_t i=0; i<pri_tsv.size(); ++i) {
+                output.emplace_back(time_axis, output_vals[i],
+                        pri_tsv[i].point_interpretation());
+            }
+
+            return output;
         }
-
-
 
     }
 }
@@ -340,33 +354,33 @@ TEST_SUITE("qm") {
         core::utctime interp_start(core::no_utctime);
 
         // Act
-        qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
+        auto result = qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
                 pri_q_order, q_order, weights, ta, interp_start);
 
         // Assert
         for (size_t i=0; i<num_priors; ++i) {
             if (i < 3) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 10.2);
+                FAST_CHECK_EQ(result[pri_q_order[0][i]].value(0), 10.2);
             } else if (i < 11) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 21.0);
+                FAST_CHECK_EQ(result[pri_q_order[0][i]].value(0), 21.0);
             } else if (i < 20) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 32.1);
+                FAST_CHECK_EQ(result[pri_q_order[0][i]].value(0), 32.1);
             } else if (i < 24) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 35.4);
+                FAST_CHECK_EQ(result[pri_q_order[0][i]].value(0), 35.4);
             } else {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[0][i]].value(0), 71.0);
+                FAST_CHECK_EQ(result[pri_q_order[0][i]].value(0), 71.0);
             }
 
             if (i < 10) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 1.2);
+                FAST_CHECK_EQ(result[pri_q_order[1][i]].value(1), 1.2);
             } else if (i < 12) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 12.4);
+                FAST_CHECK_EQ(result[pri_q_order[1][i]].value(1), 12.4);
             } else if (i < 20) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 34.2);
+                FAST_CHECK_EQ(result[pri_q_order[1][i]].value(1), 34.2);
             } else if (i < 24) {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 83.4);
+                FAST_CHECK_EQ(result[pri_q_order[1][i]].value(1), 83.4);
             } else {
-                FAST_CHECK_EQ(prior_ts_v[pri_q_order[1][i]].value(1), 89.2);
+                FAST_CHECK_EQ(result[pri_q_order[1][i]].value(1), 89.2);
             }
         }
     }
@@ -409,7 +423,7 @@ TEST_SUITE("qm") {
         auto pri_q_order = qm::quantile_index<tsa_t>(prior_ts_v, ta);
 
         // Act
-        qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
+        auto result = qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
                 pri_q_order, q_order, weights, ta, interp_start);
 
         // Assert
@@ -420,20 +434,20 @@ TEST_SUITE("qm") {
                 // period. For the second half, the value is 20.
                 if (i < num_priors / 2) {
                     if (t < 9) {
-                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t),
                                       5.0);
                     } else {
                         double weight = (t - 9) / 4.0;
-                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t),
                                       ((1.0 - weight) * 5.0 + weight * i));
                     }
                 } else {
                     if (t < 9) {
-                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t),
                                       20.0);
                     } else {
                         double weight = (t - 9) / 4.0;
-                        FAST_CHECK_EQ(prior_ts_v[pri_q_order[t][i]].value(t),
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t),
                                       ((1.0 - weight) * 20.0 + weight * i));
                     }
                 }
