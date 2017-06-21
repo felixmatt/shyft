@@ -308,7 +308,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
             elif isinstance(v, dict):  # get the latest forecasts
                 t = v['forecasts_older_than']
                 n = v['number of forecasts']
-                idx = np.argmin(time < t) - 1
+                idx = np.argmin(time <= t) - 1
                 if idx < 0:
                     first_lead_time_of_last_fc = int(time[-1])
                     if first_lead_time_of_last_fc < t:
