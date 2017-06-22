@@ -183,10 +183,11 @@ namespace shyft {
                 interpolation_period = core::utcperiod();
             }
 
-            vector<vector<double>> output_vals;
+            tsv_t output;
+            output.reserve(pri_tsv.size());
             for (size_t i=0; i<pri_tsv.size(); ++i) {
-                vector<double> currout(time_axis.size());
-                output_vals.emplace_back(currout);
+                output.emplace_back(time_axis, nan,
+                        pri_tsv[i].point_interpretation());
             }
             for (size_t t=0; t<time_axis.size(); ++t) {
                 wvo_prog.t_ix = t;
@@ -214,14 +215,8 @@ namespace shyft {
                     } else {
                         setval = quantile_vals[i];
                     }
-                    output_vals[pri_idx_v[t][i]][t] = setval;
+                    output[pri_idx_v[t][i]].set(t, setval);
                 }
-            }
-            tsv_t output;
-            output.reserve(pri_tsv.size());
-            for (size_t i=0; i<pri_tsv.size(); ++i) {
-                output.emplace_back(time_axis, output_vals[i],
-                        pri_tsv[i].point_interpretation());
             }
 
             return output;
