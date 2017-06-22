@@ -31,13 +31,21 @@ namespace shyft {
         template <class tsa_t,class tsv_t,class ta_t>
         vector<vector<int>> quantile_index(tsv_t const &tsv,ta_t const &ta ) {
             vector < tsa_t> tsa; tsa.reserve(tsv.size()); // create ts-accessors to enable fast thread-safe access to ts value aspect
-            for (const auto& ts : tsv) tsa.emplace_back(ts, ta);
+            for (const auto& ts : tsv) tsa.emplace_back(ts, ta, shyft::time_series::extension_policy::USE_NAN);
 
             vector<vector<int>> qi(ta.size()); // result vector, qi[i] -> a vector of index-order tsv[i].value(t)
             vector<int> pi(tsv.size());for(size_t i=0;i<tsv.size();++i) pi[i]=i;//initial order 0..n-1, and we re-use it in the loop
             for(size_t t=0;t<ta.size();++t) {
                 sort(begin(pi),end(pi),[&tsa,t](int a,int b)->int {return tsa[a].value(t)<tsa[b].value(t);});
-                qi[t]=pi; // it's a copy assignment, ok, since sort above will start out with previous time-step order
+                // Filter away the nans, which signal that we have time series that don't extend this far
+                vector<int> final_inds;
+                for (size_t i=0; i<tsa.size(); ++i) {
+                    double test = tsa[i].value(t);
+                    if (isfinite(tsa[i].value(t))) {
+                        final_inds.emplace_back(pi[i]);
+                    }
+                }
+                qi[t]=final_inds; // it's a copy assignment, ok, since sort above will start out with previous time-step order
             }
             return qi;
         }
@@ -107,17 +115,26 @@ namespace shyft {
         template <class tsa_t>
         struct wvo_accessor {
             vector<vector<int>>const& ordered_ix; ///<index ordering of the i'th timestep
-            vector<double>const & w;///< weights of each ts
+            vector<double>const & w;///< weights of each ts - assumed to be same for all timesteps
             vector<tsa_t>const& tsv;///< access to .value(t), where t is size_t
             size_t t_ix=0;///< current time step index
-            double w_sum;///< sum of weights so we can return normalized .weight(i)
+            vector<double> w_sum;///< sum of weights per timestep so we can return normalized .weight(i). Note that it must be per timestep even if we have the same weights for all timestep - this is because ordered_idx can contain varying length-vectors of indices, since certain time series might be invalid at certain times.
             //-------------------
             wvo_accessor(vector<vector<int>> const&ordered_ix,vector<double> const&w,vector<tsa_t> const &tsv)
-            :ordered_ix(ordered_ix),w(w),tsv(tsv),w_sum(accumulate(begin(w),end(w),0.0)) {}
+            :ordered_ix(ordered_ix),w(w),tsv(tsv) 
+            {
+                for (size_t t=0; t<ordered_ix.size(); ++t) {
+                    double currsum = 0.0;
+                    for (size_t i=0; i<ordered_ix[t].size(); ++i) {
+                        currsum += w[ordered_ix[t][i]];
+                    }
+                    w_sum.emplace_back(currsum);
+                }
+            }
 
             //-- here goes the template contract requirements
             size_t size() const { return tsv.size();}
-            double weight(size_t i ) const {return w[ordered_ix[t_ix][i]]/w_sum;}
+            double weight(size_t i ) const {return w[ordered_ix[t_ix][i]]/w_sum[t_ix];}
             double value(size_t i ) const { return tsv[ordered_ix[t_ix][i]].value(t_ix);}
         };
 
@@ -170,9 +187,6 @@ namespace shyft {
             for (const auto& ts : pri_tsv) 
                 pri_accessor_vec.emplace_back(ts, time_axis);
 
-            auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v,
-                    prog_weights, prog_tsv);
-
             core::utcperiod interpolation_period;
             if (core::is_valid(interpolation_start)) {
                 interpolation_period = core::utcperiod(
@@ -182,6 +196,9 @@ namespace shyft {
             } else {
                 interpolation_period = core::utcperiod();
             }
+            auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v,
+                    prog_weights, prog_tsv);
+
 
             tsv_t output;
             output.reserve(pri_tsv.size());
@@ -445,6 +462,81 @@ TEST_SUITE("qm") {
                         FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t),
                                       ((1.0 - weight) * 20.0 + weight * i));
                     }
+                }
+            }
+        }
+    }
+
+    TEST_CASE("qm_partial_prognoses") {
+
+        // Test for the cases where we have certain prognoses that don't
+        // extend to the whole mapping period. We'll make three prognoses
+        // series, with varying lengths.
+
+
+        //Arrange
+        const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        core::calendar utc;
+        tsv_t prior_ts_v;
+        tsv_t forecast_ts_v;
+        //We don't want to interpolate for this one
+        core::utctime interp_start(core::no_utctime);
+        vector<double> weights;
+        // we make three series
+        for (size_t i=0; i<3; ++i) {
+            vector<double> currvals;
+            ta_t ta;
+            weights.emplace_back(1.0);
+            if (i == 0) {
+                ta = ta_t(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 2);
+                currvals = {1.0, 1.0};
+            } else if (i == 1) {
+                ta = ta_t(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 3);
+                currvals = {2.0, 2.0, 2.0};
+            } else if (i == 2) {
+                ta = ta_t(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 4);
+                currvals = {3.0, 3.0, 3.0, 3.0};
+            }
+            forecast_ts_v.emplace_back(ta, currvals, fx_avg);
+        }
+
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 4);
+        auto q_order = qm::quantile_index<tsa_t>(forecast_ts_v, ta);
+
+        // Create the prior series. These will all have four data points
+        for (size_t i=0; i<9; ++i) {
+            vector<double> currvals;
+            for (size_t t=0; t<4; ++t) {
+                currvals.emplace_back(i);
+            }
+            prior_ts_v.emplace_back(ta, currvals, fx_avg);
+        }
+
+        auto pri_q_order = qm::quantile_index<tsa_t>(prior_ts_v, ta);
+
+        //Act
+        auto result = qm::quantile_mapping<tsa_t>(prior_ts_v, forecast_ts_v,
+                pri_q_order, q_order, weights, ta, interp_start);
+
+        //Assert
+        for (size_t i=0; i<9; ++i) {
+            for (size_t t=0; t<3; ++t) {
+                if (t < 2) {
+                    if (i < 3) {
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 1.0);
+                    } else if (i < 6) {
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 2.0);
+                    } else if (i < 9) {
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 3.0);
+                    }
+                } else if (t < 3) {
+                    if (i < 5) {
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 2.0);
+                    } else if (i < 9) {
+                        FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 3.0);
+                    }
+                } else {
+                    FAST_CHECK_EQ(result[pri_q_order[t][i]].value(t), 3.0);
                 }
             }
         }
