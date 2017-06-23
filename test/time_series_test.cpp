@@ -60,6 +60,7 @@ namespace shyfttest {
             void set(size_t i, point p) { points[i] = p; }
             void add_point(const point& p) {points.emplace_back(p);}
             void reserve(size_t sz) {points.reserve(sz);}
+            utcperiod total_period() const { return utcperiod(points.front().t, points.back().t); }
         };
 
 } // namespace test

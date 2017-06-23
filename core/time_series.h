@@ -1274,6 +1274,7 @@ namespace shyft{
             } // maybe verify v.size(), vs. time_axis size ?
             size_t size() const {return ta.size();}
             size_t index_of(const utctime tx) const {return ta.index_of(tx);}
+            utcperiod total_period() const { return ta.total_period(); }
 
             // Specific methods
             double operator()(utctime t) const {return fx(t);}
@@ -1316,6 +1317,7 @@ namespace shyft{
             constant_timeseries(const TA& time_axis, double value) : time_axis(time_axis), cvalue(value) {}
             // Source read interface
             point get(size_t i) const { return point(time_axis.time(i), cvalue); }
+            utcperiod total_period() const { return time_axis.total_period(); }
             size_t index_of(const utctime tx) const { return time_axis.index_of(tx); }
             size_t size() const { return time_axis.size(); }
             // Accessor interface
@@ -1330,10 +1332,10 @@ namespace shyft{
         // The policy of how the accessors should handle data points after the
         // last point that is given in the source
         enum class extension_policy {
-                USE_LAST, ///< ts.value(ta.size()-1) is used for all values after end of source length
-                USE_ZERO, ///< fill in zero for all values after end of source length
-                USE_NAN ///< nan filled in for all values after end of source length
-            };
+            USE_DEFAULT, ///< Use the 'native' behaviour of the accessor, whatever that may be
+            USE_ZERO, ///< fill in zero for all values after end of source length
+            USE_NAN ///< nan filled in for all values after end of source length
+        };
 
         /** \brief average_accessor provides a projection/interpretation
          * of the values of a point source on to a time-axis as provided
@@ -1404,16 +1406,16 @@ namespace shyft{
             mutable size_t last_idx=-1;
             mutable size_t q_idx=-1;// last queried index
             mutable double q_value=nan;// outcome of
-            extension_policy ext_policy = extension_policy::USE_LAST;
+            extension_policy ext_policy = extension_policy::USE_DEFAULT;
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
             bool linear_between_points=false;
           public:
-            average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_LAST)
+            average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE), ext_policy(policy){ /* Do nothing */ }
-            average_accessor(std::shared_ptr<S> source,const TA& time_axis, extension_policy policy=extension_policy::USE_LAST)// also support shared ptr. access
+            average_accessor(std::shared_ptr<S> source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
                 source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
                 ext_policy(policy) {}
@@ -1423,16 +1425,16 @@ namespace shyft{
             double value(const size_t i) const {
                 if(i == q_idx)
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-                if (ext_policy == extension_policy::USE_LAST || i < source.size()) {
-                    q_value = average_value(source, time_axis.period(q_idx=i), last_idx,linear_between_points);
-                }
-                else if (ext_policy == extension_policy::USE_NAN) {
+                if (ext_policy == extension_policy::USE_NAN && time_axis.time(i) >= source.total_period().end) {
                     q_idx = i;
                     q_value = nan;
-                } else if (ext_policy == extension_policy::USE_ZERO) {
-                    q_idx=i;
+                } else if (ext_policy == extension_policy::USE_ZERO && time_axis.time(i) >= source.total_period().end) {
+                    q_idx = i;
                     q_value = 0;
+                } else {
+                    q_value = average_value(source, time_axis.period(q_idx=i), last_idx,linear_between_points);
                 }
+
                 return q_value;
             }
 
@@ -1452,15 +1454,15 @@ namespace shyft{
             mutable size_t last_idx=-1;
             mutable size_t q_idx=-1;// last queried index
             mutable double q_value=nan;// outcome of
-            extension_policy ext_policy = extension_policy::USE_LAST;
+            extension_policy ext_policy = extension_policy::USE_DEFAULT;
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
         public:
-            accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_LAST)
+            accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), ext_policy(policy) { /* Do nothing */
             }
-            accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis, extension_policy policy=extension_policy::USE_LAST)// also support shared ptr. access
+            accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
             }
 
@@ -1471,17 +1473,17 @@ namespace shyft{
                     return 0.0;// as defined by now, (but if ts is nan, then nan could be correct value!)
                 if (i == q_idx)
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-                if (ext_policy == extension_policy::USE_LAST || i < source.size()) {
+                if (ext_policy == extension_policy::USE_NAN && time_axis.time(i) >= source.total_period().end) {
+                    q_value = nan;
+                } else if (ext_policy == extension_policy::USE_ZERO && time_axis.time(i) >= source.total_period().end) {
+                    q_value = 0.0;
+                } else {
                     utctimespan tsum = 0;
                     if (i > q_idx && q_idx != npos) { // utilize the fact that we already have computed the sum up to q_idx
                         q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
                     } else { // just have to do the heavy work, calculate the entire sum again.
                         q_value = accumulate_value(source, utcperiod(time_axis.time(0), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
                     }
-                } else if (ext_policy == extension_policy::USE_NAN) {
-                    q_value = nan;
-                } else if (ext_policy == extension_policy::USE_ZERO) {
-                    q_value = 0.0;
                 }
                 q_idx = i;
                 return q_value;

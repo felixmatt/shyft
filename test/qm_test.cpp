@@ -40,7 +40,6 @@ namespace shyft {
                 // Filter away the nans, which signal that we have time series that don't extend this far
                 vector<int> final_inds;
                 for (size_t i=0; i<tsa.size(); ++i) {
-                    double test = tsa[i].value(t);
                     if (isfinite(tsa[i].value(t))) {
                         final_inds.emplace_back(pi[i]);
                     }
