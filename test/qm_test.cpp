@@ -238,8 +238,37 @@ namespace shyft {
             return output;
         }
 
+        template <class tsa_t, class tsv_t, class ta_t>
+        tsv_t quantile_map_main(vector<tsv_t> const &forecast_sets, 
+                vector<double> const &set_weights, tsv_t const &historical_data,
+                ta_t const &time_axis, 
+                core::utctime const &interpolation_start) {
+            tsv_t forecasts_unpacked;
+            vector<double> weights_unpacked;
+            for (size_t i=0; i<forecast_sets.size(); ++i) {
+                forecasts_unpacked.reserve(forecasts_unpacked.size() +
+                        forecast_sets[i].size());
+                weights_unpacked.reserve(weights_unpacked.size() + 
+                        forecast_sets[i].size());
+                for (size_t j=0; j<forecast_sets[i].size(); ++j) {
+                    forecasts_unpacked.emplace_back(forecast_sets[i][j]);
+                    weights_unpacked.emplace_back(set_weights[i]);
+                }
+            }
+
+            auto historical_indices = quantile_index<tsa_t>(historical_data,
+                    time_axis);
+            auto forecast_indices = quantile_index<tsa_t>(forecasts_unpacked,
+                    time_axis);
+
+            return quantile_mapping<tsa_t>(historical_data, forecasts_unpacked,
+                    historical_indices, forecast_indices, weights_unpacked,
+                    time_axis, interpolation_start);
+        }
     }
 }
+
+
 using namespace shyft;
 using namespace std;
 using ta_t = time_axis::fixed_dt;
@@ -540,5 +569,146 @@ TEST_SUITE("qm") {
             }
         }
     }
-}
 
+    TEST_CASE("qm_main") {
+        
+        //Arrange
+        const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        core::calendar utc;
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 4);
+        tsv_t historical_data;
+        vector<tsv_t> forecast_sets;
+        vector<double> weight_sets;
+        size_t num_historical_data = 56;
+
+        //Let's make three sets, one of two elements, one of three, and one of
+        //four.
+        tsv_t forecasts_1, forecasts_2, forecasts_3;
+
+        vector<double> currvals = {13.4, 15.6, 17.1, 19.1};
+        forecasts_1.emplace_back(ta, currvals, fx_avg);
+        currvals = {34.1, 2.4, 43.9, 10.2};
+        forecasts_1.emplace_back(ta, currvals, fx_avg);
+        forecast_sets.emplace_back(forecasts_1);
+        weight_sets.emplace_back(5.0);
+        currvals = {83.1, -42.2, 0.4, 23.4};
+        forecasts_2.emplace_back(ta, currvals, fx_avg);
+        currvals = {15.1, 6.5, 4.2, 2.9};
+        forecasts_2.emplace_back(ta, currvals, fx_avg);
+        currvals = {53.1, 87.9, 23.8, 5.6};
+        forecasts_2.emplace_back(ta, currvals, fx_avg);
+        forecast_sets.emplace_back(forecasts_2);
+        weight_sets.emplace_back(9.0);
+        currvals = {1.5, -1.9, -17.2, -10.0};
+        forecasts_3.emplace_back(ta, currvals, fx_avg);
+        currvals = {4.7, 18.2, 15.3, 8.9};
+        forecasts_3.emplace_back(ta, currvals, fx_avg);
+        currvals = {-45.2, -2.3, 80.2, 71.0};
+        forecasts_3.emplace_back(ta, currvals, fx_avg);
+        currvals = {45.1, -92.0, 34.4, 65.8};
+        forecasts_3.emplace_back(ta, currvals, fx_avg);
+        forecast_sets.emplace_back(forecasts_3);
+        weight_sets.emplace_back(3.0);
+
+
+        for (size_t i=0; i<num_historical_data; ++i) {
+            vector<double> insertvec { static_cast<double>(std::rand())/RAND_MAX * 50.0,
+                                       static_cast<double>(std::rand())/RAND_MAX * 50.0 ,
+                                       static_cast<double>(std::rand())/RAND_MAX * 50.0 ,
+                                       static_cast<double>(std::rand())/RAND_MAX * 50.0 };
+            historical_data.emplace_back(ta, insertvec, fx_avg);
+        }
+
+        auto historical_order = qm::quantile_index<tsa_t>(historical_data, ta);
+
+        core::utctime interpolation_start(core::no_utctime);
+
+        //Act
+        auto result = qm::quantile_map_main<tsa_t>(forecast_sets, weight_sets, 
+                historical_data, ta, interpolation_start);
+
+        //Assert
+        for (size_t i=0; i<num_historical_data; ++i) {
+            if (i < 4) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), -45.2);
+            } else if (i < 7) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 1.5);
+            } else if (i < 11) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 4.7);
+            } else if (i < 16) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 13.4);
+            } else if (i < 26) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 15.1);
+            } else if (i < 32) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 34.1);
+            } else if (i < 35) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 45.1);
+            } else if (i < 45) {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 53.1);
+            } else {
+                FAST_CHECK_EQ(result[historical_order[0][i]].value(0), 83.1);
+            } 
+
+            if (i < 4) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), -92.0);
+            } else if (i < 14) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), -42.2);
+            } else if (i < 17) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), -2.3);
+            } else if (i < 21) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), -1.9);
+            } else if (i < 26) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), 2.4);
+            } else if (i < 36) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), 6.5);
+            } else if (i < 42) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), 15.6);
+            } else if (i < 45) {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), 18.2);
+            } else {
+                FAST_CHECK_EQ(result[historical_order[1][i]].value(1), 87.9);
+            }
+
+            if (i < 4) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), -17.2);
+            } else if (i < 14) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 0.4);
+            } else if (i < 24) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 4.2);
+            } else if (i < 27) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 15.3);
+            } else if (i < 33) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 17.1);
+            } else if (i < 43) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 23.8);
+            } else if (i < 47) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 34.4);
+            } else if (i < 52) {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 43.9);
+            } else {
+                FAST_CHECK_EQ(result[historical_order[2][i]].value(2), 80.2);
+            }
+
+            if (i < 4) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), -10.0);
+            } else if (i < 14) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 2.9);
+            } else if (i < 24) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 5.6);
+            } else if (i < 27) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 8.9);
+            } else if (i < 33) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 10.2);
+            } else if (i < 39) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 19.1);
+            } else if (i < 49) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 23.4);
+            } else if (i < 52) {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 65.8);
+            } else {
+                FAST_CHECK_EQ(result[historical_order[3][i]].value(3), 71.0);
+            }
+        }
+
+    }
+}
