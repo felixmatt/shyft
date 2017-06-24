@@ -182,7 +182,6 @@ public:
 		: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
 	}
 
-	size_t get_last_index() { return last_idx; }  // TODO: Testing utility, remove later.
 
 	double value(const size_t i) const {
 		if (i == q_idx)
@@ -712,6 +711,28 @@ TEST_CASE("test_average_value_linear_between_points") {
 }
 
 
+TEST_CASE("accessor_policy") {
+	vector<double> v{1.0,2.0,2.5};
+	time_axis::fixed_dt ts_ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size());
+	time_axis::fixed_dt ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size()+2); // two more steps
+    time_series::point_ts<time_axis::fixed_dt> ts(ts_ta,v,ts_point_fx::POINT_AVERAGE_VALUE);
+    SUBCASE("average") {
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
+        CHECK(a_default.value(ta.size()-1)==doctest::Approx(2.5));
+        CHECK(a_0.value(ta.size()-1)==doctest::Approx(0.0));
+        CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
+    }
+    SUBCASE("accumulate") {
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
+        CHECK(a_default.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5+2.5)));
+        CHECK(a_0.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5)));
+        CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
+    }
+}
 
 
 TEST_CASE("test_TxFxSource") {

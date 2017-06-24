@@ -182,6 +182,9 @@
 		<Unit filename="time_series_merge.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
+		<Unit filename="time_series_qm.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="time_series_statistics.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>

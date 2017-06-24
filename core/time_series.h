@@ -1406,11 +1406,11 @@ namespace shyft{
             mutable size_t last_idx=-1;
             mutable size_t q_idx=-1;// last queried index
             mutable double q_value=nan;// outcome of
-            extension_policy ext_policy = extension_policy::USE_DEFAULT;
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
             bool linear_between_points=false;
+            extension_policy ext_policy = extension_policy::USE_DEFAULT;
           public:
             average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
@@ -1420,7 +1420,6 @@ namespace shyft{
                 source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
                 ext_policy(policy) {}
 
-            size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
 
             double value(const size_t i) const {
                 if(i == q_idx)
@@ -1449,24 +1448,23 @@ namespace shyft{
          */
         template <class S, class TA>
         class accumulate_accessor {
-        private:
+          private:
             static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
             mutable size_t last_idx=-1;
             mutable size_t q_idx=-1;// last queried index
             mutable double q_value=nan;// outcome of
-            extension_policy ext_policy = extension_policy::USE_DEFAULT;
+
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
-        public:
+            extension_policy ext_policy = extension_policy::USE_DEFAULT;
+          public:
             accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), ext_policy(policy) { /* Do nothing */
             }
             accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
             }
-
-            size_t get_last_index() const { return last_idx; }  // TODO: Testing utility, remove later.
 
             double value(const size_t i) const {
                 if (i == 0)
@@ -1475,14 +1473,15 @@ namespace shyft{
                     return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
                 if (ext_policy == extension_policy::USE_NAN && time_axis.time(i) >= source.total_period().end) {
                     q_value = nan;
-                } else if (ext_policy == extension_policy::USE_ZERO && time_axis.time(i) >= source.total_period().end) {
-                    q_value = 0.0;
                 } else {
                     utctimespan tsum = 0;
+                    auto t_end = time_axis.time(i);
+                    if( ext_policy == extension_policy::USE_ZERO && t_end >= source.total_period().end)
+                        t_end=source.total_period().end; // clip to end (effect of use zero at extension
                     if (i > q_idx && q_idx != npos) { // utilize the fact that we already have computed the sum up to q_idx
-                        q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+                        q_value += accumulate_value(source, utcperiod(time_axis.time(q_idx), t_end), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
                     } else { // just have to do the heavy work, calculate the entire sum again.
-                        q_value = accumulate_value(source, utcperiod(time_axis.time(0), time_axis.time(i)), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
+                        q_value = accumulate_value(source, utcperiod(time_axis.time(0), t_end), last_idx, tsum, source.point_interpretation() == POINT_INSTANT_VALUE);
                     }
                 }
                 q_idx = i;
