@@ -237,7 +237,7 @@ namespace shyft {
         tsv_t quantile_map_forecast(vector<tsv_t> const &forecast_sets,
                 vector<double> const &set_weights, tsv_t const &historical_data,
                 ta_t const &time_axis,
-                core::utctime const &interpolation_start) {
+                core::utctime interpolation_start) {
             tsv_t forecasts_unpacked;
             vector<double> weights_unpacked;
             for (size_t i=0; i<forecast_sets.size(); ++i) {
