@@ -19,7 +19,7 @@
 #include "pt_gs_k.h"
 #include "pt_ss_k.h"
 #include "pt_hs_k.h"
-
+#include "time_series_info.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
 #include <boost/serialization/vector.hpp>
@@ -345,6 +345,22 @@ void shyft::core::pt_hs_k::state::serialize(Archive & ar, const unsigned int fil
         ;
 }
 
+template <class Archive>
+void shyft::dtss::ts_info::serialize(Archive& ar, const unsigned int file_version) {
+    ar
+        & make_nvp("name", name)
+        & make_nvp("point_fx", point_fx)
+        & make_nvp("delta_t",delta_t)
+        & make_nvp("olson_tz_id",olson_tz_id)
+        & make_nvp("data_period",data_period)
+        & make_nvp("created",created)
+        & make_nvp("modified",modified)
+        ;
+}
+
+//-- export dtss stuff
+x_serialize_implement(shyft::dtss::ts_info);
+
 //-- export geo stuff
 x_serialize_implement(shyft::core::geo_point);
 x_serialize_implement(shyft::core::land_type_fractions);
@@ -411,6 +427,9 @@ x_serialize_implement(shyft::core::hbv_stack::state);
 
 // repeat template instance for each archive class
 #define x_arch(T) x_serialize_archive(T,binary_oarchive,binary_iarchive)
+
+x_arch(shyft::dtss::ts_info);
+
 x_arch(shyft::core::utcperiod);
 x_arch(shyft::core::time_zone::tz_info_t);
 x_arch(shyft::core::time_zone::tz_table);
