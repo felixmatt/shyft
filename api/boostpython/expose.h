@@ -499,7 +499,24 @@ namespace expose {
         .def_readwrite("parameter_lower_bound",&Optimizer::parameter_lower_bound,"the lower bound parameters\n")
         .def_readwrite("parameter_upper_bound",&Optimizer::parameter_upper_bound,"the upper bound parameters\n")
         .def("parameter_active",&Optimizer::active_parameter,"returns true if the parameter is active, i.e. lower != upper bound\n")
-            ;
+        .def_readonly("trace_size",&Optimizer::trace_size,
+            doc_intro("returns the size of the parameter-trace")
+            doc_see_also("trace_goal_function_value,trace_parameter")
+        )
+        .def_readonly("trace_goal_function_values",&Optimizer::goal_fn_trace,
+            doc_intro("the goal-function values in the order of searching for the minimum value")
+            doc_intro("The trace_parameter(i) gives the corresponding i'th parameter")
+            doc_see_also("trace_parameter,trace_value,trace_size")
+        )
+        .def("trace_goal_function_value",&Optimizer::trace_goal_fn,args("i"),
+            doc_intro("returns the i'th goal function value")
+        )
+        .def("trace_parameter",&Optimizer::trace_parameter,args("i"),
+            doc_intro("returns the i'th parameter tried, corresponding to the ")
+            doc_intro("i'th trace_goal_function value")
+            doc_see_also("trace_goal_function,trace_size")
+        )
+        ;
 
     }
 }

@@ -9,6 +9,7 @@
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "api/time_series.h"
+#include <regex>
 
 using namespace std;
 using namespace shyft;
@@ -16,8 +17,8 @@ using namespace shyft::core;
 
 api::apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
 
-    std::vector<double> x;x.reserve(n);
-    for (int i = 0;i < n;++i)
+    std::vector<double> x; x.reserve(n);
+    for (int i = 0; i < n; ++i)
         x.push_back(-double(n) / 2.0 + i);
     api::apoint_ts aa(api::gta_t(t, dt, n), x);
     auto a = aa*3.0 + aa;
@@ -44,11 +45,11 @@ TEST_CASE("dlib_server_basics") {
         shyft::time_axis::fixed_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
-        call_back_t cb = [ta, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
+        read_call_back_t cb = [ta, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
             ->ts_vector_t {
-            ts_vector_t r;r.reserve(ts_ids.size());
+            ts_vector_t r; r.reserve(ts_ids.size());
             double fv = 1.0;
-            for (size_t i = 0;i < ts_ids.size();++i)
+            for (size_t i = 0; i < ts_ids.size(); ++i)
                 r.emplace_back(ta, fv += 1.0);
             if (throw_exception) {
                 dlog << dlib::LINFO << "Throw from inside dtss executes!";
@@ -56,7 +57,26 @@ TEST_CASE("dlib_server_basics") {
             }
             return r;
         };
-        server our_server(cb);
+        std::vector<std::string> ts_names = {
+            string("a.prod.mw"),
+            string("b.prod.mw")
+        };
+        find_call_back_t fcb = [&ts_names, &throw_exception](std::string search_expression)
+            ->ts_info_vector_t {
+            ts_info_vector_t r;
+            dlog << dlib::LINFO << "find-callback with search-string:" << search_expression;
+            std::regex re(search_expression);
+            auto match_end = std::sregex_iterator();
+            for (auto const&tsn : ts_names) {
+                if (std::sregex_iterator(tsn.begin(), tsn.end(), re)!= match_end) {
+                    ts_info tsi; tsi.name = tsn;
+                    r.push_back(tsi);
+                }
+            }
+            return r;
+        };
+
+        server our_server(cb,fcb);
 
         // set up the server object we have made
         our_server.set_listening_ip("127.0.0.1");
@@ -82,6 +102,13 @@ TEST_CASE("dlib_server_basics") {
             FAST_REQUIRE_UNARY(our_server.is_running());
             dtss.evaluate(tsl, ta.period(0));
             dlog << dlib::LINFO << "done second test";
+            // test search functions
+            dlog << dlib::LINFO << "test .find function";
+            auto found_ts = dtss.find(string("a.*"));
+            FAST_REQUIRE_EQ(found_ts.size(), 1);
+            FAST_CHECK_EQ(found_ts[0].name, ts_names[0]);
+            dlog << dlib::LINFO << "test .find function done";
+
             throw_exception = true;// verify server-side exception gets back here.
             TS_ASSERT_THROWS_ANYTHING(dtss.evaluate(tsl, ta.period(0)));
             dlog<<dlib::LINFO << "exceptions done,testing ordinary evaluate after exception";
@@ -126,7 +153,7 @@ TEST_CASE("dlib_server_performance") {
 		for (int i = 0; i < n_ts; ++i)
 			from_disk.emplace_back(ta, fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
 
-        call_back_t cb = [&from_disk, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
+        read_call_back_t cb = [&from_disk, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
             ->ts_vector_t {
             if (throw_exception) {
                 dlog << dlib::LINFO << "Throw from inside dtss executes!";

@@ -352,6 +352,8 @@ namespace shyft {
             public:
                 PA parameter_lower_bound;///< current setting of parameter lower bound
                 PA parameter_upper_bound;///< current setting of parameter upper bound
+                vector<PA> parameters_trace;///< parameters_trace contains all parameters tried during optimization
+                vector<double> goal_fn_trace;///< goal-fn-value, corresponding to parameters_trace
                 PA& parameter_accessor; ///<  a *reference* to the model parameters in the target  model, all cells share this!
                 region_model_t& model; ///< a reference to the region model that we optimize
                 vector<target_specification_t> targets; ///<  list of targets ts& catchments indexes to be optimized, used to calculate goal function
@@ -478,6 +480,8 @@ namespace shyft {
                     model.set_catchment_calculation_filter(catchment_indexes); //Only calculate the catchments that we optimize
                     // 4. detects if initial state is established, if not it automatically do a copy of the current state
                     auto_initial_state_check();
+                    parameters_trace.clear();// wipe out parameters_trace
+                    goal_fn_trace.clear();// and the corresponding goal_fn values
                 }
                 void auto_initial_state_check() {
                     if (model.initial_state.size() != model.get_cells()->size()) {
@@ -486,7 +490,9 @@ namespace shyft {
                         establish_initial_state_from_model();
                     }
                 }
-
+                int trace_size() const {return goal_fn_trace.size();}
+                double trace_goal_fn(int i) const {return goal_fn_trace[size_t(i)];}
+                PA   trace_parameter(int i) const {return parameters_trace[size_t(i)];}
                 /** returns the initial state for the i'th cell */
                 state_t get_initial_state(size_t idx) {
                     auto_initial_state_check();// in case it's not done, do it now
@@ -780,6 +786,8 @@ namespace shyft {
                         }
                     }
                     goal_function_value /= scale_factor_sum;
+                    parameters_trace.push_back(parameter_accessor);// save to the parameters_trace
+                    goal_fn_trace.push_back(goal_function_value);//
                     if (print_progress_level > 0) {
                         cout << goal_function_value <<" : ParameterVector(";
                         for (size_t i = 0; i < parameter_accessor.size(); ++i) {

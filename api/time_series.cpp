@@ -1,5 +1,7 @@
 #include "core/core_pch.h"
 #include "time_series.h"
+#include "core/time_series_merge.h"
+#include "core/time_series_qm.h"
 
 #include <dlib/statistics.h>
 
@@ -470,6 +472,76 @@ namespace shyft{
         ats_vector max(ats_vector const &a, apoint_ts const & b) { return a.max(b); }
         ats_vector max(apoint_ts const &b, ats_vector const &a) { return a.max(b); }
         ats_vector max(ats_vector const &a, ats_vector const & b) { return a.max(b); }
+        apoint_ts  ats_vector::forecast_merge(utctimespan lead_time,utctimespan fc_interval) const {
+            //verify arguments
+            if(lead_time < 0)
+                throw runtime_error("lead_time parameter should be 0 or a positive number giving number of seconds into each forecast to start the merge slice");
+            if(fc_interval <=0)
+                throw runtime_error("fc_interval parameter should be positive number giving number of seconds between first time point in each of the supplied forecast");
+            for(size_t i=1;i<size();++i) {
+                if( (*this)[i-1].total_period().start + fc_interval > (*this)[i].total_period().start) {
+                    throw runtime_error(
+                        string("The suplied forecast vector should be strictly ordered by increasing t0 by length at least fc_interval: requirement broken at index:")
+                            + std::to_string(i)
+                        );
+                }
+            }
+            return time_series::forecast_merge<apoint_ts>(*this,lead_time,fc_interval);
+
+        }
+        double ats_vector::nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n) const {
+            if(n<0)
+                throw runtime_error("n, number of intervals, must be specified as > 0");
+            if(dt<=0)
+                throw runtime_error("dt, average interval, must be specified as > 0 s");
+            if(t0_offset<0)
+                throw runtime_error("lead_time,t0_offset,must be specified  >= 0 s");
+            return time_series::nash_sutcliffe(*this,obs,t0_offset,dt,(size_t)n);
+        }
+
+        ats_vector ats_vector::average_slice(utctimespan t0_offset,utctimespan dt, int n) const {
+            if(n<0)
+                throw runtime_error("n, number of intervals, must be specified as > 0");
+            if(dt<=0)
+                throw runtime_error("dt, average interval, must be specified as > 0 s");
+            if(t0_offset<0)
+                throw runtime_error("lead_time,t0_offset,must be specified  >= 0 s");
+            ats_vector r;
+            for(size_t i=0;i<size();++i) {
+                auto const& ts =(*this)[i];
+                if(ts.size()) {
+                    gta_t ta(ts.time_axis().time(0) + t0_offset, dt, n);
+                    r.push_back((*this)[i].average(ta));
+                } else {
+                    r.push_back(ts);
+                }
+            }
+            return r;
+        }
+        /** \see shyft::qm::quantile_map_forecast */
+        ats_vector quantile_map_forecast(vector<ats_vector> const & forecast_sets,
+                                         vector<double> const& set_weights,
+                                         ats_vector const& historical_data,
+                                         gta_t const&time_axis,
+                                         utctime interpolation_start) {
+            // since this is scripting access, verify all parameters here
+            if(forecast_sets.size()<1)
+                throw runtime_error("forecast_set must contain at least one forecast");
+            if(historical_data.size() < 2)
+                throw runtime_error("historical_data should have more than one time-series");
+            if(forecast_sets.size()!=set_weights.size())
+                throw runtime_error(string("The size of weights (")+to_string(set_weights.size())+string("), must match number of forecast-sets (")+to_string(forecast_sets.size())+string(""));
+            if(time_axis.size()==0)
+                throw runtime_error("time-axis should have at least one step");
+            if(core::is_valid(interpolation_start) && !time_axis.total_period().contains(interpolation_start)) {
+                calendar utc;
+                auto ts=utc.to_string(interpolation_start);
+                auto ps =utc.to_string(time_axis.total_period());
+                throw runtime_error("interpolation_start " + ts + " is not within time_axis period " + ps);
+            }
+            return qm::quantile_map_forecast<time_series::average_accessor<apoint_ts,gta_t> >(forecast_sets,set_weights,historical_data,time_axis,interpolation_start);
+
+        }
 
     }
 }

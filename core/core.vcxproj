@@ -59,8 +59,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -83,8 +82,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -151,6 +149,9 @@
     <ClInclude Include="time_series.h" />
     <ClInclude Include="region_model.h" />
     <ClInclude Include="time_axis.h" />
+    <ClInclude Include="time_series_info.h" />
+    <ClInclude Include="time_series_merge.h" />
+    <ClInclude Include="time_series_qm.h" />
     <ClInclude Include="time_series_statistics.h" />
     <ClInclude Include="unit_conversion.h" />
     <ClInclude Include="utctime_utilities.h" />

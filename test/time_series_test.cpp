@@ -60,6 +60,7 @@ namespace shyfttest {
             void set(size_t i, point p) { points[i] = p; }
             void add_point(const point& p) {points.emplace_back(p);}
             void reserve(size_t sz) {points.reserve(sz);}
+            utcperiod total_period() const { return utcperiod(points.front().t, points.back().t); }
         };
 
 } // namespace test
@@ -114,7 +115,148 @@ namespace shyfttest {
 
 
 };
+using namespace shyft::core;
+using namespace shyft::time_series;
+/// average_value_staircase_fast:
+/// Just keept for the reference now, but
+/// the generic/complex does execute at similar speed
+/// combining linear/stair-case into one function.
+//
+        template <class S>
+        double average_value_staircase_fast(const S& source, const utcperiod& p, size_t& last_idx) {
+            const size_t n=source.size();
+            if (n == 0) // early exit if possible
+                return shyft::nan;
+            size_t i=hint_based_search(source,p,last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
+            if(i==std::string::npos) // this might be a case
+                return shyft::nan; // and is equivalent to no points, or all points after requested period.
+
+            point l;          // Left point
+            l = source.get(i);
+            if (l.t >= p.end) { // requested period before first point,
+                last_idx=i;
+                return shyft::nan; // defined to return nan
+            }
+
+            if(l.t<p.start) l.t=p.start;//project left value to start of interval
+            if(!std::isfinite(l.v))
+                l.v=0.0;// nan-is 0 kind of def. fixes issues if period start with some nan-points, then area will be zero until first point..
+
+            if( ++i >= n) { // advance to next point and check for early exit
+                last_idx=--i;
+                return l.v*(p.end-l.t)/p.timespan(); // nan-is 0 kind of def..
+            }
+            double area = 0.0;  // Integrated area
+            point r(l);
+            do {
+                if( i<n ) { // if possible, advance to next point
+                    r=source.get(i++);
+                    if(r.t>p.end)
+                        r.t=p.end;//clip to p.end to ensure correct integral time-range
+                } else {
+                    r.t=p.end; // else set right hand side time to p.end(we are done)
+                }
+                area += l.v*(r.t -l.t);// add area for the current stair-case
+                if(std::isfinite(r.v)) { // could be a new value, which establish the new stair-case
+                    l=r;
+                } else { // not a valid new value, so
+                    l.t=r.t;// just keep l.value, adjust time(ignore nans)
+                }
+            } while(l.t < p.end );
+            last_idx = --i; // Store last index, so that next call starts at a smart position.
+            return area/p.timespan();
+        }
+
+template <class S, class TA>
+class average_staircase_accessor_fast {
+private:
+	static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
+	mutable size_t last_idx;
+	mutable size_t q_idx;// last queried index
+	mutable double q_value;// outcome of
+	const TA& time_axis;
+	const S& source;
+public:
+	average_staircase_accessor_fast(const S& source, const TA& time_axis)
+		: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
+	}
+
+
+	double value(const size_t i) const {
+		if (i == q_idx)
+			return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
+		q_value = average_value_staircase_fast(source, time_axis.period(q_idx = i), last_idx);
+		return q_value;
+	}
+
+	size_t size() const { return time_axis.size(); }
+};
+
+template <class A,class B>
+static bool is_equal_ts(const A& a,const B& b) {
+    const auto &a_ta=a.time_axis();
+    const auto &b_ta=b.time_axis();
+    if(a_ta.size()!=b_ta.size())
+        return false;
+    for(size_t i=0;i<a_ta.size();++i) {
+        if(a_ta.period(i)!= b_ta.period(i))
+            return false;
+        if (fabs(a.value(i)-b.value(i))>1e-6)
+            return false;
+    }
+    return true;
+}
+
+template < class TS_E,class TS_A,class TS_B,class TA>
+static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
+    // Expected results are time-series with ta and a constant value equal to the standard operators
+    TS_E a_plus_b(ta,a_value+b_value);
+    TS_E a_minus_b(ta,a_value-b_value);
+    TS_E a_mult_b(ta,a_value*b_value);
+    TS_E a_div_b(ta,a_value/b_value);
+    TS_E max_a_b(ta,std::max(a_value,b_value));
+    TS_E min_a_b(ta,std::min(a_value,b_value));
+    // Step 1:   ts bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b)));
+    // Step 2:  ts bin_op double
+    TS_ASSERT(is_equal_ts(a_plus_b,a+b_value));
+    TS_ASSERT(is_equal_ts(a_minus_b,a-b_value));
+    TS_ASSERT(is_equal_ts(a_mult_b,a*b_value));
+    TS_ASSERT(is_equal_ts(a_div_b,a/b_value));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a,b_value)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a,b_value)));
+    // Step 3: double bin_op ts
+    TS_ASSERT(is_equal_ts(a_plus_b,a_value+b));
+    TS_ASSERT(is_equal_ts(a_minus_b,a_value-b));
+    TS_ASSERT(is_equal_ts(a_mult_b,a_value*b));
+    TS_ASSERT(is_equal_ts(a_div_b,a_value/b));
+    TS_ASSERT(is_equal_ts(max_a_b,max(a_value,b)));
+    TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
+
+}
+
+
+
+typedef shyft::time_axis::fixed_dt tta_t;
+typedef shyft::time_series::point_ts<tta_t> tts_t;
+
+template<typename Fx>
+std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
+    std::vector<tts_t> r;r.reserve(n);
+    for (size_t i = 0;i < n;++i) {
+        std::vector<double> v;v.reserve(ta.size());
+        for (size_t j = 0;j < ta.size();++j)
+            v.push_back(f(i, ta.time(j)));
+        r.push_back(tts_t(ta, v));
+    }
+    return std::move(r);
+}
 TEST_SUITE("time_series") {
 TEST_CASE("nan_min_max") {
 
@@ -569,84 +711,29 @@ TEST_CASE("test_average_value_linear_between_points") {
 }
 
 
-using namespace shyft::core;
-using namespace shyft::time_series;
-/// average_value_staircase_fast:
-/// Just keept for the reference now, but
-/// the generic/complex does execute at similar speed
-/// combining linear/stair-case into one function.
-//
-        template <class S>
-        double average_value_staircase_fast(const S& source, const utcperiod& p, size_t& last_idx) {
-            const size_t n=source.size();
-            if (n == 0) // early exit if possible
-                return shyft::nan;
-            size_t i=hint_based_search(source,p,last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
+TEST_CASE("accessor_policy") {
+	vector<double> v{1.0,2.0,2.5};
+	time_axis::fixed_dt ts_ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size());
+	time_axis::fixed_dt ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size()+2); // two more steps
+    time_series::point_ts<time_axis::fixed_dt> ts(ts_ta,v,ts_point_fx::POINT_AVERAGE_VALUE);
+    SUBCASE("average") {
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
+        time_series::average_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
+        CHECK(a_default.value(ta.size()-1)==doctest::Approx(2.5));
+        CHECK(a_0.value(ta.size()-1)==doctest::Approx(0.0));
+        CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
+    }
+    SUBCASE("accumulate") {
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
+        time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
+        CHECK(a_default.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5+2.5)));
+        CHECK(a_0.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5)));
+        CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
+    }
+}
 
-            if(i==std::string::npos) // this might be a case
-                return shyft::nan; // and is equivalent to no points, or all points after requested period.
-
-            point l;          // Left point
-            l = source.get(i);
-            if (l.t >= p.end) { // requested period before first point,
-                last_idx=i;
-                return shyft::nan; // defined to return nan
-            }
-
-            if(l.t<p.start) l.t=p.start;//project left value to start of interval
-            if(!std::isfinite(l.v))
-                l.v=0.0;// nan-is 0 kind of def. fixes issues if period start with some nan-points, then area will be zero until first point..
-
-            if( ++i >= n) { // advance to next point and check for early exit
-                last_idx=--i;
-                return l.v*(p.end-l.t)/p.timespan(); // nan-is 0 kind of def..
-            }
-            double area = 0.0;  // Integrated area
-            point r(l);
-            do {
-                if( i<n ) { // if possible, advance to next point
-                    r=source.get(i++);
-                    if(r.t>p.end)
-                        r.t=p.end;//clip to p.end to ensure correct integral time-range
-                } else {
-                    r.t=p.end; // else set right hand side time to p.end(we are done)
-                }
-                area += l.v*(r.t -l.t);// add area for the current stair-case
-                if(std::isfinite(r.v)) { // could be a new value, which establish the new stair-case
-                    l=r;
-                } else { // not a valid new value, so
-                    l.t=r.t;// just keep l.value, adjust time(ignore nans)
-                }
-            } while(l.t < p.end );
-            last_idx = --i; // Store last index, so that next call starts at a smart position.
-            return area/p.timespan();
-        }
-
-template <class S, class TA>
-class average_staircase_accessor_fast {
-private:
-	static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
-	mutable size_t last_idx;
-	mutable size_t q_idx;// last queried index
-	mutable double q_value;// outcome of
-	const TA& time_axis;
-	const S& source;
-public:
-	average_staircase_accessor_fast(const S& source, const TA& time_axis)
-		: last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source) { /* Do nothing */
-	}
-
-	size_t get_last_index() { return last_idx; }  // TODO: Testing utility, remove later.
-
-	double value(const size_t i) const {
-		if (i == q_idx)
-			return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
-		q_value = average_value_staircase_fast(source, time_axis.period(q_idx = i), last_idx);
-		return q_value;
-	}
-
-	size_t size() const { return time_axis.size(); }
-};
 
 TEST_CASE("test_TxFxSource") {
     utctime t0 = calendar().time(YMDhms(1940, 1, 1, 0,0, 0));
@@ -738,54 +825,6 @@ TEST_CASE("test_sin_fx_ts") {
 	TS_ASSERT_DELTA(tsfx(0), 10.0, 0.0000001);
 	TS_ASSERT_DELTA(tsfx(deltahours(24)), 10.0, 0.0000001);
 	TS_ASSERT_DELTA(tsfx(deltahours(18)), 0.0, 0.000001);
-}
-
-template <class A,class B>
-static bool is_equal_ts(const A& a,const B& b) {
-    const auto &a_ta=a.time_axis();
-    const auto &b_ta=b.time_axis();
-    if(a_ta.size()!=b_ta.size())
-        return false;
-    for(size_t i=0;i<a_ta.size();++i) {
-        if(a_ta.period(i)!= b_ta.period(i))
-            return false;
-        if (fabs(a.value(i)-b.value(i))>1e-6)
-            return false;
-    }
-    return true;
-}
-
-template < class TS_E,class TS_A,class TS_B,class TA>
-static void test_bin_op(const TS_A& a, const TS_B &b, const TA ta,double a_value,double b_value) {
-    // Expected results are time-series with ta and a constant value equal to the standard operators
-    TS_E a_plus_b(ta,a_value+b_value);
-    TS_E a_minus_b(ta,a_value-b_value);
-    TS_E a_mult_b(ta,a_value*b_value);
-    TS_E a_div_b(ta,a_value/b_value);
-    TS_E max_a_b(ta,std::max(a_value,b_value));
-    TS_E min_a_b(ta,std::min(a_value,b_value));
-    // Step 1:   ts bin_op ts
-    TS_ASSERT(is_equal_ts(a_plus_b,a+b));
-    TS_ASSERT(is_equal_ts(a_minus_b,a-b));
-    TS_ASSERT(is_equal_ts(a_mult_b,a*b));
-    TS_ASSERT(is_equal_ts(a_div_b,a/b));
-    TS_ASSERT(is_equal_ts(max_a_b,max(a,b)));
-    TS_ASSERT(is_equal_ts(min_a_b,min(a,b)));
-    // Step 2:  ts bin_op double
-    TS_ASSERT(is_equal_ts(a_plus_b,a+b_value));
-    TS_ASSERT(is_equal_ts(a_minus_b,a-b_value));
-    TS_ASSERT(is_equal_ts(a_mult_b,a*b_value));
-    TS_ASSERT(is_equal_ts(a_div_b,a/b_value));
-    TS_ASSERT(is_equal_ts(max_a_b,max(a,b_value)));
-    TS_ASSERT(is_equal_ts(min_a_b,min(a,b_value)));
-    // Step 3: double bin_op ts
-    TS_ASSERT(is_equal_ts(a_plus_b,a_value+b));
-    TS_ASSERT(is_equal_ts(a_minus_b,a_value-b));
-    TS_ASSERT(is_equal_ts(a_mult_b,a_value*b));
-    TS_ASSERT(is_equal_ts(a_div_b,a_value/b));
-    TS_ASSERT(is_equal_ts(max_a_b,max(a_value,b)));
-    TS_ASSERT(is_equal_ts(min_a_b,min(a_value,b)));
-
 }
 
 TEST_CASE("test_binary_operator") {
@@ -899,20 +938,6 @@ TEST_CASE("test_api_ts") {
     TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
 }
 
-typedef shyft::time_axis::fixed_dt tta_t;
-typedef shyft::time_series::point_ts<tta_t> tts_t;
-
-template<typename Fx>
-std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
-    std::vector<tts_t> r;r.reserve(n);
-    for (size_t i = 0;i < n;++i) {
-        std::vector<double> v;v.reserve(ta.size());
-        for (size_t j = 0;j < ta.size();++j)
-            v.push_back(f(i, ta.time(j)));
-        r.push_back(tts_t(ta, v));
-    }
-    return std::move(r);
-}
 
 /** just verify that it calculate the right things */
 TEST_CASE("test_ts_statistics_calculations") {
@@ -1487,7 +1512,5 @@ TEST_CASE("test_uniform_sum_ts") {
 		TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
 	}
 }
-TEST_CASE("ts_vector_operations") {
 
-}
 }

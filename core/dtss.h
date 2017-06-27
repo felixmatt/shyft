@@ -1,5 +1,6 @@
 #pragma once
 #include "api/time_series.h"
+#include "time_series_info.h"
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/base_object.hpp>
@@ -13,8 +14,14 @@ namespace shyft {
             SERVER_EXCEPTION,
             EVALUATE_TS_VECTOR,
             EVALUATE_TS_VECTOR_PERCENTILES,
+            FIND_TS,
             // EVALUATE_TS_VECTOR_HISTOGRAM //-- tsv,period,ta,bin_min,bin_max -> ts_vector[n_bins]
         };
+
+        using shyft::core::utctime;
+        using shyft::core::utcperiod;
+        using shyft::core::utctimespan;
+        using shyft::core::no_utctime;
 
         namespace msg {
             template <class T>
@@ -37,6 +44,14 @@ namespace shyft {
                 int32_t sz=s.size();
                 out.write((char const*)&sz,sizeof(sz));
                 out.write(s.data(),sz);
+            }
+            template <class T>
+            std::string read_string(T& in) {
+                int32_t sz;
+                in.read((char*)&sz, sizeof(sz));
+                std::string msg(sz, '\0');
+                in.read((char*)msg.data(), sz);
+                return msg;
             }
 
             template<class T>
@@ -66,17 +81,36 @@ namespace shyft {
         }
 
         //typedef std::vector<api::apoint_ts> ts_vector_t;
-        typedef api::ats_vector ts_vector_t;
+        //typedef shyft::api::ats_vector ts_vector_t;
+        using ts_vector_t = shyft::api::ats_vector;
+        typedef std::vector<ts_info> ts_info_vector_t;
         typedef std::vector<std::string> id_vector_t;
-        typedef std::function< ts_vector_t (id_vector_t const& ts_ids,core::utcperiod p)> call_back_t;
+        typedef std::function< ts_vector_t (id_vector_t const& ts_ids,core::utcperiod p)> read_call_back_t;
+        typedef std::function< ts_info_vector_t(std::string search_expression)> find_call_back_t;
 
         struct server : dlib::server_iostream {
-            call_back_t bind_ts_cb;
+            read_call_back_t bind_ts_cb;
+            find_call_back_t find_ts_cb;
 
             template <class CB>
             server(CB&& cb):bind_ts_cb(std::forward<CB>(cb)) {
             }
+
+            template <class RCB,class FCB>
+            server(RCB&& rcb, FCB && fcb ) : 
+                bind_ts_cb(std::forward<RCB>(rcb)), 
+                find_ts_cb(std::forward<FCB>(fcb)) {
+            }
+
             ~server() {}
+
+            ts_info_vector_t do_find_ts(std::string search_expression) {
+                if (find_ts_cb) {
+                    return find_ts_cb(search_expression);
+                } else {
+                    return ts_info_vector_t();
+                }
+            }
 
             void
             do_bind_ts(core::utcperiod bind_period, ts_vector_t& atsv) const {
@@ -173,6 +207,19 @@ namespace shyft {
                                     oa << result;
                                 }
                             } break;
+                            case FIND_TS: {
+                                std::string search_expression;
+                                {
+                                    //boost::archive::binary_iarchive ia(in);
+                                    search_expression = msg::read_string(in);// >> search_expression;
+                                }
+                                auto find_result = do_find_ts(search_expression);
+                                {
+                                    msg::write_type(message_type::FIND_TS, out);
+                                    boost::archive::binary_oarchive oa(out);
+                                    oa << find_result;
+                                }
+                            } break;
                             default:
                                 throw std::runtime_error(std::string("Got unknown message type:") + std::to_string((int)msg_type));
                         }
@@ -238,6 +285,29 @@ namespace shyft {
                     return r;
                 }
                 throw std::runtime_error(std::string("Got unexpected response:")+std::to_string((int)response_type));
+            }
+
+            ts_info_vector_t find(std::string search_expression) {
+                msg::write_type(message_type::FIND_TS, io);
+                {
+                    //boost::archive::binary_oarchive oa(io);
+                    //oa << search_expression;
+                    msg::write_string(search_expression,io);
+                }
+                auto response_type = msg::read_type(io);
+                if (response_type == message_type::SERVER_EXCEPTION) {
+                    auto re = msg::read_exception(io);
+                    throw re;
+                }
+                else if (response_type == message_type::FIND_TS) {
+                    ts_info_vector_t r;
+                    {
+                        boost::archive::binary_iarchive ia(io);
+                        ia >> r;
+                    }
+                    return r;
+                }
+                throw std::runtime_error(std::string("Got unexpected response:") + std::to_string((int)response_type));
             }
 
         };

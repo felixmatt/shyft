@@ -106,6 +106,47 @@ namespace expose {
             .def("max", (m_double)&ats_vector::max, args("number"), "returns max of vector and a number")
             .def("max", (m_ts)&ats_vector::max, args("ts"), "returns max of ts-vector and a ts")
             .def("max", (m_tsv)&ats_vector::max, args("tsv"), "returns max of ts-vector and another ts-vector")
+            .def("forecast_merge",&ats_vector::forecast_merge,args("lead_time","fc_interval"),
+                 doc_intro("merge the forecasts in this vector into a time-series that is constructed")
+                 doc_intro("taking a slice of length fc_interval starting lead_time into each of the forecasts")
+                 doc_intro("of this time-series vector.")
+                 doc_intro("The content of the vector should be ordered in forecast-time, each entry at least")
+                 doc_intro("fc_interval separated from the previous.")
+                 doc_intro("If there is missing forecasts (larger than fc_interval between two forecasts) this is")
+                 doc_intro("automagically repaired using extended slices from the existing forecasts")
+                 doc_parameters()
+                 doc_parameter("lead_time","int","start slice number of seconds from t0 of each forecast")
+                 doc_parameter("fc_interval","int","length of each slice in seconds, and thus also gives the forecast-interval separation")
+                 doc_returns("merged time-series","TimeSeries","A merged forecast time-series")
+                 )
+             .def("nash_sutcliffe",&ats_vector::nash_sutcliffe,args("observation_ts","lead_time","delta_t","n"),
+                doc_intro("Computes the nash-sutcliffe (wiki nash-sutcliffe) criteria between the")
+                doc_intro("observation_ts over the slice of each time-series in the vector.")
+                doc_intro("The slice for each ts is specified by the lead_time, delta_t and n")
+                doc_intro("parameters. The function is provided to ease evaluation of forecast performance")
+                doc_intro("for different lead-time periods into each forecast.")
+                doc_intro("The returned value range is 1.0 for perfect match -oo for no match, or nan if observations is constant or data missing")
+                doc_parameters()
+                doc_parameter("observation_ts","TimeSeries","the observation time-series")
+                doc_parameter("lead_time","int","number of seconds lead-time offset from each ts .time(0)")
+                doc_parameter("delta_t","int","delta-time seconds to average as basis for n.s. simulation and observation values")
+                doc_parameter("n","int","number of time-steps of length delta_t to slice out of each forecast/simulation ts")
+                doc_returns("nash-sutcliffe value","double","the nash-sutcliffe criteria evaluated over all time-series in the TsVector for the specified lead-time, delta_t and number of elements")
+                  doc_notes()
+                  doc_see_also("nash_sutcliffe_goal_function")
+             )
+             .def("average_slice",&ats_vector::average_slice,args("lead_time","delta_t","n"),
+                doc_intro("Returns a ts-vector with the average time-series of the specified slice")
+                doc_intro("The slice for each ts is specified by the lead_time, delta_t and n")
+                doc_intro("parameters. ")
+                doc_parameters()
+                doc_parameter("lead_time","int","number of seconds lead-time offset from each ts .time(0)")
+                doc_parameter("delta_t","int","delta-time seconds to average as basis for n.s. simulation and observation values")
+                doc_parameter("n","int","number of time-steps of length delta_t to slice out of each forecast/simulation ts")
+                doc_returns("ts_vector_sliced","TsVector","a ts-vector with average ts of each slice specified.")
+                  doc_notes()
+                  doc_see_also("nash_sutcliffe,forecast_merge")
+             )
             // defining vector math-operations goes here
             .def(-self)
             .def(self*double())
@@ -138,7 +179,7 @@ namespace expose {
             typedef ats_vector(*f_atsv_ats)(ats_vector const &, apoint_ts const& );
             typedef ats_vector(*f_ats_atsv)(apoint_ts const &b, ats_vector const& a);
             typedef ats_vector(*f_atsv_atsv)(ats_vector const &b, ats_vector const &a);
-            
+
             def("min", (f_ats_atsv)min, args("ts", "ts_vector"), "return minimum of ts and ts_vector");
             def("min", (f_atsv_ats)min, args("ts_vector", "ts"), "return minimum of ts_vector and ts");
             def("min", (f_atsv_double)min, args("ts_vector", "number"), "return minimum of ts_vector and number");
@@ -149,6 +190,29 @@ namespace expose {
             def("max", (f_atsv_double)max, args("ts_vector", "number"), "return max of ts_vector and number");
             def("max", (f_double_atsv)max, args("number", "ts_vector"), "return max of number and ts_vector");
             def("max", (f_atsv_atsv)max, args("a", "b"), "return max of ts_vectors a and b (requires equal size!)");
+
+            // we also need a vector of ats_vector for quantile_map_forecast function
+            typedef std::vector<ats_vector> TsVectorSet;
+            class_<TsVectorSet>("TsVectorSet",
+                doc_intro("A set of TsVector")
+                doc_intro("")
+                doc_see_also("quantile_map_forecast,TsVector")
+            )
+            .def(vector_indexing_suite<TsVectorSet>())
+            .def(init<TsVectorSet const&>(args("clone_me")))
+            ;
+            def("quantile_map_forecast",quantile_map_forecast,args("forecast_sets","set_weights","historical_data","time_axis","interpolation_start"),
+                doc_intro("Computes the quantile-mapped forecast from the supplied input.")
+                doc_intro(" TBD:detailed description with references ")
+                doc_parameters()
+                doc_parameter("forecast_sets","TsVectorSet","forecast sets, each of them a TsVector with n forecasts (might differ in size and length)")
+                doc_parameter("set_weights","DoubleVector","a weight for each of the forecast set in forecast-sets,correlated by same index)")
+                doc_parameter("historical_data","TsVector","historical time-series that should cover the requested time-axis")
+                doc_parameter("time_axis","TimeAxis","the time-axis that the resulting time-series are mapped into")
+                doc_parameter("interpolation_start","int","time where the historical to forecast interpolation should start, 1970 utc seconds since epoch")
+                doc_returns("qm_forecast","TsVector","quantile mapped forecast with the requested time-axis")
+                );
+
     }
 
     #define DEF_STD_TS_STUFF() \

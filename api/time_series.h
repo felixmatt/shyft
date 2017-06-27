@@ -999,9 +999,13 @@ namespace shyft {
             ats_vector min(ats_vector const& x) const;
             ats_vector max(ats_vector const& x) const;
 
+            apoint_ts forecast_merge(utctimespan lead_time,utctimespan fc_interval) const;
+            ats_vector average_slice(utctimespan t0_offset,utctimespan dt, int n) const ;
+            double nash_sutcliffe(apoint_ts const &obs,utctimespan t0_offset,utctimespan dt, int n)const ;
             x_serialize_decl();
         };
-
+        // quantile-mapping
+        ats_vector quantile_map_forecast(vector<ats_vector> const & forecast_set,vector<double> const& set_weights,ats_vector const& historical_data,gta_t const&time_axis,utctime interpolation_start);
         // multiply operators
         ats_vector operator*(ats_vector const &a,double b);
         ats_vector operator*(double a,ats_vector const &b);

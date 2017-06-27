@@ -11,13 +11,13 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/vector.hpp>
 
-//-- for the server
+//-- for the dlib server
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
+#include <dlib/timer.h>
 
 #include "api/time_series.h"
 #include "core/dtss.h"
-#include "dlib/timer.h"
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
 struct scoped_gil_release {
@@ -53,26 +53,34 @@ namespace shyft {
 
         struct py_server : server {
             boost::python::object cb;
-            py_server():server([=](id_vector_t const &ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); }) {
+            boost::python::object fcb;
+            py_server():server(
+                [=](id_vector_t const &ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); },
+                [=](std::string search_expression) {return this->find_cb(search_expression); }
+            ) {
                 if (!PyEval_ThreadsInitialized()) {
-                    //std::cout << "InitThreads needed\n";
                     PyEval_InitThreads();// ensure threads-is enabled
                 }
             }
             ~py_server() {
-                //std::cout << "~dtss()\n";
                 cb = boost::python::object();
+                fcb = boost::python::object();
             }
 
 
             static int msg_count ;
-
+            ts_info_vector_t find_cb(std::string search_expression) {
+                ts_info_vector_t r;
+                if (fcb.ptr() != Py_None) {
+                    scoped_gil_aquire gil;
+                    r = boost::python::call<ts_info_vector_t>(fcb.ptr(), search_expression);
+                }
+                return r;
+            }
             ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
-                //std::cout << "cb("<<ts_ids.size()<<")\n";
                 api::ats_vector r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
-                    //std::cout<<" py cb.."<<std::endl;std::cout.flush();
                     r = boost::python::call<ts_vector_t>(cb.ptr(), ts_ids, p);
                 } else {
                     // for testing, just fill in constant values.
@@ -112,6 +120,10 @@ namespace shyft {
                 scoped_gil_release gil;
                 return ts_vector_t(impl.evaluate(tsv,p));
             }
+            ts_info_vector_t find(std::string search_expression) {
+                scoped_gil_release gil;
+                return impl.find(search_expression);
+            }
 
         };
     }
@@ -123,12 +135,56 @@ namespace expose {
     using namespace boost::python;
     void dtss_finalize() {
 #ifdef _WIN32
-        //to avoid infinite hang at exit on win, you need git clone https://github.com/sigbjorn/dlib
         WSACleanup();
 #endif
     }
     static void dtss_messages() {
         def("dtss_finalize", dtss_finalize, "dlib socket and timer cleanup before exit python(automatically called once at module exit)");
+
+        typedef shyft::dtss::ts_info TsInfo;
+        class_<TsInfo>("TsInfo",
+            doc_intro("Gives some information from the backend ts data-store")
+            doc_intro("about the stored time-series, that could be useful in some contexts")
+            )
+            .def(init<std::string, shyft::time_series::ts_point_fx, shyft::core::utctimespan, std::string, shyft::core::utcperiod, shyft::core::utctime, shyft::core::utctime>(
+                args("name", "point_fx", "delta_t", "olson_tz_id", "data_period", "created", "modified"),
+                doc_intro("construct a TsInfo with all values specified")
+                )
+            )
+            .def_readwrite("name", &TsInfo::name,
+                doc_intro("the unique name")
+            )
+            .def_readwrite("point_fx", &TsInfo::point_fx,
+                doc_intro("how to interpret the points, instant value, or average over period")
+            )
+            .def_readwrite("delta_t", &TsInfo::delta_t,
+                doc_intro("time-axis steps, in seconds, 0 if irregular time-steps")
+            )
+            .def_readwrite("olson_tz_id", &TsInfo::olson_tz_id,
+
+                doc_intro("empty or time-axis calendar for calendar,t0,delta_t type time-axis")
+            )
+            .def_readwrite("data_period", &TsInfo::data_period,
+                doc_intro("the period for data-stored, if applicable")
+            )
+            .def_readwrite("created", &TsInfo::created,
+                doc_intro("when time-series was created, seconds 1970s utc")
+            )
+            .def_readwrite("modified", &TsInfo::modified,
+                doc_intro("when time-series was last modified, seconds 1970 utc")
+            )
+            .def(self == self)
+            .def(self != self)
+            ;
+
+        typedef std::vector<TsInfo> TsInfoVector;
+        class_<TsInfoVector>("TsInfoVector",
+            doc_intro("A vector/list of TsInfo")
+            )
+            .def(vector_indexing_suite<TsInfoVector>())
+            .def(init<const TsInfoVector&>(args("clone_me")))
+            ;
+
     }
     static void dtss_server() {
         typedef shyft::dtss::py_server DtsServer;
@@ -195,6 +251,28 @@ namespace expose {
                     "dtss.process_messages(60000)\n"
                 )
             )
+            .def_readwrite("find_cb", &DtsServer::fcb,
+                doc_intro("callback for finding time-series using a search-expression.")
+                doc_intro("Called everytime the .find() method is called.")
+                doc_intro("The signature of the callback function should be fcb(search_expr: str)->TsInfoVector")
+                doc_intro("\nExamples\n--------\n")
+                doc_intro(
+                    "from shyft import api as sa\n\n"
+                    "def find_ts(search_expr: str)->sa.TsInfoVector:\n"
+                    "    print('find:',search_expr)\n"
+                    "    r = sa.TsInfoVector()\n"
+                    "    tsi = sa.TsInfo()\n"
+                    "    tsi.name = 'some_test'\n"
+                    "    r.append(tsi)\n"
+                    "    return r\n"
+                    "# and then bind the function to the callback\n"
+                    "dtss=sa.DtsServer()\n"
+                    "dtss.find_cb=find_ts\n"
+                    "dtss.set_listening_port(20000)\n"
+                    "# more code to invoce .find etc.\n"
+                )
+            )
+
             .def("fire_cb",&DtsServer::fire_cb,args("msg","rp"),"testing fire from c++")
             .def("process_messages",&DtsServer::process_messages,args("msec"),
                 doc_intro("wait and process messages for specified number of msec before returning")
@@ -254,6 +332,13 @@ namespace expose {
                 doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
                 doc_returns("tsvector","TsVector","an evaluated list of point time-series in the same order as the input list")
                 doc_see_also(".percentiles(),DtsServer")
+            )
+            .def("find",&DtsClient::find,args("search_expression"),
+                doc_intro("find ts information that matches the search-expression")
+                doc_parameters()
+                doc_parameter("search_expression","str","search-expression, to be interpreted by the back-end tss server (usually by callback to python)")
+                doc_returns("ts_info_vector","TsInfoVector","The search result, as vector of TsInfo objects")
+                doc_see_also("TsInfo,TsInfoVector")
             )
             ;
 

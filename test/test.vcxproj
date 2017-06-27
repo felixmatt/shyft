@@ -137,7 +137,9 @@
     <ClCompile Include="hbv_stack_test.cpp" />
     <ClCompile Include="hbv_tank_test.cpp" />
     <ClCompile Include="kalman_test.cpp" />
+    <ClCompile Include="merge_test.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
+    <ClCompile Include="qm_test.cpp" />
     <ClCompile Include="routing_test.cpp" />
     <ClCompile Include="sceua_test.cpp" />
     <ClCompile Include="test_pch.cpp">

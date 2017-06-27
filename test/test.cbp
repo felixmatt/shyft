@@ -12,17 +12,13 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=core_average_ts" />
+				<Option parameters="-nv -tc=accessor_policy" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
 					<Add directory="../bin/Debug" />
 				</Linker>
-				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv  -tc=test_mass_balance" />
-					<Mode after="always" />
-				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />
@@ -30,6 +26,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Option parameters="-tc=tsv_nash_sutcliffe" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-DARMA_NO_DEBUG" />
@@ -39,7 +36,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_binary_operator" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=accessor_policy" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -130,6 +127,7 @@
 		<Unit filename="kriging_test.cpp">
 			<Option virtualFolder="interpolation/" />
 		</Unit>
+		<Unit filename="merge_test.cpp" />
 		<Unit filename="mocks.cpp">
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
@@ -147,6 +145,9 @@
 		</Unit>
 		<Unit filename="pt_ss_k_test.cpp">
 			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="qm_test.cpp">
+			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="region_model_test.cpp">
 			<Option virtualFolder="full_model/" />
