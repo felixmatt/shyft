@@ -145,6 +145,12 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                 "radiation": api.RadiationSource,
                                 "wind_speed": api.WindSpeedSource}
 
+        self.series_type = {"relative_humidity": api.POINT_INSTANT_VALUE,
+                            "temperature": api.POINT_INSTANT_VALUE,
+                            "precipitation": api.POINT_AVERAGE_VALUE,
+                            "radiation": api.POINT_AVERAGE_VALUE,
+                            "wind_speed": api.POINT_INSTANT_VALUE}
+
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """Get shyft source vectors of time series for input_source_types
 
@@ -274,7 +280,7 @@ class AromeDataRepository(interfaces.GeoTsRepository):
                                                    "data points ({}) for {}"
                                                    "".format(ta.size(), d.size, key))
                 return tsc(ta.size(), ta.start, ta.delta_t,
-                           api.DoubleVector_FromNdArray(d.flatten()), api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+                           api.DoubleVector_FromNdArray(d.flatten()), self.series_type[key])
             time_series[key] = np.array([[construct(data[fslice + [i, j]])
                                           for j in range(J)] for i in range(I)])
         return time_series
