@@ -212,33 +212,20 @@ namespace shyft {
             for (size_t t = 0; t<time_axis.size(); ++t) {
                 wvo_fc.t_ix = t;
                 size_t num_pri_cases = pri_idx_v[t].size();
-                if (wvo_fc.size() > 0) {
+                if (wvo_fc.size() > 0 && (!core::is_valid(interpolation_period.end) || time_axis.time(t)<interpolation_period.end)) {
                     vector<double> quantile_vals = compute_weighted_quantiles(num_pri_cases, wvo_fc);
-                    double interp_weight = 0.0;
-                    if (interpolation_period.valid() &&
-                        (interpolation_period.contains(time_axis.time(t)) ||
+                    if ( (interpolation_period.contains(time_axis.time(t)) ||
                             interpolation_period.end == time_axis.time(t))) {
                         core::utctime start = interpolation_period.start;
                         core::utctime end = interpolation_period.end;
-                        interp_weight = (static_cast<double>(time_axis.time(t) - start) / (end - start));
+                        double interp_weight = (static_cast<double>(time_axis.time(t) - start)/(end - start));
+                        for (size_t i = 0; i < num_pri_cases; ++i)
+                            output[pri_idx_v[t][i]].set(t,(1.0 - interp_weight)*quantile_vals[i] + interp_weight*pri_accessor_vec[pri_idx_v[t][i]].value(t));
+                    } else {
+                        for (size_t i = 0; i < num_pri_cases; ++i)  output[pri_idx_v[t][i]].set(t, quantile_vals[i]);
                     }
-
-                    for (size_t i = 0; i < num_pri_cases; ++i) {
-                        double setval;
-                        if (interp_weight != 0.0) {
-                            setval = ((1.0 - interp_weight) * quantile_vals[i] +
-                                interp_weight *
-                                pri_accessor_vec[pri_idx_v[t][i]].value(t));
-                        }
-                        else {
-                            setval = quantile_vals[i];
-                        }
-                        output[pri_idx_v[t][i]].set(t, setval);
-                    }
-                }
-                else { // if no more forecast available, use the prior scenario value for the specified time-points
-                    for (size_t i = 0; i < num_pri_cases; ++i)
-                        output[pri_idx_v[t][i]].set(t, pri_accessor_vec[pri_idx_v[t][i]].value(t));
+                } else { // if no more forecast available, or after valid end, use the prior scenario value for the specified time-points
+                    for (size_t i = 0; i < num_pri_cases; ++i)  output[pri_idx_v[t][i]].set(t, pri_accessor_vec[pri_idx_v[t][i]].value(t));
                 }
             }
 
