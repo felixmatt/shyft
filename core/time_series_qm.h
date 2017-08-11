@@ -28,7 +28,7 @@ namespace shyft {
                 // Filter away the nans, which signal that we have time series that don't extend this far
                 vector<int> final_inds;
                 for (size_t i = 0; i<tsa.size(); ++i) {
-                    if (isfinite(tsa[i].value(t))) {
+                    if (isfinite(tsa[pi[i]].value(t))) {
                         final_inds.emplace_back(pi[i]);
                     }
                 }
@@ -75,7 +75,7 @@ namespace shyft {
                 double q_i = q_step*i;  // multiplication or addition, almost same performance(?)
                 while (q_j + w_j  < q_i) { //  as long as current q_j+w_j are LESS than target q_i
                     q_j += w_j;            // climb along the 'j' quantile axis until we reach wanted level
-                    if (j + 1 < wv.size()) {  // only get next element if there are more left
+                    if (j + 1 < wv.fc_size()) {  // only get next element if there are more left
                         w_j = wv.weight(++j);
                         v_j = wv.value(j);
                     }
