@@ -11,6 +11,13 @@ namespace expose {
     using namespace shyft::core;
     using namespace boost::python;
     using namespace std;
+    
+    shyft::api::ats_vector quantile_map_forecast_5(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start ) {
+        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start);
+    }
+    shyft::api::ats_vector quantile_map_forecast_6(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end) {
+        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end);
+    }
 
     static void expose_ats_vector() {
         using namespace shyft::api;
@@ -201,17 +208,27 @@ namespace expose {
             .def(vector_indexing_suite<TsVectorSet>())
             .def(init<TsVectorSet const&>(args("clone_me")))
             ;
-            def("quantile_map_forecast",quantile_map_forecast,args("forecast_sets","set_weights","historical_data","time_axis","interpolation_start"),
+            const char* qm_doc =
                 doc_intro("Computes the quantile-mapped forecast from the supplied input.")
                 doc_intro(" TBD:detailed description with references ")
                 doc_parameters()
-                doc_parameter("forecast_sets","TsVectorSet","forecast sets, each of them a TsVector with n forecasts (might differ in size and length)")
-                doc_parameter("set_weights","DoubleVector","a weight for each of the forecast set in forecast-sets,correlated by same index)")
-                doc_parameter("historical_data","TsVector","historical time-series that should cover the requested time-axis")
-                doc_parameter("time_axis","TimeAxis","the time-axis that the resulting time-series are mapped into")
-                doc_parameter("interpolation_start","int","time where the historical to forecast interpolation should start, 1970 utc seconds since epoch")
-                doc_returns("qm_forecast","TsVector","quantile mapped forecast with the requested time-axis")
+                doc_parameter("forecast_sets", "TsVectorSet", "forecast sets, each of them a TsVector with n forecasts (might differ in size and length)")
+                doc_parameter("set_weights", "DoubleVector", "a weight for each of the forecast set in forecast-sets,correlated by same index)")
+                doc_parameter("historical_data", "TsVector", "historical time-series that should cover the requested time-axis")
+                doc_parameter("time_axis", "TimeAxis", "the time-axis that the resulting time-series are mapped into")
+                doc_parameter("interpolation_start", "int", "time where the historical to forecast interpolation should start, 1970 utc seconds since epoch")
+                doc_parameter("interpolation_end", "int", "time where the interpolation should end, if no_utctime, use end of forecast-set")
+                doc_returns("qm_forecast", "TsVector", "quantile mapped forecast with the requested time-axis")
+                ;
+
+            def("quantile_map_forecast",quantile_map_forecast_5, 
+                args("forecast_sets","set_weights","historical_data","time_axis","interpolation_start"),
+                qm_doc
                 );
+            def("quantile_map_forecast", quantile_map_forecast_6,
+                args("forecast_sets", "set_weights", "historical_data", "time_axis", "interpolation_start", "interpolation_end"),
+                qm_doc
+            );
 
     }
 

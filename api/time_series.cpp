@@ -523,7 +523,9 @@ namespace shyft{
                                          vector<double> const& set_weights,
                                          ats_vector const& historical_data,
                                          gta_t const&time_axis,
-                                         utctime interpolation_start) {
+                                         utctime interpolation_start,
+                                         utctime interpolation_end
+        ) {
             // since this is scripting access, verify all parameters here
             if(forecast_sets.size()<1)
                 throw runtime_error("forecast_set must contain at least one forecast");
@@ -533,13 +535,21 @@ namespace shyft{
                 throw runtime_error(string("The size of weights (")+to_string(set_weights.size())+string("), must match number of forecast-sets (")+to_string(forecast_sets.size())+string(""));
             if(time_axis.size()==0)
                 throw runtime_error("time-axis should have at least one step");
-            if(core::is_valid(interpolation_start) && !time_axis.total_period().contains(interpolation_start)) {
-                calendar utc;
-                auto ts=utc.to_string(interpolation_start);
-                auto ps =utc.to_string(time_axis.total_period());
-                throw runtime_error("interpolation_start " + ts + " is not within time_axis period " + ps);
+            if(core::is_valid(interpolation_start)) {
+                if (!time_axis.total_period().contains(interpolation_start)) {
+                    calendar utc;
+                    auto ts = utc.to_string(interpolation_start);
+                    auto ps = utc.to_string(time_axis.total_period());
+                    throw runtime_error("interpolation_start " + ts + " is not within time_axis period " + ps);
+                }
+                if (core::is_valid(interpolation_end) && !time_axis.total_period().contains(interpolation_end)) {
+                    calendar utc;
+                    auto ts = utc.to_string(interpolation_end);
+                    auto ps = utc.to_string(time_axis.total_period());
+                    throw runtime_error("interpolation_end " + ts + " is not within time_axis period " + ps);
+                }
             }
-            return qm::quantile_map_forecast<time_series::average_accessor<apoint_ts,gta_t> >(forecast_sets,set_weights,historical_data,time_axis,interpolation_start);
+            return qm::quantile_map_forecast<time_series::average_accessor<apoint_ts,gta_t> >(forecast_sets,set_weights,historical_data,time_axis,interpolation_start,interpolation_end);
 
         }
 

@@ -1005,7 +1005,7 @@ namespace shyft {
             x_serialize_decl();
         };
         // quantile-mapping
-        ats_vector quantile_map_forecast(vector<ats_vector> const & forecast_set,vector<double> const& set_weights,ats_vector const& historical_data,gta_t const&time_axis,utctime interpolation_start);
+        ats_vector quantile_map_forecast(vector<ats_vector> const & forecast_set,vector<double> const& set_weights,ats_vector const& historical_data,gta_t const&time_axis,utctime interpolation_start, utctime interpolation_end=no_utctime);
         // multiply operators
         ats_vector operator*(ats_vector const &a,double b);
         ats_vector operator*(double a,ats_vector const &b);

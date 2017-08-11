@@ -75,7 +75,7 @@ namespace shyft {
                 double q_i = q_step*i;  // multiplication or addition, almost same performance(?)
                 while (q_j + w_j  < q_i) { //  as long as current q_j+w_j are LESS than target q_i
                     q_j += w_j;            // climb along the 'j' quantile axis until we reach wanted level
-                    if (j + 1 < wv.fc_size()) {  // only get next element if there are more left
+                    if (j + 1 < wv.size()) {  // only get next element if there are more left
                         w_j = wv.weight(++j);
                         v_j = wv.value(j);
                     }
@@ -120,14 +120,13 @@ namespace shyft {
             }
 
             //-- here goes the template contract requirements
-            size_t size() const { return tsv.size(); }
-            size_t fc_size() const { return ordered_ix[t_ix].size(); } //<< number of forecasts available at time-point t_ix
+            size_t size() const { return ordered_ix[t_ix].size(); } //<< number of forecasts available at time-point t_ix
             double weight(size_t i) const { return w[ordered_ix[t_ix][i]] / w_sum[t_ix]; }
             double value(size_t i) const { return tsv[ordered_ix[t_ix][i]].value(t_ix); }
         };
 
         /**\brief The main quantile mapping function, which, using quantile
-        * calculations, maps the values of the weighted 'prognosis' time
+        * calculations, maps the values of the weighted 'forecast' time
         * series vectors onto the 'prior' time series. This mapping is done
         * for each time step in the specified time axis.
         * \tparam tsa_t The time-series accessor type.
@@ -135,39 +134,39 @@ namespace shyft {
         * \tparam ta_t The time-axis type.
         * \param pri_tsv The time-series vector containing the 'prior'
         *      observations. The values in this vector will be more or less
-        *      overwritten by the values in prog_tsv that, using the quantile
+        *      overwritten by the values in fc_tsv that, using the quantile
         *      mapping, correspond to the values in pri_tsv.
-        * \param prog_tsv The time-series vector containing the 'prognosis'.
+        * \param fc_tsv The time-series vector containing the 'forecast'.
         *      The values in this vector will overwrite the corresponding ones
         *      (in the quantile mapping sense) in pri_tsv.
         * \param pri_idx_v The vector containing the indices that will order
         *      the observations in pri_tsv according to their value, so that
         *      if the current time axis index is t, then pri_idx_v[t] will
         *      give a vector sorting pri_tsv for that timestep.
-        * \param prog_idx_v Same as pri_idx_v, but applies to prog_tsv.
-        * \param prog_weights Contains the weights to apply to each
-        *      value in prog_tsv. Assumed to be the same for all timesteps.
+        * \param fc_idx_v Same as pri_idx_v, but applies to fc_tsv.
+        * \param fc_weights Contains the weights to apply to each
+        *      value in fc_tsv. Assumed to be the same for all timesteps.
         * \param time_axis The time axis over which to perform the mapping.
         * \param interpolation_start The start of the period over which we
-        *      want to interpolate between the prognosis and prior. We assume
+        *      want to interpolate between the forecast and prior. We assume
         *      that the end of the interpolation period coincides with the
         *      last point of time_axis. For all times before
         *      interpolation_start, the corresponding value in pri_tsv will
         *      only contain the corresponding quantile-mapped value in
-        *      prog_tsv, while for times after interpolation_start, the value
+        *      fc_tsv, while for times after interpolation_start, the value
         *      in pri_tsv will contain a linearly interpolated mix of the
         *      value already in pri_tsv and the corresponding quantile-mapped
-        *      value in prog_tsv. If this parameter is set to
+        *      value in fc_tsv. If this parameter is set to
         *      core::no_utctime, interpolation will not take place.
         * \return tsv_t Containing the quantile mapped values at the times
         *      indicated by time_axis, and interpolated after
         *      interpolation_start.
         **/
         template <class tsa_t, class tsv_t, class ta_t>
-        tsv_t quantile_mapping(tsv_t const &pri_tsv, tsv_t const &prog_tsv,
+        tsv_t quantile_mapping(tsv_t const &pri_tsv, tsv_t const &fc_tsv,
             vector<vector<int>> const &pri_idx_v,
-            vector<vector<int>> const &prog_idx_v,
-            vector<double> const &prog_weights,
+            vector<vector<int>> const &fc_idx_v,
+            vector<double> const &fc_weights,
             ta_t const &time_axis,
             core::utctime const &interpolation_start,
             core::utctime const interpolation_end = core::no_utctime
@@ -177,14 +176,14 @@ namespace shyft {
             for (const auto& ts : pri_tsv)
                 pri_accessor_vec.emplace_back(ts, time_axis);
 
-            core::utcperiod prog_period; // compute the maximum prognosis period
-            for (const auto&ts : prog_tsv) {
+            core::utcperiod fc_period; // compute the maximum forecast period
+            for (const auto&ts : fc_tsv) {
                 auto p = ts.time_axis().total_period();
-                if (!prog_period.valid())
-                    prog_period = p;
+                if (!fc_period.valid())
+                    fc_period = p;
                 else {
-                    prog_period.start = std::min(prog_period.start, p.start);
-                    prog_period.end = std::max(prog_period.end, p.end);
+                    fc_period.start = std::min(fc_period.start, p.start);
+                    fc_period.end = std::max(fc_period.end, p.end);
                 }
             }
 
@@ -193,16 +192,16 @@ namespace shyft {
                 interpolation_period = core::utcperiod(interpolation_start, time_axis.time(time_axis.size() - 1));
                 if (core::is_valid(interpolation_end))
                     interpolation_period.end = interpolation_end;
-                // now clip i.start <= prog_end
-                // and clip i.end <= prog_end
-                interpolation_period.start = std::min(prog_period.end, interpolation_period.start);
-                interpolation_period.end = std::min(prog_period.end, interpolation_period.end);
+                // now clip i.start <= fc_end
+                // and clip i.end <= fc_end
+                interpolation_period.start = std::min(fc_period.end, interpolation_period.start);
+                interpolation_period.end = std::min(fc_period.end, interpolation_period.end);
             }
             else {
                 interpolation_period = core::utcperiod();
             }
 
-            auto wvo_prog = wvo_accessor<typename tsv_t::value_type>(prog_idx_v, prog_weights, prog_tsv);
+            auto wvo_fc = wvo_accessor<typename tsv_t::value_type>(fc_idx_v, fc_weights, fc_tsv);
 
 
             tsv_t output;
@@ -211,10 +210,10 @@ namespace shyft {
                 output.emplace_back(time_axis, nan, pri_tsv[i].point_interpretation());
             }
             for (size_t t = 0; t<time_axis.size(); ++t) {
-                wvo_prog.t_ix = t;
+                wvo_fc.t_ix = t;
                 size_t num_pri_cases = pri_idx_v[t].size();
-                if (wvo_prog.fc_size() > 0) {
-                    vector<double> quantile_vals = compute_weighted_quantiles(num_pri_cases, wvo_prog);
+                if (wvo_fc.size() > 0) {
+                    vector<double> quantile_vals = compute_weighted_quantiles(num_pri_cases, wvo_fc);
                     double interp_weight = 0.0;
                     if (interpolation_period.valid() &&
                         (interpolation_period.contains(time_axis.time(t)) ||
@@ -259,14 +258,15 @@ namespace shyft {
         * \param set_weights the weights for each of the n-elements in the forecast_set
         * \param historical_data historical time-series that should cover the forecast period
         * \param time_axis the time-axis that we would like the resulting time-series to be mapped into
-        * \param interpolation_start the time within the forecast period where there interpolation period should start
+        * \param interpolation_start the time within the forecast period where the interpolation period should start
+        * \param interpolation_end   the time within the forecast period where the interpolation period should end, default last fc
         * \return a time-series vector with the resulting quantile-mapped time-series
         */
         template <class tsa_t, class tsv_t, class ta_t>
         tsv_t quantile_map_forecast(vector<tsv_t> const &forecast_sets,
             vector<double> const &set_weights, tsv_t const &historical_data,
             ta_t const &time_axis,
-            core::utctime interpolation_start) {
+            core::utctime interpolation_start,core::utctime interpolation_end=core::no_utctime) {
             tsv_t forecasts_unpacked;
             vector<double> weights_unpacked;
             for (size_t i = 0; i<forecast_sets.size(); ++i) {
@@ -283,7 +283,7 @@ namespace shyft {
 
             return quantile_mapping<tsa_t>(historical_data, forecasts_unpacked,
                 historical_indices_handle.get(), forecast_indices, weights_unpacked,
-                time_axis, interpolation_start);
+                time_axis, interpolation_start,interpolation_end);
         }
     }
 }

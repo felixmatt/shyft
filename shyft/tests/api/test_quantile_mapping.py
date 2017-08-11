@@ -55,9 +55,9 @@ class QuantileMapping(unittest.TestCase):
         # need one more exposed from core here: auto historical_order = qm::quantile_index<tsa_t>(historical_data, ta);
 
         interpolation_start = no_utctime
-
+        interpolation_end = no_utctime
         # Act
-        result = quantile_map_forecast(forecast_sets, weight_sets, historical_data, ta, interpolation_start)
+        result = quantile_map_forecast(forecast_sets, weight_sets, historical_data, ta, interpolation_start,interpolation_end)
 
         self.assertIsNotNone(result)
         self.assertEqual(len(result),num_historical_data)
