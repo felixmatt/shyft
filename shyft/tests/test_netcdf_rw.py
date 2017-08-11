@@ -617,8 +617,8 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         ta = TimeAxis(utc.time(2016, 1, 1) + deltahours(1), deltahours(1), 23)
         data = np.arange(10, 10 + ta.size(), dtype=np.float64)
         data[4] = np.nan
-        data[6] = np.inf
-        data[8] = -np.inf
+        data[6] = np.nan  # np.inf, but trouble getting inf trough all version of numpy/netcdf
+        data[8] = np.nan  # -np.inf, --"--
         ts = TimeSeries(ta, dv.from_numpy(data), point_fx=point_fx.POINT_AVERAGE_VALUE)
         # save the first batch
         t_ds.append_ts_data(ts)
@@ -633,7 +633,10 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         data = np.array([0, 10, 11, 12, 13, np.nan, 15,
                          # np.inf,
                          np.nan,  # TODO: figure out how to unmask restoring 'used' mask-values
-                         17, -np.inf, 19, 20, 21, 22, 23, 24, 25, 26,
+                         17,
+                         #-np.inf,
+                         np.nan,
+                         19, 20, 21, 22, 23, 24, 25, 26,
                          27, 28, 29, 30, 31, 32, 1])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
         ts_exp = TimeSeries(ta, dv.from_numpy(data))
