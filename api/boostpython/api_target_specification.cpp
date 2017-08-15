@@ -37,6 +37,7 @@ namespace expose {
     /** custom constructors needed for target-spec, to accept any type of ts
     * and at the same time represent the same efficient core-type at the
     * c++ impl. level
+    * TODO: could we simply change the type of target_ts to apoint_ts and accept it as ok performance?
     * \ref boost::python make_constructor
     */
     struct target_specification_ext {
@@ -58,7 +59,10 @@ namespace expose {
         {
             return  new model_calibration::target_specification<target_ts_t>(ts,cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
-
+        static void ensure_time_axis_requirements(const shyft::api::gta_t& gta) {
+            if(gta.gt != time_axis::generic_dt::FIXED)
+                throw runtime_error("the supplied target specification ts time_axis must be a trivial fixed interval timeaxis");
+        }
         static TargetSpecificationPts* acreate_cids(
                const shyft::api::apoint_ts& ats,
                vector<int> cids,
@@ -70,9 +74,7 @@ namespace expose {
                model_calibration::target_property_type catchment_property_ = model_calibration::DISCHARGE,
                std::string uid = "")
         {
-            if(ats.time_axis().gt != time_axis::generic_dt::FIXED)
-                throw runtime_error("the supplied target specification ts time_axis must be a trivial fixed interval timeaxis");
-
+            ensure_time_axis_requirements(ats.time_axis());
             return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
 
@@ -83,6 +85,16 @@ namespace expose {
                model_calibration::target_spec_calc_type calc_mode )
         {
             return  create_cids(ts,cids,scale_factor,calc_mode);
+        }
+
+        static TargetSpecificationPts* acreate_cids2(
+               const shyft::api::apoint_ts& ats,
+               vector<int> cids,
+               double scale_factor,
+               model_calibration::target_spec_calc_type calc_mode )
+        {
+            ensure_time_axis_requirements(ats.time_axis());
+            return  create_cids(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode);
         }
 
         static TargetSpecificationPts* create_rid(
@@ -97,6 +109,21 @@ namespace expose {
         {
             return  new model_calibration::target_specification<target_ts_t>(ts,river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
+        static TargetSpecificationPts* acreate_rid(
+               const shyft::api::apoint_ts& ats,
+               int river_id,
+               double scale_factor,
+               model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
+               double s_r = 1.0,
+               double s_a = 1.0,
+               double s_b = 1.0,
+               std::string uid = "")
+        {
+            ensure_time_axis_requirements(ats.time_axis());
+            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
+        }
+
+
     };
 
 
@@ -139,7 +166,7 @@ namespace expose {
                  doc_intro("Construct an empty class")
                  )
             .def("__init__",make_constructor(&target_specification_ext::create_cids),
-                //args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
+                //TODO: could we pass in this ? args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TsFixed","time-series containing the target time-series")
@@ -175,7 +202,41 @@ namespace expose {
                 doc_parameter("scale_factor","float","the weight of this target-specification")
                 doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
              )
-            .def("__init__",make_constructor(&target_specification_ext::create_rid))
+            .def("__init__",make_constructor(&target_specification_ext::acreate_cids2),
+                //args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
+                doc_intro("construct a target specification filled in with supplied parameters")
+                doc_parameters()
+                doc_parameter("ts","TimeSeries","time-series containing the target time-series, note the time-axis needs to be fixed_dt!")
+                doc_parameter("cids","IntVector","A list of catchment id's(cids) that together adds up into same as the target-ts")
+                doc_parameter("scale_factor","float","the weight of this target-specification")
+                doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
+             )
+
+
+            .def("__init__",make_constructor(&target_specification_ext::create_rid),
+                doc_intro("construct a target specification filled in with supplied parameters")
+                doc_parameters()
+                doc_parameter("ts","TsFixed","time-series containing the target time-series")
+                doc_parameter("rid","int","A river-id identifying the point of flow in the river-network")
+                doc_parameter("scale_factor","float","the weight of this target-specification")
+                doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
+                doc_parameter("s_r","float","KG scalefactor for correlation")
+                doc_parameter("s_a","float","KG scalefactor for alpha(variance)")
+                doc_parameter("s_b","float","KG scalefactor for beta(bias)")
+                doc_parameter("uid","str","user specified string/id to help integration efforts")
+            )
+            .def("__init__",make_constructor(&target_specification_ext::acreate_rid),
+                doc_intro("construct a target specification filled in with supplied parameters")
+                doc_parameters()
+                doc_parameter("ts","TimeSeries","time-series containing the target time-series, note time-axis required to be fixed-dt type")
+                doc_parameter("rid","int","A river-id identifying the point of flow in the river-network")
+                doc_parameter("scale_factor","float","the weight of this target-specification")
+                doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
+                doc_parameter("s_r","float","KG scalefactor for correlation")
+                doc_parameter("s_a","float","KG scalefactor for alpha(variance)")
+                doc_parameter("s_b","float","KG scalefactor for beta(bias)")
+                doc_parameter("uid","str","user specified string/id to help integration efforts")
+             )
 
 			/*Wanted! .def(init<shyft::api::apoint_ts, vector<int>, double,
 				optional<model_calibration::target_spec_calc_type, double, double, double, model_calibration::catchment_property_type>>(

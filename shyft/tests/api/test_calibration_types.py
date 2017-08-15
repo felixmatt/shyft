@@ -291,6 +291,30 @@ class ShyftApi(unittest.TestCase):
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # make sure the ts passed onto target spec, is a copy
         self.assertAlmostEqual(tsa.value(1), 3.0)  # and that we really did change the source
 
+    def test_create_target_spec_from_std_time_series(self):
+        """
+        Verify we can create target-spec giving ordinary ts,
+        and that passing a non-fixed time-axis raises exception
+
+        """
+        cal=api.Calendar()
+        ta=api.TimeAxis(cal.time(2017,1,1),api.deltahours(1), 24)
+        ts=api.TimeSeries(ta,fill_value=3.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        cids = api.IntVector([0, 2, 3])
+        t0 = api.TargetSpecificationPts(ts, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,'test_uid')
+        self.assertAlmostEqual(t0.ts.value(0),ts.value(0))
+        rid = 0
+        t1 = api.TargetSpecificationPts(ts, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0,'test_uid')
+        self.assertAlmostEqual(t1.ts.value(0),ts.value(0))
+        tax = api.TimeAxis(api.UtcTimeVector.from_numpy(ta.time_points[:-1]),ta.total_period().end)
+        tsx = api.TimeSeries(tax,fill_value=2.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        try:
+            tx = api.TargetSpecificationPts(tsx, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, 'test_uid')
+            self.assertTrue(False,"Expected exception here")
+        except RuntimeError as re:
+            pass
+
+
     def test_IntVector(self):
         v1 = api.IntVector()  # empy
         v2 = api.IntVector([i for i in range(10)])  # by list
