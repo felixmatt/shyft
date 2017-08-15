@@ -142,7 +142,7 @@ namespace expose {
             .value("CELL_CHARGE",model_calibration::CELL_CHARGE)
             .export_values()
             ;
-
+        using  pyarg=boost::python::arg;
         class_<TargetSpecificationPts>("TargetSpecificationPts",
             "To guide the model calibration, we have a goal-function that we try to minimize\n"
             "This class contains the needed specification of this goal-function so that we can\n"
@@ -165,8 +165,11 @@ namespace expose {
             .def("__init__",make_constructor(&target_specification_ext::create_default),
                  doc_intro("Construct an empty class")
                  )
-            .def("__init__",make_constructor(&target_specification_ext::create_cids),
-                //TODO: could we pass in this ? args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
+            .def("__init__",make_constructor(&target_specification_ext::create_cids,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("cids"),pyarg("scale_factor"),pyarg("calc_mode"),
+                 pyarg("s_r"),pyarg("s_a"),pyarg("s_b"),pyarg("catchment_property"),pyarg("uid"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TsFixed","time-series containing the target time-series")
@@ -179,7 +182,11 @@ namespace expose {
                 doc_parameter("catchment_property","CatchmentPropertyType","what to extract from catchment(DISCHARGE|SNOW_COVERED_AREA|SNOW_WATER_EQUIVALENT|ROUTED_DISCHARGE|CELL_CHARGE)")
                 doc_parameter("uid","str","user specified string/id to help integration efforts")
              )
-            .def("__init__",make_constructor(&target_specification_ext::acreate_cids),
+            .def("__init__",make_constructor(&target_specification_ext::acreate_cids,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("cids"),pyarg("scale_factor"),pyarg("calc_mode"),
+                 pyarg("s_r"),pyarg("s_a"),pyarg("s_b"),pyarg("catchment_property"),pyarg("uid"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TimeSeries","time-series containing the target time-series, note that the time-axis of this ts must be a fixed-interval type")
@@ -193,8 +200,10 @@ namespace expose {
                 doc_parameter("uid","str","user specified string/id to help integration efforts")
                  )
 
-            .def("__init__",make_constructor(&target_specification_ext::create_cids2),
-                //args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
+            .def("__init__",make_constructor(&target_specification_ext::create_cids2,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("cids"),pyarg("scale_factor"),pyarg("calc_mode"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TsFixed","time-series containing the target time-series")
@@ -202,8 +211,10 @@ namespace expose {
                 doc_parameter("scale_factor","float","the weight of this target-specification")
                 doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
              )
-            .def("__init__",make_constructor(&target_specification_ext::acreate_cids2),
-                //args("ts","cids","scale_factor","calc_mode","s_r","s_a","s_b","catchment_property","uid"),
+            .def("__init__",make_constructor(&target_specification_ext::acreate_cids2,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("cids"),pyarg("scale_factor"),pyarg("calc_mode"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TimeSeries","time-series containing the target time-series, note the time-axis needs to be fixed_dt!")
@@ -213,7 +224,11 @@ namespace expose {
              )
 
 
-            .def("__init__",make_constructor(&target_specification_ext::create_rid),
+            .def("__init__",make_constructor(&target_specification_ext::create_rid,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("rid"),pyarg("scale_factor"),pyarg("calc_mode"),
+                 pyarg("s_r"),pyarg("s_a"),pyarg("s_b"),pyarg("uid"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TsFixed","time-series containing the target time-series")
@@ -225,7 +240,11 @@ namespace expose {
                 doc_parameter("s_b","float","KG scalefactor for beta(bias)")
                 doc_parameter("uid","str","user specified string/id to help integration efforts")
             )
-            .def("__init__",make_constructor(&target_specification_ext::acreate_rid),
+            .def("__init__",make_constructor(&target_specification_ext::acreate_rid,
+                default_call_policies(),
+                (pyarg("ts"),pyarg("rid"),pyarg("scale_factor"),pyarg("calc_mode"),
+                 pyarg("s_r"),pyarg("s_a"),pyarg("s_b"),pyarg("uid"))
+                ),
                 doc_intro("construct a target specification filled in with supplied parameters")
                 doc_parameters()
                 doc_parameter("ts","TimeSeries","time-series containing the target time-series, note time-axis required to be fixed-dt type")
@@ -238,10 +257,6 @@ namespace expose {
                 doc_parameter("uid","str","user specified string/id to help integration efforts")
              )
 
-			/*Wanted! .def(init<shyft::api::apoint_ts, vector<int>, double,
-				optional<model_calibration::target_spec_calc_type, double, double, double, model_calibration::catchment_property_type>>(
-					args("ts", "cids", "scale_factor", "calc_mode", "s_r", "s_a", "s_b", "catchment_property"), "constructs a complete target specification, using a Timeseries as target ts")
-			)*/
 			.def_readwrite("scale_factor", &TargetSpecificationPts::scale_factor, "the scale factor to be used when considering multiple target_specifications")
             .def_readwrite("calc_mode",&TargetSpecificationPts::calc_mode,"*NASH_SUTCLIFFE, KLING_GUPTA")
             .def_readwrite("catchment_property",&TargetSpecificationPts::catchment_property,"*DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT")
