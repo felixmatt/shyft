@@ -228,19 +228,28 @@ namespace shyft {
         *      value already in pri_tsv and the corresponding quantile-mapped
         *      value in fc_tsv. If this parameter is set to
         *      core::no_utctime, interpolation will not take place.
+        * \param interpolation_end As interpolation_start, but denotes the end
+        *      of the interpolation period.
+        * \param interpolated_quantiles Whether to interpolate between forecast
+        *      quantile values or use the quantile values that are less than or
+        *      equal to the current quantile (default) when mapping the forecast
+        *      observations to the priors. Note that this interpolation is
+        *      something else than what is referred to wrt the
+        *      interpolation_start and interpolation_end.
         * \return tsv_t Containing the quantile mapped values at the times
         *      indicated by time_axis, and interpolated after
         *      interpolation_start.
         **/
         template <class tsa_t, class tsv_t, class ta_t>
         tsv_t quantile_mapping(tsv_t const &pri_tsv, tsv_t const &fc_tsv,
-            vector<vector<int>> const &pri_idx_v,
-            vector<vector<int>> const &fc_idx_v,
-            vector<double> const &fc_weights,
-            ta_t const &time_axis,
-            core::utctime const &interpolation_start,
-            core::utctime const interpolation_end = core::no_utctime
-        ) {
+                vector<vector<int>> const &pri_idx_v,
+                vector<vector<int>> const &fc_idx_v,
+                vector<double> const &fc_weights,
+                ta_t const &time_axis,
+                core::utctime const &interpolation_start,
+                core::utctime const interpolation_end = core::no_utctime,
+                bool interpolated_quantiles = false) {
+
             vector<tsa_t> pri_accessor_vec;
             pri_accessor_vec.reserve(pri_tsv.size());
             for (const auto& ts : pri_tsv)
@@ -283,7 +292,12 @@ namespace shyft {
                 wvo_fc.t_ix = t;
                 size_t num_pri_cases = pri_idx_v[t].size();
                 if (wvo_fc.size() > 0 && (!core::is_valid(interpolation_period.end) || time_axis.time(t)<interpolation_period.end)) {
-                    vector<double> quantile_vals = compute_weighted_quantiles(num_pri_cases, wvo_fc);
+                    vector<double> quantile_vals;
+                    if (interpolated_quantiles) {
+                        quantile_vals = compute_interp_weighted_quantiles(num_pri_cases, wvo_fc);
+                    } else {
+                        quantile_vals = compute_weighted_quantiles(num_pri_cases, wvo_fc);
+                    }
                     if ( (interpolation_period.contains(time_axis.time(t)) ||
                             interpolation_period.end == time_axis.time(t))) {
                         core::utctime start = interpolation_period.start;
@@ -317,13 +331,21 @@ namespace shyft {
         * \param time_axis the time-axis that we would like the resulting time-series to be mapped into
         * \param interpolation_start the time within the forecast period where the interpolation period should start
         * \param interpolation_end   the time within the forecast period where the interpolation period should end, default last fc
+        * \param interpolated_quantiles Whether to interpolate between forecast
+        *      quantile values or use the quantile values that are less than or
+        *      equal to the current quantile (default) when mapping the forecast
+        *      observations to the priors. Note that this interpolation is
+        *      something else than what is referred to wrt the
+        *      interpolation_start and interpolation_end.
+
         * \return a time-series vector with the resulting quantile-mapped time-series
         */
         template <class tsa_t, class tsv_t, class ta_t>
         tsv_t quantile_map_forecast(vector<tsv_t> const &forecast_sets,
             vector<double> const &set_weights, tsv_t const &historical_data,
             ta_t const &time_axis,
-            core::utctime interpolation_start,core::utctime interpolation_end=core::no_utctime) {
+            core::utctime interpolation_start,core::utctime interpolation_end=core::no_utctime,
+            bool interpolated_quantiles=false) {
             tsv_t forecasts_unpacked;
             vector<double> weights_unpacked;
             for (size_t i = 0; i<forecast_sets.size(); ++i) {
@@ -340,7 +362,8 @@ namespace shyft {
 
             return quantile_mapping<tsa_t>(historical_data, forecasts_unpacked,
                 historical_indices_handle.get(), forecast_indices, weights_unpacked,
-                time_axis, interpolation_start,interpolation_end);
+                time_axis, interpolation_start,interpolation_end,
+                interpolated_quantiles);
         }
     }
 }
