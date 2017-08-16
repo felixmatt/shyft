@@ -85,6 +85,76 @@ namespace shyft {
             return q;
         }
 
+
+        /** \brief compute interpolated quantile-values based on weigh_value ordered (wvo) items
+        *
+        *
+        * \note The requirement to the wvo_accessor
+        *  (1) sum weights == 1.0
+        *  (2) weight(i), value(i) are already ordered by value asc
+        *   are the callers responsibility
+        *   no checks/asserts are done
+        *
+        *  CONSIDER: we might want to rework the output of this algorithm
+        *        so that it streams/put data directly into the
+        *        target-time-series (instead of building a vector
+        *        and then spread that across time-series)
+        *
+        *  The difference between this function and compute_weighted_quantiles
+        *  is that this function assigns a value to each desired quantile that
+        *  is the interpolated value between the two closest input quantiles,
+        *  while compute_weighted_quantiles assigns a value to each desired
+        *  quantile that is just the value of the input quantile that is less
+        *  than or equal to the desired quantile. (This function treats the edge
+        *  cases similarly - i.e. whenever the desired quantile is lower than
+        *  half of the first input quantile or greater than the last half of
+        *  the last input quantile, the value assigned is the first and last
+        *  input quantile values, respectively, and no interpolation is
+        *  performed).
+        *
+        * \tparam WVO Weight Value Ordered accessor, see also wvo_accessor
+        *  .size() -> number of weight,value items
+        *  .value(i)-> double the i'th value
+        *  .weight(i)-> double the i'th weight
+        * \param n_q number of quantiles,>1, evenly distributed over 0..1.0
+        * \param items the weighted items, weight,value, ordered asc value by i'th index,
+        *        assuming that sum weights = 1.0
+        * \return vector<double> of size n_q, where the i'th value is the i'th computed quantile
+        */
+        template <class WVO>
+        vector<double> compute_interp_weighted_quantiles(size_t n_q, WVO const& wv) {
+            const double q_step = 1.0 / (n_q - 1); // iteration is 0-based..
+            vector<double> q; q.reserve(n_q);
+            size_t j = -1;
+            double q_j = 0.0;
+            double w_j = 0;
+            double width = 0;
+            for (size_t i = 0; i< n_q; ++i) {
+                double q_i = q_step * i;
+                while (q_j <= q_i && j + 1 != wv.size()) {
+                    width = 0.5 * w_j;
+                    w_j = wv.weight(++j);
+                    width += 0.5 * w_j;
+                    q_j += width;
+                }
+                // Calculate interpolation
+                double v_j;
+
+                if (j == 0 || (j + 1 == wv.size() && q_i >= q_j)) {
+                    // Flat values beyond interpolation range
+                    v_j = wv.value(j);
+                } else {
+                    double interp_start = wv.value(j-1);
+                    double interp_end = wv.value(j);
+                    double inclination = (interp_end - interp_start) / width;
+                    double offset = q_j - width;
+                    v_j = interp_start + inclination * (q_i - offset);
+                }
+                q.emplace_back(v_j);
+            }
+            return q;
+        }
+
         /**\brief a Weight Value Ordered collection for ts-vector type
         *
         * This type is a stack-context only, light weight wrapper,

@@ -113,8 +113,45 @@ TEST_SUITE("qm") {
         }
     }
 
-    TEST_CASE("quantile_mapping") {
+    TEST_CASE("interpolated_weighted_quantiles") {
+        // Arrange
+        const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
+        size_t n_quantiles = 5;
+        core::calendar utc;
+        ta_t ta(utc.time(2017, 1, 1, 0, 0, 0), core::deltahours(24), 2);
+        //-----------------
+        vector<double> weights;//weight of each forecast below,two with equal weights
+        tsv_t fcv;// forecast-vector, there are 4 of them in this case, with two values each
+        weights.push_back(5.0); fcv.emplace_back(ta, vector<double>{14.2, 4.1}, fx_avg);
+        weights.push_back(2.0); fcv.emplace_back(ta, vector<double>{13.0, 2.9}, fx_avg);
+        weights.push_back(2.0); fcv.emplace_back(ta, vector<double>{15.8, 20.4}, fx_avg);
+        weights.push_back(1.0); fcv.emplace_back(ta, vector<double>{ 9.1, 11.2}, fx_avg);
 
+        auto q_order = qm::quantile_index<tsa_t>(fcv, ta); // here we use already tested function to get ordering, all steps
+        qm::wvo_accessor<ts_t> wvo(q_order, weights, fcv);// stash it into wvo_accessor, so we are ready to go
+
+        // Act
+        vector<double> q0 = qm::compute_interp_weighted_quantiles(n_quantiles, wvo);
+        wvo.t_ix++; // increment to next time-step
+        vector<double> q1 = qm::compute_interp_weighted_quantiles(n_quantiles, wvo);
+
+        // Assert
+        FAST_REQUIRE_EQ(q0.size(), n_quantiles);
+        FAST_CHECK_EQ(q0[0], 9.1);
+        TS_ASSERT_DELTA(q0[1], 13.171428571428571, 1e-15);
+        TS_ASSERT_DELTA(q0[2], 14.028571428571428, 1e-15);
+        TS_ASSERT_DELTA(q0[3], 15.114285714285714, 1e-15);
+        FAST_CHECK_EQ(q0[4], 15.8);
+
+        FAST_REQUIRE_EQ(q1.size(), n_quantiles);
+        FAST_CHECK_EQ(q1[0], 2.9);
+        TS_ASSERT_DELTA(q1[1], 3.4142857142857141, 1e-15);
+        TS_ASSERT_DELTA(q1[2], 5.2833333333333332, 1e-15);
+        TS_ASSERT_DELTA(q1[3], 11.2, 1e-15);
+        FAST_CHECK_EQ(q1[4], 20.4);
+    }
+
+    TEST_CASE("quantile_mapping") {
         const auto fx_avg = time_series::ts_point_fx::POINT_AVERAGE_VALUE;
         // Arrange
         core::calendar utc;
