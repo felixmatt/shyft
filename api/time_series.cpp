@@ -524,7 +524,8 @@ namespace shyft{
                                          ats_vector const& historical_data,
                                          gta_t const&time_axis,
                                          utctime interpolation_start,
-                                         utctime interpolation_end
+                                         utctime interpolation_end,
+                                         bool interpolated_quantiles
         ) {
             // since this is scripting access, verify all parameters here
             if(forecast_sets.size()<1)
@@ -549,7 +550,7 @@ namespace shyft{
                     throw runtime_error("interpolation_end " + ts + " is not within time_axis period " + ps);
                 }
             }
-            return qm::quantile_map_forecast<time_series::average_accessor<apoint_ts,gta_t> >(forecast_sets,set_weights,historical_data,time_axis,interpolation_start,interpolation_end);
+            return qm::quantile_map_forecast<time_series::average_accessor<apoint_ts,gta_t> >(forecast_sets,set_weights,historical_data,time_axis,interpolation_start,interpolation_end, interpolated_quantiles);
 
         }
 

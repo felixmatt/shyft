@@ -18,6 +18,10 @@ namespace expose {
     shyft::api::ats_vector quantile_map_forecast_6(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end) {
         return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end);
     }
+    shyft::api::ats_vector quantile_map_forecast_7(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end, bool interpolated_quantiles) {
+        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end, interpolated_quantiles);
+    }
+
 
     static void expose_ats_vector() {
         using namespace shyft::api;
@@ -218,6 +222,7 @@ namespace expose {
                 doc_parameter("time_axis", "TimeAxis", "the time-axis that the resulting time-series are mapped into")
                 doc_parameter("interpolation_start", "int", "time where the historical to forecast interpolation should start, 1970 utc seconds since epoch")
                 doc_parameter("interpolation_end", "int", "time where the interpolation should end, if no_utctime, use end of forecast-set")
+                doc_parameter("interpolated_quantiles", "bool", "whether the quantile values should be interpolated or assigned the values lower than or equal to the current quantile")
                 doc_returns("qm_forecast", "TsVector", "quantile mapped forecast with the requested time-axis")
                 ;
 
@@ -227,6 +232,10 @@ namespace expose {
                 );
             def("quantile_map_forecast", quantile_map_forecast_6,
                 args("forecast_sets", "set_weights", "historical_data", "time_axis", "interpolation_start", "interpolation_end"),
+                qm_doc
+            );
+            def("quantile_map_forecast", quantile_map_forecast_7,
+                args("forecast_sets", "set_weights", "historical_data", "time_axis", "interpolation_start", "interpolation_end", "interpolated_quantiles"),
                 qm_doc
             );
 
