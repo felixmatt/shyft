@@ -44,6 +44,8 @@ before_install:
   - conda create -n shyft_env  pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj 
   - source activate shyft_env
   - ln -s $HOME/miniconda/envs/shyft_env/include/python3.5m $HOME/miniconda/envs/shyft_env/include/python3.5
+  # the conda library is out-dated, causes missing LIBGCC error on load, easy fix to remove it and use fresh from system
+  - rm -f $HOME/miniconda/envs/shyft_env/lib/libstdc++*
   - python -V
 
   # The data repository dependency
