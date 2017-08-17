@@ -64,7 +64,7 @@ before_script:
 script:
   - export CXX="g++-6" CC="gcc-6"
   - gcc --version
-  - g++-5 --version
+  - g++-6 --version
   - make -j 3 VERBOSE=1   CXX="g++-6" CC="gcc-6" # 3 paralel compiler processes can take up to 5 GB RAM!
   - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
   - export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3.0.0:/usr/lib/x86_64-linux-gnu/libgfortran.so.3 
