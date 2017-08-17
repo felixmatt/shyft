@@ -47,7 +47,7 @@ class TimeSeriesMetaInfoError(Exception):
 class TimeSeriesMetaInfo:
     """
     Contain enough information to create a netcdf4 cf-compliant file
-    that can be ready bey shyft cf_geo_ts_repository
+    that can be ready by shyft cf_geo_ts_repository
     """
     shyft_name_to_cf_info = {
         'precipitation': CFInfo('convective_precipitation_rate', 'mm/h'),
@@ -65,7 +65,9 @@ class TimeSeriesMetaInfo:
                 list(self.shyft_name_to_cf_info.keys())))
             raise TimeSeriesMetaInfoError(msg)
 
-        self.variable_name = name  # shyft  (precipitiation|temperature|radiation|wind_speed|relative_humidity)
+        self.variable_name = name  if name != 'radiation' else 'global_radiation'
+        self.shyft_name = name
+        # shyft  (precipitiation|temperature|radiation|wind_speed|relative_humidity)
         self.timeseries_id = ts_id  # like /observed/temperature/<location>/ or any
         self.long_name = long_name  # descriptive name like measured temperature by sensor xyz
         self.x = pos_x
@@ -78,11 +80,11 @@ class TimeSeriesMetaInfo:
 
     @property
     def units(self):
-        return TimeSeriesMetaInfo.shyft_name_to_cf_info[self.variable_name].units
+        return TimeSeriesMetaInfo.shyft_name_to_cf_info[self.shyft_name].units
 
     @property
     def standard_name(self):
-        return TimeSeriesMetaInfo.shyft_name_to_cf_info[self.variable_name].standard_name
+        return TimeSeriesMetaInfo.shyft_name_to_cf_info[self.shyft_name].standard_name
 
 
 class TimeSeriesStoreError(Exception):
