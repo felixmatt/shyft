@@ -3,7 +3,7 @@ import traceback
 import warnings
 import functools
 
-from ._api import *
+from shyft.api._api import *
 import numpy as np
 from math import sqrt
 
