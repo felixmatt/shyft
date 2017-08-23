@@ -73,6 +73,65 @@ TEST_CASE("test_mass_balance_at_snowpack_buildup") {
 
 }
 
+TEST_CASE("test_snow_distr_at_snowpack_buildup") {
+    vector<double> s = { 1.0, 1.0, 1.0, 0.0, 0.0 };//
+    vector<double> a = { 0.0, 0.25, 0.5, 0.75, 1.0 };
+    parameter p(s, a);
+    state state;
+    response r;
+
+    utctime t0 = 0;
+    utctime t1 = 3600; // One hour
+    double precipitation = 0.15;
+    double temperature = -1.0;
+    double sca = 0.15;
+    double swe = 10.0;
+    state.swe = swe;
+    state.sca = sca;
+    SnowModel snow_model(p, state);
+    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    TS_ASSERT_DELTA(state.sca,0.75,1e-8);
+}
+TEST_CASE("test_snow_uniform_distr_at_snowpack_buildup") {
+    vector<double> s = { 1.0, 1.0, 1.0, 1.0, 1.0 };//
+    vector<double> a = { 0.0, 0.25, 0.5, 0.75, 1.0 };
+    parameter p(s, a);
+    state state;
+    response r;
+
+    utctime t0 = 0;
+    utctime t1 = 3600; // One hour
+    double precipitation = 0.15;
+    double temperature = -1.0;
+    double sca = 0.15;
+    double swe = 10.0;
+    state.swe = swe;
+    state.sca = sca;
+    SnowModel snow_model(p, state);
+    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    TS_ASSERT_DELTA(state.sca,1.0, 1e-8);
+}
+TEST_CASE("test_snow_skewed_distr_at_snowpack_buildup") {
+    vector<double> s = { 1.0, 0.0, 0.0, 0.0, 0.0 };//
+    vector<double> a = { 0.0, 0.25, 0.5, 0.75, 1.0 };
+    parameter p(s, a);
+    state state;
+    response r;
+
+    utctime t0 = 0;
+    utctime t1 = 3600; // One hour
+    double precipitation = 0.15;
+    double temperature = -1.0;
+    double sca = 0.15;
+    double swe = 10.0;
+    state.swe = swe;
+    state.sca = sca;
+    SnowModel snow_model(p, state);
+    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    TS_ASSERT_DELTA(state.sca, 0.25, 1e-8);
+}
+
+
 TEST_CASE("test_mass_balance_rain_no_snow") {
     vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0};
     vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};

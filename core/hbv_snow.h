@@ -241,13 +241,12 @@ namespace shyft {
                         }
 
                         for (size_t i = 0; i < I_n; ++i) sp[i] += snow*sd[i];
-
+                        sca = I[1]; //  at least one bin filled after snow-fall
                         for (size_t i = I_n - 2; i > 0; --i)
                             if (sd[i] > 0.0) {
-                                sca = sd[i + 1];
+                                sca = I[i + 1];
                                 break;
-                            } else
-                                sca = sd[1];
+                            }
                     }
 
                     double potmelt = p.cx*step_in_days*(temp - p.ts);
