@@ -158,6 +158,16 @@ void shyft::api::abin_op_ts_scalar::serialize(Archive & ar, const unsigned int v
     ;
 }
 
+template<class Archive>
+void shyft::api::abs_ts::serialize(Archive & ar, const unsigned int version) {
+    ar
+        & make_nvp("ipoint_ts", base_object<shyft::api::ipoint_ts>(*this))
+        & make_nvp("ts", ts)
+//        & make_nvp("ta", ta)
+//        & make_nvp("fx_policy", fx_policy)
+//        & make_nvp("bound", bound)
+        ;
+}
 
 template<class Archive>
 void shyft::api::apoint_ts::serialize(Archive & ar, const unsigned int version) {
@@ -192,6 +202,7 @@ x_serialize_implement(shyft::api::aref_ts);
 x_serialize_implement(shyft::api::average_ts);
 x_serialize_implement(shyft::api::integral_ts);
 x_serialize_implement(shyft::api::accumulate_ts);
+x_serialize_implement(shyft::api::abs_ts);
 x_serialize_implement(shyft::api::time_shift_ts);
 x_serialize_implement(shyft::api::periodic_ts);
 x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);
@@ -221,6 +232,7 @@ x_arch(shyft::api::aref_ts);
 x_arch(shyft::api::average_ts);
 x_arch(shyft::api::integral_ts);
 x_arch(shyft::api::accumulate_ts);
+x_arch(shyft::api::abs_ts);
 x_arch(shyft::api::time_shift_ts);
 x_arch(shyft::api::periodic_ts);
 x_arch(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);

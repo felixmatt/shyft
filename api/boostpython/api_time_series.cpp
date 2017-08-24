@@ -76,6 +76,11 @@ namespace expose {
                  doc_parameter("indexes","IntVector","the indicies to pick out from self, if indexes is empty, then all is returned")
                  doc_returns("slice","TsVector","a new TsVector, with content according to indexes specified")
             )
+            .def("abs", &ats_vector::abs,
+                doc_intro("create a new ts-vector, with all members equal to abs(self")
+                doc_returns("tsv", "TsVector", "a new TsVector expression, that will provide the abs-values of self.values")
+            )
+
             .def("average", &ats_vector::average, args("ta"),
                 doc_intro("create a new vector of ts that is the true average of self")
                 doc_intro("over the specified time-axis ta.")
@@ -389,7 +394,10 @@ namespace expose {
 
 			.def(-self)
             .def(operator!(self))
-
+            .def("abs", &shyft::api::apoint_ts::abs,
+                doc_intro("create a new ts, abs(self")
+                doc_returns("ts", "TimeSeries", "a new time-series expression, that will provide the abs-values of self.values")
+            )
 			.def("average", &shyft::api::apoint_ts::average, args("ta"),
                 doc_intro("create a new ts that is the true average of self")
                 doc_intro("over the specified time-axis ta.")

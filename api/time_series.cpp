@@ -276,7 +276,6 @@ namespace shyft{
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
 
-
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& tsv1,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
             auto rp= shyft::time_series::calculate_percentiles(ta,deflate_ts_vector<gts_t>(tsv1),percentile_list);
@@ -342,6 +341,10 @@ namespace shyft{
 
         apoint_ts time_shift(const apoint_ts& ts, utctimespan dt) {
             return apoint_ts( std::make_shared<shyft::api::time_shift_ts>(ts,dt));
+        }
+
+        apoint_ts apoint_ts::abs() const {
+            return apoint_ts(std::make_shared<shyft::api::abs_ts>(ts));
         }
 
 		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {

@@ -1,5 +1,6 @@
 ﻿from shyft import api
 import numpy as np
+import math
 from numpy.testing import assert_array_almost_equal
 import unittest
 
@@ -486,6 +487,26 @@ class TimeSeries(unittest.TestCase):
         except RuntimeError as re:
             pass
 
+    def test_abs(self):
+        c = api.Calendar()
+        t0 = c.time(2016, 1, 1)
+        dt = api.deltahours(1)
+        n = 4
+        v =  api.DoubleVector([1.0, -1.5, float("nan"),3.0])
+        ta = api.TimeAxisFixedDeltaT(t0, dt, n)
+        ts0 = api.TimeSeries(ta=ta, values=v, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        ts1 = ts0.abs()
+        self.assertAlmostEqual(ts0.value(0),ts1.value(0), 6)
+        self.assertAlmostEqual(abs(ts0.value(1)), ts1.value(1), 6)
+        self.assertTrue(math.isnan(ts1.value(2)))
+        self.assertAlmostEqual(ts0.value(3), ts1.value(3), 6)
+        tsv0 = api.TsVector()
+        tsv0.append(ts0)
+        tsv1=tsv0.abs()
+        self.assertAlmostEqual(tsv0[0].value(0), tsv1[0].value(0), 6)
+        self.assertAlmostEqual(abs(tsv0[0].value(1)), tsv1[0].value(1), 6)
+        self.assertTrue(math.isnan(tsv1[0].value(2)))
+        self.assertAlmostEqual(tsv0[0].value(3), tsv1[0].value(3), 6)
 
     def test_ts_reference_and_bind(self):
         c = api.Calendar()

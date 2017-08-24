@@ -126,6 +126,7 @@ namespace shyft {
         struct aref_ts;// fwd api
         struct ts_bind_info;
         struct ats_vector;//fwd
+        struct abs_ts;//fwd
 
         /** \brief  apoint_ts, a value-type conceptual ts.
          *
@@ -145,6 +146,7 @@ namespace shyft {
            friend struct time_shift_ts;
            friend struct accumulate_ts;
            friend struct aglacier_melt_ts;
+           friend struct abs_ts;
             // constructors that we want to expose
             // like
 
@@ -221,7 +223,7 @@ namespace shyft {
             static apoint_ts min(const apoint_ts& a, const apoint_ts& b);
             ats_vector partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
             apoint_ts convolve_w(const std::vector<double>& w, shyft::time_series::convolve_policy conv_policy) const;
-
+            apoint_ts abs() const;
             //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
             //   we would like these to be working (exception if it's not possible,i.e. an expression)
             point get(size_t i) const {return point(time(i),value(i));}
@@ -587,6 +589,61 @@ namespace shyft {
             virtual std::vector<double> values() const {return ts->values();}
             virtual bool needs_bind() const { return ts->needs_bind();}
             virtual void do_bind() {ts->do_bind();do_deferred_bind();}
+            x_serialize_decl();
+
+        };
+
+        /** \brief abs_ts as  abs(ts)
+        *
+        * The time-axis as source, values are abs of source
+        *
+        *
+        */
+        struct abs_ts :ipoint_ts {
+            std::shared_ptr<ipoint_ts> ts;
+            gta_t ta;
+
+            abs_ts() = default;
+
+            //-- useful ct goes here
+            abs_ts(const apoint_ts& ats)
+                :ts(ats.ts) {
+                if (!ts->needs_bind())
+                    do_deferred_bind();
+
+            }
+            abs_ts(apoint_ts&& ats)
+                :ts(std::move(ats.ts)){
+                if (!ts->needs_bind())
+                    do_deferred_bind();
+            }
+            abs_ts(const std::shared_ptr<ipoint_ts> &ts)
+                :ts(ts) {
+                if (!ts->needs_bind())
+                    do_deferred_bind();
+            }
+            void do_deferred_bind() {
+                if (ta.size() == 0) {//TODO: introduce bound flag, and use that, using the ta.size() is a problem if ta *is* size 0.
+                    ta = ts->time_axis();
+                }
+            }
+            // implement ipoint_ts contract:
+            virtual ts_point_fx point_interpretation() const { return ts->point_interpretation(); }
+            virtual void set_point_interpretation(ts_point_fx point_interpretation) { ts->set_point_interpretation(point_interpretation); }
+            virtual const gta_t& time_axis() const { return ta; }
+            virtual utcperiod total_period() const { return ta.total_period(); }
+            virtual size_t index_of(utctime t) const { return ts->index_of(t); }
+            virtual size_t size() const { return ta.size(); }
+            virtual utctime time(size_t i) const { return ta.time(i); };
+            virtual double value(size_t i) const { return abs(ts->value(i)); }
+            virtual double value_at(utctime t) const { return abs(ts->value_at(t)); }
+            virtual std::vector<double> values() const { 
+                auto vv=ts->values(); 
+                for (auto &v : vv) v = abs(v);
+                return vv;
+            }
+            virtual bool needs_bind() const { return ts->needs_bind(); }
+            virtual void do_bind() { ts->do_bind(); do_deferred_bind(); }
             x_serialize_decl();
 
         };
@@ -971,7 +1028,9 @@ namespace shyft {
                     return r;
                 }
             }
-
+            ats_vector abs() const {
+                ats_vector r; r.reserve(size()); for (auto const &ts : *this) r.push_back(ts.abs()); return r;
+            }
             ats_vector average(gta_t const&ta) const {
                 ats_vector r;r.reserve(size());for(auto const &ts:*this) r.push_back(ts.average(ta)); return r;
             }
@@ -1077,3 +1136,4 @@ x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>)
 x_serialize_export_key(shyft::api::convolve_w_ts);
 x_serialize_export_key(shyft::api::apoint_ts);
 x_serialize_export_key(shyft::api::ats_vector);
+x_serialize_export_key(shyft::api::abs_ts);
