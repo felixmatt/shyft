@@ -142,7 +142,7 @@ namespace expose {
 
         static void e_generic_dt() {
             using namespace shyft::time_axis;
-
+            namespace py = boost::python;
             enum_<generic_dt::generic_type>("TimeAxisType")
             .value("FIXED",generic_dt::generic_type::FIXED)
             .value("CALENDAR",generic_dt::generic_type::CALENDAR)
@@ -215,9 +215,40 @@ namespace expose {
                 .def_readonly("fixed_dt",&generic_dt::f,"The fixed dt representation (if active)")
                 .def_readonly("calendar_dt",&generic_dt::c,"The calendar dt representation(if active)")
                 .def_readonly("point_dt",&generic_dt::p,"The point_dt representation(if active)")
+                .def("total_period", &generic_dt::total_period,
+                    doc_returns("total_period", "UtcPeriod", "the period that covers the entire time-axis")
+                )
+                .def("size", &generic_dt::size,
+                    doc_returns("n", "int", "number of periods in time-axis")
+                )
+                .def("time", &generic_dt::time, args("i"),
+                    doc_parameters()
+                    doc_parameter("i", "int", "the i'th period, 0..n-1")
+                    doc_returns("utctime", "int", "the start(utctime) of the i'th period of the time-axis")
+                )
+                .def("period", &generic_dt::period, args("i"),
+                    doc_parameters()
+                    doc_parameter("i", "int", "the i'th period, 0..n-1")
+                    doc_returns("period", "UtcPeriod", "the i'th period of the time-axis")
+                )
+                .def("index_of", &generic_dt::index_of, (py::arg("t"),py::arg("ix_hint")=string::npos),
+                    doc_parameters()
+                    doc_parameter("t", "int", "utctime in seconds 1970.01.01")
+                    doc_parameter("ix_hint","int","index-hint to make search in point-time-axis faster")
+                    doc_returns("index", "int", "the index of the time-axis period that contains t, -1 if outside range")
+                )
+                .def("open_range_index_of", &generic_dt::open_range_index_of, (py::arg("t"), py::arg("ix_hint") = string::npos),
+                    "returns the index that contains t, or is before t"
+                    doc_parameters()
+                    doc_parameter("t", "int", "utctime in seconds 1970.01.01")
+                    doc_parameter("ix_hint", "int", "index-hint to make search in point-time-axis faster")
+                    doc_returns("index", "int", "the index the time-axis period that contains t, -1 if before first period n-1, if t is after last period")
+                )
+                .def(self == self)
+                .def(self != self)
                 ;//.def("full_range",&point_dt::full_range,"returns a timeaxis that covers [-oo..+oo> ").staticmethod("full_range")
                 //.def("null_range",&point_dt::null_range,"returns a null timeaxis").staticmethod("null_range");
-            e_time_axis_std<generic_dt>(g_dt);
+            //e_time_axis_std<generic_dt>(g_dt);
             def("time_axis_extract_time_points", time_axis_extract_time_points, args("time_axis"),
                 doc_intro("Extract all time_axis.period(i).start plus time_axis.total_period().end into a UtcTimeVector")
                 doc_parameters()

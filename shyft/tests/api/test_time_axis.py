@@ -21,6 +21,15 @@ class TimeAxis(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_index_of(self):
+        self.assertEqual(self.ta.index_of(self.t),0)
+        self.assertEqual(self.ta.index_of(self.t,0), 0)
+        self.assertEqual(self.ta.index_of(self.t-3600), api.npos)
+        self.assertEqual(self.ta.open_range_index_of(self.t),0)
+        self.assertEqual(self.ta.open_range_index_of(self.t,0), 0)
+        self.assertEqual(self.ta.open_range_index_of(self.t-3600), api.npos)
+
+
     def test_create_timeaxis(self):
         self.assertEqual(self.ta.size(), self.n)
         self.assertEqual(len(self.ta), self.n)
