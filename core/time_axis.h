@@ -86,7 +86,7 @@ namespace shyft {
             }
 
             size_t index_of( utctime tx ) const {
-                if( tx < t ) return std::string::npos;
+                if( tx < t || dt == 0 ) return std::string::npos;
                 size_t r = ( tx - t ) / dt;
                 if( r < n ) return r;
                 return std::string::npos;
