@@ -6,6 +6,12 @@ import glob
 import platform
 import subprocess
 from setuptools import setup, find_packages
+bdist_class=None
+try:
+	import distutils.command.bdist_conda
+	bdist_class=distutils.command.bdist_conda.CondaDistribution
+except:
+	pass
 
 
 print('Building SHyFT')
@@ -73,19 +79,40 @@ if "Windows" in platform.platform():
         shutil.copy2(f, path.join(dest_dir, path.basename(f)))
 
 requires = ["numpy", "nose", "netcdf4", "pyyaml","six", "pyproj", "shapely" ]
-setup(
-    name='shyft',
-    version=VERSION,
-    author='Statkraft',
-    author_email='shyft@statkraft.com',
-    url='https://github.com/statkraft/shyft',
-    description='An OpenSource hydrological toolbox',
-    license='LGPL v3',
-    packages=find_packages(),
-    package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 
-        'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 
-        'tests/netcdf/*', 'lib/*.dll']},
-    entry_points={},
-    requires= requires,
-    install_requires=requires
-)
+if bdist_class:
+	setup(
+		name='shyft',
+		version=VERSION,
+		distclass=bdist_class,
+		author='Statkraft',
+		author_email='shyft@statkraft.com',
+		url='https://github.com/statkraft/shyft',
+		description='An OpenSource hydrological toolbox',
+		license='LGPL v3',
+		packages=find_packages(),
+		package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 
+			'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 
+			'tests/netcdf/*', 'lib/*.dll']},
+		entry_points={},
+		requires= requires,
+		install_requires=requires,
+		conda_import_tests=False
+	)
+else:
+	setup(
+		name='shyft',
+		version=VERSION,
+		distclass=bdist_class,
+		author='Statkraft',
+		author_email='shyft@statkraft.com',
+		url='https://github.com/statkraft/shyft',
+		description='An OpenSource hydrological toolbox',
+		license='LGPL v3',
+		packages=find_packages(),
+		package_data={'shyft': ['api/*.so', 'api/*.pyd', 'api/pt_gs_k/*.pyd', 'api/pt_gs_k/*.so', 'api/pt_hs_k/*.pyd', 
+			'api/pt_hs_k/*.so', 'api/pt_ss_k/*.pyd', 'api/pt_ss_k/*.so', 'api/hbv_stack/*.pyd', 'api/hbv_stack/*.so', 
+			'tests/netcdf/*', 'lib/*.dll']},
+		entry_points={},
+		requires= requires,
+		install_requires=requires,
+		)
