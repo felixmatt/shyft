@@ -216,38 +216,22 @@ class CFDataRepository(interfaces.GeoTsRepository):
             y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
             # Limit data
-            x_upper = x >= x_min
-            x_lower = x <= x_max
-            y_upper = y >= y_min
-            y_lower = y <= y_max
-            if sum(x_upper == x_lower) < 2:
-                if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
-                    raise CFDataRepositoryError("Bounding box longitudes don't intersect with dataset.")
-                x_upper[np.argmax(x_upper) - 1] = True
-                x_lower[np.argmin(x_lower)] = True
-            if sum(y_upper == y_lower) < 2:
-                if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
-                    raise CFDataRepositoryError("Bounding box latitudes don't intersect with dataset.")
-                y_upper[np.argmax(y_upper) - 1] = True
-                y_lower[np.argmin(y_lower)] = True
+            xy_mask = ((x <= x_max) & (x >= x_min) & (y <= y_max) & (y >= y_min))
 
-            x_inds = np.nonzero(x_upper == x_lower)[0]
-            y_inds = np.nonzero(y_upper == y_lower)[0]
-
-            # Masks
-            x_mask = x_upper == x_lower
-            y_mask = y_upper == y_lower
-            xy_mask = ((x_mask)&(y_mask))
-
-        if(list(self.selection_criteria)[0]=='unique_id'):
+        if (list(self.selection_criteria)[0] == 'unique_id'):
             xy_mask = np.array([id in self.selection_criteria['unique_id'] for id in ts_id])
-            x_inds = y_inds = np.nonzero(xy_mask)[0]
 
+        # Check if there is at least one point extaracted and raise error if there isn't
+        if not xy_mask.any():
+            raise CFDataRepositoryError("No points in dataset which satisfy selection criterion '{}'.".
+                                              format(list(self.selection_criteria)[0]))
+
+        xy_inds = np.nonzero(xy_mask)[0]
 
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, x[xy_mask], y[xy_mask])
 
-        return xx, yy, xy_mask, (x_inds, y_inds)
+        return xx, yy, xy_mask, xy_inds
 
     def _get_data_from_dataset(self, dataset, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):

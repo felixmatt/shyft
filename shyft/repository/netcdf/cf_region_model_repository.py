@@ -74,35 +74,14 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
         y_min, y_max = min(bb_proj[1]), max(bb_proj[1])
 
         # Limit data
-        x_upper = x >= x_min
-        x_lower = x <= x_max
-        y_upper = y >= y_min
-        y_lower = y <= y_max
-        if sum(x_upper == x_lower) < 2:
-            if sum(x_lower) == 0 and sum(x_upper) == len(x_upper):
-                raise CFRegionModelRepositoryError("Bounding box longitudes don't intersect with dataset.")
-            x_upper[np.argmax(x_upper) - 1] = True
-            x_lower[np.argmin(x_lower)] = True
-        if sum(y_upper == y_lower) < 2:
-            if sum(y_lower) == 0 and sum(y_upper) == len(y_upper):
-                raise CFRegionModelRepositoryError("Bounding box latitudes don't intersect with dataset.")
-            y_upper[np.argmax(y_upper) - 1] = True
-            y_lower[np.argmin(y_lower)] = True
+        xy_mask = ((x <= x_max) & (x >= x_min) & (y <= y_max) & (y >= y_min))
 
-        x_inds = np.nonzero(x_upper == x_lower)[0]
-        y_inds = np.nonzero(y_upper == y_lower)[0]
-
-        # Masks
-        x_mask = x_upper == x_lower
-        y_mask = y_upper == y_lower
-        xy_mask = ((x_mask)&(y_mask))
-        
+        xy_inds = np.nonzero(xy_mask)[0]
 
         # Transform from source coordinates to target coordinates
         xx, yy = transform(data_proj, target_proj, x, y)
 
-        #return xx, yy, (x_mask, y_mask), (x_inds, y_inds)
-        return xx, yy, xy_mask, (x_inds, y_inds)
+        return xx, yy, xy_mask, xy_inds
 
     def get_region_model(self, region_id, catchments=None):
         """
