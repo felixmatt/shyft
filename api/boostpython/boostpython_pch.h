@@ -17,7 +17,7 @@
 #include <boost/python/return_internal_reference.hpp>
 #include <boost/python/copy_const_reference.hpp>
 #include <boost/python/handle.hpp>
-#include <boost/python/numeric.hpp>
+//#include <boost/python/numeric.hpp>
 #include <boost/python/tuple.hpp>
 #include <boost/python/enum.hpp>
 #include <boost/python/operators.hpp>
