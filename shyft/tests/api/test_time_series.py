@@ -729,6 +729,134 @@ class TimeSeries(unittest.TestCase):
         except RuntimeError as re:
             pass
 
+    def test_ts_extend(self):
+        t0 = api.utctime_now()
+        dt = api.deltahours(1)
+        n = 512
+        ta_a = api.TimeAxisFixedDeltaT(t0, dt, 2*n)
+        ta_b = api.TimeAxisFixedDeltaT(t0 + n*dt, dt, 2*n)
+        ta_c = api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 2*n)
+        ta_d = api.TimeAxisFixedDeltaT(t0 + 3*n*dt, dt, 2*n)
+
+        a = api.TimeSeries(ta=ta_a, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        b = api.TimeSeries(ta=ta_b, fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        c = api.TimeSeries(ta=ta_c, fill_value=4.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        d = api.TimeSeries(ta=ta_d, fill_value=8.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        # default behavior: extend from end of a
+        ac = a.extend(c)
+
+        for i in range(2*n):  # valus from first ts
+            self.assertEqual(ac(t0 + i*dt), 1.0)
+        for i in range(2*n):  # values from extension ts
+            self.assertEqual(ac(t0 + (i + 2*n)*dt), 4.0)
+
+        # default behavior: extend from end of a, fill gap with nan
+        ad = a.extend(d)
+
+        for i in range(2*n):  # values from first
+            self.assertEqual(ad(t0 + i * dt), 1.0)
+        for i in range(n):  # gap
+            self.assertTrue(math.isnan(ad(t0 + (i + 2*n)*dt)))
+        for i in range(2*n):  # extension
+            self.assertEqual(ad(t0 + (i + 3*n)*dt), 8.0)
+
+        # split at the first value of d instead of last of c
+        cd = c.extend(d, split_policy=api.extend_split_policy.RHS_FIRST)
+
+        for i in range(n):  # first, only until the extension start
+            self.assertEqual(cd(t0 + (2*n + i)*dt), 4.0)
+        for i in range(2*n):  # extension
+            self.assertEqual(cd(t0 + (3*n + i)*dt), 8.0)
+
+        # split at a given time step, and extend the last value through the gap
+        ac = a.extend(c, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + dt*n//2),
+                      fill_policy=api.extend_fill_policy.USE_LAST)
+
+        for i in range(n//2):  # first, only until the given split value
+            self.assertEqual(ac(t0 + i*dt), 1.0)
+        for i in range(3*n//2):  # gap, uses last value before gap
+            self.assertEqual(ac(t0 + (n//2 + i)*dt), 1.0)
+        for i in range(2*n):  # extension
+            self.assertEqual(ac(t0 + (2*n + i)*dt), 4.0)
+
+        # split at the beginning of the ts to extend when the extension start before it
+        cb = c.extend(b, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + 2*n*dt))
+
+        for i in range(n):  # don't extend before
+            self.assertTrue(math.isnan(cb(t0 + (n + i)*dt)))
+        for i in range(n):  # we split at the beginning => only values from extension
+            self.assertEqual(cb(t0 + (2*n + i)*dt), 2.0)
+        for i in range(n):  # no values after extension
+            self.assertTrue(math.isnan(cb(t0 + (3*n + i)*dt)))
+
+        # extend with ts starting after the end, fill the gap with a given value
+        ad = a.extend(d, fill_policy=api.extend_fill_policy.FILL_VALUE, fill_value=5.5)
+
+        for i in range(2*n):  # first
+            self.assertEqual(ad(t0 + i*dt), 1.0)
+        for i in range(n):  # gap, filled with 5.5
+            self.assertEqual(ad(t0 + (2*n + i)*dt), 5.5)
+        for i in range(2*n):  # extension
+            self.assertEqual(ad(t0 + (3*n + i)*dt), 8.0)
+
+    def test_extend_vector_of_timeseries(self):
+        t0 = api.utctime_now()
+        dt = api.deltahours(1)
+        n = 512
+
+        tsvector = api.TsVector()
+
+        ta = api.TimeAxisFixedDeltaT(t0 + 3*n*dt, dt, 2*n)
+
+        tsvector.push_back(api.TimeSeries(
+            ta=api.TimeAxisFixedDeltaT(t0, dt, 2*n),
+            fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+        tsvector.push_back(api.TimeSeries(
+            ta=api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 2*n),
+            fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+
+        extension = api.TimeSeries(ta=ta, fill_value=8.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+
+        # extend after all time-series in the vector
+        extended_tsvector = tsvector.extend(extension)
+
+        # assert first element
+        for i in range(2*n):
+            self.assertEqual(extended_tsvector[0](t0 + i*dt), 1.0)
+        for i in range(n):
+            self.assertTrue(math.isnan(extended_tsvector[0](t0 + (2*n + i)*dt)))
+        for i in range(2*n):
+            self.assertEqual(extended_tsvector[0](t0 + (3*n + i)*dt), 8.0)
+
+        # assert second element
+        for i in range(2*n):
+            self.assertEqual(extended_tsvector[1](t0 + (2*n + i)*dt), 2.0)
+        for i in range(n):
+            self.assertEqual(extended_tsvector[1](t0 + (4*n + i)*dt), 8.0)
+
+        tsvector_2 = api.TsVector()
+        tsvector_2.push_back(api.TimeSeries(
+            ta=api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 4*n),
+            fill_value=10.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+        tsvector_2.push_back(api.TimeSeries(
+            ta=api.TimeAxisFixedDeltaT(t0 + 4*n*dt, dt, 4*n),
+            fill_value=20.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
+
+        # extend each element in tsvector by the corresponding element in tsvector_2
+        extended_tsvector = tsvector.extend(tsvector_2)
+
+        # assert first element
+        for i in range(2*n):
+            self.assertEqual(extended_tsvector[0](t0 + i*dt), 1.0)
+        for i in range(4*n):
+            self.assertEqual(extended_tsvector[0](t0 + (2*n + i)*dt), 10.0)
+
+        # assert second element
+        for i in range(2*n):
+            self.assertEqual(extended_tsvector[1](t0 + (2*n + i)*dt), 2.0)
+        for i in range(4*n):
+            self.assertEqual(extended_tsvector[1](t0 + (4*n + i)*dt), 20.0)
 
 if __name__ == "__main__":
     unittest.main()

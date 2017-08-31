@@ -128,6 +128,22 @@ namespace shyft {
         struct ats_vector;//fwd
         struct abs_ts;//fwd
 
+		/** \brief Enumerates fill policies for time-axis extension.
+		 */
+		enum extend_ts_fill_policy {
+			EPF_NAN,   /**< Fill any gap between the time-axes with NaN. */
+			EPF_LAST,  /**< At a gap, keep the last time-axis value through a gap. */
+			EPF_FILL,  /**< Fill any gap between the time-axes with a given value. */
+		};
+
+		/** \brief Enumerates split policies for time-axis extension.
+		 */
+		enum extend_ts_split_policy {
+			EPS_LHS_LAST,   /**< Split at the last value of the lhs ts. */
+			EPS_RHS_FIRST,  /**< Split at the first value of the rhs ts. */
+			EPS_VALUE,      /**< Split at a given time-value. */
+		};
+
         /** \brief  apoint_ts, a value-type conceptual ts.
          *
          *  This is the class that we expose to python, with operations, expressions etc.
@@ -211,6 +227,9 @@ namespace shyft {
             std::vector<double> values() const {return ts?ts->values():std::vector<double>();}
 
             //-- then some useful functions/properties
+            apoint_ts extend( const apoint_ts & ts,
+                extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+                utctime split_at, double fill_value ) const;
             apoint_ts average(const gta_t& ta) const;
             apoint_ts integral(gta_t const &ta) const;
             apoint_ts accumulate(const gta_t& ta) const;
@@ -725,6 +744,106 @@ namespace shyft {
             x_serialize_decl();
         };
 
+        /** \brief Extend for ts.extend(ts).
+         */
+        struct extend_ts : ipoint_ts {
+
+            apoint_ts lhs;
+            apoint_ts rhs;
+            extend_ts_split_policy ets_split_p = EPS_LHS_LAST;
+            utctime split_at;
+            extend_ts_fill_policy ets_fill_p = EPF_NAN;
+            double fill_value;
+            
+            gta_t ta;
+            ts_point_fx fx_policy = POINT_AVERAGE_VALUE;  // how f(t) are mapped to t
+            
+            bool bound = false;
+
+            ts_point_fx point_interpretation() const {
+                return fx_policy;
+            }
+
+            void set_point_interpretation(ts_point_fx x) {
+                fx_policy = x;
+            }
+
+            void do_deferred_bind() {
+                if (!bound) {
+                    fx_policy = result_policy(lhs.point_interpretation(), rhs.point_interpretation());
+                    ta = time_axis::extend(lhs.time_axis(), rhs.time_axis(), get_split_at());
+                    bound = true;
+                }
+            }
+
+            extend_ts() = default;
+            extend_ts(
+                const apoint_ts & lhs, const apoint_ts & rhs,
+                extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+                utctime split_at, double fill_value
+            )
+                : lhs( lhs ), rhs( rhs ),
+                  ets_split_p(split_policy ), split_at( split_at ),
+                  ets_fill_p(fill_policy ), fill_value( fill_value ) {
+                if (!needs_bind())
+                    do_deferred_bind();
+            }
+
+            utctime get_split_at() const {
+                switch ( this->ets_split_p ) {
+                default:
+                case EPS_LHS_LAST:  return this->lhs.total_period().end;
+                case EPS_RHS_FIRST: return this->rhs.total_period().start;
+                case EPS_VALUE:     return this->split_at;
+                }
+            }
+
+            void bind_check() const {
+                if (!bound)
+                    throw runtime_error("attempting to use unbound timeseries, context abin_op_ts");
+            }
+            virtual utcperiod total_period() const {
+                return time_axis().total_period();
+            }
+            const gta_t& time_axis() const {
+                bind_check();
+                return ta;
+            };// combine lhs,rhs
+
+            size_t index_of(utctime t) const {
+                return time_axis().index_of(t);
+            };
+
+            size_t size() const {
+                return time_axis().size();
+            };// use the combined ta.size();
+
+            utctime time(size_t i) const {
+                return time_axis().time(i);
+            }; // return combined ta.time(i)
+
+            /** Get ta value at time. */
+            double value_at(utctime t) const;
+
+            /** Get ts value at point no. */
+            double value(size_t i) const;
+
+            /** Collect all values for the extended ts. */
+            std::vector<double> values() const;
+
+            bool needs_bind() const {
+                return lhs.needs_bind() || rhs.needs_bind();
+            }
+            virtual void do_bind() {
+                lhs.do_bind();
+                rhs.do_bind();
+                do_deferred_bind();
+            }
+
+            x_serialize_decl();
+
+        };
+
         /** The iop_t represent the basic 'binary' operation,
          *   a stateless function that takes two doubles and returns the binary operation.
          *   E.g.: a+b
@@ -765,42 +884,42 @@ namespace shyft {
          */
         struct abin_op_ts:ipoint_ts {
 
-              apoint_ts lhs;
-              iop_t op=iop_t::OP_NONE;
-              apoint_ts rhs;
-              gta_t ta;
-              ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
-              bool bound=false;
+            apoint_ts lhs;
+            iop_t op=iop_t::OP_NONE;
+            apoint_ts rhs;
+            gta_t ta;
+            ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
+            bool bound=false;
 
-              ts_point_fx point_interpretation() const {return fx_policy;}
-              void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
+            ts_point_fx point_interpretation() const {return fx_policy;}
+            void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
 
-              void do_deferred_bind() {
+            void do_deferred_bind() {
                 if(!bound) {
                     fx_policy=result_policy(lhs.point_interpretation(),rhs.point_interpretation());
                     ta=time_axis::combine(lhs.time_axis(),rhs.time_axis());
                     bound=true;
                 }
-              }
+            }
 
-              abin_op_ts()=default;
-              abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
-              :lhs(lhs),op(op),rhs(rhs) {
-                  if( !needs_bind() )
-                     do_deferred_bind();
-              }
-              void bind_check() const {if(!bound) throw runtime_error("attempting to use unbound timeseries, context abin_op_ts");}
-              virtual utcperiod total_period() const {return time_axis().total_period();}
-              const gta_t& time_axis() const {bind_check(); return ta;};// combine lhs,rhs
-              size_t index_of(utctime t) const{return time_axis().index_of(t);};
-              size_t size() const {return time_axis().size();};// use the combined ta.size();
-              utctime time( size_t i) const {return time_axis().time(i);}; // return combined ta.time(i)
-              double value_at(utctime t) const ;
-              double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
-              std::vector<double> values() const;
-              bool needs_bind() const {return lhs.needs_bind() || rhs.needs_bind(); }
-              virtual void do_bind() {lhs.do_bind();rhs.do_bind();do_deferred_bind();}
-              x_serialize_decl();
+            abin_op_ts()=default;
+            abin_op_ts(const apoint_ts &lhs,iop_t op,const apoint_ts& rhs)
+                :lhs(lhs),op(op),rhs(rhs) {
+                if( !needs_bind() )
+                    do_deferred_bind();
+            }
+            void bind_check() const {if(!bound) throw runtime_error("attempting to use unbound timeseries, context abin_op_ts");}
+            virtual utcperiod total_period() const {return time_axis().total_period();}
+            const gta_t& time_axis() const {bind_check(); return ta;};// combine lhs,rhs
+            size_t index_of(utctime t) const{return time_axis().index_of(t);};
+            size_t size() const {return time_axis().size();};// use the combined ta.size();
+            utctime time( size_t i) const {return time_axis().time(i);}; // return combined ta.time(i)
+            double value_at(utctime t) const ;
+            double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
+            std::vector<double> values() const;
+            bool needs_bind() const {return lhs.needs_bind() || rhs.needs_bind(); }
+            virtual void do_bind() {lhs.do_bind();rhs.do_bind();do_deferred_bind();}
+            x_serialize_decl();
 
         };
 
@@ -944,6 +1063,11 @@ namespace shyft {
         ///< time_shift i.e. same ts values, but time-axis is time-axis + dt
         apoint_ts time_shift(const apoint_ts &ts, utctimespan dt);
 
+        apoint_ts extend(
+            const apoint_ts & lhs_ts, const apoint_ts & rhs_ts,
+            extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+            utctime split_at, double fill_value );
+
         /** Given a vector of expressions, deflate(evaluate) the expressions and return the
          * equivalent concrete point-time-series of the expressions in the
          * preferred destination type Ts
@@ -1028,6 +1152,32 @@ namespace shyft {
                     return r;
                 }
             }
+
+            ats_vector extend_ts(
+                apoint_ts const & ta,
+                extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+                utctime split_at, double fill_value
+            ) const {
+                ats_vector r; r.reserve(this->size());
+                for ( auto const & ts : *this )
+                    r.push_back(ts.extend(ta, split_policy, fill_policy, split_at, fill_value));
+                return r;
+            }
+            ats_vector extend_vec(
+                ats_vector const & ts_vec,
+                extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+                utctime split_at, double fill_value
+            ) const {
+                if ( this->size() != ts_vec.size() ) throw std::runtime_error("vector size mismatch, must be of the same size");
+                ats_vector r; r.reserve(this->size());
+                auto lhs_it = this->cbegin(); auto rhs_it = ts_vec.cbegin();
+                while ( lhs_it != this->cend() ) {
+                    r.push_back(lhs_it->extend(*rhs_it, split_policy, fill_policy, split_at, fill_value));
+                    lhs_it++; rhs_it++;
+                }
+                return r;
+            }
+
             ats_vector abs() const {
                 ats_vector r; r.reserve(size()); for (auto const &ts : *this) r.push_back(ts.abs()); return r;
             }
@@ -1128,6 +1278,7 @@ x_serialize_export_key(shyft::api::integral_ts);
 x_serialize_export_key(shyft::api::accumulate_ts);
 x_serialize_export_key(shyft::api::time_shift_ts);
 x_serialize_export_key(shyft::api::periodic_ts);
+x_serialize_export_key(shyft::api::extend_ts);
 x_serialize_export_key(shyft::api::abin_op_scalar_ts);
 x_serialize_export_key(shyft::api::abin_op_ts);
 x_serialize_export_key(shyft::api::abin_op_ts_scalar);

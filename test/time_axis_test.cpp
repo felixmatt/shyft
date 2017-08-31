@@ -5,6 +5,7 @@ using namespace shyft;
 using namespace shyft::core;
 using namespace std;
 
+
 /** \brief Utility function to verify one time-axis are conceptually equal to another */
 template <class TA, class TB>
 static bool test_if_equal( const TA& e, const TB& t ) {
@@ -161,8 +162,531 @@ TEST_CASE("test_all") {
     }
 
 }
+TEST_CASE("time_axis_extend") {
 
+    namespace ta = shyft::time_axis;
+    namespace core = shyft::core;
 
+    core::calendar utc;
+
+    SUBCASE("directly sequential fixed_dt") {
+        core::utctime t0 = utc.time(2017, 1, 1);
+        core::utctimespan dt = core::deltahours(1);
+        size_t n = 512;
+
+        ta::fixed_dt axis(t0, dt, 2*n);
+        ta::fixed_dt ext(t0 + 2*n*dt, dt, 2*n);
+
+        ta::generic_dt res = ta::extend(axis, ext, t0 + 2*n*dt);
+        ta::fixed_dt expected(t0, dt, 4*n);
+
+        FAST_REQUIRE_EQ(res.gt, ta::generic_dt::FIXED);
+        FAST_CHECK_EQ(res.f, expected);
+    }
+
+    SUBCASE("fixed_dt with fixed_dt") {
+
+        core::utctime t0 = utc.time(2017, 1, 1);
+        core::utctimespan dt = deltahours(1);
+        size_t n = 24u;
+
+        ta::fixed_dt
+            axis(t0, dt, n),
+            empty = ta::fixed_dt::null_range();
+
+        SUBCASE("empty time-axes") {
+            SUBCASE("both empty") {
+                ta::generic_dt res = ta::extend(empty, empty, empty.t + empty.dt*empty.n);
+                FAST_REQUIRE_EQ(res.f, empty);
+            }
+            SUBCASE("last empty") {
+                SUBCASE("split after") {
+                    ta::generic_dt res = ta::extend(axis, empty, t0 + dt * n);
+                    FAST_REQUIRE_EQ(res.f, axis);
+                }
+                SUBCASE("split inside") {
+                    size_t split_after = n / 2;
+                    ta::generic_dt res = ta::extend(axis, empty, t0 + dt * split_after);
+                    FAST_REQUIRE_EQ(res.f, ta::fixed_dt(t0, dt, split_after));
+                }
+                SUBCASE("split before") {
+                    ta::generic_dt res = ta::extend(axis, empty, t0 - 1);
+                    FAST_REQUIRE_EQ(res.f, empty);
+                }
+            }
+            SUBCASE("first empty") {
+                SUBCASE("split after") {
+                    ta::generic_dt res = ta::extend(empty, axis, t0 + dt * n);
+                    FAST_REQUIRE_EQ(res.f, empty);
+                }
+                SUBCASE("split inside") {
+                    size_t split_after = n / 2;
+                    ta::generic_dt res = ta::extend(empty, axis, t0 + dt * split_after);
+                    FAST_REQUIRE_EQ(res.f, ta::fixed_dt(t0 + dt * split_after, dt, n - split_after));
+                }
+                SUBCASE("split before") {
+                    ta::generic_dt res = ta::extend(empty, axis, t0 - 1);
+                    FAST_REQUIRE_EQ(res.f, axis);
+                }
+            }
+        }
+        SUBCASE("aligned") {
+            SUBCASE("rhs fully before lhs") {  // branch 4
+                ta::fixed_dt extension(t0 - 24u * dt, dt, 12u);
+                ta::generic_dt res = ta::extend(axis, extension, t0 - 6 * dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::FIXED);
+                FAST_CHECK_EQ(res.f, empty);
+            }
+            SUBCASE("rhs start before lhs and end inside") {  // branch 3
+                ta::fixed_dt extension(t0 - 12u * dt, dt, n);
+                ta::fixed_dt expected(t0, dt, 12u);
+
+                ta::generic_dt res = ta::extend(axis, extension, t0);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::FIXED);
+                FAST_CHECK_EQ(res.f, expected);
+            }
+            SUBCASE("rhs start before and end after lhs") {  // branch 1
+                ta::fixed_dt extension(t0 - 12u * dt, dt, n + 24u);
+                ta::fixed_dt expected(t0, dt, n + 12u);
+
+                ta::generic_dt res = ta::extend(axis, extension, t0 + 12u * dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::FIXED);
+                FAST_CHECK_EQ(res.f, expected);
+            }
+            SUBCASE("rhs matches exactly lhs") {  // branch 2
+                ta::fixed_dt extension(t0, dt, n);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + n * dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::FIXED);
+                FAST_CHECK_EQ(res.f, axis);
+            }
+            SUBCASE("rhs start inside lhs and end after") {  // branch 2
+                ta::fixed_dt extension(t0 + (n / 2u)*dt, dt, n + 12u);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + (n / 2u + n + 12u)*dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::FIXED);
+                FAST_CHECK_EQ(res.f, axis);
+            }
+            SUBCASE("rhs start and end inside lhs") {  // degenerate to point_dt
+                ta::fixed_dt extension(t0 + 6u * dt, dt, 12u);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + 3u * dt);
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= 3u; ++i )
+                    expected_points.push_back(t0 + i * dt);
+                for ( size_t i = 0u; i <= 12u; ++i )
+                    expected_points.push_back(t0 + (i + 6u) * dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+            SUBCASE("rhs fully after lhs") {  // degenerate to point_dt
+                ta::fixed_dt extension(t0 + (n + 2)*dt, dt, 12u);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + (n + 1) * dt);
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(t0 + i * dt);
+                for ( size_t i = 0u; i <= 12u; ++i )
+                    expected_points.push_back(t0 + (i + n + 2) * dt);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+        }
+        SUBCASE("unaligned") {
+            SUBCASE("equal dt, unaligned boundaries") {
+                utctime t0_ext = t0 + deltaminutes(30);
+
+                ta::fixed_dt extension(t0_ext, dt, 2 * n);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + n*dt);
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( utctime t = t0; t <= t0 + utctimespan(dt*n); t += dt )
+                    expected_points.push_back(t);
+                for ( utctime t = t0_ext + n*dt; t <= t0_ext + utctimespan(2 * n * dt); t += dt )
+                    expected_points.push_back(t);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+            SUBCASE("unequal dt, aligned boundaries") {
+                utctimespan dt_ext = deltaminutes(30);
+                size_t n_ext = 4 * n;
+
+                ta::fixed_dt extension(t0, dt_ext, n_ext);
+                ta::generic_dt res = ta::extend(axis, extension, t0 + dt * n);
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( utctime t = t0; t <= t0 + utctimespan(dt * n); t += dt )
+                    expected_points.push_back(t);
+
+                for ( utctime t = t0 + n * dt + dt_ext; t <= t0 + utctimespan(4 * n * dt_ext); t += dt_ext )
+                    expected_points.push_back(t);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+        }
+    }
+    SUBCASE("calendar_dt with calendar_dt") {
+
+        std::shared_ptr<core::calendar> cal = std::make_shared<core::calendar>(utc);
+        core::utctime t0 = cal->time(2017, 4, 1);
+        core::utctimespan dt = core::calendar::DAY;
+        size_t n = 30;
+
+        ta::calendar_dt
+            axis(cal, t0, dt, n),
+            empty = ta::calendar_dt::null_range();
+
+        SUBCASE("empty time-axes") {
+            SUBCASE("both empty") {
+                ta::generic_dt res = ta::extend(empty, empty, 0);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                FAST_REQUIRE_EQ(res.c, empty);
+            }
+            SUBCASE("last empty") {
+                SUBCASE("split after") {
+                    ta::generic_dt res = ta::extend(axis, empty, cal->add(t0, dt, n + 1));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_REQUIRE_EQ(res.c, axis);
+                }
+                SUBCASE("split inside") {
+                    size_t split_after = n / 2;  // 15
+                    ta::calendar_dt expected(cal, t0, dt, split_after);
+                    ta::generic_dt res = ta::extend(axis, empty, cal->add(t0, dt, split_after));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_REQUIRE_EQ(res.c, expected);
+                }
+                SUBCASE("split before") {
+                    ta::generic_dt res = ta::extend(axis, empty, cal->add(t0, dt, -1));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_REQUIRE_EQ(res.c, empty);
+                }
+            }
+            SUBCASE("first empty") {
+                SUBCASE("split after") {
+                    ta::generic_dt res = ta::extend(empty, axis, cal->add(t0, dt, n+1));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_REQUIRE_EQ(res.c, empty);
+                }
+                SUBCASE("split inside") {
+                    size_t split_after = n / 2;  // 15
+
+                    ta::calendar_dt expected(cal, cal->time(2017, 4, split_after + 1), dt, n - split_after);
+                    ta::generic_dt res = ta::extend(empty, axis, cal->add(t0, dt, split_after));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_CHECK_EQ(res.c, expected);
+                }
+                SUBCASE("split before") {
+                    ta::generic_dt res = ta::extend(empty, axis, cal->add(t0, dt, -1));
+
+                    FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                    FAST_REQUIRE_EQ(res.c, axis);
+                }
+            }
+        }
+        SUBCASE("aligned") {
+            SUBCASE("rhs fully before lhs") {  // branch 4
+                ta::calendar_dt extension(cal, cal->add(t0, dt, -15), dt, 10);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, -5));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::CALENDAR);
+                FAST_CHECK_EQ(res.c, empty);
+            }
+            SUBCASE("rhs start before lhs and end inside") {  // branch 3
+                ta::calendar_dt extension(cal, cal->add(t0, dt, -15), dt, n);
+                ta::calendar_dt expected(cal, t0, dt, 15u);
+
+                ta::generic_dt res = ta::extend(axis, extension, t0);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::CALENDAR);
+                FAST_CHECK_EQ(res.c, expected);
+            }
+            SUBCASE("rhs start before and end after lhs") {  // branch 1
+                ta::calendar_dt extension(cal, cal->add(t0, dt, -10), dt, n+20);
+                ta::calendar_dt expected(cal, t0, dt, n + 10u);
+
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, 15));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::CALENDAR);
+                FAST_CHECK_EQ(res.c, expected);
+            }
+            SUBCASE("rhs matches exactly lhs") {  // branch 2
+                ta::calendar_dt extension(cal, t0, dt, n);
+
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::CALENDAR);
+                FAST_CHECK_EQ(res.c, axis);
+            }
+            SUBCASE("rhs start inside lhs and end after") {  // branch 2
+                ta::calendar_dt extension(cal, cal->add(t0, dt, 15), dt, n);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n + 15));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::CALENDAR);
+                FAST_CHECK_EQ(res.c, axis);
+            }
+            SUBCASE("rhs start and end inside lhs") {  // degenerate to point_dt
+                ta::calendar_dt extension(cal, cal->add(t0, dt, 10), dt, n - 20);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, 5));
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= 5u; ++i )
+                    expected_points.push_back(cal->add(t0, dt, i));
+                for ( size_t i = 0u; i <= 10u; ++i )
+                    expected_points.push_back(cal->add(t0, dt, 10 + i));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+            SUBCASE("rhs fully after lhs") {  // degenerate to point_dt
+                ta::calendar_dt extension(cal, cal->add(t0, dt, n+10), dt, n);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n+5));
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0, dt, i));
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0, dt, n + 10 + i));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+        }
+        SUBCASE("unaligned") {
+            SUBCASE("equal dt, unaligned boundaries") {
+                utctime t0_ext = cal->add(t0, core::calendar::HOUR, 12);
+
+                ta::calendar_dt extension(cal, t0_ext, dt, 2 * n);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n));
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0, dt, i));
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0_ext, dt, n + i));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+            SUBCASE("unequal dt, aligned boundaries") {
+                core::utctimespan dt_ext = core::calendar::HOUR;
+                size_t n_ext = 2 * 24 * n;
+
+                ta::calendar_dt extension(cal, t0, dt_ext, n_ext);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n));
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0, dt, i));
+                //
+                core::utctime end = cal->add(t0, dt, n);
+                for ( size_t i = 1u; i <= n_ext / 2; ++i )
+                    expected_points.push_back(cal->add(end, dt_ext, i));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+            SUBCASE("different calendars") {
+                std::shared_ptr<core::calendar> other_cal = std::make_shared<core::calendar>(2 * core::calendar::HOUR);
+
+                ta::calendar_dt extension(other_cal, t0, dt, n);
+                ta::generic_dt res = ta::extend(axis, extension, cal->add(t0, dt, n / 2));
+
+                // construct time points
+                std::vector<utctime> expected_points;
+                for ( size_t i = 0u; i <= n; ++i )
+                    expected_points.push_back(cal->add(t0, dt, i));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::generic_type::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt(expected_points));
+            }
+        }
+    }
+    SUBCASE("continuous with different continuous") {
+
+        std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>(utc);
+
+        core::utctime t0 = utc.time(2017, 1, 1);
+        core::utctimespan dt_30m = 30 * core::calendar::MINUTE;
+        core::utctimespan dt_h = core::calendar::HOUR;
+        size_t n = 50;
+
+        SUBCASE("empty cases") {
+
+            ta::fixed_dt empty_fdt = ta::fixed_dt::null_range();
+            ta::point_dt empty_pdt = ta::point_dt::null_range();
+            ta::calendar_dt non_empty(utc_ptr, t0, dt_h, n);
+
+            SUBCASE("empty with empty") {
+                ta::generic_dt res = ta::extend(empty_fdt, empty_pdt, 0);
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p.size(), 0);
+            }
+            SUBCASE("empty with non-empty (split_at == middle of non_empty)") {
+                ta::calendar_dt expected(utc_ptr, utc.add(t0, dt_h, n/2), dt_h, n/2);
+
+                ta::generic_dt res = ta::extend(empty_fdt, non_empty, utc.add(t0, dt_h, n/2));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.c, expected);
+            }
+            SUBCASE("non-empty with empty (split_at == non_empty.end)") {
+                ta::generic_dt res = ta::extend(non_empty, empty_pdt, utc.add(t0, dt_h, n));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.c, non_empty);
+            }
+        }
+        SUBCASE("non-empty cases") {
+            SUBCASE("fully before (split between)") {
+                ta::fixed_dt ax_fdt(t0, dt_h, n);
+                ta::calendar_dt ext_cdt(utc_ptr,
+                    utc.add(t0, dt_h, -2*((long)n)),
+                    dt_h, n);
+
+                ta::generic_dt res = ta::extend(ax_fdt, ext_cdt, utc.add(t0, dt_h, -(long)n/2));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, ta::point_dt::null_range());
+            }
+            SUBCASE("overlapping starting before, ending inside (split at axis start)") {
+                std::vector<core::utctime> ext_points;
+                core::utctime t0_ext = utc.add(t0, dt_30m, -(long)n/2);
+                for ( size_t i = 0; i <= n; ++i ) {
+                    ext_points.push_back(utc.add(t0_ext, dt_30m, i));
+                }
+
+                ta::calendar_dt ax_cdt(utc_ptr, t0, dt_h, n);
+                ta::point_dt ext_pdt(ext_points);
+
+                ta::generic_dt res = ta::extend(ax_cdt, ext_pdt, t0);
+
+                std::vector<core::utctime> exp_points;
+                for ( size_t i = 0; i <= n/2; ++i ) {
+                    exp_points.push_back(utc.add(t0, dt_30m, i));
+                }
+                ta::point_dt expected_pdt(exp_points);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, expected_pdt);
+            }
+            SUBCASE("overlapping starting before, ending after (split at middle of axis)") {
+                std::vector<core::utctime> ax_points;
+                for ( size_t i = 0; i <= n; ++i ) {
+                    ax_points.push_back(t0 + i * dt_h);
+                }
+
+                ta::point_dt ax_pdt(ax_points);
+                ta::fixed_dt ext_fdt(t0 - n * dt_h / 2, dt_h, 2 * n);
+
+                ta::generic_dt res = extend(ax_pdt, ext_fdt, t0 + n * dt_h / 2);
+
+                std::vector<core::utctime> exp_points;
+                for ( size_t i = 0; i <= 3 * n / 2; ++i ) {
+                    exp_points.push_back(utc.add(t0, dt_h, i));
+                }
+                ta::point_dt expected_pdt(exp_points);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, expected_pdt);
+            }
+            SUBCASE("overlapping exactly (split in the middle)") {
+                std::vector<core::utctime> ext_points;
+                for ( size_t i = 0; i <= 2*n; ++i ) {
+                    ext_points.push_back(t0 + i * dt_h / 2);
+                }
+
+                ta::fixed_dt ax_fdt(t0, dt_h, n);
+                ta::point_dt ext_pdt(ext_points);
+
+                ta::generic_dt res = ta::extend(ax_fdt, ext_pdt, t0 + n * dt_h / 2);
+
+                std::vector<core::utctime> exp_points;
+                for ( size_t i = 0; i <= n / 2; ++i ) {
+                    exp_points.push_back(t0 + i * dt_h);
+                }
+                for ( size_t i = 1; i <= n; ++i ) {
+                    exp_points.push_back((t0 + n * dt_h / 2) + i * dt_h / 2);
+                }
+                ta::point_dt expected_pdt(exp_points);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, expected_pdt);
+            }
+            SUBCASE("overlapping fully inside (split mid between axis start and extend start)") {
+                ta::calendar_dt ax_cdt(utc_ptr, t0, dt_h, n);
+                ta::fixed_dt ext_fdt(utc.add(t0, dt_h, n / 5), dt_h, 3 * n / 5);
+
+                ta::generic_dt res = ta::extend(ax_cdt, ext_fdt, utc.add(t0, dt_h, n / 10));
+
+                std::vector<core::utctime> exp_points;
+                for ( size_t i = 0; i <= n / 10; ++i ) {
+                    exp_points.push_back(utc.add(t0, dt_h, i));
+                }
+                for ( size_t i = 0; i <= 3 * n / 5; ++i ) {
+                    exp_points.push_back(utc.add(t0, dt_h, n / 5) + i * dt_h);
+                }
+                ta::point_dt expected(exp_points);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, expected);
+            }
+            SUBCASE("overlapping starting inside, ending after (split at end of extend)") {
+                std::vector<core::utctime> ax_points;
+                for ( size_t i = 0; i <= n; ++i ) {
+                    ax_points.push_back(utc.add(t0, dt_h, i));
+                }
+
+                ta::point_dt ax_pdt(ax_points);
+                ta::calendar_dt ext_cdt(utc_ptr, utc.add(t0, dt_h, n / 2), dt_h, n);
+
+                ta::generic_dt res = ta::extend(ax_pdt, ext_cdt, utc.add(t0, dt_h, 3 * n / 2));
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, ax_pdt);
+            }
+            SUBCASE("fully after (split before axis)") {
+                std::vector<core::utctime> ax_points;
+                for ( size_t i = 0; i <= n; ++i ) {
+                    ax_points.push_back(t0 + i*dt_h);
+                }
+
+                std::vector<core::utctime> ext_points;
+                for ( size_t i = 0; i <= n; ++i ) {
+                    ext_points.push_back((t0 + 2 * n * dt_h) + i * dt_30m);
+                }
+
+                ta::point_dt ax_pdt(ax_points);
+                ta::point_dt ext_pdt(ext_points);
+
+                ta::generic_dt res = ta::extend(ax_pdt, ext_pdt, t0 - n * dt_h);
+
+                FAST_REQUIRE_EQ(res.gt, ta::generic_dt::POINT);
+                FAST_CHECK_EQ(res.p, ext_pdt);
+            }
+        }
+    }
+}
 TEST_CASE("test_time_shift") {
     calendar utc;
     utctime t0=utc.time(2015,1,1);

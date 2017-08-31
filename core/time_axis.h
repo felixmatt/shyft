@@ -98,67 +98,119 @@ namespace shyft {
         };
 
         /** A variant of time_axis that adheres to calendar periods, possibly including DST handling
-         *  e.g.: a calendar day might be 23,24 or 25 hour long in a DST calendar.
-         *  If delta-t is less or equal to one hour, it's close to as efficient as time_axis
-         */
-        struct calendar_dt :continuous<true> {
+        *  e.g.: a calendar day might be 23,24 or 25 hour long in a DST calendar.
+        *  If delta-t is less or equal to one hour, it's close to as efficient as time_axis
+        */
+        struct calendar_dt : continuous<true> {
+
             static constexpr utctimespan dt_h = 3600;
+
             shared_ptr<calendar> cal;
             utctime t;
             utctimespan dt;
             size_t n;
-            shared_ptr<calendar> get_calendar() const { return cal; }
-            calendar_dt() : t( no_utctime ), dt( 0 ), n( 0 ) {}
-            calendar_dt( const shared_ptr< calendar>& cal, utctime t, utctimespan dt, size_t n ) : cal( cal ), t( t ), dt( dt ), n( n ) {}
-            calendar_dt(const calendar_dt&c):cal(c.cal),t(c.t),dt(c.dt),n(c.n) {}
-            calendar_dt(calendar_dt &&c):cal(std::move(c.cal)),t(c.t),dt(c.dt),n(c.n){}
-            calendar_dt& operator=(calendar_dt&&c) {
-                cal=std::move(c.cal);
-                t=c.t;
-                dt=c.dt;
-                n=c.n;
+
+            shared_ptr<calendar> get_calendar() const {
+                return cal;
+            }
+
+            calendar_dt()
+                : t( no_utctime ),
+                dt( 0 ),
+                n( 0 ) { }
+            calendar_dt(const shared_ptr< calendar> & cal,
+                utctime t,
+                utctimespan dt,
+                size_t n)
+                : cal( cal ),
+                t( t ),
+                dt( dt ),
+                n( n ) { }
+            calendar_dt(const calendar_dt & c)
+                : cal( c.cal ),
+                t( c.t ),
+                dt( c.dt ),
+                n( c.n ) { }
+            calendar_dt(calendar_dt && c)
+                : cal( std::move(c.cal) ),
+                t( c.t ),
+                dt( c.dt ),
+                n( c.n ) { }
+
+            calendar_dt & operator=(calendar_dt && c) {
+                cal = std::move(c.cal);
+                t = c.t;
+                dt = c.dt;
+                n = c.n;
                 return *this;
             }
-            calendar_dt& operator=(const calendar_dt &x) {
-                if(this != &x) {
-                    cal=x.cal;
-                    t=x.t;
-                    dt=x.dt;
-                    n=x.n;
+            calendar_dt & operator=(const calendar_dt & x) {
+                if ( this != &x ) {
+                    cal = x.cal;
+                    t = x.t;
+                    dt = x.dt;
+                    n = x.n;
                 }
                 return *this;
             }
-			/** equality, notice that calendar is equal if they refer to exactly same calendar pointer */
-			bool operator==(const calendar_dt& other) const { return cal.get()== other.cal.get() && t == other.t && dt == other.dt && n == other.n; }
-			bool operator!=(const calendar_dt& other) const { return !this->operator==(other); }
+            /** equality, notice that calendar is equal if they refer to exactly same calendar pointer */
+            bool operator==(const calendar_dt & other) const {
+                return cal.get() == other.cal.get()
+                    && t == other.t
+                    && dt == other.dt
+                    && n == other.n;
+            }
+            bool operator!=(const calendar_dt & other) const {
+                return !this->operator == (other);
+            }
 
-            size_t size() const {return n;}
+            size_t size() const {
+                return n;
+            }
 
             utcperiod total_period() const {
-                return n == 0 ?
-                       utcperiod( min_utctime, min_utctime ) :  // maybe just a non-valid period?
-                       utcperiod( t, dt <= dt_h ? t + n*dt : cal->add( t, dt,long(n) ) );
+                return n == 0
+                    ? utcperiod(min_utctime, min_utctime)  // maybe just a non-valid period?
+                    : utcperiod(t, dt <= dt_h ? t + n*dt : cal->add(t, dt, long(n)));
             }
 
-            utctime time( size_t i ) const {
-                if( i < n ) return dt <= dt_h ? t + i * dt : cal->add( t, dt, long(i) );
-                throw out_of_range( "calendar_dt.time(i)" );
+            utctime time(size_t i) const {
+                if ( i < n ) {
+                    return dt <= dt_h
+                        ? t + i * dt
+                        : cal->add(t, dt, long(i));
+                }
+                throw out_of_range("calendar_dt.time(i)");
             }
 
-            utcperiod period( size_t i ) const {
-                if( i < n ) return dt <= dt_h ? utcperiod( t + i * dt, t + ( i + 1 ) * dt ) : utcperiod( cal->add( t, dt, long( i) ), cal->add( t, dt, long(i + 1) ) );
-                throw out_of_range( "calendar_dt.period(i)" );
+            utcperiod period(size_t i) const {
+                if ( i < n ) {
+                    return dt <= dt_h
+                        ? utcperiod(t + i * dt, t + (i + 1) * dt)
+                        : utcperiod(cal->add(t, dt, static_cast<long>(i)), cal->add(t, dt, static_cast<long>(i + 1)));
+                }
+                throw out_of_range("calendar_dt.period(i)");
             }
 
-            size_t index_of( utctime tx ) const {
+            size_t index_of(utctime tx) const {
                 auto p = total_period();
-                if( !p.contains( tx ) )
-                    return string::npos;
-                return dt <= dt_h ?
-                       ( size_t )( ( tx - t ) / dt ) :
-                       ( size_t ) cal->diff_units( t, tx, dt );
+                if ( !p.contains(tx) )
+                    return std::string::npos;  // why string...? Introduce a static constant + check similar classes
+                return dt <= dt_h
+                    ? static_cast<size_t>((tx - t) / dt)
+                    : static_cast<size_t>(cal->diff_units(t, tx, dt));
             }
-            size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {return tx >= total_period().end && n > 0 ? n - 1 : index_of( tx );}
+
+            size_t open_range_index_of(utctime tx, size_t ix_hint = std::string::npos) const {
+                return tx >= total_period().end && n > 0
+                    ? n - 1
+                    : index_of( tx );
+            }
+
+            static calendar_dt null_range() {
+                return calendar_dt();
+            }
+
             x_serialize_decl();
         };
 
@@ -180,7 +232,9 @@ namespace shyft {
         struct point_dt:continuous<true>{
             vector<utctime> t;
             utctime  t_end;// need one extra, after t.back(), to give the last period!
-            point_dt() {}
+            point_dt()
+                : t( vector<utctime>{} ),
+                  t_end( no_utctime ) {}
             point_dt( const vector<utctime>& t, utctime t_end ) : t( t ), t_end( t_end ) {
                 //TODO: throw if t.back()>= t_end
                 // consider t_end==no_utctime , t_end=t.back()+tick.
@@ -268,7 +322,7 @@ namespace shyft {
             size_t open_range_index_of( utctime tx, size_t ix_hint = std::string::npos) const {return size() > 0 && tx >= t_end ? size() - 1 : index_of( tx,ix_hint );}
 
             static point_dt null_range() {
-                return point_dt{};
+                return point_dt();
             }
             x_serialize_decl();
         };
@@ -280,28 +334,59 @@ namespace shyft {
          * It's useful when combining time-axis, and we would like to keep
          * the internal rep. to the most efficient as determined at runtime.
          */
-        struct generic_dt:continuous<true> {
-            //--possible implementation types:
-            enum generic_type { FIXED = 0, CALENDAR = 1, POINT = 2};
+        struct generic_dt : continuous<true> {
+
+            /** \brief Possible time-axis types.
+             */
+            enum generic_type {
+                FIXED = 0,     /**< Represents storage of fixed_dt. */
+                CALENDAR = 1,  /**< Represents storage of calendar_dt. */
+                POINT = 2      /**< Represents storage of point_dt. */
+            };
+
             generic_type gt;
+
             fixed_dt f;
             calendar_dt c;
             point_dt p;
-            //---------------
-            generic_dt(): gt( FIXED ) {}
+
+            generic_dt() : gt( FIXED ) { }
             // provide convinience constructors, to directly create the wanted time-axis, regardless underlying rep.
-            generic_dt( utctime t0,utctimespan dt,size_t n):gt(FIXED),f(t0,dt,n) {}
-            generic_dt( const shared_ptr<calendar>& cal, utctime t, utctimespan dt, size_t n ) : gt(CALENDAR),c(cal,t,dt,n) {}
-            generic_dt( const vector<utctime>& t, utctime t_end ):gt(POINT),p(t,t_end) {}
-            generic_dt( const vector<utctime>& all_points):gt(POINT),p(all_points){}
-            // --
-            generic_dt( const fixed_dt&f ): gt( FIXED ), f( f ) {}
-            generic_dt( const calendar_dt &c ): gt( CALENDAR ), c( c ) {}
-            generic_dt( const point_dt& p ): gt( POINT ), p( p ) {}
+            generic_dt(utctime t0, utctimespan dt, size_t n)
+                : gt(FIXED),
+                  f(t0, dt, n) { }
+            generic_dt(const shared_ptr<calendar> & cal, utctime t, utctimespan dt, size_t n)
+                : gt(CALENDAR),
+                  c(cal, t, dt, n) { }
+            generic_dt(const vector<utctime> & t, utctime t_end)
+                : gt(POINT),
+                  p(t, t_end) { }
+            generic_dt(const vector<utctime> & all_points)
+                : gt(POINT),
+                  p(all_points) { }
+
+            generic_dt(const fixed_dt&f)
+                : gt(FIXED),
+                  f(f) { }
+            generic_dt(const calendar_dt &c)
+                : gt(CALENDAR),
+                  c(c) { }
+            generic_dt(const point_dt& p)
+                : gt(POINT),
+                  p(p) { }
+
             // -- need move,ct etc for msc++
             // ms seems to need explicit move etc.
-            generic_dt(const generic_dt&cc) : gt(cc.gt),f(cc.f),c(cc.c),p(cc.p) {}
-            generic_dt(generic_dt &&cc) :gt(cc.gt),f(std::move(cc.f)), c(std::move(cc.c)), p(std::move(cc.p)) {}
+            generic_dt(const generic_dt&cc)
+                : gt(cc.gt),
+                  f(cc.f),
+                  c(cc.c),
+                  p(cc.p) { }
+            generic_dt(generic_dt &&cc)
+                : gt(cc.gt),
+                  f(std::move(cc.f)),
+                  c(std::move(cc.c)),
+                  p(std::move(cc.p)) { }
             generic_dt& operator=(generic_dt&&cc) {
                 gt = cc.gt;
                 f = std::move(cc.f);
@@ -310,7 +395,7 @@ namespace shyft {
                 return *this;
             }
             generic_dt& operator=(const generic_dt &x) {
-                if (this != &x) {
+                if ( this != &x ) {
                     gt = x.gt;
                     f = x.f;
                     c = x.c;
@@ -318,27 +403,79 @@ namespace shyft {
                 }
                 return *this;
             }
-			bool operator==(const generic_dt& other) const {
-				if (gt != other.gt) {// they are represented differently:
-					switch (gt) {
-					default:
-					case FIXED: return equivalent_time_axis(f, other);
-					case CALENDAR: return equivalent_time_axis(c, other);
-					case POINT: return equivalent_time_axis(p, other);
-					}
-				} // else they have same-representation, use equality directly
-				switch (gt) { default: case FIXED: return f == other.f; case CALENDAR: return c==other.c; case POINT: return p == other.p; }
-			}
-			bool operator!=(const generic_dt& other) const { return !this->operator==(other); }
-            //--
-            bool is_fixed_dt() const {return gt != POINT;}
+            bool operator==(const generic_dt& other) const {
+                if ( gt != other.gt ) {// they are represented differently:
+                    switch ( gt ) {
+                    default:
+                    case FIXED:    return equivalent_time_axis(f, other);
+                    case CALENDAR: return equivalent_time_axis(c, other);
+                    case POINT:    return equivalent_time_axis(p, other);
+                    }
+                } // else they have same-representation, use equality directly
+                switch ( gt ) {
+                default:
+                case FIXED:    return f == other.f;
+                case CALENDAR: return c == other.c;
+                case POINT:    return p == other.p;
+                }
+            }
+			bool operator!=(const generic_dt& other) const {
+                return ! this->operator==(other);
+            }
 
-            size_t size() const          {switch( gt ) {default: case FIXED: return f.size(); case CALENDAR: return c.size(); case POINT: return p.size();}}
-            utcperiod total_period() const  {switch( gt ) {default: case FIXED: return f.total_period(); case CALENDAR: return c.total_period(); case POINT: return p.total_period();}}
-            utcperiod period( size_t i ) const {switch( gt ) {default: case FIXED: return f.period( i ); case CALENDAR: return c.period( i ); case POINT: return p.period( i );}}
-            utctime     time( size_t i ) const {switch( gt ) {default: case FIXED: return f.time( i ); case CALENDAR: return c.time( i ); case POINT: return p.time( i );}}
-            size_t index_of( utctime t ,size_t ix_hint=std::string::npos) const {switch( gt ) {default: case FIXED: return f.index_of( t ); case CALENDAR: return c.index_of( t ); case POINT: return p.index_of( t,ix_hint );}}
-            size_t open_range_index_of( utctime t, size_t ix_hint = std::string::npos) const {switch( gt ) {default: case FIXED: return f.open_range_index_of( t ); case CALENDAR: return c.open_range_index_of( t ); case POINT: return p.open_range_index_of( t,ix_hint );}}
+            bool is_fixed_dt() const {
+                return gt != POINT;
+            }
+
+            size_t size() const {
+                switch( gt ) {
+                default:
+                case FIXED:    return f.size();
+                case CALENDAR: return c.size();
+                case POINT:    return p.size();
+                }
+            }
+            utcperiod total_period() const {
+                switch ( gt ) {
+                default:
+                case FIXED:    return f.total_period();
+                case CALENDAR: return c.total_period();
+                case POINT:    return p.total_period();
+                }
+            }
+            utcperiod period(size_t i) const {
+                switch( gt ) {
+                default:
+                case FIXED:    return f.period(i);
+                case CALENDAR: return c.period(i);
+                case POINT:    return p.period(i);
+                }
+            }
+            utctime time(size_t i) const {
+                switch( gt ) {
+                default:
+                case FIXED:    return f.time(i);
+                case CALENDAR: return c.time(i);
+                case POINT:    return p.time(i);
+                }
+            }
+            size_t index_of(utctime t, size_t ix_hint=std::string::npos) const {
+                switch( gt ) {
+                default:
+                case FIXED:    return f.index_of(t);
+                case CALENDAR: return c.index_of(t);
+                case POINT:    return p.index_of(t, ix_hint);
+                }
+            }
+            size_t open_range_index_of(utctime t, size_t ix_hint = std::string::npos) const {
+                switch ( gt ) {
+                default:
+                case FIXED:    return f.open_range_index_of(t);
+                case CALENDAR: return c.open_range_index_of(t);
+                case POINT:    return p.open_range_index_of(t, ix_hint);
+                }
+            }
+
             x_serialize_decl();
         };
 
@@ -555,6 +692,446 @@ namespace shyft {
                 return period_list();
             }
         };
+
+        // don't leak from the compilation unit
+        namespace {
+
+            /** \brief Helper handling special actions for different time-axes.
+            *
+            * Specialized on the different continuous time axes: fixed_dt, calendar_dt, point_dt, and generic_dt.
+            */
+            template<class T> struct extend_helper;
+
+            template<>
+            struct extend_helper<fixed_dt> {
+                /** \brief Wrap the supplied time-axis as a generic_dt.
+                * 
+                * \warning Use with caution, there is not bounds checking done!
+                *
+                * \param base   Time-axis.
+                * \param skip   Number of intervals to skip from the start.
+                * \param steps  Number of intervals to include. Counted from the first included interval.
+                */
+                static generic_dt as_generic(const fixed_dt & base, size_t skip, size_t steps) {
+                    return generic_dt(fixed_dt(base.t + skip*base.dt, base.dt, steps));
+                }
+            };
+            template<>
+            struct extend_helper<calendar_dt> {
+                /** \brief Wrap the supplied time-axis as a generic_dt.
+                * 
+                * \warning Use with caution, there is not bounds checking done!
+                *
+                * \param base   Time-axis.
+                * \param skip   Number of intervals to skip from the start.
+                * \param steps  Number of intervals to include. Counted from the first included interval.
+                */
+                static generic_dt as_generic(const calendar_dt & base, size_t skip, size_t steps) {
+                    return generic_dt(calendar_dt(base.cal, base.cal->add(base.t, base.dt, skip), base.dt, steps));
+                }
+            };
+            template<>
+            struct extend_helper<point_dt> {
+                /** \brief Wrap the supplied time-axis as a generic_dt.
+                * 
+                * \warning Use with caution, there is not bounds checking done!
+                *
+                * \param base   Time-axis.
+                * \param skip   Number of intervals to skip from the start.
+                * \param steps  Number of intervals to include. Counted from the first included interval.
+                */
+                static generic_dt as_generic(const point_dt & base, size_t skip, size_t steps) {
+                    auto it_begin = base.t.cbegin(); std::advance(it_begin, skip);
+                    auto it_end = it_begin;          std::advance(it_end, steps);
+
+                    utctime end_time = base.t_end;
+                    if ( it_end != base.t.cend() ) {
+                        end_time = base.t[skip + steps + 1];
+                    }
+
+                    return generic_dt(point_dt(std::vector<core::utctime>(it_begin, it_end), end_time));
+                }
+            };
+            template<>
+            struct extend_helper<generic_dt> {
+                /** \brief Wrap the supplied time-axis as a generic_dt.
+                * 
+                * \warning Use with caution, there is not bounds checking done!
+                *
+                * \param base   Time-axis.
+                * \param skip   Number of intervals to skip from the start.
+                * \param steps  Number of intervals to include. Counted from the first included interval.
+                */
+                static generic_dt as_generic(const generic_dt & base, size_t skip, size_t steps) {
+                    switch ( base.gt ) {
+                    case generic_dt::FIXED:    return extend_helper<fixed_dt>::as_generic(base.f, skip, steps);
+                    case generic_dt::CALENDAR: return extend_helper<calendar_dt>::as_generic(base.c, skip, steps);
+                    case generic_dt::POINT:    return extend_helper<point_dt>::as_generic(base.p, skip, steps);
+                    }
+                }
+            };
+
+        }
+
+        /** \brief Extend time-axis `a` with time-axis `b`.
+         *
+         * 
+         *
+         * Values are only added after time-axis `a`, never inside.
+         *
+         * \param a  Time-axis to extend.
+         * \param b  Time-axis to extend.
+         * \param split_at  Time-point to split between `a` and `b`.
+         *   If at a interval boundary in `a` the interval is _not_ included.
+         *   If inside a interval in `a` the interval is included.
+         *   If at a interval boundary in `b` the interval is included.
+         *   If inside a interval in `b` the interval is _not_ included.
+         */
+        inline generic_dt extend(const fixed_dt & a, const fixed_dt & b, const utctime split_at) {
+            const utcperiod pa = a.total_period();
+            const utcperiod pb = b.total_period();
+
+            {
+                const size_t asz = a.size();
+                const size_t bsz = b.size();
+
+                // trivial cases
+                if ( asz == 0 || bsz == 0 ) {
+                    // - both empty -> return empty range
+                    if ( asz == 0 && bsz == 0 ) {
+                        return generic_dt(fixed_dt::null_range());
+                    }
+                    // - one empty -> return non-empty sliced at split_at
+                    else if ( asz == 0 ) {
+                        size_t split_index = b.index_of(split_at);
+                        if ( split_index == std::string::npos ) {
+                            if ( split_at < pb.start ) {
+                                return generic_dt(b);
+                            } else {
+                                return generic_dt(fixed_dt::null_range());
+                            }
+                        } else {
+                            utcperiod split_p = b.period(split_index);
+                            return generic_dt(fixed_dt(
+                                split_p.start,
+                                b.dt, bsz - split_index));
+                        }
+                    } else {
+                        size_t split_index = a.index_of(split_at);
+                        if ( split_index == std::string::npos ) {
+                            if ( split_at < pa.start ) {
+                                return generic_dt(fixed_dt::null_range());
+                            } else {
+                                return generic_dt(a);
+                            }
+                        } else {
+                            return generic_dt(fixed_dt(
+                                pa.start,
+                                a.dt, split_index));
+                        }
+                    }
+                }
+            }
+
+            // sliced spans for a and b 
+            const utcperiod sa(  // span a
+                    pa.start,
+                    min(max(pa.start + ((split_at - pa.start) / a.dt) * a.dt, pa.start), pa.end) );
+            const utcperiod sb(  // span b
+                    max(min(pb.start + ((split_at - pb.start) / b.dt) * b.dt, pb.end), pb.start),
+                    pb.end );
+
+            // aligned and consecutive
+            if ( 
+                a.dt == b.dt && pa.start == pb.start + ((pa.start - pb.start) / b.dt)*b.dt  // aligned
+                && (sa.start == sa.end || sb.start == sb.end || sa.end == sb.start)  // consecutive
+            ) {
+                if ( sa.start != sa.end ) {  // non-empty
+                    if ( sb.start != sb.end ) {  // non-empty
+                        return generic_dt(fixed_dt(sa.start, a.dt, (sb.end - sa.start) / a.dt));
+                    } else {
+                        return generic_dt(fixed_dt(sa.start, a.dt, (sa.end - sa.start) / a.dt));
+                    }
+                } else {
+                    if ( sb.start != sb.end ) {  // non-empty
+                        return generic_dt(fixed_dt(sb.start, a.dt, (sb.end - sb.start) / a.dt));
+                    } else {
+                        return generic_dt(fixed_dt::null_range());
+                    }
+                }
+            // unaligned or non-consecutive
+            } else {
+                std::vector<utctime> points;
+                points.reserve(
+                    (sa.end - sa.start) / a.dt + (sa.start != sa.end ? 1 : 0)
+                    + (sb.end - sb.start) / b.dt + (sb.start != sb.end ? 1 : 0));
+
+                // add a
+                if ( sa.start != sa.end ) {
+                    for ( utctime t = sa.start; t <= sa.end; t += a.dt )
+                        points.push_back(t);
+                }
+
+                // add b
+                if ( sb.start != sb.end ) {
+                    // the first interval may overlap for unaligned time-axes
+                    if ( sa.start != sa.end && sb.start > sa.end )
+                        points.push_back(sb.start);
+                    for ( utctime t = sb.start+b.dt; t <= sb.end; t += b.dt )
+                        points.push_back(t);
+                }
+
+                // finalize
+                if ( points.size() >= 2 ) {
+                    return generic_dt(point_dt(std::move(points)));
+                } else {
+                    return generic_dt(point_dt::null_range());
+                }
+            }
+        }
+
+        inline generic_dt extend(const calendar_dt & a, const calendar_dt & b, const utctime split_at) {
+            const utcperiod pa = a.total_period();
+            const utcperiod pb = b.total_period();
+
+            {
+                const size_t asz = a.size();
+                const size_t bsz = b.size();
+
+                // trivial cases
+                if ( asz == 0 || bsz == 0 ) {
+                    // - both empty -> return empty range
+                    if ( asz == 0 && bsz == 0 ) {
+                        return generic_dt(calendar_dt::null_range());
+                    }
+                    // - one empty -> return non-empty sliced at split_at
+                    else if ( asz == 0 ) {
+                        size_t split_index = b.index_of(split_at);
+                        if ( split_index == std::string::npos ) {
+                            if ( split_at < pb.start ) {
+                                return generic_dt(b);
+                            } else {
+                                return generic_dt(calendar_dt::null_range());
+                            }
+                        } else {
+                            utcperiod split_p = b.period(split_index);
+                            return generic_dt(calendar_dt(
+                                b.get_calendar(),
+                                split_p.start,
+                                b.dt, bsz - split_index));
+                        }
+                    } else {
+                        size_t split_index = a.index_of(split_at);
+                        if ( split_index == std::string::npos ) {
+                            if ( split_at < pa.start ) {
+                                return generic_dt(calendar_dt::null_range());
+                            } else {
+                                return generic_dt(a);
+                            }
+                        } else {
+                            return generic_dt(calendar_dt(
+                                a.get_calendar(),
+                                pa.start,
+                                a.dt, split_index));
+                        }
+                    }
+                }
+            }
+
+            // sliced spans for a and b
+            size_t idx = a.index_of(split_at);
+            const size_t split_a_idx = idx != std::string::npos ? idx : (split_at < pa.start ? 0 : a.size());
+            //
+            idx = b.index_of(split_at);
+            const size_t split_b_idx = idx != std::string::npos ? idx : (split_at < pb.start ? 0 : b.size() - 1);
+
+            // split interval
+            const utcperiod span_a(
+                pa.start,
+                split_at < pa.end ? a.period(split_a_idx).start : pa.end);
+            const utcperiod span_b(
+                split_at < pb.end ? b.period(split_b_idx).start : pb.end,
+                pb.end);
+
+            if ( span_a.start == span_a.end && span_b.start == span_b.end ) {
+                return generic_dt(calendar_dt::null_range());
+            }
+
+            // equivalent calendars, aligned dt, and consecutive
+            if ( a.cal->tz_info->name() == b.cal->tz_info->name()
+                && a.dt == b.dt
+                && (span_a.start == span_a.end || span_b.start == span_b.end || span_a.end == span_b.start)
+            ) {
+
+                // determine aligned offset
+                utctimespan remainder;
+                size_t n = static_cast<size_t>(a.cal->diff_units(pa.start, pb.end, a.dt, remainder));
+
+                // no offset 
+                if ( remainder == 0 ) {
+                    if ( span_a.start != span_a.end ) {  // non-empty
+                        if ( span_b.start != span_b.end ) {  // non-empty
+                            return generic_dt(calendar_dt(a.get_calendar(), span_a.start, a.dt, n));
+                        } else {
+                            return generic_dt(calendar_dt(a.get_calendar(), span_a.start, a.dt, split_a_idx));
+                        }
+                    } else {
+                        if ( span_b.start != span_b.end ) {  // non-empty
+                            return generic_dt(calendar_dt(a.get_calendar(), span_b.start, a.dt, b.size() - split_b_idx));
+                        //} else {
+                            //return generic_dt(calendar_dt::null_range());
+                        }
+                    }
+                }
+            }
+
+            // ELSE unaligned or non-consecutive
+
+            std::vector<utctime> points;
+            points.reserve(
+                (span_a.start != span_a.end ? split_a_idx + 1 : 0)
+                 + (span_b.start != span_b.end && split_at < pb.end ? b.size() - split_b_idx : 0)
+                 + (span_a.start != span_b.end && span_a.end < span_b.start ? 1 : 0));
+
+            // add a
+            if ( split_a_idx > 0 ) {
+                for ( size_t i = 0; i <= split_a_idx; ++i ) {
+                    points.push_back(a.cal->add(pa.start, a.dt, i));
+                }
+            }
+
+            // add b
+            if ( span_b.start != span_b.end ) {
+                // the first interval may overlap for unaligned time-axes
+                if ( span_a.start == span_a.end || span_b.start > span_a.end ) {
+                    points.push_back(b.cal->add(pb.start, b.dt, split_b_idx));
+                }
+                const size_t bsz = b.size();
+                for ( size_t i = split_b_idx + 1; i <= bsz; ++i ) {
+                    points.push_back(b.cal->add(pb.start, b.dt, i));
+                }
+            }
+
+            // finalize
+            if ( points.size() >= 2 ) {
+                return generic_dt(point_dt(std::move(points)));
+            } else {
+                return generic_dt(point_dt::null_range());
+            }
+        }
+
+        inline generic_dt extend(const generic_dt & a, const generic_dt & b, const utctime split_at) {
+            if ( a.gt == generic_dt::FIXED && b.gt == generic_dt::FIXED ) {
+                return extend(a.f, b.f, split_at);
+            } else if ( a.gt == generic_dt::CALENDAR && b.gt == generic_dt::CALENDAR ) {
+                return extend(a.c, b.c, split_at);
+            } else {
+                if ( a.gt == generic_dt::FIXED ) {
+                    if ( b.gt == generic_dt::CALENDAR ) {
+                        return extend(a.f, b.c, split_at);
+                    } else {  // point
+                        return extend(a.f, b.p, split_at);
+                    }
+                } else if ( a.gt == generic_dt::CALENDAR ) {
+                    if ( b.gt == generic_dt::FIXED ) {
+                        return extend(a.c, b.f, split_at);
+                    } else {  // point
+                        return extend(a.c, b.p, split_at);
+                    }
+                } else {
+                    if ( b.gt == generic_dt::FIXED ) {
+                        return extend(a.p, b.f, split_at);
+                    } else if ( b.gt == generic_dt::CALENDAR ) {
+                        return extend(a.p, b.c, split_at);
+                    } else {  // point
+                        return extend(a.p, b.p, split_at);
+                    }
+                }
+            }
+        }
+
+        template<class TA, class TB>
+        inline auto extend(const TA & a, const TB & b, const utctime split_at)
+            -> typename std::enable_if<TA::continuous::value && TB::continuous::value, generic_dt>::type  // SFINAE
+        {
+            namespace core = shyft::core;
+
+            const size_t a_sz = a.size(),
+                         b_sz = b.size();
+            const core::utcperiod pa = a.total_period(),
+                                  pb = b.total_period();
+
+            // determine number of intervals to use
+            const size_t a_idx = a.index_of(split_at),
+                         a_end_idx = a_idx != std::string::npos  // split index not after a?
+                ? a_idx : (a_sz == 0 || split_at < pa.start ? 0 : a_sz);
+            // -----
+            const size_t b_idx = b.index_of(split_at),
+                         b_start_idx = b_idx != std::string::npos  // split index not before b?
+                ? b_idx : (b_sz == 0 || split_at < pb.start ? 0 : b_sz);
+
+            // one empty?
+            if ( a_end_idx == 0 || b_start_idx == b_sz ) {
+                if ( a_end_idx == 0 && b_start_idx == b_sz ) {
+                    return std::move(generic_dt(point_dt::null_range()));
+                }
+                // b empty? (remember then a can't be)
+                else if ( b_start_idx == b_sz ) {
+                    if ( a_end_idx == 0 ) {
+                        return generic_dt(a);
+                    } else {
+                        return extend_helper<TA>::as_generic(a, 0, a_end_idx);
+                    }
+                } else {
+                    if ( b_start_idx == 0 ) {
+                        return generic_dt(b);
+                    } else {
+                        return extend_helper<TB>::as_generic(b, b_start_idx, b_sz - b_start_idx);
+                    }
+                }
+            }
+
+            std::vector<utctime> points;
+
+            // any a points to use?
+            if ( a_sz > 0 && split_at >= a.period(0).end ) {
+                for ( size_t i = 0; i < a_end_idx; ++i ) {
+                    points.push_back(a.period(i).start);
+                }
+                points.push_back(a.period(a_end_idx - 1).end);
+            }
+
+            // any b points to use?
+            if ( b_sz > 0 && pa.start < pb.end && split_at < pb.end ) {
+                if (
+                    pa.start == pa.end      // a is empty
+                    || pb.start > pa.end    // OR b starts after end of a
+                    || split_at > pa.end    // OR split is after end of a
+                    || pb.start > split_at  // OR the start of b is after the split
+                ) {
+                    // then push the first point of b (otherwise it is included as the last from a)
+                    points.push_back(b.period(b_start_idx).start);
+                }
+                for ( size_t i = b_start_idx + 1; i < b_sz; ++i ) {
+                    points.push_back(b.period(i).start);
+                }
+                points.push_back(b.period(b_sz-1).end);
+            }
+
+            // finalize
+            if ( points.size() >= 2 ) {
+                return generic_dt(point_dt(std::move(points)));
+            } else {
+                return generic_dt(point_dt::null_range());
+            }
+        }
+
+        template<class TA, class TB>
+        inline auto extend(const TA & a, const TB & b, const utctime split_at)
+            -> typename std::enable_if<! TA::continuous::value || ! TB::continuous::value, generic_dt>::type  // SFINAE
+        {
+            throw std::runtime_error("extension of/with discontinuous time-axis not supported");
+        }
 
         /** \brief fast&efficient combine for two fixed_dt time-axis */
         inline fixed_dt combine( const fixed_dt& a, const fixed_dt& b )  {

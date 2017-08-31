@@ -174,6 +174,17 @@ namespace shyft{
 		apoint_ts apoint_ts::time_shift(utctimespan dt) const {
 			return shyft::api::time_shift(*this, dt);
 		}
+        apoint_ts apoint_ts::extend(
+            const apoint_ts & ts,
+            extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+            utctime split_at, double fill_value
+        ) const {
+            return shyft::api::extend(
+                *this, ts,
+                split_policy, fill_policy, 
+                split_at, fill_value
+            );
+        }
 
         /** recursive function to dig out bind_info */
         static void find_ts_bind_info(const std::shared_ptr<shyft::api::ipoint_ts>&its, std::vector<ts_bind_info>&r) {
@@ -557,6 +568,104 @@ namespace shyft{
 
         }
 
+        apoint_ts extend(
+            const apoint_ts & lhs_ts,
+            const apoint_ts & rhs_ts,
+            extend_ts_split_policy split_policy, extend_ts_fill_policy fill_policy,
+            utctime split_at, double fill_value
+        ) {
+            return apoint_ts(std::make_shared<shyft::api::extend_ts>(
+                    lhs_ts, rhs_ts,
+                    split_policy, fill_policy,
+                    split_at, fill_value
+                ));
+        }
+
+        std::vector<double> extend_ts::values() const {
+            this->bind_check();
+
+            const utctime split_at = this->get_split_at();
+            const auto lhs_p = this->lhs.time_axis().total_period();
+            const auto rhs_p = this->rhs.time_axis().total_period();
+
+            // get values 
+            std::vector<double> lhs_values{}, rhs_values{};
+            if ( split_at >= lhs_p.start ) lhs_values = this->lhs.values();
+            if ( split_at <= lhs_p.end )   rhs_values = this->rhs.values();
+
+            // possibly to long, but not too short, all values default to nan
+            std::vector<double> result;
+            result.reserve(lhs.size() + rhs_values.size());
+
+            auto res_oit = std::back_inserter(result);  // output iterator
+
+            // values from the lhs
+            if ( split_at >= lhs_p.end ) {  // use all of lhs
+                res_oit = std::copy(lhs_values.begin(), lhs_values.end(), res_oit);
+            } else if ( split_at >= lhs_p.start ) {  // split inside lhs
+                size_t lhs_i = this->lhs.time_axis().index_of(split_at);
+                auto lhs_end_it = lhs_values.begin();
+                std::advance(lhs_end_it, lhs_i);
+
+                res_oit = std::copy(lhs_values.begin(), lhs_end_it, res_oit);
+            }
+
+            // values from the rhs
+            if ( split_at <= rhs_p.start ) {  // use all of rhs
+                std::copy(rhs_values.begin(), rhs_values.end(), res_oit);
+            } else if ( split_at <= rhs_p.end ) {  // split inside rhs
+                size_t rhs_i = this->rhs.time_axis().index_of(split_at);
+                auto rhs_start_it = rhs_values.begin();
+                std::advance(rhs_start_it, rhs_i);
+
+                std::copy(rhs_start_it, rhs_values.end(), res_oit);
+            }
+
+            return result;
+        }
+
+        double extend_ts::value_at(utctime t) const {
+            //this->bind_check();  // done in time_axis()
+            if ( ! this->time_axis().total_period().contains(t) ) {
+                return nan;
+            }
+
+            utctime split_at = this->get_split_at();
+
+            if ( t < split_at ) {  // lhs
+                if ( this->lhs.time_axis().total_period().contains(t) ) {
+                    return this->lhs(t);
+                } else {
+                    // greater than lhs.end -> use policy
+                    switch ( this->ets_fill_p ) {
+                    default:
+                    case EPF_NAN:  return nan;
+                    case EPF_FILL: return this->fill_value;
+                    case EPF_LAST: return this->lhs.value(lhs.size() - 1);
+                    }
+                }
+            } else {  // rhs
+                if ( this->rhs.time_axis().total_period().contains(t) ) {
+                    return this->rhs(t);
+                } else {
+                    // less than rhs.start -> use policy
+                    switch ( this->ets_fill_p ) {
+                    default:
+                    case EPF_NAN:  return nan;
+                    case EPF_FILL: return this->fill_value;
+                    case EPF_LAST: return this->lhs.value(lhs.size() - 1);
+                    }
+                }
+            }
+        }
+
+        double extend_ts::value(size_t i) const {
+            //this->bind_check();  // done in value_at()
+            if ( i == std::string::npos || i >= time_axis().size() ) {
+                return nan;
+            }
+            return value_at(time_axis().time(i));
+        }
     }
 }
 

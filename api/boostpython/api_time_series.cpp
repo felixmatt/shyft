@@ -11,7 +11,9 @@ namespace expose {
     using namespace shyft::core;
     using namespace boost::python;
     using namespace std;
-    
+
+    namespace py = boost::python;
+
     shyft::api::ats_vector quantile_map_forecast_5(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start ) {
         return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start);
     }
@@ -116,6 +118,26 @@ namespace expose {
                 doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
 				doc_returns("tsv","TsVector",	"a new time-series, that appears as time-shifted version of self")
 			)
+            .def("extend", &ats_vector::extend_ts, (py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
+                doc_intro("create a new ats_vector where all time-series are extended by ts")
+                doc_parameters()
+                doc_parameter("ts", "TimeSeries", "time-series to extend each time-series in self with")
+                doc_parameter("split_policy", "extend_ts_split_policy", "policy determining where to split between self and ts")
+                doc_parameter("fill_policy", "extend_ts_fill_policy", "policy determining how to fill any gap between self and ts")
+                doc_parameter("split_at", "utctime", "time at which to split if split_policy == EPS_VALUE")
+                doc_parameter("fill_value", "float", "value to fill any gap with if fill_policy == EPF_FILL")
+                doc_returns("new_ts_vec" ,"TsVector", "a new time-series vector where all time-series in self have been extended by ts")
+            )
+            .def("extend", &ats_vector::extend_vec, (py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
+                doc_intro("create a new ats_vector where all ts' are extended by the matching ts from ts_vec")
+                doc_parameters()
+                doc_parameter("ts_vec", "TsVector", "time-series vector to extend time-series in self with")
+                doc_parameter("split_policy", "extend_ts_split_policy", "policy determining where to split between self and ts")
+                doc_parameter("fill_policy", "extend_ts_fill_policy", "policy determining how to fill any gap between self and ts")
+                doc_parameter("split_at", "utctime", "time at which to split if split_policy == EPS_VALUE")
+                doc_parameter("fill_value", "float", "value to fill any gap with if fill_policy == EPF_FILL")
+                doc_returns("new_ts_vec" ,"TsVector", "a new time-series vector where all time-series in self have been extended by the corresponding time-series in ts_vec")
+            )
             .def("min",(m_double)&ats_vector::min,args("number"),"returns min of vector and a number")
             .def("min", (m_ts)&ats_vector::min, args("ts"), "returns min of ts-vector and a ts")
             .def("min", (m_tsv)&ats_vector::min, args("tsv"), "returns min of ts-vector and another ts-vector")
@@ -286,6 +308,8 @@ namespace expose {
 
 
     static void expose_apoint_ts() {
+        using namespace shyft::api;
+
         typedef shyft::api::apoint_ts pts_t;
         typedef pts_t (pts_t::*self_dbl_t)(double) const;
         typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
@@ -442,6 +466,16 @@ namespace expose {
                 "\t Specifies how to handle initial weight.size()-1 values\n")
                 doc_returns("ts","TimeSeries","a new time-series that is evaluated on request to the convolution of self")
                 doc_see_also("ConvolvePolicy")
+            )
+            .def("extend", &shyft::api::apoint_ts::extend, (py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
+                doc_intro("create a new time-series that is self extended with ts")
+                doc_parameters()
+                doc_parameter("ts", "TimeSeries", "time-series to extend self with, only values after both the start of self, and split_at is used")
+                doc_parameter("split_policy", "extend_split_policy", "policy determining where to split between self and ts")
+                doc_parameter("fill_policy", "extend_fill_policy", "policy determining how to fill any gap between self and ts")
+                doc_parameter("split_at", "utctime", "time at which to split if split_policy == EPS_VALUE")
+                doc_parameter("fill_value", "float", "value to fill any gap with if fill_policy == EPF_FILL")
+                doc_returns("extended_ts" ,"TimeSeries", "a new time-series that is the extension of self with ts")
             )
             .def("min",min_double_f,args("number"),"create a new ts that contains the min of self and number for each time-step")
             .def("min",min_ts_f,args("ts_other"),"create a new ts that contains the min of self and ts_other")
@@ -610,6 +644,29 @@ namespace expose {
             .value("AVERAGE",time_series::statistics_property::AVERAGE)
             .value("MIN_EXTREME",time_series::statistics_property::MIN_EXTREME)
             .value("MAX_EXTREME",time_series::statistics_property::MAX_EXTREME)
+            ;
+
+        enum_<time_series::api::extend_ts_fill_policy>(
+            "extend_fill_policy",
+            "Ref TimeSeries.extend function, this policy determines how to represent values in a gap\n"
+            "EPF_NAN : use nan values in the gap\n"
+            "EPF_LAST: use the last value before the gap\n"
+            "EPF_FILL: use a supplied value in the gap\n"
+            )
+            .value("FILL_NAN",   time_series::api::extend_ts_fill_policy::EPF_NAN)
+            .value("USE_LAST",   time_series::api::extend_ts_fill_policy::EPF_LAST)
+            .value("FILL_VALUE", time_series::api::extend_ts_fill_policy::EPF_FILL)
+            ;
+        enum_<time_series::api::extend_ts_split_policy>(
+            "extend_split_policy",
+            "Ref TimeSeries.extend function, this policy determines where to split/shift from one ts to the other\n"
+            "EPS_LHS_LAST : use nan values in the gap\n"
+            "EPS_RHS_FIRST: use the last value before the gap\n"
+            "EPS_VALUE    : use a supplied value in the gap\n"
+            )
+            .value("LHS_LAST",  time_series::api::extend_ts_split_policy::EPS_LHS_LAST)
+            .value("RHS_FIRST", time_series::api::extend_ts_split_policy::EPS_RHS_FIRST)
+            .value("AT_VALUE",  time_series::api::extend_ts_split_policy::EPS_VALUE)
             ;
 
         enum_<time_series::convolve_policy>(

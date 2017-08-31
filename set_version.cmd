@@ -4,6 +4,6 @@ git rev-list --count HEAD > VERSION
 
 set /p minor=<VERSION
 
-echo 4.1.%minor% > VERSION
+echo 4.4.%minor% > VERSION
 
-echo ##teamcity[buildNumber '4.1.%minor%']
+echo ##teamcity[buildNumber '4.4.%minor%']
