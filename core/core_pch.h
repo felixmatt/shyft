@@ -1,19 +1,19 @@
 ///	Copyright 2012 Statkraft Energi A/S
 ///
-///	This file is part of ENKI.
+///	This file is part of Shyft.
 ///
-///	ENKI is free software: you can redistribute it and/or modify
+///	Shyft is free software: you can redistribute it and/or modify
 ///	it under the terms of the GNU Lesser General Public License as
 ///	published by the Free Software Foundation, either version 3 of
 ///	the License, or (at your option) any later version.
 ///
-///	ENKI is distributed in the hope that it will be useful,
+///	Shyft is distributed in the hope that it will be useful,
 ///	but WITHOUT ANY WARRANTY; without even the implied warranty of
 ///	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ///	GNU Lesser General Public License for more details.
 ///
 ///	You should have received a copy of the GNU Lesser General Public
-///	License along with ENKI, usually located under the ENKI root
+///	License along with Shyft, usually located under the Shyft root
 ///	directory in two files named COPYING.txt and COPYING_LESSER.txt.
 ///	If not, see <http://www.gnu.org/licenses/>.
 ///
@@ -35,9 +35,6 @@
 #include <algorithm>
 #include <functional>
 #include <iosfwd>
-//#include <iostream>
-//#include <ostream>
-//#include <sstream>
 #include <thread>
 #include <future>
 #include <mutex>
@@ -52,12 +49,6 @@
 #include <math.h>
 #include <cmath>
 
-#ifndef _MSC_VER
-// SiH: On ubuntu 15.04, with boost 1.59, gcc 4.9.2 this was needed
-// to avoid undefined static_gcd_type
-#include <boost/math_fwd.hpp>
-typedef boost::math::static_gcd_type static_gcd_type;
-#endif
 #include <boost/numeric/odeint.hpp>
 #include <boost/range.hpp>
 #include <boost/math/distributions/gamma.hpp>
