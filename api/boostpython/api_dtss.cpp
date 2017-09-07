@@ -1,5 +1,6 @@
 #include "boostpython_pch.h"
 #include <boost/python/docstring_options.hpp>
+#include <boost/python/import.hpp>
 
 //-- for serialization:
 #include <boost/archive/binary_iarchive.hpp>
@@ -67,21 +68,55 @@ namespace shyft {
                 fcb = boost::python::object();
             }
 
+            void handle_pyerror() {
+                // from SO: https://stackoverflow.com/questions/1418015/how-to-get-python-exception-text
+                using namespace boost::python;
+                using namespace boost;
+                std::string msg{"unspecified error"};
+                if(PyErr_Occurred()) {
+                    PyObject *exc,*val,*tb;
+                    object formatted_list, formatted;
+                    PyErr_Fetch(&exc,&val,&tb);
+                    handle<> hexc(exc),hval(allow_null(val)),htb(allow_null(tb));
+                    object traceback(import("traceback"));
+                    if (!tb) {
+                        object format_exception_only(traceback.attr("format_exception_only"));
+                        formatted_list = format_exception_only(hexc,hval);
+                    } else {
+                        object format_exception(traceback.attr("format_exception"));
+                        formatted_list = format_exception(hexc,hval,htb);
+                    }
+                    formatted = str("\n").join(formatted_list);
+                    msg= extract<std::string>(formatted);
+                }
+                handle_exception();
+                PyErr_Clear();
+                throw std::runtime_error(msg);
+            }
 
             static int msg_count ;
             ts_info_vector_t find_cb(std::string search_expression) {
                 ts_info_vector_t r;
                 if (fcb.ptr() != Py_None) {
                     scoped_gil_aquire gil;
-                    r = boost::python::call<ts_info_vector_t>(fcb.ptr(), search_expression);
+                    try {
+                        r = boost::python::call<ts_info_vector_t>(fcb.ptr(), search_expression);
+                    } catch  (const boost::python::error_already_set&) {
+                        handle_pyerror();
+                    }
                 }
                 return r;
             }
+
             ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
                 api::ats_vector r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
-                    r = boost::python::call<ts_vector_t>(cb.ptr(), ts_ids, p);
+                    try {
+                        r = boost::python::call<ts_vector_t>(cb.ptr(), ts_ids, p);
+                    } catch  (const boost::python::error_already_set&) {
+                        handle_pyerror();
+                    }
                 } else {
                     // for testing, just fill in constant values.
                     api::gta_t ta(p.start, core::deltahours(1), p.timespan() / core::deltahours(1));

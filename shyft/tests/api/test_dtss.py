@@ -17,16 +17,19 @@ from shyft.api import TsInfo
 from shyft.api import TsInfoVector
 from shyft.api import utctime_now
 
+
 class DtssTestCase(unittest.TestCase):
     """Verify and illustrate dtts, distributed ts service
 
      """
-    def __init__(self,*args,**kwargs):
-        super(DtssTestCase,self).__init__(*args,**kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super(DtssTestCase, self).__init__(*args, **kwargs)
         self.callback_count = 0
         self.find_count = 0
         self.ts_infos = TsInfoVector()
-        utc=Calendar()
+        self.rd_throws = False
+        utc = Calendar()
         t_now = utctime_now()
         for i in range(30):
             self.ts_infos.append(
@@ -35,23 +38,30 @@ class DtssTestCase(unittest.TestCase):
                     point_fx=point_fx.POINT_AVERAGE_VALUE,
                     delta_t=deltahours(1),
                     olson_tz_id='',
-                    data_period=UtcPeriod(utc.time(2017,1,1), utc.time(2018, 1, 1)),
+                    data_period=UtcPeriod(utc.time(2017, 1, 1), utc.time(2018, 1, 1)),
                     created=t_now,
                     modified=t_now
                 )
             )
 
-    def dtss_read_callback(self,ts_ids:StringVector,read_period:UtcPeriod)->TsVector:
+    def dtss_read_callback(self, ts_ids: StringVector, read_period: UtcPeriod) -> TsVector:
         self.callback_count += 1
         r = TsVector()
-        ta = TimeAxis(read_period.start,deltahours(1),read_period.timespan()//deltahours(1))
+        ta = TimeAxis(read_period.start, deltahours(1), read_period.timespan() // deltahours(1))
+        if self.rd_throws:
+            self.rd_throws = False
+            raise RuntimeError(f"read-ts-problem")
         for ts_id in ts_ids:
-            r.append(TimeSeries(ta,fill_value=1.0,point_fx=point_fx.POINT_AVERAGE_VALUE))
+            r.append(TimeSeries(ta, fill_value=1.0, point_fx=point_fx.POINT_AVERAGE_VALUE))
         return r
 
-    def dtss_find_callback(self,search_expression: str)-> TsInfoVector:
+    def dtss_find_callback(self, search_expression: str) -> TsInfoVector:
         self.find_count += 1
         r = TsInfoVector()
+        if self.rd_throws:
+            self.rd_throws = False  # we hope py do the right thing, release r here.
+            raise ValueError("Any exception is translated to runtime-error")
+
         prog = re.compile(search_expression)
         for tsi in self.ts_infos:
             if prog.fullmatch(tsi.name):
@@ -76,7 +86,7 @@ class DtssTestCase(unittest.TestCase):
             tsv.append(float(1 + i / 10) * TimeSeries(ta, np.linspace(start=0, stop=1.0, num=ta.size()),
                                                       point_fx.POINT_AVERAGE_VALUE))
 
-        dummy_ts= TimeSeries('dummy://a')
+        dummy_ts = TimeSeries('dummy://a')
         tsv.append(dummy_ts.integral(ta))
 
         # then start the server
@@ -94,17 +104,31 @@ class DtssTestCase(unittest.TestCase):
         r1 = dts.evaluate(tsv, ta.total_period())
         r2 = dts.percentiles(tsv, ta.total_period(), ta24, percentile_list)
         r3 = dts.find('netcdf://dummy\.nc/ts\d')
+        self.rd_throws = True
+        ex_count = 0
+        try:
+            rx = dts.evaluate(tsv, ta.total_period())
+        except RuntimeError as e:
+            ex_count = 1
+            pass
+        self.rd_throws = True
+        try:
+            fx = dts.find('should throw')
+        except RuntimeError as e:
+            ex_count += 1
+            pass
+
         dts.close()  # close connection (will use context manager later)
         dtss.clear()  # close server
-
+        self.assertEqual(ex_count, 2)
         self.assertEqual(len(r1), len(tsv))
-        self.assertEqual(self.callback_count,2)
-        for i in range(n_ts-1):
+        self.assertEqual(self.callback_count, 3)
+        for i in range(n_ts - 1):
             self.assertEqual(r1[i].time_axis, tsv[i].time_axis)
             assert_array_almost_equal(r1[i].values.to_numpy(), tsv[i].values.to_numpy(), decimal=4)
 
         self.assertEqual(len(r2), len(percentile_list))
-        dummy_ts.bind(TimeSeries(ta,fill_value=1.0))
+        dummy_ts.bind(TimeSeries(ta, fill_value=1.0))
         p2 = tsv.percentiles(ta24, percentile_list)
         # r2 = tsv.percentiles(ta24,percentile_list)
 
@@ -112,9 +136,7 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(r2[i].time_axis, p2[i].time_axis)
             assert_array_almost_equal(r2[i].values.to_numpy(), p2[i].values.to_numpy(), decimal=1)
 
-        self.assertEqual(self.find_count, 1)
+        self.assertEqual(self.find_count, 2)
         self.assertEqual(len(r3), 10)  # 0..9
         for i in range(len(r3)):
-            self.assertEqual(r3[i],self.ts_infos[i])
-
-
+            self.assertEqual(r3[i], self.ts_infos[i])
