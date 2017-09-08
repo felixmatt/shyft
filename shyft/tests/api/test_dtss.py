@@ -50,7 +50,7 @@ class DtssTestCase(unittest.TestCase):
         ta = TimeAxis(read_period.start, deltahours(1), read_period.timespan() // deltahours(1))
         if self.rd_throws:
             self.rd_throws = False
-            raise RuntimeError(f"read-ts-problem")
+            raise RuntimeError("read-ts-problem")
         for ts_id in ts_ids:
             r.append(TimeSeries(ta, fill_value=1.0, point_fx=point_fx.POINT_AVERAGE_VALUE))
         return r
