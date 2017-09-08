@@ -1,14 +1,13 @@
 README
 ======
 
-|Branch      |Status   |
-|------------|---------|
-|master       | [![Build Status](https://travis-ci.org/statkraft/shyft.svg?branch=master)](https://travis-ci.org/statkraft/shyft) |
+|Branch      |Status   |Docs   |
+|------------|---------|---------|
+|master       | [![Build Status](https://travis-ci.org/statkraft/shyft.svg?branch=master)](https://travis-ci.org/statkraft/shyft) | [![Doc Development](https://img.shields.io/badge/docs-latest-blue.svg)](http://shyft.readthedocs.io/en/latest/) |
 
-Shyft is an OpenSource hydrological toolbox developed by
-[Statkraft](http://www.statkraft.com).
+Shyft is an OpenSource hydrological toolbox developed by [Statkraft](http://www.statkraft.com). It is optimized for highly efficient modeling of hydrologic processes following the paradigm of distributed, lumped parameter models -- though recent developments have introduced more physically based / process-level methods.
 
-It is optimized for highly efficient modeling of hydrologic processes following the paradigm of distributed, lumped parameter models -- though recent developments have introduced more physically based / process-level methods.
+
 
 The code is based on an early [initiative for distributed hydrological simulation](http://www.sintef.no/sintef-energi/xergi/xergi-2004/nr-1---april/betre-tilsigsprognoser-med-meir-informasjon/) , called [ENKI](https://bitbucket.org/enkiopensource/enki) funded by Statkraft and developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland and Oddbjorn Bruland.
 
