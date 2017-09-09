@@ -1,0 +1,72 @@
+# TODO: 1. rather use git version/tag to set version
+# TODO: 2. notice that the file conda_buld_config.yaml
+#          that contains settings for the python and numpy version used
+#          This is hard-linked to the boost-python libraries
+#          used when producing the extension modules usually *prior* 
+#          to the conda-build step
+#          So what we need is to ensure that those hard dependencies
+#          are propagated through the package-dependencies set
+#          by conda-build
+#          (The alternative of using setup-tools to build is abandoned
+#           due to the complexity of building the 3rd party dependencies
+#           including boost, and specially boost python on win using ms tools)
+#
+package:
+    name: shyft
+    version: {{ environ.get('SHYFT_VERSION','4.4.1') }}
+    
+source:
+    # where to find the source-tree
+    # in this case we assume it's precompiled
+    path: ../
+    
+build:
+    # notice that we do pass through these *in case*
+    # a full build is run, and we do have a complete
+    # ready built shyft_dependencies directory to rely on
+    # the boost_pythonhome ensures that the include we
+    # see from our source-code through boost-python 
+    # is the same as the boost-python libraries was 
+    # built with.
+    # Note that the shyft setup.py script detects already built extension modules
+    #  and skips the build if all are in place.
+    #
+    script_env:
+       - BOOST_PYTHONHOME
+       - SHYFT_DEPENDENCIES
+    number: 1
+    string: np{{CONDA_NPY}}py{{CONDA_PY}}_{{PKG_BUILDNUM}}
+
+test:
+    imports:
+    - shyft.api
+    requires:
+    - nose
+    
+requirements:
+    build:
+        - python
+        - setuptools
+        - numpy {{ numpy }}
+        - shapely
+        - gdal
+        - netcdf4
+        - pyproj
+        - six
+        - pyyaml
+        - nose
+    run:
+        - python
+        - setuptools
+        - {{ pin_compatible('numpy') }}
+        - shapely
+        - gdal
+        - netcdf4
+        - pyproj
+        - six
+        - pyyaml
+        - nose
+about:
+    home: https://github.com/statkraft/shyft
+    license: LGPL v.3
+    

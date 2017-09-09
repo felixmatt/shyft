@@ -1,0 +1,22 @@
+#
+# Please read the note on meta.yaml file
+# the purpose of these settings is
+#  a) get the CONDA_PY and CONDA_NPY versions set
+#  b) avoid creative conda-build to lower the NP version in the run relative the build env
+#
+# Some more hints here:
+#   Basically the link/dependency to python/numpy
+#   is set the moment the extension modules are compiled.
+#   Due to complexity of dependencies, and lack of proper build support for the windows platform
+#   the extension-modules are rather built *before* the conda-build, or the python setup.py .. process
+#   Thus these version number should match the boost-python build environment (python and numpy)
+#
+python:
+    - 3.6
+
+numpy:
+    - 1.13.1
+    
+pin_run_as_build:
+    numpy: x.x
+
