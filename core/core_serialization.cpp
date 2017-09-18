@@ -23,6 +23,7 @@
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/nvp.hpp>
@@ -202,12 +203,15 @@ void shyft::time_series::glacier_melt_ts<TS_A, TS_B>::serialize(Archive & ar, co
 template <class Ts>
 template <class Archive>
 void shyft::time_series::convolve_w_ts<Ts>::serialize(Archive & ar, const unsigned int version) {
+	bool b = bound;
     ar
-    & make_nvp("ts", ts)
-    & make_nvp("fx_policy", fx_policy)
-    & make_nvp("w", w)
-    & make_nvp("convolve_policy",policy)
+		& make_nvp("ts", ts)
+		& make_nvp("fx_policy", fx_policy)
+		& make_nvp("w", w)
+		& make_nvp("convolve_policy",policy)
+		& make_nvp("bound", b)
     ;
+	bound = b;
 }
 
 template <class A, class B, class O, class TA>
@@ -223,6 +227,43 @@ void shyft::time_series::bin_op<A, B, O, TA>::serialize(Archive & ar, const unsi
     & make_nvp("bind_done",bind_done)
     ;
     bind_done = bd;
+}
+
+template<class Archive>
+void shyft::time_series::rating_curve_segment::serialize(Archive & ar, const unsigned int version) {
+	ar
+		& make_nvp("lower", lower)
+		& make_nvp("a", a)
+		& make_nvp("b", b)
+		& make_nvp("c", c)
+		;
+}
+
+template<class Archive>
+void shyft::time_series::rating_curve_function::serialize(Archive & ar, const unsigned int version) {
+	ar
+		& make_nvp("segments", segments)
+		;
+}
+
+template<class Archive>
+void shyft::time_series::rating_curve_parameters::serialize(Archive & ar, const unsigned int version) {
+	ar
+		& make_nvp("curves", curves)
+		;
+}
+
+template <class TS>
+template<class Archive>
+void shyft::time_series::rating_curve_ts<TS>::serialize(Archive & ar, const unsigned int version) {
+	bool bd = bound;
+	ar
+		& make_nvp("level_ts", level_ts)
+		& make_nvp("rc_param", rc_param)
+		& make_nvp("fx_policy", fx_policy)
+		& make_nvp("bound", bd)
+		;
+	bound = bd;
 }
 
 //-- basic geo stuff
@@ -244,6 +285,7 @@ void shyft::core::land_type_fractions::serialize(Archive& ar, const unsigned int
     & make_nvp("forest_",forest_)
     ;
 }
+
 template <class Archive>
 void shyft::core::routing_info::serialize(Archive& ar, const unsigned int version) {
     ar
@@ -406,6 +448,14 @@ x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::calendar
 x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::point_dt>);
 x_serialize_implement(shyft::time_series::periodic_ts<shyft::time_axis::generic_dt>);
 
+x_serialize_implement(shyft::time_series::rating_curve_segment);
+x_serialize_implement(shyft::time_series::rating_curve_function);
+x_serialize_implement(shyft::time_series::rating_curve_parameters);
+x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
+
 //-- export method and method-stack state
 x_serialize_implement(shyft::core::hbv_snow::state);
 x_serialize_implement(shyft::core::hbv_soil::state);
@@ -462,6 +512,14 @@ x_arch(shyft::time_series::periodic_ts<shyft::time_axis::fixed_dt>);
 x_arch(shyft::time_series::periodic_ts<shyft::time_axis::calendar_dt>);
 x_arch(shyft::time_series::periodic_ts<shyft::time_axis::point_dt>);
 x_arch(shyft::time_series::periodic_ts<shyft::time_axis::generic_dt>);
+
+x_arch(shyft::time_series::rating_curve_segment);
+x_arch(shyft::time_series::rating_curve_function);
+x_arch(shyft::time_series::rating_curve_parameters);
+x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
 x_arch(shyft::core::geo_point);
 x_arch(shyft::core::land_type_fractions);

@@ -215,7 +215,15 @@ namespace shyft{
             } else if (dynamic_cast<const api::abin_op_ts_scalar*>(its.get())) {
                 auto bin_op = dynamic_cast<const api::abin_op_ts_scalar*>(its.get());
                 find_ts_bind_info(bin_op->lhs.ts, r);
-            }
+			} else if ( dynamic_cast<const api::abs_ts*>(its.get()) ) {
+				find_ts_bind_info(dynamic_cast<const api::abs_ts*>(its.get())->ts, r);
+			} else if ( dynamic_cast<const api::extend_ts*>(its.get()) ) {
+				auto ext = dynamic_cast<const api::extend_ts*>(its.get());
+				find_ts_bind_info(ext->lhs.ts, r);
+				find_ts_bind_info(ext->rhs.ts, r);
+			} else if ( dynamic_cast<const api::rating_curve_ts*>(its.get()) ) {
+				find_ts_bind_info(dynamic_cast<const api::rating_curve_ts*>(its.get())->ts.level_ts.ts, r);
+			}
         }
 
         std::vector<ts_bind_info> apoint_ts::find_ts_bind_info() const {
@@ -283,9 +291,14 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-        apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
+        
+		apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
+
+		apoint_ts apoint_ts::rating_curve(const rating_curve_parameters & rc_param) const {
+			return apoint_ts(std::make_shared<shyft::api::rating_curve_ts>(*this, rc_param));
+		}
 
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& tsv1,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());

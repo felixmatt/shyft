@@ -5,6 +5,8 @@
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
 
+#include <map>
+
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
 #endif
@@ -77,7 +79,29 @@ namespace shyft{
          * \see ref_ts
          */
         template<class T> struct needs_bind {static const bool value=true;};
-        template<class T> bool e_needs_bind(T const&) {return false;}// run-time check on state, default false
+        
+		/** Resolves compiletime to dispatch runtime calls to needs_bind where supported.
+		 * Additionally allows for querying if a type supports needs_bind.
+		 */
+		template <
+			class T, typename = void
+		> struct needs_bind_dispatcher : std::false_type
+		{
+			static bool needs_bind(const T& t) {
+				return false;
+			}
+		};
+
+		template <class T> struct needs_bind_dispatcher<
+			T, std::enable_if_t<std::is_same<decltype(std::declval<T>().needs_bind()), bool>::value>
+		> : std::true_type
+		{
+			static bool needs_bind(const T& t) {
+				return t.needs_bind();
+			}
+		};
+
+		template<class T> bool e_needs_bind(T const& t) { return needs_bind_dispatcher<T>::needs_bind(t); }// run-time check on state, default false
 
         /** \brief d_ref function to d_ref object or shared_ptr
          *
@@ -374,11 +398,11 @@ namespace shyft{
                 :ts(std::forward<A_>(ts)),dt(dt) {
                 // we have to wait with time-axis until we know underlying stuff are ready:
                 if( !(needs_bind< typename d_ref_t<Ts>::type>::value && e_needs_bind(ts))) {
-                    do_deferred_bind();//if possible do it now
+                    do_bind();//if possible do it now
                 }
             }
 
-            void do_deferred_bind() {
+            void do_bind() {
                 if(!bound) {
                     fx_policy = d_ref(ts).point_interpretation();
                     ta = time_axis::time_shift(d_ref(ts).time_axis(),dt);
@@ -824,6 +848,7 @@ namespace shyft{
             ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
             W w;
             convolve_policy policy = convolve_policy::USE_FIRST;
+			bool bound = false;
             //-- default stuff, ct/copy etc goes here
             convolve_w_ts() = default;
 
@@ -833,10 +858,25 @@ namespace shyft{
                 :ts(std::forward<A_>(tsx)),
                 w(std::forward<W_>(w)),
                 policy(policy) {
-                if( !(needs_bind<typename d_ref_t<Ts>::type>::value && e_needs_bind(ts))) {
-                    fx_policy=d_ref(ts).point_interpretation();// TODO: use deferred_bind ! this will be incorrect on expr.
-                }
+                //if( !(needs_bind<typename d_ref_t<Ts>::type>::value && e_needs_bind(ts))) {
+				if ( ! e_needs_bind(d_ref(ts)) ) {
+					local_do_bind();
+				}
             }
+			void do_bind() {
+				ts.do_bind();
+				local_do_bind();
+			}
+			bool needs_bind() const {
+				return ! bound;
+			}
+
+			void local_do_bind() {
+				if ( ! bound ) {
+					fx_policy=d_ref(ts).point_interpretation();
+					bound = true;
+				}
+			}
 
             const ta_t& time_axis() const { return ts.time_axis(); }
             ts_point_fx point_interpretation() const { return fx_policy; }
@@ -959,14 +999,14 @@ namespace shyft{
                 //-- if lhs and rhs allows us (i.e) !needs_bind, we do the binding now
                 if(  !(needs_bind<typename d_ref_t<A>::type >::value && e_needs_bind(d_ref(lhs)))
                    &&!(needs_bind<typename d_ref_t<B>::type >::value && e_needs_bind(d_ref(rhs))) )
-                   do_deferred_bind();
+                   do_bind();
             }
 
-            void deferred_bind() const {
+            void ensure_bound() const {
                 if(!bind_done)
                     throw runtime_error("bin_op: access to not yet bound attempted");
             }
-            void do_deferred_bind()  {
+            void do_bind()  {
                 if(!bind_done) {
                     dbind_ts(d_ref(lhs));
                     dbind_ts(d_ref(rhs));
@@ -977,11 +1017,11 @@ namespace shyft{
             }
 
             const TA& time_axis() const {
-                deferred_bind();
+				ensure_bound();
                 return ta;
             }
             ts_point_fx point_interpretation() const {
-                deferred_bind();
+				ensure_bound();
                 return fx_policy;
             }
             void set_point_interpretation(ts_point_fx point_interpretation) {
@@ -1001,7 +1041,7 @@ namespace shyft{
                 return value_at(ta.time(i));
             }
             size_t size() const {
-                deferred_bind();
+				ensure_bound();
                 return ta.size();
             }
             x_serialize_decl();
@@ -1009,7 +1049,7 @@ namespace shyft{
 
         template<class A, class B, class O, class TA>
         void dbind_ts(bin_op<A,B,O,TA>&&ts) {
-            std::forward<bin_op<A,B,O,TA>>(ts).do_deferred_bind();
+            std::forward<bin_op<A,B,O,TA>>(ts).do_bind();
         }
 
         /** specialize for double bin_op ts */
@@ -1028,11 +1068,11 @@ namespace shyft{
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
                 //-- if lhs and rhs allows us (i.e) !needs_bind, we do the binding now
                 if( !(needs_bind<typename d_ref_t<B>::type >::value && e_needs_bind(d_ref(rhs))) )
-                   do_deferred_bind();
+                   do_bind();
 
             }
 
-            void do_deferred_bind()  {
+            void do_bind()  {
                 if (!bind_done) {
                     dbind_ts(d_ref(rhs));
                     ta = d_ref(rhs).time_axis();
@@ -1041,25 +1081,25 @@ namespace shyft{
                 }
             }
 
-            void deferred_bind() const {
+            void ensure_bound() const {
                 if(!bind_done)
                     throw runtime_error("bin_op: access to not yet bound attempted");
             }
 
-            const TA& time_axis() const {deferred_bind();return ta;}
+            const TA& time_axis() const {ensure_bound();return ta;}
             ts_point_fx point_interpretation() const {
-                deferred_bind();
+				ensure_bound();
                 return fx_policy;
             }
             void set_point_interpretation(ts_point_fx point_interpretation) {
-                deferred_bind();//ensure it's done
+				ensure_bound();//ensure it's done
                 fx_policy=point_interpretation;
             }
 
             double operator()(utctime t) const {return op(lhs,d_ref(rhs)(t));}
             double value(size_t i) const {return op(lhs,d_ref(rhs).value(i));}
             size_t size() const {
-                deferred_bind();
+				ensure_bound();
                 return ta.size();
             }
             x_serialize_decl();
@@ -1081,10 +1121,10 @@ namespace shyft{
             bin_op(A_&& lhsx,O op,B_&& rhsx):lhs(forward<A_>(lhsx)),rhs(forward<B_>(rhsx)),op(op) {
                 //-- if hs allows us (i.e) !needs_bind, we do the binding now
                 if( !(needs_bind<typename d_ref_t<A>::type >::value && e_needs_bind(d_ref(lhs))) )
-                   do_deferred_bind();
+                   do_bind();
             }
 
-            void do_deferred_bind()  {
+            void do_bind()  {
                 if (!bind_done) {
                     dbind_ts(d_ref(lhs));
                     ta = d_ref(lhs).time_axis();
@@ -1092,24 +1132,24 @@ namespace shyft{
                     bind_done = true;
                 }
             }
-            void deferred_bind() const {
+            void ensure_bound() const {
                 if(!bind_done)
                     throw runtime_error("bin_op: access to not yet bound attempted");
             }
 
-            const TA& time_axis() const {deferred_bind();return ta;}
+            const TA& time_axis() const {ensure_bound();return ta;}
             ts_point_fx point_interpretation() const {
-                deferred_bind();
+				ensure_bound();
                 return fx_policy;
             }
             void set_point_interpretation(ts_point_fx point_interpretation) {
-                deferred_bind();//ensure it's done
+				ensure_bound();//ensure it's done
                 fx_policy=point_interpretation;
             }
             double operator()(utctime t) const {return op(d_ref(lhs)(t),rhs);}
             double value(size_t i) const {return op(d_ref(lhs).value(i),rhs);}
             size_t size() const {
-                deferred_bind();
+				ensure_bound();
                 return ta.size();
             }
             x_serialize_decl();
@@ -1139,28 +1179,415 @@ namespace shyft{
             typedef typename d_ref_t<L>::type::ta_t type;
         };
 
-        /** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
-         * otherwise the operators will interfere with other libraries doing the same.
-         */
-        template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
-        template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
-        template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
-        template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
-        template<class T> struct is_ts<uniform_sum_ts<T>> { static const bool value = true; };
-        template<class T> struct is_ts<shared_ptr<uniform_sum_ts<T>>> { static const bool value = true; };
-        template<class TS> struct is_ts<convolve_w_ts<TS>> { static const bool value = true; };
-        template<class TS> struct is_ts<shared_ptr<convolve_w_ts<TS>>> { static const bool value = true; };
-        // This is to allow this ts to participate in ts-math expressions
-        template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
-        template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
+		class rating_curve_segment {
 
-        template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
-        template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
-        template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+		public:
+			double lower;  ///< Lower level for this segment, considered valid indefinitly after.
+			double a;  ///< Rating-curve parameter.
+			double b;  ///< Rating-curve parameter.
+			double c;  ///< Rating-curve parameter.
 
-        template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
-        template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
+		public:  // con/de-struction, copy & move
+			rating_curve_segment()
+				: lower{ 0. }, a{ 0. }, b{ 0. }, c{ 0. } { }
+			rating_curve_segment(double lower, double a, double b, double c)
+				: lower{ lower }, a{ a }, b{ b }, c{ c } { }
+			~rating_curve_segment() = default;
+			// -----
+			rating_curve_segment(const rating_curve_segment &) = default;
+			rating_curve_segment & operator=(const rating_curve_segment &) = default;
+			// -----
+			rating_curve_segment(rating_curve_segment &&) = default;
+			rating_curve_segment & operator=(rating_curve_segment &&) = default;
 
+		public:  // api
+			/** Return whether the segment is valid for the level.
+			 * Validity is based on whether level is less than lower.
+			 */
+			bool valid(double level) const {
+				return lower <= level;
+			}
+			// -----
+			/** Compute the flow from a water level.
+			 * Does _not_ check if `h` is valid according to `lower`.
+			 */
+			double flow(double level) const {
+				return std::pow(a*(level - b), c);
+			}
+			/** Compute the flow for a list of water levels.
+			* Does _not_ check if the water levels are valid according to `lower`.
+			*/
+			std::vector<double> flow(
+				const std::vector<double> & levels,
+				std::size_t i0 = 0u,
+				std::size_t iN = std::numeric_limits<std::size_t>::max()
+			) const {
+				std::vector<double> flow;
+				flow.reserve(levels.size());
+				for (std::size_t i = i0, idx_end = std::min(levels.size(), iN); i < idx_end; ++i) {
+					flow.emplace_back(std::pow(a*(levels[i] - b), c));
+				}
+				return flow;
+			}
+			// -----
+			operator std::string() {
+				std::ostringstream ret{ "rating_curve_segment{ ", std::ios_base::ate };
+				ret << "lower=" << lower << " a=" << a << " b=" << b << " c=" << c << " }";
+				return ret.str();
+			}
+			// -----
+			/** Compare two rating-curve segments according to their lower value.
+			 */
+			bool operator< (rating_curve_segment & other) const {
+				return this->lower < other.lower;
+			}
+			/** Compare a rating-curve segment to a value interpreted as a level value.
+			*/
+			bool operator< (double value) const {
+				return this->lower < value;
+			}
+
+			x_serialize_decl();
+		};
+
+		class rating_curve_function {
+			std::vector<rating_curve_segment> segments;  // invariant: This is kept sorted ascending on el.lower!
+
+		public:
+			rating_curve_function() = default;
+			rating_curve_function(const std::vector<rating_curve_segment> & segment_vector, bool sorted = false)
+				: segments{ segment_vector }
+			{
+				if ( ! sorted )
+					std::sort(segments.begin(), segments.end());  
+			}
+			rating_curve_function(std::vector<rating_curve_segment> && segment_vector, bool sorted = false)
+				: segments{ std::move(segment_vector) }
+			{
+				if ( ! sorted)
+					std::sort(segments.begin(), segments.end());
+			}
+			template <class InputIt>
+			rating_curve_function(InputIt first, InputIt last, bool sorted = false)
+				: segments{ first, last }
+			{
+				if ( ! sorted)
+					std::sort(segments.begin(), segments.end());
+			}
+			~rating_curve_function() = default;
+			// -----
+			rating_curve_function(const rating_curve_function &) = default;
+			rating_curve_function & operator=(const rating_curve_function &) = default;
+			// -----
+			rating_curve_function(rating_curve_function &&) = default;
+			rating_curve_function & operator=(rating_curve_function &&) = default;
+
+		public:  // api
+			decltype(segments)::const_iterator cbegin() const {
+				return segments.cbegin();
+			}
+			decltype(segments)::const_iterator cend() const {
+				return segments.cend();
+			}
+			std::size_t size() const {
+				return segments.size();
+			}
+			// -----
+			operator std::string() {
+				std::ostringstream ret{ "rating_curve_function{", std::ios_base::ate };
+				for ( auto & it : segments )
+					ret << " " << static_cast<std::string>(it) << ",";
+				ret << " }";
+				return ret.str();
+			}
+			// -----
+			void add_segment(double lower, double a, double b, double c) {
+				add_segment(rating_curve_segment(lower, a, b, c));
+			}
+			void add_segment(rating_curve_segment && seg) {
+				segments.emplace(
+					std::upper_bound(segments.begin(), segments.end(), seg),
+					std::forward<rating_curve_segment>(seg) );
+			}
+			void add_segment(const rating_curve_segment & seg) {
+				segments.emplace(std::upper_bound(segments.begin(), segments.end(), seg), seg );
+			}
+			// -----
+			/** Compute the flow at a specific level.
+			 */
+			double flow(const double level) const {
+				if ( segments.size() == 0 )
+					throw std::runtime_error("no rating-curve segments");
+
+				// assume segments is sorted ascending on el.lower
+				auto it = std::lower_bound(segments.cbegin(), segments.cend(), level);
+				if ( it != segments.cend() && level == it->lower ) {
+					return it->flow(level);
+				} else if ( it != segments.cbegin() ) {  // not at begining? -> compute with prev curve
+					return (it - 1)->flow(level);
+				} else {  // before first segment -> no flow
+					return nan;
+				}
+			}
+			/** Compute the flow for all values in a vector.
+			 */
+			vector<double> flow(const vector<double> & levels) const {
+				return flow(levels.cbegin(), levels.cend());
+			}
+			/** Compute the flow for all values from a iterator.
+			*/
+			template <typename InputIt>
+			vector<double> flow(InputIt first, InputIt last) const {
+				if ( segments.size() == 0 )
+					throw std::runtime_error("no rating-curve segments");
+
+				std::size_t count = std::distance(first, last);
+
+				if ( count == 0 )
+					return std::vector<double>{};
+
+				std::vector<double> flow;
+				flow.reserve(count);
+				for ( auto lvl = first; lvl != last; ++lvl ) {
+					auto it = std::lower_bound(segments.cbegin(), segments.cend(), *lvl);
+					if ( it != segments.cend() && *lvl == it->lower ) {
+						flow.emplace_back(it->flow(*lvl));
+					} else if ( it != segments.cbegin() ) {  // not at begining? -> compute with prev curve
+						flow.emplace_back((*(it - 1)).flow(*lvl));
+					} else {  // before first segment -> no flow
+						flow.emplace_back(nan);
+					}
+				}
+
+				return flow;
+			}
+
+			x_serialize_decl();
+		};
+
+		class rating_curve_parameters {
+			std::map<utctime, rating_curve_function> curves;
+
+		public:  // con/de-struction
+			rating_curve_parameters() = default;
+			/** Instanciate a new rating-curve parameter block from
+			* a iterator yielding `std::pair< [const] utctime, rating_curve_function >`.
+			*/
+			template <typename InputIt>
+			rating_curve_parameters(InputIt first, InputIt last)
+				: curves{ first, last } { }
+			rating_curve_parameters(const std::vector<std::pair<utctime, rating_curve_function>> & curves)
+				: rating_curve_parameters{ curves.cbegin(), curves.cend() } { }
+			// -----
+			~rating_curve_parameters() = default;
+			// -----
+			rating_curve_parameters(const rating_curve_parameters &) = default;
+			rating_curve_parameters & operator= (const rating_curve_parameters &) = default;
+			// -----
+			rating_curve_parameters(rating_curve_parameters &&) = default;
+			rating_curve_parameters & operator= (rating_curve_parameters &&) = default;
+
+		public:  // api
+			decltype(curves)::const_iterator cbegin() const {
+				return curves.cbegin();
+			}
+			decltype(curves)::const_iterator cend() const {
+				return curves.cend();
+			}			// -----
+			operator std::string() {
+				std::ostringstream ret{ "rating_curve_parameters{", std::ios_base::ate };
+				for ( auto & it : curves )
+					ret << " " << it.first << ": [ " << static_cast<std::string>(it.second) << " ],";
+				ret << " }";
+				return ret.str();
+			}
+			// -----
+			void add_curve(utctime t, rating_curve_function && rcf) {
+				curves.emplace(t, std::forward<rating_curve_function>(rcf));
+			}
+			void add_curve(utctime t, const rating_curve_function & rcf) {
+				curves.emplace(t, rcf);
+			}
+			// -----
+			/** Apply the rating-curve pack at a specific time. */
+			double flow(utctime t, double level) const {
+				using curve_vt = decltype(curves)::value_type;
+				auto it = std::lower_bound(
+					curves.cbegin(), curves.cend(), t,
+					[](curve_vt lhs, utctime rhs) -> bool { return lhs.first < rhs; }
+				);
+				if ( it == curves.cbegin() && it->first > t ) {
+					return shyft::nan;
+				} else if ( it == curves.cend() || it->first > t ) {
+					// last curve valid indefinitly
+					it--;
+				}
+				return it->second.flow(level);
+			}
+			/** Apply the rating-curve pack on a time-series. */
+			template <typename TA>
+			std::vector<double> flow(const TA & ta) const {
+				auto it = curves.cbegin();
+				if ( it == curves.cend() || it->first >= ta.total_period().end ) {  // no curves...
+					return std::vector<double>(ta.size(), shyft::nan);
+				}
+				std::vector<double> flow;
+				flow.reserve(ta.size());
+
+				// determine start and pad with nan
+				std::size_t i;
+				if ( it->first > ta.time(0u) ) {
+					i = ta.index_of(it->first);
+					for ( std::size_t j = 0u; j < i; ++j ) {
+						flow.emplace_back(shyft::nan);
+					}
+				} else {
+					i = 0u;
+				}
+
+				auto it_next = it;  // peeking iterator
+				it_next++;
+				for ( std::size_t dim = ta.size(); i < dim; ++i ) {
+					utctime t = ta.time(i);
+					double val = ta.value(i);
+
+					if ( it_next != curves.cend() && it_next->first <= t ) {
+						// advance both iterators
+						it++; it_next++;
+					}
+
+					flow.emplace_back(it->second.flow(val));
+				}
+
+				return flow;
+			}
+
+			x_serialize_decl();
+		};
+
+		template <class TS>
+		class rating_curve_ts {
+
+		public:  // type api
+			using ts_t = TS;
+			using ta_t = typename TS::ta_t;
+
+		public:  // data
+			ts_t level_ts;
+			rating_curve_parameters rc_param;
+			// -----
+			ts_point_fx fx_policy = ts_point_fx::POINT_INSTANT_VALUE;
+			// -----
+			bool bound = false;
+
+		public:  // con/de-struction, copy & move
+			rating_curve_ts() = default;
+			rating_curve_ts(ts_t && ts, rating_curve_parameters && rc,
+							ts_point_fx fx_policy = ts_point_fx::POINT_INSTANT_VALUE)
+				: level_ts{ std::forward<ts_t>(ts) },
+				  rc_param{ std::forward<rating_curve_parameters>(rc) },
+				  fx_policy{ fx_policy }
+			{
+				if( ! e_needs_bind(d_ref(level_ts)) )
+					local_do_bind();
+			}
+			rating_curve_ts(const ts_t & ts, const rating_curve_parameters & rc,
+							ts_point_fx fx_policy = ts_point_fx::POINT_INSTANT_VALUE)
+				: level_ts{ ts }, rc_param{ rc },
+				  fx_policy{ fx_policy }
+			{
+				if( ! e_needs_bind(d_ref(level_ts)) ) {
+					local_do_bind();
+				}
+			}
+			// -----
+			~rating_curve_ts() = default;
+			// -----
+			rating_curve_ts(const rating_curve_ts &) = default;
+			rating_curve_ts & operator= (const rating_curve_ts &) = default;
+			// -----
+			rating_curve_ts(rating_curve_ts &&) = default;
+			rating_curve_ts & operator= (rating_curve_ts &&) = default;
+
+		public:  // usage
+			bool needs_bind() const {
+				return ! bound;
+			}
+			void do_bind() {
+				if ( !bound ) {
+					level_ts.do_bind();  // bind water levels
+					local_do_bind();
+				}
+			}
+			void local_do_bind() {
+				fx_policy = d_ref(level_ts).point_interpretation();
+				bound = true;
+			}
+			void ensure_bound() const {
+				if ( ! bound ) {
+					throw runtime_error("rating_curve_ts: access to not yet bound attempted");
+				}
+			}
+			// -----
+			ts_point_fx point_interpretation() const {
+				return fx_policy;
+			}
+			void set_point_interpretation(ts_point_fx policy) {
+				fx_policy = policy;
+			}
+
+		public:  // api
+			std::size_t size() const {
+				return level_ts.size();
+			}
+			utcperiod total_period() const {
+				return level_ts.total_period();
+			}
+			const ta_t & time_axis() const {
+				return level_ts.time_axis();
+			}
+			// -----
+			std::size_t index_of(utctime t) const {
+				return level_ts.index_of(t);
+			}
+			double operator()(utctime t) const {
+				ensure_bound();
+				return rc_param.flow(t, level_ts(t));
+			}
+			// -----
+			utctime time(std::size_t i) const {
+				return level_ts.time(i);
+			}
+			double value(std::size_t i) const {
+				ensure_bound();
+				return rc_param.flow(time(i), level_ts.value(i));
+			}
+			
+			x_serialize_decl();
+		};
+
+		/** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
+		* otherwise the operators will interfere with other libraries doing the same.
+		*/
+		template<class T> struct is_ts<point_ts<T>> {static const bool value=true;};
+		template<class T> struct is_ts<shared_ptr<point_ts<T>>> {static const bool value=true;};
+		template<class T> struct is_ts<time_shift_ts<T>> {static const bool value=true;};
+		template<class T> struct is_ts<shared_ptr<time_shift_ts<T>>> {static const bool value=true;};
+		template<class T> struct is_ts<uniform_sum_ts<T>> { static const bool value = true; };
+		template<class T> struct is_ts<shared_ptr<uniform_sum_ts<T>>> { static const bool value = true; };
+		template<class TS> struct is_ts<convolve_w_ts<TS>> { static const bool value = true; };
+		template<class TS> struct is_ts<shared_ptr<convolve_w_ts<TS>>> { static const bool value = true; };
+		// This is to allow this ts to participate in ts-math expressions
+		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
+		template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
+		template<class TS> struct is_ts<rating_curve_ts<TS>> { static const bool value = true; };
+
+		template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
+		template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};
+		template<class A, class B, class O, class TA> struct is_ts< bin_op<A,B,O,TA> > {static const bool value=true;};
+
+		template<class T> struct is_ts<ref_ts<T>> {static const bool value=true;};
+		template<class T> struct is_ts<shared_ptr<ref_ts<T>>> {static const bool value=true;};
 
         /** time_shift function, to ease syntax and usability */
         template<class Ts>
@@ -1240,71 +1667,6 @@ namespace shyft{
             return bin_op<A,B,op_min,typename op_axis<A,B>::type> (lhs,op_min(),rhs);
         }
 
-
-
-        /** \brief A point source with a time_axis, and a function Fx(utctime t) that
-         *  gives the value at utctime t, where t is from timeaxis(i).t
-         *  suitable for functional type of time series
-         * \tparam TA Time axis type that supports:
-         *  -# .index_of(tx) const --> -1(npos) or lowerbound index
-         *  -# .size() const       --> number of periods on time-axis
-         *  -#  op() (i) const     --> utcperiod of the i'th interval
-         *
-         * \tparam F functor object that supports
-         *  -# op()(utctime t) const --> double, F(t)
-         */
-        template<typename TA,typename F>
-        class function_timeseries {
-            TA ta;
-            F fx;
-            ts_point_fx point_fx=POINT_INSTANT_VALUE;
-          public:
-
-             /** point interpretation: how we should map points to f(t) */
-            ts_point_fx point_interpretation() const {return point_fx;}
-            void set_point_interpretation(ts_point_fx point_interpretation) {point_fx=point_interpretation;}
-
-            function_timeseries(const TA& ta, const F& f,ts_point_fx point_interpretation=POINT_INSTANT_VALUE):ta(ta),fx(f) {}
-            const TA& time_axis() const {return ta;}
-
-            // Source read interface:
-            point get(size_t i) const {
-                utctime t = ta.time(i);
-                return point(t, (*this)(t));
-            } // maybe verify v.size(), vs. time_axis size ?
-            size_t size() const {return ta.size();}
-            size_t index_of(const utctime tx) const {return ta.index_of(tx);}
-            utcperiod total_period() const { return ta.total_period(); }
-
-            // Specific methods
-            double operator()(utctime t) const {return fx(t);}
-        };
-
-        //For test&fun, a sinus function
-        // r= _y0 + _a * sin( _w * (t-t0) )
-        // r > _yMax: r=_yMax
-        // r < _yMin: r=_Ymin
-        // _w = fullPeriod/2*M_PI
-        //  a sinewave for 24 hours, fullPeriod=24*3600
-        class sin_fx {
-            double y0;
-            double y_min;
-            double y_max;
-            double a;
-            double w;
-            utctime t0;
-        public:
-            sin_fx(double y0, double y_min, double y_max, double amplitude, utctime t0, utctimespan full_period)
-                : y0(y0), y_min(y_min), y_max(y_max), a(amplitude), w(2.0*M_PI / double(full_period)), t0(t0) {}
-
-            double operator()(utctime t) const {
-                double r = y0 + a*sin(w*(t - t0));
-                if (r < y_min) r = y_min;
-                if (r > y_max) r = y_max;
-                return r;
-            }
-        };
-
         /** \brief A constant_source, just return the same constant value for all points
          * \tparam TA time-axis
          */
@@ -1327,7 +1689,6 @@ namespace shyft{
             ts_point_fx point_interpretation() const {return POINT_AVERAGE_VALUE;}
             void set_point_interpretation(ts_point_fx point_interpretation) {}///<ignored
         };
-
 
         // The policy of how the accessors should handle data points after the
         // last point that is given in the source
@@ -1742,22 +2103,22 @@ namespace shyft{
         void bind_ref_ts(bin_op<A,B,O,TA>& ts,Fbind&& f_bind) {
             bind_ref_ts(d_ref(ts.lhs),f_bind);
             bind_ref_ts(d_ref(ts.rhs),f_bind);
-            ts.do_deferred_bind();
+            ts.do_bind();
         }
         template<class B, class O, class TA,class Fbind>
         void bind_ref_ts(bin_op<double,B,O,TA>& ts,Fbind&& f_bind) {
             bind_ref_ts(d_ref(ts.rhs),f_bind);
-            ts.do_deferred_bind();
+            ts.do_bind();
         }
         template<class A, class O, class TA,class Fbind>
         void bind_ref_ts(bin_op<A,double,O,TA>& ts,Fbind&& f_bind) {
             bind_ref_ts(d_ref(ts.lhs),f_bind);
-            ts.do_deferred_bind();
+            ts.do_bind();
         }
         template <class Ts,class Fbind>
         void bind_ref_ts(time_shift_ts<Ts>&time_shift,Fbind&& f_bind) {
             bind_ref_ts(d_ref(time_shift.ts,f_bind));
-            time_shift.do_deferred_bind();
+            time_shift.do_bind();
         }
         template <class Ts,class Ta,class Fbind>
         void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {

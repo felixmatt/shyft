@@ -117,56 +117,57 @@ namespace shyfttest {
 };
 using namespace shyft::core;
 using namespace shyft::time_series;
-/// average_value_staircase_fast:
-/// Just keept for the reference now, but
-/// the generic/complex does execute at similar speed
-/// combining linear/stair-case into one function.
-//
-        template <class S>
-        double average_value_staircase_fast(const S& source, const utcperiod& p, size_t& last_idx) {
-            const size_t n=source.size();
-            if (n == 0) // early exit if possible
-                return shyft::nan;
-            size_t i=hint_based_search(source,p,last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
-            if(i==std::string::npos) // this might be a case
-                return shyft::nan; // and is equivalent to no points, or all points after requested period.
+/** average_value_staircase_fast:
+ *  Just keept for the reference now, but
+ *  the generic/complex does execute at similar speed
+ *  combining linear/stair-case into one function.
+ */
+template <class S>
+double average_value_staircase_fast(const S& source, const utcperiod& p, size_t& last_idx) {
+    const size_t n=source.size();
+    if (n == 0) // early exit if possible
+        return shyft::nan;
+    size_t i=hint_based_search(source,p,last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 
-            point l;          // Left point
-            l = source.get(i);
-            if (l.t >= p.end) { // requested period before first point,
-                last_idx=i;
-                return shyft::nan; // defined to return nan
-            }
+    if(i==std::string::npos) // this might be a case
+        return shyft::nan; // and is equivalent to no points, or all points after requested period.
 
-            if(l.t<p.start) l.t=p.start;//project left value to start of interval
-            if(!std::isfinite(l.v))
-                l.v=0.0;// nan-is 0 kind of def. fixes issues if period start with some nan-points, then area will be zero until first point..
+    point l;          // Left point
+    l = source.get(i);
+    if (l.t >= p.end) { // requested period before first point,
+        last_idx=i;
+        return shyft::nan; // defined to return nan
+    }
 
-            if( ++i >= n) { // advance to next point and check for early exit
-                last_idx=--i;
-                return l.v*(p.end-l.t)/p.timespan(); // nan-is 0 kind of def..
-            }
-            double area = 0.0;  // Integrated area
-            point r(l);
-            do {
-                if( i<n ) { // if possible, advance to next point
-                    r=source.get(i++);
-                    if(r.t>p.end)
-                        r.t=p.end;//clip to p.end to ensure correct integral time-range
-                } else {
-                    r.t=p.end; // else set right hand side time to p.end(we are done)
-                }
-                area += l.v*(r.t -l.t);// add area for the current stair-case
-                if(std::isfinite(r.v)) { // could be a new value, which establish the new stair-case
-                    l=r;
-                } else { // not a valid new value, so
-                    l.t=r.t;// just keep l.value, adjust time(ignore nans)
-                }
-            } while(l.t < p.end );
-            last_idx = --i; // Store last index, so that next call starts at a smart position.
-            return area/p.timespan();
+    if(l.t<p.start) l.t=p.start;//project left value to start of interval
+    if(!std::isfinite(l.v))
+        l.v=0.0;// nan-is 0 kind of def. fixes issues if period start with some nan-points, then area will be zero until first point..
+
+    if( ++i >= n) { // advance to next point and check for early exit
+        last_idx=--i;
+        return l.v*(p.end-l.t)/p.timespan(); // nan-is 0 kind of def..
+    }
+    double area = 0.0;  // Integrated area
+    point r(l);
+    do {
+        if( i<n ) { // if possible, advance to next point
+            r=source.get(i++);
+            if(r.t>p.end)
+                r.t=p.end;//clip to p.end to ensure correct integral time-range
+        } else {
+            r.t=p.end; // else set right hand side time to p.end(we are done)
         }
+        area += l.v*(r.t -l.t);// add area for the current stair-case
+        if(std::isfinite(r.v)) { // could be a new value, which establish the new stair-case
+            l=r;
+        } else { // not a valid new value, so
+            l.t=r.t;// just keep l.value, adjust time(ignore nans)
+        }
+    } while(l.t < p.end );
+    last_idx = --i; // Store last index, so that next call starts at a smart position.
+    return area/p.timespan();
+}
 
 template <class S, class TA>
 class average_staircase_accessor_fast {
@@ -734,36 +735,6 @@ TEST_CASE("accessor_policy") {
     }
 }
 
-
-TEST_CASE("test_TxFxSource") {
-    utctime t0 = calendar().time(YMDhms(1940, 1, 1, 0,0, 0));
-    utctimespan dt = deltahours(1);
-	size_t n = 4*100*24*365;
-	typedef std::function<double(utctime)> f_t;
-    f_t fx_sin = [t0, dt](utctime t) { return 0.2*(t - t0)/dt; }; //sin(2*3.14*(t - t0)/dt);
-    typedef function_timeseries<time_axis::fixed_dt, f_t> txfx_t;
-
-    time_axis::fixed_dt tx(t0, dt, n);
-    txfx_t fsin(tx, fx_sin,POINT_AVERAGE_VALUE);
-    TS_ASSERT_EQUALS(fsin.size(), tx.size());
-    TS_ASSERT_DELTA(fsin(t0 + dt), fx_sin(t0+dt), shyfttest::EPS);
-    TS_ASSERT_EQUALS(fsin.get(0), point(t0, fx_sin(t0)));
-    /// Some speed tests to check/verify that even more complexity could translate into fast code:
-	time_axis::fixed_dt td(t0, dt * 25, n / 24);
-	average_accessor<txfx_t, time_axis::fixed_dt> favg(fsin, td);
-	average_staircase_accessor_fast<txfx_t, time_axis::fixed_dt> gavg(fsin, td);
-	auto f1 = [&favg, &td](double &sum) {sum = 0.0; for (size_t i = 0; i < td.size(); ++i) sum += favg.value(i); };
-	auto f2 = [&gavg, &td](double &sum) { sum = 0.0; for (size_t i = 0; i < td.size(); ++i) sum += gavg.value(i); };
-	double s1,s2;
-	auto msec1 = measure<>::execution(f1,s1);
-	auto msec2 = measure<>::execution(f2, s2);
-	TS_ASSERT_LESS_THAN(std::abs(msec1-msec2),100);
-
-	//cout << "\nTiming results:" << endl;
-	//cout << "    T generic : " << msec1 << " (" << s1 << ")" << endl;
-	//cout << "    T fast    : " << msec2 << " (" << s2 << ")" << endl;
-}
-
 TEST_CASE("test_point_timeseries_with_point_timeaxis") {
     vector<utctime> times={3600*1,3600*2,3600*3,3600*4};
     vector<double> points={1.0,2.0,3.0};
@@ -809,22 +780,6 @@ TEST_CASE("test_ts_weighted_average") {
 	for (size_t i = 0; i < rs.size(); ++i) {
 		TS_ASSERT_DELTA(rs.value(i), (1.0*a2+10.0*a1)/(a1+a2), 0.0001);
 	}
-}
-
-TEST_CASE("test_sin_fx_ts") {
-	sin_fx fx(10.0, 0.0, 10.0, 10.0, 0, deltahours(24));
-	TS_ASSERT_DELTA(fx(0), 10.0, 0.000001);
-	TS_ASSERT_DELTA(fx(deltahours(24)), 10.0, 0.000001);
-	calendar utc;
-	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
-	utctimespan dt = deltahours(1);
-	size_t n = 10;
-	time_axis::fixed_dt ta(start, dt, n);
-	function_timeseries<time_axis::fixed_dt, sin_fx> tsfx(ta, fx);
-
-	TS_ASSERT_DELTA(tsfx(0), 10.0, 0.0000001);
-	TS_ASSERT_DELTA(tsfx(deltahours(24)), 10.0, 0.0000001);
-	TS_ASSERT_DELTA(tsfx(deltahours(18)), 0.0, 0.000001);
 }
 
 TEST_CASE("test_binary_operator") {
@@ -938,6 +893,173 @@ TEST_CASE("test_api_ts") {
     TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
 }
 
+TEST_CASE("test_rating_curve_ts") {
+	namespace core = shyft::core;
+	namespace ta = shyft::core::time_axis;
+	namespace ts = shyft::core::time_series;
+
+	const core::utctime t0 = core::utctime_now();
+	const double a = 1., b = 2., c = 3.;
+
+	SUBCASE("rating_curve_segment") {
+		rating_curve_segment rts{ 0., a, b, c };
+
+		SUBCASE("called on value") {
+			double flow = 4.2;
+			double exp = std::pow(a*(flow - b), c);
+			double res = rts.flow(flow);
+			FAST_CHECK_EQ(res, exp);
+		}
+		SUBCASE("called on vector") {
+			std::vector<double> flow{ 12.3, 13.4, 15.6, 12.3, 14.5, 17.8 };
+			const std::size_t f0 = 1, fn = 4;
+			
+			std::vector<double> res = rts.flow(flow, f0, fn);
+			FAST_REQUIRE_EQ(res.size(), fn - f0);
+			for (std::size_t i = 0u, dim = res.size(); i < dim; ++i) {
+				double exp = std::pow(a*(flow[i + f0] - b), c);
+				FAST_CHECK_EQ(doctest::Approx(res[i]), exp);
+			}
+		}
+	}
+	SUBCASE("rating_curve_function") {
+		std::array<core::rating_curve_segment, 3> segment_data{  // unsorted
+			core::rating_curve_segment{  5., 2., 0., 1. },
+			core::rating_curve_segment{  0., 1., 0., 1. },
+			core::rating_curve_segment{ 10., 3., 0., 1. }
+		};
+
+		core::rating_curve_function rcf{ segment_data.cbegin(), segment_data.cend() };
+
+		FAST_REQUIRE_EQ(rcf.size(), 3);
+
+		// assert sorted
+		auto it = rcf.cbegin();
+		FAST_REQUIRE_EQ(it->lower, 0.);
+		FAST_REQUIRE_EQ((++it)->lower, 5.);
+		FAST_REQUIRE_EQ((++it)->lower, 10.);
+
+		SUBCASE("called on value") {
+
+			FAST_CHECK_UNARY(std::isnan(rcf.flow(-2.)));  // before first
+
+			FAST_CHECK_EQ(rcf.flow(0.), 0.);
+			FAST_CHECK_EQ(rcf.flow(2.5), 1.*2.5);
+			FAST_CHECK_EQ(rcf.flow(5.), 2.*5.);
+			FAST_CHECK_EQ(rcf.flow(7.5), 2.*7.5);
+			FAST_CHECK_EQ(rcf.flow(100.), 3.*100.);
+		}
+		SUBCASE("called on vector") {
+			std::vector<double> flow    { -2., 1.3, 5.4,    3.6, 6.3,   -1.2, 10.5,   5.0   };
+			std::vector<double> expected{  0., 1.3, 5.4*2., 3.6, 6.3*2., 0.,  10.5*3, 5.0*2 };
+
+			std::vector<double> result = rcf.flow(flow);
+
+			FAST_REQUIRE_EQ(result.size(), expected.size());
+
+			for (std::size_t i = 0; i < flow.size(); ++i) {
+				if ( flow[i] < 0 ) {
+					FAST_CHECK_UNARY(std::isnan(result[i]));
+				} else {
+					FAST_CHECK_EQ(result[i], expected[i]);
+				}
+			}
+		}
+	}
+	SUBCASE("rating_curve_parameters") {
+		std::array<std::pair<core::utctime, core::rating_curve_function>, 3> curve_data{
+			std::make_pair(t0+deltahours(1u),  std::vector<core::rating_curve_segment>{
+					core::rating_curve_segment{  0., 1., 0., 1. },
+					core::rating_curve_segment{  4., 2., 0., 1. } }),
+
+			std::make_pair(t0+deltahours(9u),  std::vector<core::rating_curve_segment>{
+					core::rating_curve_segment{  0., 3., 0., 1. },
+					core::rating_curve_segment{  5., 4., 0., 1. },
+					core::rating_curve_segment{ 10., 5., 0., 1. } }),
+
+			std::make_pair(t0+deltahours(20u), std::vector<core::rating_curve_segment>{
+					core::rating_curve_segment{  0., 6., 0., 1. },
+					core::rating_curve_segment{  6., 7., 0., 1. },
+					core::rating_curve_segment{  9., 8., 0., 1. } })
+		};
+
+		core::rating_curve_parameters rcp{ curve_data.cbegin(), curve_data.cend() };
+
+		SUBCASE("called on value") {
+
+			FAST_CHECK_UNARY(std::isnan(rcp.flow(t0, 3.2)));  // before first
+
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(1u), 4.2), 2*4.2);
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(3u), 2.1), 1*2.1);
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(9u), 20.1), 5*20.1);
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(10u), 5.0), 4*5.0);
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(12u), 0.1), 3*0.1);
+			FAST_CHECK_EQ(rcp.flow(t0+deltahours(20u), 6.9), 7*6.9);
+		}
+		SUBCASE("apply to a time_series") {
+			std::vector<double> data{
+				1.0,  // before curve -> nan
+				 2.0,  4.1, 3.5, 6.2, 4.9, 4.0, 3.3,  9.2,  // curve 1
+				10.8, 10.5, 4.7, 5.0, 7.0, 8.3, 9.9, 10.0, 12.8, 10.1,  9.1,  // curve 2
+				 7.5,  5.1, 3.2, 0.0 };  // curve 3
+			std::vector<double> expected{
+				 shyft::nan,
+				 1*2.0,  2*4.1,  1*3.5,  2*6.2,  2*4.9,  2*4.0,  1*3.3, 2*9.2,  // curve 1
+				5*10.8, 5*10.5,  3*4.7,  4*5.0,  4*7.0,  4*8.3,  4*9.9, 5*10.0, 5*12.8, 5*10.1,  4*9.1,  // curve 2
+				 7*7.5,  6*5.1,  6*3.2,  6*0.0 };  // curve 3
+
+			ts::point_ts<ta::fixed_dt> pts{ ta::fixed_dt{ t0, core::deltahours(1), 24 }, data };
+
+			std::vector<double> res = rcp.flow(pts);
+
+			FAST_REQUIRE_EQ(res.size(), expected.size());
+			for ( std::size_t i = 0, dim = expected.size(); i < dim; ++i ) {
+				if ( std::isnan(expected[i]) ) {
+					FAST_CHECK_UNARY(std::isnan(res[i]));
+				} else {
+					FAST_CHECK_EQ(res[i], doctest::Approx(expected[i]));
+				}
+			}
+		}
+	}
+	SUBCASE("rating_curve_ts") {
+		std::array<std::pair<core::utctime, core::rating_curve_function>, 3> curve_data{
+			std::make_pair(t0, std::vector<core::rating_curve_segment>{
+				core::rating_curve_segment{  0., 1., 0., 1. },
+				core::rating_curve_segment{  5., 2., 0., 1. }
+			}),
+
+			std::make_pair(t0+deltahours(24u),  std::vector<core::rating_curve_segment>{
+				core::rating_curve_segment{  0., 3., 0., 1. },
+				core::rating_curve_segment{  8., 4., 0., 1. },
+			})
+		};
+
+		core::rating_curve_parameters rcp{ curve_data.cbegin(), curve_data.cend() };
+
+		std::vector<double> data;
+		for ( std::size_t i = 0; i < 2 * 48; ++i ) {
+			data.emplace_back(10.*i/48.);
+		}
+
+		ta::generic_dt gta{ ta::fixed_dt{ t0, core::deltaminutes(30), 2*48 }};
+		api::apoint_ts ts{ gta, data };
+
+		api::apoint_ts sts{ "a" };
+		auto rcsts = sts.rating_curve(rcp);
+
+		auto rcsts_2 = rcsts;
+
+		FAST_CHECK_UNARY(rcsts_2.needs_bind());
+		auto fbi = rcsts_2.find_ts_bind_info();
+		FAST_CHECK_EQ(fbi.size(), 1);
+		fbi.at(0).ts.bind(ts);
+		rcsts_2.do_bind();
+		FAST_CHECK_UNARY_FALSE(rcsts_2.needs_bind());
+
+		FAST_REQUIRE_EQ(rcsts_2.size(), data.size());
+	}
+}
 
 /** just verify that it calculate the right things */
 TEST_CASE("test_ts_statistics_calculations") {

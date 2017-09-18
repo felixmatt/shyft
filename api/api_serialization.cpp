@@ -101,6 +101,27 @@ void shyft::api::convolve_w_ts::serialize(Archive & ar, const unsigned int versi
 }
 
 template<class Archive>
+void shyft::api::rating_curve_ts::serialize(Archive & ar, const unsigned int version) {
+	ar
+		& make_nvp("ipoint_ts", base_object<shyft::api::ipoint_ts>(*this))
+		& make_nvp("ts", ts)
+		;
+}
+
+template<>
+template<class Archive>
+void shyft::time_series::rating_curve_ts<shyft::api::apoint_ts>::serialize(Archive & ar, const unsigned int version) {
+	bool bd = bound;
+	ar
+		& make_nvp("level_ts", level_ts)
+		& make_nvp("rc_param", rc_param)
+		& make_nvp("fx_policy", fx_policy)
+		& make_nvp("bound", bd)
+		;
+	bound = bd;
+}
+
+template<class Archive>
 void shyft::api::ats_vector::serialize(Archive& ar, const unsigned int version) {
     ar
     & make_nvp("ats_vec",base_object<shyft::api::ats_vec>(*this))
@@ -112,10 +133,11 @@ template<>
 template <class Archive>
 void shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>::serialize(Archive & ar, const unsigned int version) {
     ar
-    & make_nvp("ts", ts)
-    & make_nvp("fx_policy", fx_policy)
-    & make_nvp("w", w)
-    & make_nvp("convolve_policy", policy)
+		& make_nvp("ts", ts)
+		& make_nvp("fx_policy", fx_policy)
+		& make_nvp("w", w)
+		& make_nvp("convolve_policy", policy)
+		& make_nvp("bound", bound)
     ;
 }
 
@@ -223,6 +245,8 @@ x_serialize_implement(shyft::api::time_shift_ts);
 x_serialize_implement(shyft::api::periodic_ts);
 x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);
 x_serialize_implement(shyft::api::convolve_w_ts);
+x_serialize_implement(shyft::api::rating_curve_ts);
+x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::api::apoint_ts>);
 x_serialize_implement(shyft::api::extend_ts);
 x_serialize_implement(shyft::api::abin_op_scalar_ts);
 x_serialize_implement(shyft::api::abin_op_ts);
@@ -254,6 +278,8 @@ x_arch(shyft::api::time_shift_ts);
 x_arch(shyft::api::periodic_ts);
 x_arch(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>);
 x_arch(shyft::api::convolve_w_ts);
+x_arch(shyft::api::rating_curve_ts);
+x_arch(shyft::time_series::rating_curve_ts<shyft::api::apoint_ts>);
 x_arch(shyft::api::extend_ts);
 x_arch(shyft::api::abin_op_scalar_ts);
 x_arch(shyft::api::abin_op_ts);

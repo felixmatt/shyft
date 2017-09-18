@@ -467,6 +467,45 @@ namespace expose {
                 doc_returns("ts","TimeSeries","a new time-series that is evaluated on request to the convolution of self")
                 doc_see_also("ConvolvePolicy")
             )
+			.def("rating_curve", &shyft::api::apoint_ts::rating_curve, py::arg("rc_param"),
+				doc_intro("Create a new TimeSeries that is computed using a RatingCurveParameter instance.")
+				doc_intro("")
+				doc_intro("Example:")
+				doc_intro("")
+				doc_intro(">>> import numpy as np")
+				doc_intro(">>> from shyft.api import (")
+				doc_intro("...     utctime_now, deltaminutes,")
+				doc_intro("...     TimeAxis, TimeSeries,")
+				doc_intro("...     RatingCurveFunction, RatingCurveParameters")
+				doc_intro("... )")
+				doc_intro(">>>")
+				doc_intro(">>> # parameters")
+				doc_intro(">>> t0 = utctime_now()")
+				doc_intro(">>> dt = deltaminutes(30)")
+				doc_intro(">>> n = 48*2")
+				doc_intro(">>>")
+				doc_intro(">>> # make rating function, each with two segments")
+				doc_intro(">>> rcf_1 = RatingCurveFunction()")
+				doc_intro(">>> rcf_1.add_segment(0, 2, 0, 1)    # add segment from level 0, computing f(h) = 2*(h - 0)**1")
+				doc_intro(">>> rcf_1.add_segment(5.3, 1, 1, 1.4)  # add segment from level 5.3, computing f(h) = 1.3*(h - 1)**1.4")
+				doc_intro(">>> rcf_2 = RatingCurveFunction()")
+				doc_intro(">>> rcf_2.add_segment(0, 1, 1, 1)    # add segment from level 0, computing f(h) = 1*(h - 1)**1")
+				doc_intro(">>> rcf_2.add_segment(8.0, 0.5, 0, 2)  # add segment from level 8.0, computing f(h) = 0.5*(h - 0)**2")
+				doc_intro(">>>")
+				doc_intro(">>> # add rating curves to a parameter pack")
+				doc_intro(">>> rcp = RatingCurveParameters()")
+				doc_intro(">>> rcp.add_curve(t0, rcf_1)  # rcf_1 is active from t0")
+				doc_intro(">>> rcp.add_curve(t0+dt*n//2, rcf_2)  # rcf_2 takes over from t0 + dt*n/2")
+				doc_intro(">>>")
+				doc_intro(">>> # create a time-axis/-series")
+				doc_intro(">>> ta = TimeAxis(t0, dt, n)")
+				doc_intro(">>> ts = TimeSeries(ta, np.linspace(0, 12, n))")
+				doc_intro(">>> rc_ts = ts.rating_curve(rcp)  # create a new time series computed using the rating curve functions")
+				doc_intro(">>>")
+				doc_parameters()
+				doc_parameter("rc_param", "RatingCurveParameter", "RatingCurveParameter instance.")
+				doc_returns("rcts", "TimeSeries", "A new TimeSeries computed using self and rc_param.")
+			)
             .def("extend", &shyft::api::apoint_ts::extend, (py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
                 doc_intro("create a new time-series that is self extended with ts")
                 doc_parameters()
@@ -591,6 +630,140 @@ namespace expose {
 				;
 		}
     }
+
+	static void expose_rating_curve_classes() {
+		
+		// overloads for rating_curve_segment::flow 
+		double (shyft::core::rating_curve_segment::*rcs_flow_1)(double) const = &shyft::core::rating_curve_segment::flow;
+		std::vector<double> (shyft::core::rating_curve_segment::*rcs_flow_2)(const std::vector<double> &, std::size_t, std::size_t) const = &shyft::core::rating_curve_segment::flow;
+
+		class_<shyft::core::rating_curve_segment>("RatingCurveSegment",
+				doc_intro("Represent a single rating-curve equation.")
+				doc_intro("")
+				doc_intro("The rating curve function is `a*(h - b)^c` where `a`, `b`, and `c` are parameters")
+				doc_intro("for the segment and `h` is the water level to compute flow for. Additionally there")
+				doc_intro("is a `lower` parameter for the least water level the segment is valid for. Seen")
+				doc_intro("separatly a segment is considered valid for any level greater than `lower`.")
+				doc_intro("")
+				doc_intro("The function segments are gathered into `RatingCurveFunction`s to represent a")
+				doc_intro("set of different rating functions for different levels.")
+				doc_see_also("RatingCurveFunction, RatingCurveParameters")
+			)
+			.def_readonly("lower", &shyft::core::rating_curve_segment::lower,
+						  "Least valid water level. Not mutable after constructing a segment.")
+			.def_readwrite("a", &shyft::core::rating_curve_segment::a, "Parameter a")
+			.def_readwrite("b", &shyft::core::rating_curve_segment::b, "Parameter b")
+			.def_readwrite("c", &shyft::core::rating_curve_segment::c, "Parameter c")
+			.def(init<double, double, double, double>(args("lower", "a", "b", "c"), "Defines a new RatingCurveSegment with the specified parameters"))
+			.def("valid", &shyft::core::rating_curve_segment::valid, (py::args("level")),
+					doc_intro("Check if a water level is valid for the curve segment")
+					doc_parameter("level", "float", "water level")
+					doc_returns("valid", "bool", "True if level is greater or equal to lower")
+				)
+            //NOTE: For some reason boost 1.65 needs this def *before* the other simpler def, otherwise it fails finding the simple one
+            .def("flow", rcs_flow_2, (py::arg("levels"), py::arg("i0") = 0u, py::arg("iN") = std::numeric_limits<std::size_t>::max()),
+                doc_intro("Compute the flow for a range of water levels")
+                doc_parameters()
+                doc_parameter("levels", "DoubleVector", "Vector of water levels")
+                doc_parameter("i0", "int", "first index to use from levels, defaults to 0")
+                doc_parameter("iN", "int", "first index _not_ to use from levels, defaults to std::size_t maximum.")
+                doc_returns("flow", "DoubleVector", "Vector of flow values.")
+            )
+            .def("flow", rcs_flow_1, (py::arg("level")),
+					doc_intro("Compute the flow for the given water level.")
+					doc_notes()
+					doc_note("There is _no_ check to see if level is valid. It's up to the user to call")
+					doc_note("with a correct level.")
+					doc_parameters()
+					doc_parameter("level", "float", "water level")
+					doc_returns("flow", "double", "the flow for the given water level")
+				)
+			.def("__str__", &shyft::core::rating_curve_segment::operator std::string, "Stringify the segment.")
+			;
+
+		// overloads for rating_curve_function::flow 
+		double (shyft::core::rating_curve_function::*rcf_flow_val)(double) const = &shyft::core::rating_curve_function::flow;
+		std::vector<double> (shyft::core::rating_curve_function::*rcf_flow_vec)(const std::vector<double> & ) const = &shyft::core::rating_curve_function::flow;
+		// overloads for rating_curve_function::add_segment 
+		void (shyft::core::rating_curve_function::*rcf_add_args)(double, double, double, double) = &shyft::core::rating_curve_function::add_segment;
+		void (shyft::core::rating_curve_function::*rcf_add_obj)(const rating_curve_segment & ) = &shyft::core::rating_curve_function::add_segment;
+
+		class_<shyft::core::rating_curve_function>("RatingCurveFunction",
+				doc_intro("Combine multiple RatingCurveSegments into a rating function.")
+				doc_intro("")
+				doc_intro("RatingCurveFunction aggregates multiple RatingCurveSegments and routes.")
+				doc_intro("computation calls to the correct segment based on the water level to compute for.")
+				doc_see_also("RatingCurveSegment, RatingCurveParameters")
+			)
+			.def(init<>("Defines a new empty rating curve function."))
+			.def("size", &shyft::core::rating_curve_function::size, "Get the number of RatingCurveSegments composing the function.")
+			.def("add_segment", rcf_add_args, (py::arg("lower"), py::arg("a"), py::arg("b"), py::arg("c")),
+					doc_intro("Add a new curve segment with the given parameters.")
+					doc_see_also("RatingCurveSegment")
+				)
+			.def("add_segment", rcf_add_obj, py::arg("segment"),
+					doc_intro("Add a new curve segment as a copy of an exting.")
+					doc_see_also("RatingCurveSegment")
+				)
+            // ref. note above regarding the order of overloaded member functions
+            .def("flow", rcf_flow_vec, py::arg("levels"),
+                doc_intro("Compute flow for a range of water levels.")
+                doc_parameters()
+                doc_parameter("levels", "DoubleVector", "Range of water levels to compute flow for.")
+            )
+            .def("flow", rcf_flow_val, py::arg("level"),
+					doc_intro("Compute flow for the given level.")
+					doc_parameters()
+					doc_parameter("level", "float", "Water level to compute flow for.")
+				)
+			.def("__iter__", py::range(&shyft::core::rating_curve_function::cbegin,
+									   &shyft::core::rating_curve_function::cend),
+				 "Constant iterator. Invalidated on calls to .add_segment")
+			.def("__str__", &shyft::core::rating_curve_function::operator std::string, "Stringify the function.")
+			;
+
+		// overloads for rating_curve_function::flow 
+		double (shyft::core::rating_curve_parameters::*rcp_flow_val)(utctime, double) const = &shyft::core::rating_curve_parameters::flow;
+		std::vector<double> (shyft::core::rating_curve_parameters::*rcp_flow_ts)(const shyft::api::apoint_ts & ) const = &shyft::core::rating_curve_parameters::flow<shyft::api::apoint_ts>;
+		// overloads for rating_curve_function::add_segment 
+		void (shyft::core::rating_curve_parameters::*rcp_add_obj)(utctime, const rating_curve_function & ) = &shyft::core::rating_curve_parameters::add_curve;
+
+		class_<shyft::core::rating_curve_parameters>("RatingCurveParameters",
+				doc_intro("Parameter pack controlling rating level computations.")
+				doc_intro("")
+				doc_intro("A parameter pack encapsulates multiple RatingCurveFunction's with time-points.")
+				doc_intro("When used with a TimeSeries representing level values it maps computations for")
+				doc_intro("each level value onto the correct RatingCurveFunction, which again maps onto the")
+				doc_intro("correct RatingCurveSegment for the level value.")
+				doc_see_also("RatingCurveSegment, RatingCurveFunction, TimeSeries.rating_curve")
+			)
+			.def(init<>("Defines a empty RatingCurveParameter instance"))
+			.def("add_curve", rcp_add_obj, (py::arg("t"), py::arg("curve")),
+					doc_intro("Add a curve to the parameter pack.")
+					doc_parameters()
+					doc_parameter("t", "RatingCurveFunction", "First time-point the curve is valid for.")
+					doc_parameter("curve", "RatingCurveFunction", "RatingCurveFunction to add at t.")
+				)
+			.def("flow", rcp_flow_val, (py::arg("t"), py::arg("level")),
+					doc_intro("Compute the flow at a specific time point.")
+					doc_parameters()
+					doc_parameter("t", "utctime", "Time-point of the level value.")
+					doc_parameter("level", "float", "Level value at t.")
+					doc_returns("flow", "float", "Flow correcponding to input level at t, `nan` if level is less than the least water level of the first segment or before the time of the first rating curve function.")
+				)
+			.def("flow", rcp_flow_ts, py::arg("ts"),
+					doc_intro("Compute the flow at a specific time point.")
+					doc_parameters()
+					doc_parameter("ts", "TimeSeries", "Time series of level values.")
+					doc_returns("flow", "DoubleVector", "Flow correcponding to the input levels of the time-series, `nan` where the level is less than the least water level of the first segment and for time-points before the first rating curve function.")
+				)
+			.def("__iter__", py::range(&shyft::core::rating_curve_parameters::cbegin,
+									   &shyft::core::rating_curve_parameters::cend),
+				 "Constant iterator. Invalidated on calls to .add_curve")
+			.def("__str__", &shyft::core::rating_curve_parameters::operator std::string, "Stringify the parameters.")
+			;
+	}
+
 	static void expose_correlation_functions() {
 		const char * kg_doc =
 			doc_intro("Computes the kling-gupta KGEs correlation for the two time-series over the specified time_axis")
@@ -689,6 +862,7 @@ namespace expose {
         point_ts<time_axis::fixed_dt>("TsFixed","A time-series with a fixed delta t time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
         TsFactory();
+		expose_rating_curve_classes();
         expose_apoint_ts();
 		expose_periodic_ts();
 		expose_correlation_functions();
