@@ -16,7 +16,7 @@
     1D_timeseries:
     - catch_id: [1013500] #[1013500]
       uid: '01013500' #'01013500'
-      start_datetime: 2001-09-01T00:00:00
+      start_datetime: 2001-09-01T12:00:00
       run_time_step: 86400 # 3600
       number_of_steps: 3287 # 26280
       weight: 1.0
