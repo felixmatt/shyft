@@ -1,0 +1,36 @@
+---
+camels:
+  region_config_file: camels_region.yaml
+  model_config_file: camels_model.yaml
+  datasets_config_file: camels_datasets.yaml
+  interpolation_config_file: camels_interpolation.yaml
+  start_datetime: 2000-09-01T12:00:00
+  run_time_step: 86400  # 1 day time step
+  number_of_steps: 3652   # 1 year
+  region_model_id: 'ptgsk'
+  #interpolation_id: 2   # this is optional (default 0)
+  initial_state:
+    repository:
+      class: !!python/name:shyft.repository.generated_state_repository.GeneratedStateRepository
+      params:
+        model: !!python/name:shyft.api.pt_gs_k.PTGSKModel
+    tags: []
+  #references:
+  #- repository: !!python/name:shyft.repository.netcdf.cf_ts_repository.CFTsRepository
+  #  params:
+  #    file: netcdf/orchestration-testdata/discharge.nc
+  #    var_type: discharge
+  #  1D_timeseries:
+  #  - catch_id: [1308,1394,1867,2198,2402,2545]
+  #    type: discharge
+  #    uid: /TEV.-Tya...........-D9100A3B1060R123.999
+  #    run_time_step: 86400 # 3600
+  #  - catch_id: [1228,1443,1726,2041,2129,2195,2277,2465,2718,3002,3630,1000010,1000011]
+  #    type: discharge
+  #    uid: /TEV.-Selbu-lok.....-D9100A3B1070R123.020
+  #    run_time_step: 86400 # 3600
+  #  - catch_id: [1996,2446,2640,3536]
+  #    type: discharge
+  #    uid: /TEV.-Nea...........-D9100A3B1050R123.998
+  #    run_time_step: 86400 # 3600
+...

@@ -1,0 +1,13 @@
+---
+sources:
+  - repository: !!python/name:shyft.repository.camels.camels_repository.CamelsDataRepository
+    types:
+      - precipitation
+      - temperature
+      - radiation
+      - wind_speed
+      - relative_humidity
+    params:
+      path_to_database: ../camels_test/test_data/CAMELS
+      sgid: '01013500' # USGS stream geuge ID, 8-digit zero padded
+...

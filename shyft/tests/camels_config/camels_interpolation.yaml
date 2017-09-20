@@ -1,0 +1,42 @@
+interpolation_parameters:
+  temperature:
+    method: btk
+    params:
+      temperature_gradient: -0.6
+      temperature_gradient_sd: 0.25
+      nug: 0.5
+      range: 200000.0
+      sill: 25.0
+      zscale: 20.0
+    # method: idw
+    # params:
+      # max_distance: 600000.0
+      # max_members: 10
+      # distance_measure_factor: 1.0
+      # default_temp_gradient: -0.005 # degC/m, so -0.5 degC/100m
+      # gradient_by_equation: false
+  precipitation:
+    method: idw
+    params:
+      max_distance: 600000.0
+      max_members: 10
+      distance_measure_factor: 1
+      scale_factor: 1.02
+  radiation:
+    method: idw
+    params:
+      max_distance: 600000.0
+      max_members: 10
+      distance_measure_factor: 1.0
+  wind_speed:
+    method: idw
+    params:
+      max_distance: 600000.0
+      max_members: 10
+      distance_measure_factor: 1.0
+  relative_humidity:
+    method: idw
+    params:
+      max_distance: 600000.0
+      max_members: 10
+      distance_measure_factor: 1.0

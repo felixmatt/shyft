@@ -1,0 +1,50 @@
+---
+repository:
+  class: !!python/name:shyft.repository.camels.camels_repository.CamelsRegionModelRepository
+  params:
+    path_to_database: ../camels_test/test_data/CAMELS
+    sgid: '01013500'  
+
+domain:
+  EPSG: 32633
+  nx: 10
+  ny: 10
+  step_x: 1000
+  step_y: 1000
+  lower_left_x: 0
+  lower_left_y: 0
+
+#catchment_indices:
+#  - 1228
+#  - 1308
+#  - 1330
+#  - 1394
+#  - 1443
+#  - 1726
+#  - 1867
+#  - 1966
+#  - 1996
+#  - 2041
+#  - 2129
+#  - 2195
+#  - 2198
+#  - 2277
+#  - 2402
+#  - 2446
+#  - 2465
+#  - 2545
+#  - 2640
+#  - 2718
+#  - 2728
+#  - 3002
+#  - 3178
+#  - 3536
+#  - 3630
+#  - 1000010
+#  - 1000011
+
+#parameter_overrides:
+#  1228:
+#    kirchner:
+#        c1: -2.539
+...
