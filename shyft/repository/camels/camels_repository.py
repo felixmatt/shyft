@@ -161,7 +161,6 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
 
         time_series = {}
         for key, (data, ta) in data_map.items():
-            print(type(data))
             def construct(d):
                 if ta.size() != d.size:
                     raise CFDataRepositoryError("Time axis size {} not equal to the number of "
@@ -176,7 +175,6 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
 
     def _get_data_from_camels_database(self, filename, input_source_types, utc_period,
                                geo_location_criteria, ensemble_member=None):
-        print("ist: ", input_source_types)
         ts_id = None
         if self.selection_criteria is None:
             self.selection_criteria = {'bbox':geo_location_criteria}
@@ -219,7 +217,6 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
                 data = data_dict[k].values
                 pure_arr = data[data_time_slice]
                 if isinstance(pure_arr, np.ma.core.MaskedArray):
-                    #print(pure_arr.fill_value)
                     pure_arr = pure_arr.filled(np.nan)
                 raw_data[k] = pure_arr
                 #raw_data[self._nc_shyft_map[k]] = np.array(data[data_slice], dtype='d'), k
@@ -258,7 +255,7 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
             return x
 
         def prec_conv(p):
-            return p/24.
+            return p/24. # mm/day -> mm/h
 
         # Unit- and aggregation-dependent conversions go here
         convert_map = {"wind_speed": lambda x, t: (noop_space(x), noop_time(t)),
@@ -269,7 +266,6 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
                        "discharge": lambda x, t: (noop_space(x), noop_time(t))}
         res = {}
         for k, v in data.items():
-            print(k)
             res[k] = convert_map[k](v, time)
         return res
 
@@ -323,7 +319,6 @@ class CamelsTargetRepository(TsRepository):
 
         if not path.isfile(filename):
             raise CamelsTargetRepositoryError("File '{}' not found".format(filename))
-        print(list_of_ts_id)
         return self._get_data_from_dataset(filename, utc_period, list_of_ts_id)
 
     def _convert_to_timeseries(self, data, t, ts_id):
@@ -353,7 +348,6 @@ class CamelsTargetRepository(TsRepository):
         if time[idx_max] < utc_period.end and idx_max + 1 < len(time):
             idx_max += 1  # extend range upward so that we cover the requested period
         time_slice = slice(idx_min, idx_max)
-        print("ts_id_in_file", ts_id_to_extract)
         ts_id_in_file = ts_id_to_extract
         extracted_data = data_dict['discharge'].values[time_slice]
         missing = -999.0
@@ -457,7 +451,6 @@ class CamelsRegionModelRepository(interfaces.RegionModelRepository):
                 y_max = y_min + tmp["ny"] * tmp["step_y"]
                 bounding_region = BoundingBoxRegion(np.array([x_min, x_max]),
                                                     np.array([y_min, y_max]), epsg, self._epsg)
-                print("epsg: ", bounding_region.epsg())
             else:
                 bounding_region = BoundingBoxRegion(xcoord_m, ycoord_m, dataset_epsg, self._epsg)
             self.bounding_box = bounding_region.bounding_box(self._epsg)
