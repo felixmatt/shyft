@@ -74,7 +74,7 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
             ending = "_streamflow_qc.txt"
         filepath = glob.glob(TARGET_DIR+'/*/'+sgid+'*'+ending)
         if len(filepath) != 1:
-            raise CamelsDataRepositoryError("sgid {} is not unique: {}".format(sgid, filepath))
+            raise CamelsDataRepositoryError("sgid {} is not unique in {}. Found files: {}".format(sgid, TARGET_DIR, filepath))
         return filepath[0]
 
     def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
