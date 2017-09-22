@@ -1212,7 +1212,7 @@ namespace shyft{
 			 * Does _not_ check if `h` is valid according to `lower`.
 			 */
 			double flow(double level) const {
-				return std::pow(a*(level - b), c);
+				return a * std::pow(level - b, c);
 			}
 			/** Compute the flow for a list of water levels.
 			* Does _not_ check if the water levels are valid according to `lower`.
@@ -1225,7 +1225,7 @@ namespace shyft{
 				std::vector<double> flow;
 				flow.reserve(levels.size());
 				for (std::size_t i = i0, idx_end = std::min(levels.size(), iN); i < idx_end; ++i) {
-					flow.emplace_back(std::pow(a*(levels[i] - b), c));
+					flow.emplace_back(a * std::pow(levels[i] - b, c));
 				}
 				return flow;
 			}

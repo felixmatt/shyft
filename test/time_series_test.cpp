@@ -899,14 +899,14 @@ TEST_CASE("test_rating_curve_ts") {
 	namespace ts = shyft::core::time_series;
 
 	const core::utctime t0 = core::utctime_now();
-	const double a = 1., b = 2., c = 3.;
+	const double a = 2., b = 2., c = 3.;
 
 	SUBCASE("rating_curve_segment") {
 		rating_curve_segment rts{ 0., a, b, c };
 
 		SUBCASE("called on value") {
 			double flow = 4.2;
-			double exp = std::pow(a*(flow - b), c);
+			double exp = a * std::pow(flow - b, c);
 			double res = rts.flow(flow);
 			FAST_CHECK_EQ(res, exp);
 		}
@@ -917,7 +917,7 @@ TEST_CASE("test_rating_curve_ts") {
 			std::vector<double> res = rts.flow(flow, f0, fn);
 			FAST_REQUIRE_EQ(res.size(), fn - f0);
 			for (std::size_t i = 0u, dim = res.size(); i < dim; ++i) {
-				double exp = std::pow(a*(flow[i + f0] - b), c);
+				double exp = a * std::pow(flow[i + f0] - b, c);
 				FAST_CHECK_EQ(doctest::Approx(res[i]), exp);
 			}
 		}
