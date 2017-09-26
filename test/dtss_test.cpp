@@ -341,7 +341,7 @@ TEST_CASE("dtss_store_basics") {
             std::cout<<"write pts/s = "<<w_mb_s<<", read pts/s = "<<r_mb_s<<" pts = "<<n_ts*n<<", roundtrip ms="<< double(elapsed_ms(t0,t2)) <<"\n";
 			//std::cout << "open_ms:" << db.t_open << ", write_ms:" << db.t_write << ", t_close_ms:" << db.t_close << std::endl;
             FAST_CHECK_EQ(rv.size(),tsv.size());
-            fs::remove_all("*.db");
+            //fs::remove_all("*.db");
         }
 #ifdef _WIN32
         this_thread::sleep_for(chrono::duration<int, std::milli>(1000));

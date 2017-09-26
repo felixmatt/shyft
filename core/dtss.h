@@ -263,7 +263,17 @@ namespace shyft {
 
             /** removes a ts from the container */
             void remove(const string&fn) const {
-                fs::remove(make_full_path(fn));
+                auto fp = make_full_path(fn);
+                for (size_t retry = 0; retry < 10; ++retry) {
+                    try {
+                        fs::remove(fp);
+                        return;
+                    }
+                    catch (...) { // windows usually fails, due to delayed file-close/file-release so we retry 10 x 0.3 seconds
+                        this_thread::sleep_for(chrono::duration<int, std::milli>(300));
+                    }
+                }
+                throw runtime_error("failed to remove file '" + fp + "' after 10 repeated attempts lasting for 3 seconds");
             }
 
             /** get minimal ts-information from specified fn */
