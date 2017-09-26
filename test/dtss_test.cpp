@@ -343,7 +343,18 @@ TEST_CASE("dtss_store_basics") {
             FAST_CHECK_EQ(rv.size(),tsv.size());
             fs::remove_all("*.db");
         }
+#ifdef _WIN32
+        this_thread::sleep_for(chrono::duration<int, std::milli>(1000));
+        try {
+            fs::remove_all(tmpdir);
+        }
+        catch (...) {
+            std::cout << "Failed to remove " << tmpdir << "\n";
+        }
+#else
         fs::remove_all(tmpdir);
+#endif
+
 }
 TEST_CASE("shyft_url") {
     using namespace shyft::dtss;
@@ -411,8 +422,18 @@ TEST_CASE("dtss_store") { /*
     }
 
     our_server.clear();
-
+#ifdef _WIN32
+    this_thread::sleep_for(chrono::duration<int,std::milli>(1000));
+    try {
+        fs::remove_all(tmpdir);
+    }
+    catch (...) {
+        std::cout << "Failed to remove " << tmpdir << "\n";
+    }
+#else
     fs::remove_all(tmpdir);
+#endif
+    
 
 }
 }
