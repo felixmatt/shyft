@@ -33,7 +33,7 @@ namespace shyft {
             template <class vec>
             struct sort_by_value_asc {
                 const vec& v;
-                sort_by_value_asc(const vec& v_):v(v_) {}
+                explicit sort_by_value_asc(const vec& v_):v(v_) {}
                 bool operator()(size_t a,size_t b) const {
                     return v[a]<v[b];
                 }

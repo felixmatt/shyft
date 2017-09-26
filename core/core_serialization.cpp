@@ -34,6 +34,12 @@
 
 using namespace boost::serialization;
 
+namespace shyft {
+    namespace dtss {
+        // later relocate to core/dtss.cpp when created
+        std::string shyft_prefix{"shyft://"};
+    }
+}
 //-- utctime_utilities.h
 
 template<class Archive>

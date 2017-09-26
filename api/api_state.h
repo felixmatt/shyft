@@ -61,7 +61,7 @@ namespace shyft {
             }
             /** do the magic given a cell, create the id, stash away the id:state*/
             template<class C>
-            cell_state_with_id(const C& c) :id(cell_state_id_of(c.geo)), state(c.state) {}
+            explicit cell_state_with_id(const C& c) :id(cell_state_id_of(c.geo)), state(c.state) {}
             x_serialize_decl();
         };
 
@@ -91,7 +91,7 @@ namespace shyft {
 
             state_io_handler() {}
             /** construct a handler for the cells provided*/
-            state_io_handler(std::shared_ptr<std::vector<C>> cellx) :cells(cellx) {}
+            explicit state_io_handler(const std::shared_ptr<std::vector<C>>& cellx) :cells(cellx) {}
 
             /** Extract cell identified state
             *\return the state for the cells, optionally filtered by the supplied catchment ids (cids)
@@ -110,7 +110,7 @@ namespace shyft {
             /** Restore cell identified state, filtered by cids.
             * \return a list identifying states that where not applied to cells(filtering out all that is related to non-matching cids)
             */
-            std::vector<int> apply_state(std::shared_ptr < std::vector<cell_state_id_t> > s, const std::vector<int>& cids) {
+            std::vector<int> apply_state(const std::shared_ptr < std::vector<cell_state_id_t> >& s, const std::vector<int>& cids) {
                 if (!cells)
                     throw std::runtime_error("No cells to apply state into");
                 std::map<cell_state_id, C*> cmap;// yes store pointers, we know the scope is this routine

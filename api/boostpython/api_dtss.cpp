@@ -53,11 +53,14 @@ namespace shyft {
     namespace dtss {
 
         struct py_server : server {
-            boost::python::object cb;
-            boost::python::object fcb;
+            boost::python::object cb;///< callback for the read function
+            boost::python::object fcb;///< callback for the find function
+            boost::python::object scb;///< callback for the store function
+
             py_server():server(
                 [=](id_vector_t const &ts_ids,core::utcperiod p){return this->fire_cb(ts_ids,p); },
-                [=](std::string search_expression) {return this->find_cb(search_expression); }
+                [=](std::string search_expression) {return this->find_cb(search_expression); },
+                [=](const ts_vector_t& tsv) { this->store_cb(tsv);}
             ) {
                 if (!PyEval_ThreadsInitialized()) {
                     PyEval_InitThreads();// ensure threads-is enabled
@@ -107,7 +110,16 @@ namespace shyft {
                 }
                 return r;
             }
-
+            void store_cb(const ts_vector_t&tsv) {
+                if (scb.ptr() != Py_None) {
+                    scoped_gil_aquire gil;
+                    try {
+                        boost::python::call<void>(scb.ptr(), tsv);
+                    } catch  (const boost::python::error_already_set&) {
+                        handle_pyerror();
+                    }
+                }
+            }
             ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
                 api::ats_vector r;
                 if (cb.ptr()!=Py_None) {
@@ -135,7 +147,7 @@ namespace shyft {
         // need to wrap core client to unlock gil during processing
         struct py_client {
             client impl;
-            py_client(std::string host_port):impl(host_port) {}
+            explicit py_client(const std::string& host_port):impl(host_port) {}
             ~py_client() {
                 //std::cout << "~py_client" << std::endl;
             }
@@ -147,17 +159,21 @@ namespace shyft {
                 scoped_gil_release gil;
                 impl.close(timeout_ms);
             }
-            ts_vector_t percentiles(ts_vector_t const& tsv, core::utcperiod p,api::gta_t const&ta,std::vector<int> percentile_spec) {
+            ts_vector_t percentiles(const ts_vector_t & tsv, core::utcperiod p,const api::gta_t &ta,const std::vector<int>& percentile_spec) {
                 scoped_gil_release gil;
                 return impl.percentiles(tsv,p,ta,percentile_spec);
             }
-            ts_vector_t evaluate(ts_vector_t const& tsv, core::utcperiod p) {
+            ts_vector_t evaluate(const ts_vector_t& tsv, core::utcperiod p) {
                 scoped_gil_release gil;
                 return ts_vector_t(impl.evaluate(tsv,p));
             }
-            ts_info_vector_t find(std::string search_expression) {
+            ts_info_vector_t find(const std::string& search_expression) {
                 scoped_gil_release gil;
                 return impl.find(search_expression);
+            }
+            void store_ts(const ts_vector_t&tsv) {
+                scoped_gil_release gil;
+                impl.store_ts(tsv);
             }
 
         };
@@ -307,6 +323,27 @@ namespace expose {
                     "# more code to invoce .find etc.\n"
                 )
             )
+            .def_readwrite("store_ts_cb",&DtsServer::scb,
+                doc_intro("callback for storing time-series.")
+                doc_intro("Called everytime the .store_ts() method is called and non-shyft urls are passed.")
+                doc_intro("The signature of the callback function should be scb(tsv: TsVector)->None")
+                doc_intro("\nExamples\n--------\n")
+                doc_intro(
+                    "from shyft import api as sa\n\n"
+                    "def store_ts(tsv:sa.TsVector)->None:\n"
+                    "    print('store:',len(tsv))\n"
+                    "    # each member is a bound ref_ts with an url\n"
+                    "    # extract the url, decode and store\n"
+                    "    #\n"
+                    "    #\n"
+                    "    return\n"
+                    "# and then bind the function to the callback\n"
+                    "dtss=sa.DtsServer()\n"
+                    "dtss.store_ts_cb=store_ts\n"
+                    "dtss.set_listening_port(20000)\n"
+                    "# more code to invoce .store_ts etc.\n"
+                )
+            )
 
             .def("fire_cb",&DtsServer::fire_cb,args("msg","rp"),"testing fire from c++")
             .def("process_messages",&DtsServer::process_messages,args("msec"),
@@ -319,9 +356,20 @@ namespace expose {
                     "dtss-threads perform the callback ")
                 doc_see_also("cb,start_async(),is_running,clear()")
             )
-            //.add_static_property("msg_count",
-            //                     make_getter(&DtsServer::msg_count),
-            //                     make_setter(&DtsServer::msg_count),"total number of requests")
+            .def("set_container",&DtsServer::add_container,args("name","root_dir"),
+                 doc_intro("set ( or replaces) an internal shyft store container to the dtss-server.")
+                 doc_intro("All ts-urls with shyft://<container>/ will resolve")
+                 doc_intro("to this internal time-series storage for find/read/store operations")
+                 doc_parameters()
+                 doc_parameter("name","str","Name of the container as pr. url definition above")
+                 doc_parameter("root_dir","str","A valid directory root for the container")
+                 doc_notes()
+                 doc_note("currently this call only be used when the server is not processing messages\n"
+                          "- before starting, or after stopping listening operations\n"
+                          )
+
+            )
+
             ;
 
     }
@@ -374,6 +422,17 @@ namespace expose {
                 doc_parameter("search_expression","str","search-expression, to be interpreted by the back-end tss server (usually by callback to python)")
                 doc_returns("ts_info_vector","TsInfoVector","The search result, as vector of TsInfo objects")
                 doc_see_also("TsInfo,TsInfoVector")
+            )
+            .def("store_ts",&DtsClient::store_ts,args("tsv"),
+                doc_intro("Store the time-series in the ts-vector in the dtss backend")
+                doc_intro("The current implementation replaces any existing ts with same url with the new contents")
+                doc_intro("The time-series should be created like this, with url and a concrete point-ts:")
+                doc_intro(">>>   a=sa.TimeSeries(ts_url,ts_points)")
+                doc_intro(">>>   tsv.append(a)")
+                doc_parameters()
+                doc_parameter("tsv","TsVector","ts-vector with time-series, url-reference and values to be stored at dtss server")
+                doc_returns("None","","")
+                doc_see_also("TsVector")
             )
             ;
 

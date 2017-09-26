@@ -123,12 +123,22 @@ namespace shyft{
         apoint_ts::apoint_ts(std::string ref_ts_id)
              :ts(std::make_shared<aref_ts>(ref_ts_id)) {
         }
+        apoint_ts::apoint_ts(std::string ref_ts_id,const apoint_ts&bts)
+             :ts(std::make_shared<aref_ts>(ref_ts_id)) {
+            bind(bts);// bind the symbolic ts directly
+        }
+
         void apoint_ts::bind(const apoint_ts& bts) {
             if(!dynamic_cast<aref_ts*>(ts.get()))
                 throw runtime_error("this time-series is not bindable");
             if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
                 throw runtime_error("the supplied argument time-series must be a point ts");
             dynamic_cast<aref_ts*>(ts.get())->rep.set_ts( make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep ));
+        }
+        string apoint_ts::id() const {
+            if(!dynamic_cast<aref_ts*>(ts.get()))
+                return string{};
+            return dynamic_cast<aref_ts*>(ts.get())->rep.ref;
         }
 
         // and python needs these:
@@ -181,7 +191,7 @@ namespace shyft{
         ) const {
             return shyft::api::extend(
                 *this, ts,
-                split_policy, fill_policy, 
+                split_policy, fill_policy,
                 split_at, fill_value
             );
         }
@@ -291,7 +301,7 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-        
+
 		apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
@@ -601,7 +611,7 @@ namespace shyft{
             const auto lhs_p = this->lhs.time_axis().total_period();
             const auto rhs_p = this->rhs.time_axis().total_period();
 
-            // get values 
+            // get values
             std::vector<double> lhs_values{}, rhs_values{};
             if ( split_at >= lhs_p.start ) lhs_values = this->lhs.values();
             if ( split_at <= lhs_p.end )   rhs_values = this->rhs.values();

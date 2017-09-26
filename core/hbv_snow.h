@@ -28,7 +28,7 @@ namespace shyft {
             /** \brief integrate function f given as linear interpolated between the f_i(x_i) from a to b for a, b in x.
              * If f_rhs_is_zero is set, f(b) = 0, unless b = x[i] for some i in [0,n).
              */
-            inline double integrate(vector<double> f, vector<double> x, size_t n, double a, double b, bool f_b_is_zero=false) {
+            inline double integrate(const vector<double>& f, const vector<double>& x, size_t n, double a, double b, bool f_b_is_zero=false) {
                 size_t left = 0;
                 double area = 0.0;
                 double f_l = 0.0;
@@ -138,11 +138,9 @@ namespace shyft {
                 vector<double> sw;
                 size_t I_n;
 
-                calculator(const P& p,  S& state) {
+                calculator(const P& p,  S& state):I(p.intervals),I_n(p.intervals.size()) {
                     // Simple trapezoidal rule to normalize the snow redistribution quartiles
                     auto s = p.s;
-                    I = p.intervals;
-                    I_n = I.size();
 
                     const double mean = hbv_snow::integrate(s, I, I_n, I[0], I[I_n - 1]);
                     sd = s;

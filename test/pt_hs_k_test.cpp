@@ -67,7 +67,7 @@ TEST_CASE("test_call_stack") {
     pc::parameter p_corr_param;
 
     // Initialize the state vectors
-    kr::state kirchner_state = {5.0};
+    kr::state kirchner_state {5.0};
     hs::state snow_state(10.0, 0.5);
 
     // Initialize response

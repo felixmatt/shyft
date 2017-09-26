@@ -75,7 +75,7 @@ set(DLIB_TARBALL ${DLIB_PREFIX}-${DLIB_VERSION}.tar.bz2)
 set(DLIB_URL http://sourceforge.net/projects/dclib/files/dlib/v${DLIB_VERSION}/${DLIB_TARBALL}/download)
 
 set(ARMADILLO_PREFIX "armadillo")
-set(ARMADILLO_VERSION "7.800.2")
+set(ARMADILLO_VERSION "7.960.2")
 set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.xz)
 set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL})
 
@@ -92,6 +92,7 @@ set(DOCTEST_URL https://github.com/onqtam/doctest/archive/${DOCTEST_VERSION}.tar
 
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 include("${CMAKE_SOURCE_DIR}/cmake/DownloadAndExtractTarball.cmake")
 message(STATUS "Downloading dependencies.  This may take a while...")
 

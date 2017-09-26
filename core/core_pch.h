@@ -48,7 +48,20 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <cmath>
+#include <regex>
 
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <sys/io.h>
+#define O_BINARY 0
+#define O_SEQUENTIAL 0
+#include <sys/stat.h>
+#endif
+#include <fcntl.h>
+
+#include <boost/filesystem.hpp>
+namespace fs=boost::filesystem; // it's a standard c++ 17
 #include <boost/numeric/odeint.hpp>
 #include <boost/range.hpp>
 #include <boost/math/distributions/gamma.hpp>

@@ -159,6 +159,8 @@
 			<Add library="python3" />
 			<Add library="boost_serialization" />
 			<Add library="dlib" />
+			<Add library="boost_filesystem" />
+			<Add library="boost_system" />
 			<Add directory="$(#python.lib)" />
 			<Add directory="$(#dlib.lib)" />
 			<Add directory="$(#boost.lib)" />

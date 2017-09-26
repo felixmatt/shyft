@@ -18,7 +18,7 @@ namespace shyft {
         struct ts_info {
             //--some stuff that need to be here for the python exposure
             ts_info() = default;
-            ts_info(std::string name, time_series::ts_point_fx point_fx, utctimespan delta_t, std::string olson_tz_id, utcperiod data_period, utctime created, utctime modified)
+            ts_info(const std::string& name, time_series::ts_point_fx point_fx, utctimespan delta_t, const std::string& olson_tz_id, utcperiod data_period, utctime created, utctime modified)
                 :name(name), point_fx(point_fx), delta_t(delta_t), olson_tz_id(olson_tz_id), data_period(data_period), created(created), modified(modified) {}
             ts_info(const ts_info&) = default;
             bool operator==(const ts_info&o) const { return name == o.name && point_fx == o.point_fx && delta_t == o.delta_t && olson_tz_id == o.olson_tz_id&& data_period == o.data_period && created == o.created && modified == o.modified; }

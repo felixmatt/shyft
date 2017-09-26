@@ -98,7 +98,7 @@ namespace shyft {
 		    static const int default_area_m2=1000000;
 			geo_cell_data() :catchment_ix(0),area_m2(default_area_m2),catchment_id_(-1),radiation_slope_factor_(default_radiation_slope_factor){}
 
-			geo_cell_data(geo_point mid_point,double area=default_area_m2,
+			geo_cell_data(const geo_point& mid_point,double area=default_area_m2,
                 int catchment_id = -1, double radiation_slope_factor=default_radiation_slope_factor,const land_type_fractions& land_type_fraction=land_type_fractions(),routing_info routing_inf=routing_info()):
 				routing(routing_inf),mid_point_(mid_point), area_m2(area), catchment_id_(catchment_id),radiation_slope_factor_(radiation_slope_factor),fractions(land_type_fraction)
 			{}
@@ -109,7 +109,7 @@ namespace shyft {
 			const land_type_fractions& land_type_fractions_info() const { return fractions; }
 			void set_land_type_fractions(const land_type_fractions& ltf) { fractions = ltf; }
 			double area() const { return area_m2; }
-			size_t catchment_ix; // internally generated zero-based catchment index, used to correlate to calc-filter, ref. region_model
+			size_t catchment_ix=0; // internally generated zero-based catchment index, used to correlate to calc-filter, ref. region_model
             bool operator==(const geo_cell_data &o) const {
                 return o.catchment_id_ == catchment_id_ && mid_point_ == o.mid_point_ && fabs(area_m2-o.area_m2)<0.1 && fractions==o.fractions
                 && fabs(o.routing.distance-routing.distance)<0.1 && o.routing.id == routing.id;

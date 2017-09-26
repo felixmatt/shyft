@@ -22,7 +22,7 @@ namespace shyft {
                     double t_start = 0.0; // Start of integration period
                     double t_a = 0.0; // Left hand side time of next integration subinterval
                 public:
-                    trapezoidal_average(S& stepper) {}
+                    explicit trapezoidal_average(S& stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -69,7 +69,7 @@ namespace shyft {
                     S& stepper;
                     typename S::state_type x; // Storage for the intermediate state
                 public:
-                    composite_trapezoidal_average(S& stepper): stepper(stepper) {}
+                    explicit composite_trapezoidal_average(S& stepper): stepper(stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -121,7 +121,7 @@ namespace shyft {
 
             struct state {
                 double q=0.0001; //< water content in [mm/h], it defaults to 0.0001 mm, zero is not a reasonable valid value
-                state(double q=0.0001):q(q){}
+                explicit state(double q=0.0001):q(q){}
                 bool operator==(const state&x) const {
                     const double eps=1e-6;
                     return fabs(q-x.q)<eps;
@@ -188,7 +188,7 @@ namespace shyft {
                 }
 
               public:
-                calculator(const P& param) : param(param) { /* Do nothing */ }
+                explicit calculator(const P& param) : param(param) { /* Do nothing */ }
 
                 calculator(double abs_err, double rel_err, const P& param)
                     : dense_stepper(boost::numeric::odeint::make_dense_output(abs_err, rel_err,

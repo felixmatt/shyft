@@ -16,7 +16,7 @@ namespace shyft {
 			};
 
 			struct state {
-				state(double sm = 0.0) :sm(sm) {}
+				explicit state(double sm = 0.0) :sm(sm) {}
 				double sm=50.0; // mm
 				bool operator==(const state&x) const {
 					const double eps = 1e-6;
@@ -41,7 +41,7 @@ namespace shyft {
 			template<class P>
 			struct calculator {
 				P param;
-				calculator(const P& p):param(p) {}
+				explicit calculator(const P& p):param(p) {}
 				template <class R,class S> 
 				void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, double insoil, double act_evap) {
 					double temp = s.sm + insoil;					//compute fraction at end of time after adding insoil

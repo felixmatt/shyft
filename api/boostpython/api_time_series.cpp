@@ -253,7 +253,7 @@ namespace expose {
                 doc_returns("qm_forecast", "TsVector", "quantile mapped forecast with the requested time-axis")
                 ;
 
-            def("quantile_map_forecast",quantile_map_forecast_5, 
+            def("quantile_map_forecast",quantile_map_forecast_5,
                 args("forecast_sets","set_weights","historical_data","time_axis","interpolation_start"),
                 qm_doc
                 );
@@ -387,13 +387,29 @@ namespace expose {
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
 			.def(init<const vector<double>&, utctimespan,utctime, const time_axis::generic_dt&>(args("pattern", "dt","t0", "ta"), "construct a timeseries given a equally spaced dt pattern, starting at t0, and a timeaxis ta"))
-            .def(init<std::string>(args("id"),
-                "constructs a bind-able ts,\n"
-                "providing a symbolic possibly unique id that at a later time\n"
-                "can be bound, using the .bind(ts) method to concrete values\n"
-                "if the ts is used as ts, like size(),.value(),time() before it\n"
-                "is bound, then a runtime-exception is raised\n"
+            .def(init<std::string>(args("ts_id"),
+                doc_intro("constructs a bind-able ts,")
+                doc_intro("providing a symbolic possibly unique id that at a later time")
+                doc_intro("can be bound, using the .bind(ts) method to concrete values")
+                doc_intro("if the ts is used as ts, like size(),.value(),time() before it")
+                doc_intro("is bound, then a runtime-exception is raised")
+                doc_parameters()
+                doc_parameter("ts_id","str","url-like identifier for the time-series,notice that shyft://<container>/<path> is for shyft-internal store")
                 )
+            )
+            .def(init<std::string,const apoint_ts&>(args("ts_id","bts"),
+                doc_intro("constructs a ready bound ts,")
+                doc_intro("providing a symbolic possibly unique id that at a later time")
+                doc_intro("can be used to correlate with back-end store\n")
+                doc_parameters()
+                doc_parameter("ts_id","str","url-type of id, notice that shyft://<container>/<path> is for shyft-internal store")
+                doc_parameter("bts","TimeSeries","A concrete time-series, with point_fx policy, time_axis and values")
+                )
+            )
+            .def("ts_id",&apoint_ts::id,
+                doc_intro("returns ts_id of symbolic ts, or empty string if not symbolic ts")
+                doc_returns("ts_id","str","url-like ts_id as passed to constructor or empty if the ts is not a ts with ts_id")
+                doc_see_also("TimeSeries('url://like/id'),TimeSeries('url://like/id',ts_with_values)")
             )
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
@@ -632,8 +648,8 @@ namespace expose {
     }
 
 	static void expose_rating_curve_classes() {
-		
-		// overloads for rating_curve_segment::flow 
+
+		// overloads for rating_curve_segment::flow
 		double (shyft::core::rating_curve_segment::*rcs_flow_1)(double) const = &shyft::core::rating_curve_segment::flow;
 		std::vector<double> (shyft::core::rating_curve_segment::*rcs_flow_2)(const std::vector<double> &, std::size_t, std::size_t) const = &shyft::core::rating_curve_segment::flow;
 
@@ -681,10 +697,10 @@ namespace expose {
 			.def("__str__", &shyft::core::rating_curve_segment::operator std::string, "Stringify the segment.")
 			;
 
-		// overloads for rating_curve_function::flow 
+		// overloads for rating_curve_function::flow
 		double (shyft::core::rating_curve_function::*rcf_flow_val)(double) const = &shyft::core::rating_curve_function::flow;
 		std::vector<double> (shyft::core::rating_curve_function::*rcf_flow_vec)(const std::vector<double> & ) const = &shyft::core::rating_curve_function::flow;
-		// overloads for rating_curve_function::add_segment 
+		// overloads for rating_curve_function::add_segment
 		void (shyft::core::rating_curve_function::*rcf_add_args)(double, double, double, double) = &shyft::core::rating_curve_function::add_segment;
 		void (shyft::core::rating_curve_function::*rcf_add_obj)(const rating_curve_segment & ) = &shyft::core::rating_curve_function::add_segment;
 
@@ -722,10 +738,10 @@ namespace expose {
 			.def("__str__", &shyft::core::rating_curve_function::operator std::string, "Stringify the function.")
 			;
 
-		// overloads for rating_curve_function::flow 
+		// overloads for rating_curve_function::flow
 		double (shyft::core::rating_curve_parameters::*rcp_flow_val)(utctime, double) const = &shyft::core::rating_curve_parameters::flow;
 		std::vector<double> (shyft::core::rating_curve_parameters::*rcp_flow_ts)(const shyft::api::apoint_ts & ) const = &shyft::core::rating_curve_parameters::flow<shyft::api::apoint_ts>;
-		// overloads for rating_curve_function::add_segment 
+		// overloads for rating_curve_function::add_segment
 		void (shyft::core::rating_curve_parameters::*rcp_add_obj)(utctime, const rating_curve_function & ) = &shyft::core::rating_curve_parameters::add_curve;
 
 		class_<shyft::core::rating_curve_parameters>("RatingCurveParameters",

@@ -208,7 +208,7 @@ namespace shyft {
                     statistics stat(alpha_0, p.d_range, unit_size);
 
                     unsigned long n = 0;
-                    unsigned long u = 0;
+                    //xx unsigned long u = 0;
 
                     // Accumulation
                     if (total_new_snow > unit_size) {
@@ -221,7 +221,7 @@ namespace shyft {
 
                     // Melting
                     if (pot_melt > unit_size) {
-                        u = lrint(pot_melt/unit_size);
+                        unsigned long u = lrint(pot_melt/unit_size);
                         if (nnn < u + 2) {
                             nnn = 0;
                             alpha = alpha_0;

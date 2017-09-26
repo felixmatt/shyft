@@ -35,3 +35,6 @@ using timing = std::chrono::high_resolution_clock;
 inline int  elapsed_ms(timing::time_point t0, timing::time_point t1) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
 };
+inline int  elapsed_us(timing::time_point t0, timing::time_point t1) {
+	return std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+};

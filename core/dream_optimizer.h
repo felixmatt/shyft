@@ -44,8 +44,8 @@ namespace shyft {
               */
             class dream  {
                 // TODO: get rid of these, use std::random for all needed functionality
-                mutable bool super_hack_stored;
-                mutable double stored_std_norm_super_hack;
+                mutable bool super_hack_stored=false;
+                mutable double stored_std_norm_super_hack=0.0;
 #ifdef WIN32
 				mutable std::mt19937 generator;
 #else

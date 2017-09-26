@@ -48,7 +48,7 @@ namespace shyft{
          * State-in-time values are typically POINT_INSTANT_VALUES; and we could as an approximation
          * draw a straight line between the points.
          */
-        enum ts_point_fx {
+        enum ts_point_fx:int8_t {
             POINT_INSTANT_VALUE, ///< the point value represents the value at the specific time (or centered around that time),typically linear accessor
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
@@ -79,7 +79,7 @@ namespace shyft{
          * \see ref_ts
          */
         template<class T> struct needs_bind {static const bool value=true;};
-        
+
 		/** Resolves compiletime to dispatch runtime calls to needs_bind where supported.
 		 * Additionally allows for querying if a type supports needs_bind.
 		 */
@@ -778,7 +778,7 @@ namespace shyft{
                 ts = tsn;
             }
             // useful constructors goes here:
-            ref_ts(string sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
+            explicit ref_ts(const string& sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
             const ta_t& time_axis() const {return bts().time_axis();}
             /**\brief the function value f(t) at time t, fx_policy taken into account */
             double operator()(utctime t) const {
@@ -1259,7 +1259,7 @@ namespace shyft{
 				: segments{ segment_vector }
 			{
 				if ( ! sorted )
-					std::sort(segments.begin(), segments.end());  
+					std::sort(segments.begin(), segments.end());
 			}
 			rating_curve_function(std::vector<rating_curve_segment> && segment_vector, bool sorted = false)
 				: segments{ std::move(segment_vector) }
@@ -1376,7 +1376,7 @@ namespace shyft{
 			template <typename InputIt>
 			rating_curve_parameters(InputIt first, InputIt last)
 				: curves{ first, last } { }
-			rating_curve_parameters(const std::vector<std::pair<utctime, rating_curve_function>> & curves)
+			explicit rating_curve_parameters(const std::vector<std::pair<utctime, rating_curve_function>> & curves)
 				: rating_curve_parameters{ curves.cbegin(), curves.cend() } { }
 			// -----
 			~rating_curve_parameters() = default;
@@ -1562,7 +1562,7 @@ namespace shyft{
 				ensure_bound();
 				return rc_param.flow(time(i), level_ts.value(i));
 			}
-			
+
 			x_serialize_decl();
 		};
 
@@ -1776,7 +1776,7 @@ namespace shyft{
             average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE), ext_policy(policy){ /* Do nothing */ }
-            average_accessor(std::shared_ptr<S> source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            average_accessor(const std::shared_ptr<S>& source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
                 source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
                 ext_policy(policy) {}
@@ -1823,7 +1823,7 @@ namespace shyft{
             accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), ext_policy(policy) { /* Do nothing */
             }
-            accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            accumulate_accessor(const std::shared_ptr<S>& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
             }
 
@@ -2121,7 +2121,7 @@ namespace shyft{
             time_shift.do_bind();
         }
         template <class Ts,class Ta,class Fbind>
-        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
+        void bind_ref_ts(const average_ts<Ts,Ta>& avg, Fbind&& f_bind) {
             bind_ref_ts(d_ref(avg.ts),f_bind);
         }
         template <class Ts,class Ta,class Fbind>

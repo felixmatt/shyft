@@ -50,7 +50,7 @@ namespace shyft {
 			template<class P>
 			struct calculator {
 				P param;
-				calculator(const P& p) :param(p) {}
+				explicit calculator(const P& p) :param(p) {}
 				template <class R, class S>
 				void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, double soil_outflow) {
 					double temp = s.uz + soil_outflow;				//compute of q11 & q12 at end of time after adding soil_outflow

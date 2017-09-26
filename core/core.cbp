@@ -85,7 +85,9 @@
 		<Unit filename="dream_optimizer.h">
 			<Option virtualFolder="optimizers/" />
 		</Unit>
-		<Unit filename="dtss.h" />
+		<Unit filename="dtss.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="experimental.cpp">
 			<Option virtualFolder="experimental/" />
 		</Unit>
@@ -177,6 +179,9 @@
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_info.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_merge.h">

@@ -183,13 +183,13 @@ namespace shyft {
                 double lgamma(double a) const {
                     return a < precision_threshold ? boost::math::lgamma(a, high_precision) : boost::math::lgamma(a, low_precision);
                 }
-
+                /*xx
                 inline double calc_df(const double a, const double b, const double z) const {
                     return a*b*exp(-(a + 1.0)*log(b) - lgamma(a + 1.0) + a*log(z) - z/b)
                             + 1.0 - z*exp(-a*log(b) - lgamma(a) + (a - 1.0)*log(z) - z/b)
                             - gamma_p(a, z/b);
                 }
-
+                */
                 inline double calc_q(const double a, const double b, const double z) const
                 {
                     return a*b*gamma_p(a + 1.0, z/b) + z*(1.0 - gamma_p(a, z/b));
@@ -258,6 +258,7 @@ namespace shyft {
                   }
 
               public:
+                  calculator()=default;
                   /*
                   * \brief step the snow model forward from time t to t+dt, state, parameters and input
                   * updates the state and response upon return.

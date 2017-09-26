@@ -84,7 +84,7 @@ namespace shyft {
             template <class Ts_, class Ta_>
             statistics(Ts_&&tsx, Ta_&tax) :ts(forward<Ts_>(tsx)), ta(forward<Ta_>(tax)) {}
             template <class Ts_>
-            statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
+            explicit statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
                 ta = ts.time_axis();
             }
             template <typename Fx>

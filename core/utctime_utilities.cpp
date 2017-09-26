@@ -361,7 +361,7 @@ namespace shyft {
                 return make_shared<tz_info_t>(tz_info_t(btz.base_offset(),tz_table(btz)));
             }
 
-            void tz_info_database::load_from_file(const string filename) {
+            void tz_info_database::load_from_file(const string& filename) {
                 tz_database tzdb;
                 tzdb.load_from_file(filename);
                 region_tz_map.clear(); name_tz_map.clear();

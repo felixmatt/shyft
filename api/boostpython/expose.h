@@ -339,16 +339,16 @@ namespace expose {
         typedef typename Optimizer::target_specification_t target_specification_t;
 
         // fix overloads mapping vs. vector& new parameter stuff
-        std::vector<double>(Optimizer::*optimize_v)(std::vector<double>, size_t, double, double ) = &Optimizer::optimize;
+        std::vector<double>(Optimizer::*optimize_v)(const std::vector<double>&, size_t, double, double ) = &Optimizer::optimize;
         parameter_t(Optimizer::*optimize_p)(const parameter_t&, size_t, double, double) = &Optimizer::optimize;
 
-        std::vector<double>(Optimizer::*optimize_dream_v)(std::vector<double>, size_t) = &Optimizer::optimize_dream;
+        std::vector<double>(Optimizer::*optimize_dream_v)(const std::vector<double>&, size_t) = &Optimizer::optimize_dream;
         parameter_t(Optimizer::*optimize_dream_p)(const parameter_t&, size_t) = &Optimizer::optimize_dream;
 
-        std::vector<double> (Optimizer::*optimize_sceua_v)(std::vector<double>,size_t,double,double)=&Optimizer::optimize_sceua;
+        std::vector<double> (Optimizer::*optimize_sceua_v)(const std::vector<double>&,size_t,double,double)=&Optimizer::optimize_sceua;
         parameter_t(Optimizer::*optimize_sceua_p)(const parameter_t&, size_t, double, double) = &Optimizer::optimize_sceua;
 
-        double (Optimizer::*calculate_goal_function_v)(std::vector<double>) = &Optimizer::calculate_goal_function;
+        double (Optimizer::*calculate_goal_function_v)(const std::vector<double>&) = &Optimizer::calculate_goal_function;
         double (Optimizer::*calculate_goal_function_p)(const parameter_t&) = &Optimizer::calculate_goal_function;
 
 

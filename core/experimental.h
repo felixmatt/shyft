@@ -250,7 +250,7 @@ namespace shyft {
                         } break;
                         case 2: {
                             char ts_type[200];ts_type[0]=0;
-                            if(sscanf(line.c_str(),"time %s",ts_type)!=1) {
+                            if(sscanf(line.c_str(),"time %40s",ts_type)!=1) {
                                 report_error(report_tag,line_no,"expected 2.line staring with time <ts_type>");
                                 return r;
                             }

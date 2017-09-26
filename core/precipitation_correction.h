@@ -25,14 +25,14 @@ namespace shyft {
 		namespace precipitation_correction {
 			struct parameter {
 				double scale_factor = 1.0;
-				parameter(double scale_factor = 1.0):scale_factor(scale_factor) {}
+				explicit parameter(double scale_factor = 1.0):scale_factor(scale_factor) {}
 			};
 
 
 			struct calculator {
 				const double scale_factor;
 
-				calculator(double scale_factor = 1.0) : scale_factor(scale_factor) {}
+				explicit calculator(double scale_factor = 1.0) : scale_factor(scale_factor) {}
 
 				inline double calc(const double precipitation) {
 					return precipitation*scale_factor;

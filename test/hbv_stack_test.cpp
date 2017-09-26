@@ -69,8 +69,8 @@ TEST_CASE("test_call_stack") {
 	pc::parameter p_corr_param;
 
 	// Initialize the state vectors
-	soil::state soil_state = {50.0};
-	tank::state tank_state = {20.0, 10.0 };  // Check , I follow kirchner
+	soil::state soil_state{50.0};
+	tank::state tank_state {20.0, 10.0 };  // Check , I follow kirchner
 	snow::state snow_state(10.0, 0.5);
 
 	// Initialize response

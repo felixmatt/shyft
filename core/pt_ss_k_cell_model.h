@@ -38,7 +38,7 @@ namespace shyft {
                 response_t end_reponse;  ///<< end_response, at the end of collected
 
                 all_response_collector() : destination_area(0.0) {}
-                all_response_collector(const double destination_area) : destination_area(destination_area) {}
+                explicit all_response_collector(const double destination_area) : destination_area(destination_area) {}
                 all_response_collector(const double destination_area, const timeaxis_t& time_axis)
                  : destination_area(destination_area), avg_discharge(time_axis, 0.0),charge_m3s(time_axis,0.0), snow_total_stored_water(time_axis, 0.0),
                    snow_outflow(time_axis, 0.0), glacier_melt(time_axis,0.0),ae_output(time_axis, 0.0), pe_output(time_axis, 0.0) {}
@@ -89,7 +89,7 @@ namespace shyft {
                 pts_t snow_swe;
 
                 discharge_collector() : destination_area(0.0),collect_snow(false) {}
-                discharge_collector(const double destination_area) : destination_area(destination_area),collect_snow(false) {}
+                explicit discharge_collector(const double destination_area) : destination_area(destination_area),collect_snow(false) {}
                 discharge_collector(const double destination_area, const timeaxis_t& time_axis)
                  : destination_area(destination_area), avg_discharge(time_axis, 0.0),charge_m3s(time_axis,0.0),collect_snow(false),
                     snow_sca(timeaxis_t(time_axis.start(),time_axis.delta(),0),0.0),
@@ -146,7 +146,7 @@ namespace shyft {
 
                 state_collector() : collect_state(false), destination_area(0.0) {}
 
-                state_collector(const timeaxis_t& time_axis)
+                explicit state_collector(const timeaxis_t& time_axis)
                  : collect_state(false), destination_area(0.0),
                    kirchner_discharge(time_axis, 0.0),
                    snow_swe(time_axis, 0.0),

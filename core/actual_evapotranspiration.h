@@ -28,7 +28,7 @@ namespace shyft {
 			/**<  keeps the parameters (potential calibration/localization) for the AE */
 			struct parameter {
 				double ae_scale_factor = 1.5; ///<default value is 1.5
-				parameter(double ae_scale_factor=1.5) : ae_scale_factor(ae_scale_factor) {}
+				explicit parameter(double ae_scale_factor=1.5) : ae_scale_factor(ae_scale_factor) {}
 			};
 
 			/**<  keeps the formal response of the AE method */

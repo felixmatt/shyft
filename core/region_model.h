@@ -228,7 +228,7 @@ namespace shyft {
                 }
             }
 
-            size_t n_catchments;///< optimized//extracted as max(cell.geo.catchment_id())+1 in run interpolate
+            size_t n_catchments=0;///< optimized//extracted as max(cell.geo.catchment_id())+1 in run interpolate
 
             void clone(const region_model& c) {
                 // First, clear own content
@@ -263,8 +263,8 @@ namespace shyft {
                 ncore = thread::hardware_concurrency();
                 update_ix_to_id_mapping();
             }
-            region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param) {
-                cells = std::make_shared<std::vector<C>>();
+            region_model(const std::vector<geo_cell_data>& geov, const parameter_t &region_param)
+              :cells(std::make_shared<std::vector<C>>()){
                 state_t s0;
                 auto global_parameter = make_shared<typename cell_t::parameter_t>();
                 for (const auto&gcd : geov)  cells->push_back(cell_t{ gcd, global_parameter, s0 });
@@ -370,7 +370,7 @@ namespace shyft {
 				// calculation filter
                 struct cell_proxy {
                     cell_proxy():cell(nullptr) {}
-                    cell_proxy(cell_t *c):cell(c){}
+                    explicit cell_proxy(cell_t *c):cell(c){}
                     cell_proxy(cell_proxy const &o):cell(o.cell) {}
                     cell_proxy(cell_proxy&&o):cell(o.cell){}
                     cell_proxy& operator=(cell_proxy const&o){cell=o.cell;return *this;}
