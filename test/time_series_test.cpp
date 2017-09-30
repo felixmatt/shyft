@@ -256,7 +256,7 @@ std::vector<tts_t> create_test_ts(size_t n,tta_t ta, Fx&& f) {
             v.push_back(f(i, ta.time(j)));
         r.push_back(tts_t(ta, v));
     }
-    return std::move(r);
+    return r;
 }
 TEST_SUITE("time_series") {
 TEST_CASE("nan_min_max") {
@@ -913,7 +913,7 @@ TEST_CASE("test_rating_curve_ts") {
 		SUBCASE("called on vector") {
 			std::vector<double> flow{ 12.3, 13.4, 15.6, 12.3, 14.5, 17.8 };
 			const std::size_t f0 = 1, fn = 4;
-			
+
 			std::vector<double> res = rts.flow(flow, f0, fn);
 			FAST_REQUIRE_EQ(res.size(), fn - f0);
 			for (std::size_t i = 0u, dim = res.size(); i < dim; ++i) {
@@ -1065,7 +1065,7 @@ TEST_CASE("test_rating_curve_ts") {
 TEST_CASE("test_ts_statistics_calculations") {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
-    auto fx_1 = [t0](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
+    auto fx_1 = [](size_t i, utctime t)->double {return double( i );};// should generate 0..9 constant ts.
     auto n_days=1;
     auto n_ts=10;
     tta_t  ta(t0, calendar::HOUR, n_days*24);
@@ -1103,7 +1103,7 @@ TEST_CASE("test_ts_statistics_speed") {
     calendar utc;
     auto t0 = utc.time(2015, 1, 1);
 
-    auto fx_1 = [t0](size_t i, utctime t)->double {return 1000000.0*double( rand()/36000.0 );};
+    auto fx_1 = [](size_t i, utctime t)->double {return 1000000.0*double( rand()/36000.0 );};
 #ifdef _DEBUG
     auto n_days=7;
 #else
@@ -1251,7 +1251,7 @@ TEST_CASE("test_periodic_ts_over_sampled") {
 
 TEST_CASE("test_periodic_ts_concept") {
 	// Periodic profile having 8 samples spaced by 3 h
-	std::array<double, 8> profile = { 1, 2, 3, 4, 5, 6, 7, 8 };
+	std::array<double, 8> profile { 1, 2, 3,4, 5, 6, 7, 8 };
 	const utctimespan dt = deltahours(3);
 	calendar utc;
 	utctime t0 = utc.time(2016, 1, 1);

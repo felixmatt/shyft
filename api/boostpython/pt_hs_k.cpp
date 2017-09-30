@@ -1,5 +1,4 @@
 #include "boostpython_pch.h"
-#include <boost/python/docstring_options.hpp>
 #include "core/utctime_utilities.h"
 #include "core/priestley_taylor.h"
 #include "core/actual_evapotranspiration.h"

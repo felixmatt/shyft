@@ -1,5 +1,10 @@
 #pragma once
 #include "geo_point.h"
+#ifdef SHYFT_NO_PCH
+#include <stdexcept>
+#include <cmath>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 namespace shyft {
     namespace core {
 
@@ -61,7 +66,7 @@ namespace shyft {
                 glacier_ = glacier; lake_ = lake; reservoir_ = reservoir; forest_ = forest;
             }
             bool operator==(const land_type_fractions&o) const {
-                return fabs(glacier_ - o.glacier_) + fabs(lake_ - o.glacier_) + fabs(reservoir_ - o.reservoir_) + fabs(forest_-o.forest_)< 0.001;
+                return std::abs(glacier_ - o.glacier_) + std::abs(lake_ - o.glacier_) + std::abs(reservoir_ - o.reservoir_) + std::abs(forest_-o.forest_)< 0.001;
             }
           private:
 			double glacier_;
@@ -111,8 +116,8 @@ namespace shyft {
 			double area() const { return area_m2; }
 			size_t catchment_ix=0; // internally generated zero-based catchment index, used to correlate to calc-filter, ref. region_model
             bool operator==(const geo_cell_data &o) const {
-                return o.catchment_id_ == catchment_id_ && mid_point_ == o.mid_point_ && fabs(area_m2-o.area_m2)<0.1 && fractions==o.fractions
-                && fabs(o.routing.distance-routing.distance)<0.1 && o.routing.id == routing.id;
+                return o.catchment_id_ == catchment_id_ && mid_point_ == o.mid_point_ && std::abs(area_m2-o.area_m2)<0.1 && fractions==o.fractions
+                && std::abs(o.routing.distance-routing.distance)<0.1 && o.routing.id == routing.id;
             }
             routing_info routing;///< keeps the geo-static routing info, where it routes to, and routing distance.
         private:

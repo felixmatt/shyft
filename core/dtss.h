@@ -1,13 +1,47 @@
 #pragma once
-#include "api/time_series.h"
-#include "time_series_info.h"
-#include "utctime_utilities.h"
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/base_object.hpp>
+#ifdef SHYFT_NO_PCH
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <functional>
+#include <cstring>
+
+#include <boost/filesystem.hpp>
+namespace fs=boost::filesystem;
+
+#include <regex>
+
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <sys/io.h>
+#define O_BINARY 0
+#define O_SEQUENTIAL 0
+#include <sys/stat.h>
+#endif
+#include <fcntl.h>
+
+#include <dlib/server.h>
+#include <dlib/iosockstream.h>
+#include <dlib/logger.h>
+#include <dlib/misc_api.h>
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+
+
+#endif // SHYFT_NO_PCH
+#include "api/time_series.h"
+#include "time_series_info.h"
+#include "utctime_utilities.h"
+
 
 namespace shyft {
     namespace dtss {
@@ -374,6 +408,7 @@ namespace shyft {
             }
             #endif
             void write_header(int f, const gts_t&ats) const { auto h = mk_header(ats); write(f,(const char*)&h, sizeof(h)); }
+            inline void write(int f,const void*d,size_t sz) const {if((size_t)::write(f,d,sz)!=sz) throw std::runtime_error("dtss_store:failed to write do disk");}
 			void write_time_axis(int f, const gta_t& ta) const {
 				switch (ta.gt) {
 				case time_axis::generic_dt::FIXED: {

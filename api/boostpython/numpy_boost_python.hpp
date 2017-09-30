@@ -42,8 +42,8 @@ module's init function must call:
 #define __NUMPY_BOOST_PYTHON_HPP__
 
 #include "numpy_boost.hpp"
-#include <boost/python.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
+//#include <boost/python.hpp>
+
 
 template<class T, int NDims>
 struct numpy_boost_to_python

@@ -1,9 +1,6 @@
 #include "test_pch.h"
 #include "core/skaugen.h"
 
-namespace skaugen_test_constant {
-    const double EPS = 1.0e-10;
-}
 
 using namespace shyft::core::skaugen;
 typedef calculator<parameter, state, response> SkaugenModel;

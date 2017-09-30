@@ -366,7 +366,7 @@ TEST_CASE("test_serialization_memcpy_performance") {
                         cv.notify_all();
                     }
 
-                    delete y;
+                    delete []y;
                 }
                 )
             );
@@ -400,7 +400,7 @@ TEST_CASE("apoint_ts_expression_speed") {
     time_axis::generic_dt ta24(utc.time(2016,1,1),deltahours(24),n/n_steps_pr_day);
 
     api::apoint_ts ts_expr(ta,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-    for (size_t i = 0;i < n_ts;++i) 
+    for (size_t i = 0;i < n_ts;++i)
         ts_expr = ts_expr + 3.14*api::apoint_ts(ta, double((i + 1)*1.0), time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto ts_sum_expr = ts_expr;
     ts_expr = ts_expr.average(ta24);

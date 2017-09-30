@@ -1,7 +1,7 @@
 #include "core_pch.h"
 #include "utctime_utilities.h"
 #include <ostream>
-
+#include <cstring>
 #include <boost/date_time/local_time/local_time.hpp>
 
 namespace shyft {

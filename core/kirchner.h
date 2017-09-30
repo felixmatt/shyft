@@ -1,4 +1,10 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#include <boost/numeric/odeint.hpp>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
 
@@ -124,7 +130,7 @@ namespace shyft {
                 explicit state(double q=0.0001):q(q){}
                 bool operator==(const state&x) const {
                     const double eps=1e-6;
-                    return fabs(q-x.q)<eps;
+                    return std::fabs(q-x.q)<eps;
                 }
                 x_serialize_decl();
             };
@@ -184,7 +190,7 @@ namespace shyft {
                  */
                 double log_transform_f(double ln_q, double p, double e) const {
                     const double gln_q = g(ln_q);
-                    return gln_q >= 1.e-30 ? gln_q*((p - e)*exp(-ln_q) - 1.0) : 0.0;
+                    return gln_q >= 1.e-30 ? gln_q*((p - e)*std::exp(-ln_q) - 1.0) : 0.0;
                 }
 
               public:
@@ -219,7 +225,7 @@ namespace shyft {
                             average_computer.add(exp(dense_stepper.current_state()), current_time);
                     }
                     dense_stepper.calc_state(t1, x_tmp);
-                    q = exp(x_tmp); // Invert log transform
+                    q = std::exp(x_tmp); // Invert log transform
                     average_computer.add(q, t1);
                     q_avg = average_computer.result();
                 }

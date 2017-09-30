@@ -1,5 +1,18 @@
 #include "core_pch.h"
+#ifdef SHYFT_NO_PCH
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/nvp.hpp>
 
+#endif // SHYFT_NO_PCH
 //
 // 1. first include std stuff and the headers for
 // files with serializeation support
@@ -22,11 +35,7 @@
 #include "time_series_info.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/nvp.hpp>
+
 
 //
 // 2. Then implement each class serialization support

@@ -1,5 +1,16 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <memory>
+#include <vector>
+#include <string>
+#include <map>
+#include <stdexcept>
+#include <iosfwd>
+#include <algorithm>
+#include <ctime>
 
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 namespace shyft {
 	namespace core {
         /** \brief utctime
@@ -357,7 +368,7 @@ namespace shyft {
 			 * \return utctime
 			 */
 			utctime time(YMDhms c) const;
-            utctime time(YWdhms c) const; 
+            utctime time(YWdhms c) const;
 
             ///<short hand for calendar::time(YMDhms)
             utctime time(int Y,int M=1,int D=1,int h=0,int m=0,int s=0) const {

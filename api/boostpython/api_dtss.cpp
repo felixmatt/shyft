@@ -1,24 +1,7 @@
 #include "boostpython_pch.h"
-#include <boost/python/docstring_options.hpp>
-#include <boost/python/import.hpp>
-
-//-- for serialization:
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-
-//-- notice that boost serialization require us to
-//   include shared_ptr/vector .. etc.. wherever it's needed
-
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/vector.hpp>
-
-//-- for the dlib server
-#include <dlib/server.h>
-#include <dlib/iosockstream.h>
-#include <dlib/timer.h>
-
 #include "api/time_series.h"
 #include "core/dtss.h"
+
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
 struct scoped_gil_release {

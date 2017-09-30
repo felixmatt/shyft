@@ -161,9 +161,9 @@
 			<Add library="dlib" />
 			<Add library="boost_filesystem" />
 			<Add library="boost_system" />
-			<Add directory="$(#python.lib)" />
 			<Add directory="$(#dlib.lib)" />
 			<Add directory="$(#boost.lib)" />
+			<Add directory="$(#python.lib)" />
 		</Linker>
 		<Unit filename="api.cpp">
 			<Option virtualFolder="api/" />
@@ -295,7 +295,10 @@
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
 		</Unit>
-		<Unit filename="boostpython_pch.cpp" />
+		<Unit filename="boostpython_pch.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="boostpython_pch.h">
 			<Option compile="1" />
 			<Option weight="0" />

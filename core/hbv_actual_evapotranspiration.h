@@ -1,9 +1,7 @@
 #pragma once
 
 #include "utctime_utilities.h"
-/*!\tfile
-contains the actual evatransporation parameters and algorithm
-*/
+
 namespace shyft {
 	namespace core {
 		namespace hbv_actual_evapotranspiration {

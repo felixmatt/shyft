@@ -326,7 +326,7 @@ namespace shyfttest {
 					double za = (xa + ya) / 1000.0;
 					r.emplace_back(geo_point(xa, ya, za), 10.0 + za * -0.006); // reasonable temperature, dependent on height
 				}
-				return move(r);
+				return r;
 			}
 
 			static vector<Source> GenerateTestSourceGrid(const ta::fixed_dt& time_axis, size_t nx, size_t ny, double x, double y, double dxy) {
@@ -341,7 +341,7 @@ namespace shyfttest {
 						r.emplace_back(geo_point(xa, ya, za), 10.0 + za * -0.006); // reasonable temperature, dependent on height
 					}
 				}
-				return move(r);
+				return r;
 			}
 		};
 
@@ -366,7 +366,7 @@ namespace shyfttest {
 				for (size_t x = 0; x < nx; x++)
 					for (size_t y = 0; y < ny; y++)
 						v.emplace_back(geo_point(x * 2500, y * 2500, 1000), pts);
-				return move(v);
+				return v;
 			}
 		};
 
@@ -397,7 +397,7 @@ namespace shyfttest {
 				for (size_t x = 0; x < nx; ++x)
 					for (size_t y = 0; y < ny; ++y)
 						r.emplace_back(geo_point(500.0 + x * 1000, 500.0 + y * 1000, z_min + (x + y) * dz));
-				return move(r);
+				return r;
 			}
 		};
 
@@ -422,7 +422,7 @@ namespace shyfttest {
 				for (size_t x = 0; x < nx; ++x)
 					for (size_t y = 0; y < ny; ++y)
 						v.emplace_back(geo_point(x * 1000, y * 1000, 1000), pts);
-				return move(v);
+				return v;
 			}
 		};
 

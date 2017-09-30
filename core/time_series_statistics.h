@@ -1,4 +1,15 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+
+#endif // SHYFT_NO_PCH
+
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"

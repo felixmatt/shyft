@@ -17,6 +17,10 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#endif // SHYFT_NO_PCH
+
 
 namespace shyft {
     namespace core {
@@ -91,8 +95,8 @@ namespace shyft {
 				 */
 				double net_radiation(double temperature, double global_radiation, double rhumidity, double vapour_pressure) const {
 					double k_temp = temperature + 273.15;// Temperature in Kelvin
-					double e_atm = 1.24*pow(10 * vapour_pressure / k_temp, 0.143)* (0.85 + 0.5*rhumidity);// Brutsaert's (1975) clear-sky emissivity model, Cloud factor, see tab 1 in Sicart et al (2006)
-					return    bolz*pow(k_temp, 4)*(e_atm - 0.98) // net longwave radiatin, Ta2m is used for both up- and downward LW-rad,so net balance is just an emissivity difference.
+					double e_atm = 1.24*std::pow(10 * vapour_pressure / k_temp, 0.143)* (0.85 + 0.5*rhumidity);// Brutsaert's (1975) clear-sky emissivity model, Cloud factor, see tab 1 in Sicart et al (2006)
+					return    bolz*std::pow(k_temp, 4)*(e_atm - 0.98) // net longwave radiatin, Ta2m is used for both up- and downward LW-rad,so net balance is just an emissivity difference.
 						+ global_radiation*(1.0 - land_albedo);	// Net shortwave radiation
 				}
 				const double bolz = 0.0000000567;// Stephan-Bolzman constant [W/(m^2 K^4)]

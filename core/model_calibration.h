@@ -1,4 +1,21 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+#include <iostream>
+#include <dlib/optimization/optimization_bobyqa.h>
+#include <dlib/matrix.h>
+#include <dlib/statistics.h>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "cell_model.h"
 #include "region_model.h"

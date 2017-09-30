@@ -54,8 +54,6 @@ message(STATUS "Generating Makefile for the SHyFT static library...")
 
 
 add_library(shyftcore STATIC ${SOURCES} )
-#target_precompiled_header(shyftcore core_pch.h)
-#target_precompiled_header(shyftcore core_pch.h REUSE shyftcore)
 
 set_target_properties(shyftcore PROPERTIES OUTPUT_NAME shyftcore)
 if (MSVC)

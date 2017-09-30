@@ -1,11 +1,24 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cstdint>
+#include <cmath>
+#include <string>
+#include <stdexcept>
+#include <vector>
+#include <memory>
+#include <utility>
+#include <stdexcept>
+#include <type_traits>
+#include <algorithm>
+#include <sstream>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
-
-#include <map>
 
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
@@ -38,7 +51,7 @@ namespace shyft{
 
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
         */
-        inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
+        inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && std::fabs(a.v-b.v)< EPS;}
 
         /** \brief Enumerates how points are mapped to f(t)
          *
@@ -2037,7 +2050,7 @@ namespace shyft{
                 double tv = observed_ts.value(i);
                 double dv = model_ts.value(i);
                 if (isfinite(tv) && isfinite(dv))
-                    abs_diff_sum +=fabs(tv-dv);
+                    abs_diff_sum +=std::fabs(tv-dv);
             }
             return abs_diff_sum;
         }

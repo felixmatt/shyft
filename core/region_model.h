@@ -1,5 +1,24 @@
 #pragma once
 
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+#include <future>
+#include <mutex>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
+
 #include "bayesian_kriging.h"
 #include "inverse_distance.h"
 #include "kirchner.h"
@@ -852,9 +871,11 @@ namespace shyft {
              * \param 'endc' the end of cell range
              */
             void single_run(const timeaxis_t& time_axis, int start_step, int  n_steps, cell_iterator beg, cell_iterator endc) {
-                for(auto& cell:boost::make_iterator_range(beg,endc)) {
-                     if (is_calculated_by_catchment_ix(cell.geo.catchment_ix))
-                        cell.run(time_axis,start_step,n_steps);
+                for(cell_iterator cell=beg; cell!=endc;++cell) {
+                        //& cell:boost::make_iterator_range(beg,endc)) {
+
+                     if (is_calculated_by_catchment_ix(cell->geo.catchment_ix))
+                        cell->run(time_axis,start_step,n_steps);
                 }
             }
             /** \brief uses async to execute the single_run, partitioning the cell range into thread-cell count

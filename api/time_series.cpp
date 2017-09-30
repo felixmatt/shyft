@@ -1,9 +1,11 @@
-#include "core/core_pch.h"
+#include "api_pch.h"
+#ifdef SHYFT_NO_PCH
+#include <dlib/statistics.h>
+#endif // SHYFT_NO_PCH
 #include "time_series.h"
 #include "core/time_series_merge.h"
 #include "core/time_series_qm.h"
 
-#include <dlib/statistics.h>
 
 namespace shyft{
     namespace api {

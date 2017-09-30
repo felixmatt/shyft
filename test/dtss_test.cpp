@@ -1,10 +1,5 @@
 #include "test_pch.h"
 
-#include <dlib/server.h>
-#include <dlib/iosockstream.h>
-#include <dlib/logger.h>
-#include <dlib/misc_api.h>
-
 #include "core/dtss.h"
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
@@ -80,7 +75,7 @@ TEST_CASE("dlib_server_basics") {
             string("a.prod.mw"),
             string("b.prod.mw")
         };
-        find_call_back_t fcb = [&ts_names, &throw_exception](std::string search_expression)
+        find_call_back_t fcb = [&ts_names](std::string search_expression)
             ->ts_info_vector_t {
             ts_info_vector_t r;
             dlog << dlib::LINFO << "find-callback with search-string:" << search_expression;
@@ -433,7 +428,7 @@ TEST_CASE("dtss_store") { /*
 #else
     fs::remove_all(tmpdir);
 #endif
-    
+
 
 }
 }

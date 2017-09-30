@@ -17,6 +17,17 @@
 ///
 /// This implementation is a slightly improved and ported version of Skaugen's snow routine
 /// implemented in R, see [ref].
+#ifdef SHYFT_NO_PCH
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/tools/roots.hpp>
+#include <boost/math/tools/minima.hpp>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "utctime_utilities.h"
 #include "time_series.h"

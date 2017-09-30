@@ -1,13 +1,12 @@
 #include "boostpython_pch.h"
 
-#include "py_convertible.h"
-#include "boost/python/make_constructor.hpp"
-
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/time_series.h"
 #include "api/api.h"
 #include "core/model_calibration.h"
+
+#include "py_convertible.h"
 
 namespace expose {
     using namespace shyft;

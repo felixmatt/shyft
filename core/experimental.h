@@ -1,17 +1,5 @@
 #pragma once
-
-#include "geo_cell_data.h"
-#include "utctime_utilities.h"
-#include "time_series.h"
-
-#include "region_model.h"
-#include "pt_gs_k_cell_model.h"
-
-// SiH: Had serious trouble with exceptions using the intersection method..
-// still unresolved
-//#define BOOST_GEOMETRY_DEBUG_HAS_SELF_INTERSECTIONS
-// THis one ignore the problem
-
+#ifdef SHYFT_NO_PCH
 #define BOOST_GEOMETRY_OVERLAY_NO_THROW
 
 #include <boost/geometry.hpp>
@@ -21,6 +9,14 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
+
+#endif // SHYFT_NO_PCH
+#include "geo_cell_data.h"
+#include "utctime_utilities.h"
+#include "time_series.h"
+
+#include "region_model.h"
+#include "pt_gs_k_cell_model.h"
 
 
 

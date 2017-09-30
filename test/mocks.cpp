@@ -44,13 +44,13 @@ namespace shyfttest {
 		}
 		samples.emplace_back(t1);
 		time_axis::point_dt pta(samples);
-		return move(xpts_t(pta, vars));
+		return xpts_t(pta, vars);
 	}
 
 	point_ts<time_axis::fixed_dt> create_const_time_serie(const time_axis::fixed_dt& ta, double v) {
 		vector<double> vals; vals.reserve(ta.n);
 		for (size_t i = 0; i < ta.n; ++i)
 			vals.emplace_back(v);
-		return move(point_ts<time_axis::fixed_dt>(ta, vals));
+		return point_ts<time_axis::fixed_dt>(ta, vals);
 	}
 }

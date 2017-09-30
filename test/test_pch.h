@@ -9,11 +9,13 @@
 #pragma warning (disable : 4244)
 #pragma warning (disable : 4503)
 #endif
-#define BOOST_CHRONO_VERSION 2
-#define BOOST_CHRONO_PROVIDES_DATE_IO_FOR_SYSTEM_CLOCK_TIME_POINT 1
+#ifdef SHYFT_NO_PCH
+#include <chrono>
+#include <iostream>
 
-
+#else
 #include "core/core_pch.h"
+#endif // SHYFT_NO_PCH
 #include <doctest/doctest.h>
 
 #ifndef M_PI

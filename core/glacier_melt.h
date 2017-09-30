@@ -19,7 +19,6 @@
 /// Implemented by Felix Matt
 
 #pragma once
-#include "utctime_utilities.h"
 namespace shyft {
     namespace core {
 		namespace glacier_melt {

@@ -5,7 +5,7 @@
 #pragma warning (disable : 4503)
 #endif
 
-
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <boost/python/module.hpp>
 #include <boost/python/def.hpp>
 #include <boost/python/args.hpp>
@@ -23,7 +23,15 @@
 #include <boost/python/operators.hpp>
 #include <boost/python/overloads.hpp>
 #include <boost/operators.hpp>
+#include <boost/python/docstring_options.hpp>
 
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/python/import.hpp>
+#include "boost/python/make_constructor.hpp"
+
+
+
+#include <boost/multi_array.hpp>
 
 #include "core/core_pch.h"
 

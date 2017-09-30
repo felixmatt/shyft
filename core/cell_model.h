@@ -1,5 +1,19 @@
 #pragma once
 
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+//#include <future>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
 #include "geo_cell_data.h"
