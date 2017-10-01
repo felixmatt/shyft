@@ -1,6 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 import requests
 import copy
+from typing import List, Tuple, Dict
 from pyproj import Proj
 from pyproj import transform
 import numpy as np
@@ -12,19 +13,45 @@ import gdal
 import os
 from ..interfaces import RegionModelRepository
 from ..interfaces import BoundingRegion
-from shyft import api
+# from shyft import api
 from shyft import shyftdata_dir
 import pickle
+
+#
+# Statkraft default server and service constants
+# these constants is used for forming the url-request
+#
+# note: We rely on str as immutable type when using as default-arguments to the methods
+#
+
+primary_server: str = r"oslwvagi002p"
+secondary_server: str = r"oslwvagi001q"
+
+# nordic service and catchment_type mappings (todo:should be cfg.classes or at least enums)
+nordic_service: str = "SHyFT"
+nordic_dem: str = r"Norway_DTM_1000m"
+
+nordic_catchment_type_regulated: str = r"regulated"
+nordic_catchment_type_unregulated: str = r"unregulated"
+nordic_catchment_type_ltm: str = r"LTM"
+
+# peru service and catchment_type mappings (todo: as for nordic, cfg class, or enums)
+peru_service: str = r"Peru_ShyFT"
+peru_dem: str = r"Peru_DEM_250m"
+
+peru_catchment_type: str = r"peru_catchment"
+peru_catchment_id_name: str = r"SUBCATCH_ID"
 
 
 class GisDataFetchError(Exception):
     pass
 
 
-def set_no_proxy(server):
+def set_no_proxy(server: str) -> None:
     env = os.environ.get('NO_PROXY', '')
-    if not server in env:
-        if env: env += ', '
+    if server not in env:
+        if env:
+            env += ', '
         os.environ['NO_PROXY'] = env + server
 
 
@@ -36,7 +63,7 @@ class GridSpecification(BoundingRegion):
 
     """
 
-    def __init__(self, epsg_id, x0, y0, dx, dy, nx, ny):
+    def __init__(self, epsg_id: int, x0: float, y0: float, dx: float, dy: float, nx: int, ny: int):
         self._epsg_id = epsg_id
         self.x0 = x0
         self.y0 = y0
@@ -46,7 +73,7 @@ class GridSpecification(BoundingRegion):
         self.ny = ny
 
     @property
-    def geometry(self):
+    def geometry(self) -> List[float]:
         """
         Return
         ------
@@ -54,7 +81,7 @@ class GridSpecification(BoundingRegion):
         lower left x0, y0 and upper right x1, y1
          [x0, y0, x1, y1]
         """
-        return [self.x0, self.y0, self.x0 + self.dx * self.nx, self.y0 + self.dy * self.ny]
+        return [self.x0, self.y0, self.x0 + self.dx*self.nx, self.y0 + self.dy*self.ny]
 
     def cells(self, elevations):
         """
@@ -68,17 +95,17 @@ class GridSpecification(BoundingRegion):
         """
         x0, dx = self.x0, self.dx
         y0, dy = self.y0, self.dy
-        return [(box(x0 + i * dx, y0 + j * dy, x0 + (i + 1) * dx, y0 + (j + 1) * dy), float(e))
+        return [(box(x0 + i*dx, y0 + j*dy, x0 + (i + 1)*dx, y0 + (j + 1)*dy), float(e))
                 for (i, j), e in np.ndenumerate(np.flipud(elevations).T)]
 
-    def bounding_box(self, epsg):
+    def bounding_box(self, epsg: int) -> Tuple[np.ndarray, np.ndarray]:
         """Implementation of interface.BoundingRegion"""
         epsg = str(epsg)
         x0, dx, nx = self.x0, self.dx, self.nx
         y0, dy, ny = self.y0, self.dy, self.ny
 
-        x = np.array([x0, x0 + dx * nx, x0 + dx * nx, x0], dtype="d")
-        y = np.array([y0, y0, y0 + dy * ny, y0 + dy * ny], dtype="d")
+        x = np.array([x0, x0 + dx*nx, x0 + dx*nx, x0], dtype="d")
+        y = np.array([y0, y0, y0 + dy*ny, y0 + dy*ny], dtype="d")
         if epsg == self.epsg():
             return np.array(x), np.array(y)
         else:
@@ -86,15 +113,20 @@ class GridSpecification(BoundingRegion):
             target_cs = "+init=EPSG:{}".format(epsg)
             source_proj = Proj(source_cs)
             target_proj = Proj(target_cs)
-            return [np.array(a) for a in transform(source_proj, target_proj, x, y)]
+            r = [np.array(a) for a in transform(source_proj, target_proj, x, y)]
+            return r[0], r[1]
 
-    def bounding_polygon(self, epsg):
+    def bounding_polygon(self, epsg: int) -> Tuple[np.ndarray, np.ndarray]:
         """Implementation of interface.BoundingRegion"""
         return self.bounding_box(epsg)
 
-    def epsg(self):
+    def epsg(self) -> str:
         """Implementation of interface.BoundingRegion"""
         return str(self._epsg_id)
+
+    @property
+    def epsg_id(self) -> int:
+        return self._epsg_id
 
 
 class BaseGisDataFetcher(object):
@@ -116,15 +148,15 @@ class BaseGisDataFetcher(object):
 
     """
 
-    def __init__(self, epsg_id, geometry=None, server_name="oslwvagi002p", server_name_preprod="oslwvagi001q",
-                 server_port="6080", service_index=None):
+    def __init__(self, epsg_id, geometry=None, server_name=primary_server, server_name_preprod=secondary_server,
+                 server_port="6080", service_index=None, sub_service=nordic_service):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
         self.server_port = server_port
         self.service_index = service_index
         self.geometry = geometry
         self.epsg_id = epsg_id
-        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/SHyFT/MapServer/{}/query"
+        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/" + sub_service + "/MapServer/{}/query"
         set_no_proxy(self.server_name)
         self.query = dict(text="",
                           objectIds="",
@@ -170,7 +202,7 @@ class BaseGisDataFetcher(object):
             raise GisDataFetchError(
                 "GeoJson data for {} data fetching from server {} missing mandatory field, please check your gis service or your query.".format(
                     msg, self.server_name)
-                )
+            )
         return data
 
     def get_response(self, msg, **kwargs):
@@ -203,15 +235,16 @@ class BaseGisDataFetcher(object):
 
 
 class LandTypeFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
+    def __init__(self, epsg_id, geometry=None, server_name=primary_server, server_name_preprod=secondary_server, sub_service=nordic_service):
         super(LandTypeFetcher, self).__init__(geometry=geometry,
-                                              #server_name="oslwvagi002p",
-                                              #server_port="6080",
+                                              # server_name=primary_server,
+                                              # server_port="6080",
                                               service_index=0, epsg_id=epsg_id,
                                               server_name=server_name,
                                               server_name_preprod=server_name_preprod,
+                                              sub_service=sub_service
                                               )
-        self.name_to_layer_map = {"glacier": 0, "forest": 1, "lake": 2}
+        self.name_to_layer_map = {"glacier": 0, "forest": 1, "lake": 2}  # if sub_service == "SHyFT" else {"glacier": 1, "forest": 2, "lake": 3}
         self.query["outFields"] = "OBJECTID"
 
     @property
@@ -241,7 +274,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
         # if response.status_code != 200:
         #     raise GisDataFetchError("Could not fetch land type data from gis server.")
         # data = response.json()
-        data = self.get_response(name,params=q)
+        data = self.get_response(name, params=q)
         polygons = []
         if 'error' in data.keys():
             raise GisDataFetchError("Failed in GIS service:" + data['error']['message'])
@@ -263,13 +296,13 @@ class LandTypeFetcher(BaseGisDataFetcher):
 
 
 class ReservoirFetcher(BaseGisDataFetcher):
-    def __init__(self, epsg_id, geometry=None, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
+    def __init__(self, epsg_id, geometry=None, server_name=primary_server, server_name_preprod=secondary_server, sub_service=nordic_service):
         super(ReservoirFetcher, self).__init__(geometry=geometry,
-                                               #server_name="oslwvagi002p",
-                                               #server_port="6080",
                                                server_name=server_name,
                                                server_name_preprod=server_name_preprod,
-                                               service_index=6, epsg_id=epsg_id)
+                                               service_index=6 if sub_service == nordic_service else 4,
+                                               epsg_id=epsg_id,
+                                               sub_service=sub_service)
         self.query["where"] = "1 = 1"
         self.query["outFields"] = "OBJECTID"
 
@@ -292,9 +325,10 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 
 class CatchmentFetcher(BaseGisDataFetcher):
-    def __init__(self, catchment_type, identifier, epsg_id,
-                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
-        if catchment_type == 'regulated':
+    def __init__(self, catchment_type: str, identifier: str, epsg_id: int,
+                 server_name: str = primary_server, server_name_preprod: str = secondary_server):
+        sub_service = nordic_service
+        if catchment_type == nordic_catchment_type_regulated:
             if identifier == 'SUBCATCH_ID':
                 service_index = 4
             elif identifier in ['CATCH_ID', 'POWER_PLANT_ID']:
@@ -302,19 +336,21 @@ class CatchmentFetcher(BaseGisDataFetcher):
             else:
                 raise GisDataFetchError(
                     "Unknown identifier {} for catchment_type {}. Use one of 'SUBCATCH_ID', 'CATCH_ID', 'POWER_PLANT_ID'".format(identifier, catchment_type))
-        elif catchment_type == 'unregulated':
+        elif catchment_type == nordic_catchment_type_unregulated:
             service_index = 8
-        elif catchment_type == 'LTM':
+        elif catchment_type == nordic_catchment_type_ltm:
             service_index = 3
+        elif catchment_type == peru_catchment_type:
+            service_index = 5  # SUBCATCH_ID is used, 1 is Yaupi
+            sub_service = peru_service
         else:
             raise GisDataFetchError(
                 "Undefined catchment type {}. Use one of 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
         super(CatchmentFetcher, self).__init__(geometry=None,
                                                server_name=server_name,
                                                server_name_preprod=server_name_preprod,
-                                               #server_port="6080",
                                                service_index=service_index,
-                                               epsg_id=epsg_id)
+                                               epsg_id=epsg_id, sub_service=sub_service)
         self.identifier = identifier
         self.query["outFields"] = "{}".format(
             self.identifier)  # additional attributes to be extracted can be specified here
@@ -350,21 +386,30 @@ class CatchmentFetcher(BaseGisDataFetcher):
 
 
 class CellDataFetcher(object):
-    def __init__(self, catchment_type, identifier, grid_specification, id_list,
-                 server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q", calc_forest_frac = False):
-        self.server_name = server_name
-        self.server_name_preprod = server_name_preprod
-        self.catchment_type = catchment_type
-        self.identifier = identifier
-        self.grid_specification = grid_specification
-        self.id_list = id_list
+    def __init__(self, catchment_type: str, identifier: str, grid_specification: GridSpecification, id_list: List[int],
+                 server_name: str = primary_server, server_name_preprod: str = secondary_server, calc_forest_frac: bool = False):
+        self.server_name: str = server_name
+        self.server_name_preprod: str = server_name_preprod
+        self.catchment_type: str = catchment_type
+        self.identifier: str = identifier
+        self.grid_specification: GridSpecification = grid_specification
+        self.id_list: List[int] = id_list
         self.cell_data = {}
         self.catchment_land_types = {}
-        self.calc_forest_frac = calc_forest_frac
+        self.calc_forest_frac: bool = calc_forest_frac
+        self.elevation_raster = None
 
     @property
-    def epsg_id(self):
-        return self.grid_specification.epsg()
+    def epsg_id(self) -> int:
+        return int(self.grid_specification.epsg())
+
+    @property
+    def dem(self) -> str:
+        return peru_dem if self.catchment_type == peru_catchment_type else nordic_dem
+
+    @property
+    def sub_service(self) -> str:
+        return peru_service if self.catchment_type == peru_catchment_type else nordic_service
 
     def fetch(self):
 
@@ -373,8 +418,9 @@ class CellDataFetcher(object):
         catchments = catchment_fetcher.fetch(id_list=self.id_list)
 
         # Construct cells and populate with elevations from tdm
-        dtm_fetcher = DTMFetcher(self.grid_specification,
-                                 server_name=self.server_name, server_name_preprod=self.server_name_preprod)
+        dtm_fetcher = DTMFetcher(self.grid_specification, dem=self.dem,
+                                 server_name=self.server_name, server_name_preprod=self.server_name_preprod
+                                 )
         elevations = dtm_fetcher.fetch()
         cells = self.grid_specification.cells(elevations)
         catchment_land_types = {}
@@ -382,15 +428,17 @@ class CellDataFetcher(object):
 
         # Filter all data with each catchment
         epsg = self.grid_specification.epsg()
-        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry, epsg_id=epsg,
+        ltf = LandTypeFetcher(geometry=self.grid_specification.geometry, epsg_id=epsg, sub_service=self.sub_service,
                               server_name=self.server_name, server_name_preprod=self.server_name_preprod)
-        rf = ReservoirFetcher(epsg_id=epsg,
+        rf = ReservoirFetcher(epsg_id=epsg, sub_service=self.sub_service,
                               server_name=self.server_name, server_name_preprod=self.server_name_preprod)
         all_reservoir_coords = rf.fetch(geometry=self.grid_specification.geometry)
         all_glaciers = ltf.fetch(name="glacier")
         prep_glaciers = prep(all_glaciers)
         all_lakes = ltf.fetch(name="lake")
         prep_lakes = prep(all_lakes)
+        all_forest = None
+        prep_forest = None
         if self.calc_forest_frac:
             all_forest = ltf.fetch(name="forest")
             prep_forest = prep(all_forest)
@@ -423,11 +471,10 @@ class CellDataFetcher(object):
                 if isinstance(glacier_in_catchment, (Polygon, MultiPolygon)):
                     catchment_land_types[catchment_id]["glacier"] = glacier_in_catchment
             if self.calc_forest_frac:
-                if prep_forest.intersects(catchment): # we are not using forest at the moment, and it takes time!!
-                    forest_in_catchment= all_forest.intersection(catchment)
+                if prep_forest.intersects(catchment):  # we are not using forest at the moment, and it takes time!!
+                    forest_in_catchment = all_forest.intersection(catchment)
                     if isinstance(forest_in_catchment, (Polygon, MultiPolygon)):
-                        catchment_land_types[catchment_id]["forest"]=forest_in_catchment
-
+                        catchment_land_types[catchment_id]["forest"] = forest_in_catchment
 
             catchment_cells[catchment_id] = []
             for cell, elevation in cells:
@@ -442,7 +489,7 @@ class CellDataFetcher(object):
             for cell, elevation in catchment_cells[catchment_id]:
                 data = {"cell": cell, "elevation": elevation}
                 for land_type_name, land_type_shape in iter(catchment_land_types[catchment_id].items()):
-                    data[land_type_name] = cell.intersection(land_type_shape).area / cell.area
+                    data[land_type_name] = cell.intersection(land_type_shape).area/cell.area
                 cell_data[catchment_id].append(data)
         self.cell_data = cell_data
         self.catchment_land_types = catchment_land_types
@@ -451,18 +498,20 @@ class CellDataFetcher(object):
                 "elevation_raster": self.elevation_raster}
 
     @property
-    def geometry(self):
+    def geometry(self) -> List[float]:
+        """ return grid_specification.geometry, bounding box x0,y0,x1,y1 """
         return self.grid_specification.geometry
 
 
-class DTMFetcher(object):
-    def __init__(self, grid_specification, server_name = "oslwvagi002p", server_name_preprod = "oslwvagi001q"):
-        self.grid_specification = grid_specification
-        self.server_name = server_name  # PROD
-        self.server_name_preprod = server_name_preprod  # PREPROD
-        self.server_port = "6080"
-        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/Norway_DTM_1000m/ImageServer/exportImage"  # PROD
-        set_no_proxy(self.server_name)                
+class DTMFetcher:
+    def __init__(self, grid_specification: GridSpecification, server_name: str = primary_server, server_name_preprod: str = secondary_server, dem: str = nordic_dem):
+        self.grid_specification: GridSpecification = grid_specification
+        self.server_name: str = server_name  # PROD
+        self.server_name_preprod: str = server_name_preprod  # PREPROD
+        self.server_port: str = "6080"
+        self.dem: str = dem
+        self.url_template: str = "http://{}:{}/arcgis/rest/services/SHyFT/{}/ImageServer/exportImage"  # PROD
+        set_no_proxy(self.server_name)
         self.query = dict(
             bboxSR=self.grid_specification.epsg(),
             size="{},{}".format(self.grid_specification.nx, self.grid_specification.ny),
@@ -479,10 +528,10 @@ class DTMFetcher(object):
             mosaicRule="",
             renderingRule="",
             f="image")
-        
+
     @property
     def url(self):
-        return self.url_template.format(self.server_name, self.server_port)
+        return self.url_template.format(self.server_name, self.server_port, self.dem)
 
     def _fetch(self, url_=None):
         if url_ is None:
@@ -515,7 +564,7 @@ class DTMFetcher(object):
         return data
 
 
-class RegionModelConfig(object):
+class RegionModelConfig:
     """
     Describes the needed mapping between a symbolic region-model name and
     the fields/properties needed to extract correct boundaries(shapes)
@@ -533,10 +582,12 @@ class RegionModelConfig(object):
 
     """
 
-    def __init__(self, name, region_model_type, region_parameters, grid_specification,
-                 catchment_regulated_type, service_id_field_name, id_list, catchment_parameters={},
-                 calc_forest_frac=False):
+    def __init__(self, name: str, region_model_type, region_parameters, grid_specification,
+                 catchment_regulated_type: str, service_id_field_name: str, id_list: List[int], catchment_parameters=None,
+                 calc_forest_frac: bool = False):
         """
+        TODO: consider also to add catchment level parameters
+
         Parameters
         ----------
         name:string
@@ -556,52 +607,52 @@ class RegionModelConfig(object):
         catchment_parameters: dictionary with catchment id as key and region_model_type.parameter_t() as value
          - specifies catchment level parameters
          
-        TODO: consider also to add catchment level parameters
-        
+
         """
-        self.name = name
+        self.name: str = name
         self.region_model_type = region_model_type
         self.region_parameters = region_parameters
-        self.grid_specification = grid_specification
-        self.catchment_regulated_type = catchment_regulated_type
-        self.service_id_field_name = service_id_field_name
-        self.id_list = id_list
-        self.catchment_parameters = catchment_parameters
-        self.calc_forest_frac = calc_forest_frac
+        self.grid_specification: GridSpecification = grid_specification
+        self.catchment_regulated_type: str = catchment_regulated_type
+        self.service_id_field_name: str = service_id_field_name
+        self.id_list: List[int] = id_list
+        self.catchment_parameters = catchment_parameters or {}
+        self.calc_forest_frac: bool = calc_forest_frac
 
     @property
-    def epsg_id(self):
+    def epsg_id(self) -> int:
         return self.grid_specification.epsg_id
 
+
 class CellDataCache(object):
-    def __init__(self, folder, file_type):
+    def __init__(self, folder: str, file_type: str):
         self.file_type = file_type
         self.folder = folder
         self.reader = {'pickle': self._load_from_pkl,
-                       #'netcdf': self._load_from_nc,
-                       #'numpy': self._load_from_npy
-                        }
+                       # 'netcdf': self._load_from_nc,
+                       # 'numpy': self._load_from_npy
+                       }
         self.saver = {'pickle': self._dump_to_pkl,
-                       #'netcdf': self._load_from_nc,
-                       #'numpy': self._load_from_npy
+                      # 'netcdf': self._load_from_nc,
+                      # 'numpy': self._load_from_npy
                       }
         self.file_ext = {'pickle': 'pkl',
-                         #'netcdf': 'nc',
-                         #'numpy': 'npy'
+                         # 'netcdf': 'nc',
+                         # 'numpy': 'npy'
                          }
 
-    def _make_filename(self, service_id_field_name, grid_specification):
+    def _make_filename(self, service_id_field_name: str, grid_specification: GridSpecification):
         gs = grid_specification
         file_name = 'EPSG_{}_ID_{}_dX_{}_dY_{}.{}'.format(gs.epsg(), service_id_field_name, int(gs.dx), int(gs.dy),
-                                                     self.file_ext[self.file_type])
+                                                          self.file_ext[self.file_type])
         return os.path.join(self.folder, file_name)
 
-    def is_file_available(self, service_id_field_name, grid_specification):
+    def is_file_available(self, service_id_field_name: str, grid_specification: GridSpecification):
         file_path = self._make_filename(service_id_field_name, grid_specification)
-        #file_path = os.path.join(self.folder, file_name)
-        return os.path.isfile(file_path),file_path
+        # file_path = os.path.join(self.folder, file_name)
+        return os.path.isfile(file_path), file_path
 
-    def remove_cache(self,service_id_field_name, grid_specification):
+    def remove_cache(self, service_id_field_name: str, grid_specification: GridSpecification):
         file_exists, file_path = self.is_file_available(service_id_field_name, grid_specification)
         if file_exists:
             print('Deleting file {}'.format(file_path))
@@ -609,19 +660,19 @@ class CellDataCache(object):
         else:
             print('No cashe file to remove!')
 
-    def get_cell_data(self, service_id_field_name, grid_specification, id_list):
-        #file_path = 'All_regions_as_dict_poly_wkb.pkl'
+    def get_cell_data(self, service_id_field_name: str, grid_specification: GridSpecification, id_list: List[int]):
+        # file_path = 'All_regions_as_dict_poly_wkb.pkl'
         file_path = self._make_filename(service_id_field_name, grid_specification)
-        #file_path = os.path.join(self.folder, file_name)
+        # file_path = os.path.join(self.folder, file_name)
         return self.reader[self.file_type](file_path, id_list)
 
-    def save_cell_data(self, service_id_field_name, grid_specification, cell_data):
+    def save_cell_data(self, service_id_field_name: str, grid_specification: GridSpecification, cell_data):
         file_path = self._make_filename(service_id_field_name, grid_specification)
         file_status = self.is_file_available(service_id_field_name, grid_specification)[0]
-        #file_path = os.path.join(self.folder, file_name)
+        # file_path = os.path.join(self.folder, file_name)
         self.saver[self.file_type](file_path, cell_data, file_status)
 
-    def _load_from_pkl(self, file_path, cids):
+    def _load_from_pkl(self, file_path: str, cids: np.ndarray):
         print('Loading from cache_file {}...'.format(file_path))
         with open(file_path, 'rb') as pkl_file:
             cell_info = pickle.load(pkl_file)
@@ -630,27 +681,27 @@ class CellDataCache(object):
         cids_ = np.sort(cids)
         cid_map = cids_
         cids_in_cache = geo_data[:, 4].astype(int)
-        if np.in1d(cids,cids_in_cache).sum()!= len(cids_): # Disable fetching if not all cids are found
+        if np.in1d(cids, cids_in_cache).sum() != len(cids_):  # Disable fetching if not all cids are found
             geo_data_ext = polygons_ext = cid_map = []
         else:
             idx = np.in1d(cids_in_cache, cids).nonzero()[0]
             geo_data_ext = geo_data[idx]
             polygons_ext = polygons[idx]
-            #geo_data_ext[:, 4] = np.searchsorted(cids_, geo_data_ext[:, 4]) # since ID to Index conversion not necessary
+            # geo_data_ext[:, 4] = np.searchsorted(cids_, geo_data_ext[:, 4]) # since ID to Index conversion not necessary
         return {'cid_map': cid_map, 'geo_data': geo_data_ext, 'polygons': polygons_ext}
 
-    def _dump_to_pkl(self, file_path, cell_data, is_existing_file):
+    def _dump_to_pkl(self, file_path: str, cell_data, is_existing_file: bool):
         print('Saving to cache_file {}...'.format(file_path))
-        #new_geo_data = cell_data['geo_data'].copy()
+        # new_geo_data = cell_data['geo_data'].copy()
         cid_map = cell_data['cid_map']
-        #new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)] # since ID to Index conversion not necessary
+        # new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)] # since ID to Index conversion not necessary
         cell_info = {'geo_data': cell_data['geo_data'], 'polygons': cell_data['polygons']}
         if is_existing_file:
             with open(file_path, 'rb') as pkl_file_in:
                 old = pickle.load(pkl_file_in)
-            #new_geo_data = cell_data['geo_data']
-            #cid_map = cell_data['cid_map']
-            #new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
+            # new_geo_data = cell_data['geo_data']
+            # cid_map = cell_data['cid_map']
+            # new_geo_data[:, 4] = cid_map[new_geo_data[:, 4].astype(int)]
             old['polygons'] = np.array(old['polygons'])
             old_geo_data = old['geo_data']
             old_cid = old_geo_data[:, 4].astype(int)
@@ -663,49 +714,48 @@ class CellDataCache(object):
             pickle.dump(cell_info, pkl_file_out, -1)
 
 
-
-
 class GisRegionModelRepository(RegionModelRepository):
     """
     Statkraft GIS service based version of repository for RegionModel objects.
     """
     cell_data_cache = CellDataCache(shyftdata_dir, 'pickle')
-    #cache_file_type = 'pickle'
-    server_name = "oslwvagi002p"
-    server_name_preprod = "oslwvagi001q"
+    # cache_file_type = 'pickle'
+    server_name = primary_server
+    server_name_preprod = secondary_server
 
-    def __init__(self, region_id_config, use_cache=False, cache_folder=None, cache_file_type=None):
+    def __init__(self, region_id_config: Dict[str, RegionModelConfig], use_cache: bool = False, cache_folder: str = None, cache_file_type: str = None):
         """
         Parameters
         ----------
         region_id_config: dictionary(region_id:RegionModelConfig)
         """
-        self._region_id_config = region_id_config
-        self.use_cache = use_cache
+        self._region_id_config: Dict[str, RegionModelConfig] = region_id_config
+        self.use_cache: bool = use_cache
         if cache_folder is not None:
             self.cell_data_cache.folder = cache_folder
         if cache_file_type is not None:
             self.cell_data_cache.file_type = cache_file_type
 
-    def _get_cell_data_info(self, region_id, catchments):
+    def _get_cell_data_info(self, region_id: str, catchments=None) -> RegionModelConfig:
         # alternative parse out from region_id, like
         # neanidelv.regulated.plant_field, or neanidelv.unregulated.catchment ?
-        return self._region_id_config[
-            region_id]  # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
+        return self._region_id_config[region_id]  # return tuple (regulated|unregulated,'POWER_PLANT_ID'|CATCH_ID', 'FELTNR',[id1, id2])
 
     @classmethod
-    def get_cell_data_from_gis(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list,
-                               calc_forest_frac = False):
+    def get_cell_data_from_gis(cls, catchment_regulated_type: str, service_id_field_name: str,
+                               grid_specification: GridSpecification,
+                               id_list: List[int],
+                               calc_forest_frac: bool = False):
         print('Fetching gis_data from online GIS database...')
         cell_info_service = CellDataFetcher(catchment_regulated_type, service_id_field_name,
-                                            grid_specification, id_list, server_name= cls.server_name,
-                                            server_name_preprod = cls.server_name_preprod,
-                                            calc_forest_frac = calc_forest_frac)
+                                            grid_specification, id_list, server_name=cls.server_name,
+                                            server_name_preprod=cls.server_name_preprod,
+                                            calc_forest_frac=calc_forest_frac)
 
         result = cell_info_service.fetch()  # clumsy result, we can adjust this.. (I tried to adjust it below)
         cell_data = result['cell_data']  # this is the part we need here
         radiation_slope_factor = 0.9  # todo: get it from service layer
-        unknown_fraction = 0.0 # todo: should we just remove this
+        unknown_fraction = 0.0  # todo: should we just remove this
         print('Making cell_data from gis_data...')
         cids = np.sort(list(cell_data.keys()))
         # geo_data = np.vstack([[c['cell'].centroid.x, c['cell'].centroid.y, c['elevation'], c['cell'].area, idx,
@@ -717,16 +767,16 @@ class GisRegionModelRepository(RegionModelRepository):
                                c.get('reservoir', 0.0),
                                c.get('forest', 0.0), unknown_fraction] for c in cell_data[cid]]
                              for cid in cids)
-        geo_data[:, -1] = 1 - geo_data[:, -5:-1].sum(axis=1) # calculating the unknown fraction
+        geo_data[:, -1] = 1 - geo_data[:, -5:-1].sum(axis=1)  # calculating the unknown fraction
         polys = np.concatenate(tuple([c['cell'] for c in cell_data[cid]] for cid in cids))
         return {'cid_map': cids, 'geo_data': geo_data, 'polygons': polys}
 
     @classmethod
-    def get_cell_data_from_cache(cls, service_id_field_name, grid_specification, id_list):
+    def get_cell_data_from_cache(cls, service_id_field_name: str, grid_specification: GridSpecification, id_list: List[int]):
         if cls.cell_data_cache.is_file_available(service_id_field_name, grid_specification)[0]:
             cell_info = cls.cell_data_cache.get_cell_data(service_id_field_name,
                                                           grid_specification, id_list)
-            if len(cell_info['cid_map'])!=0:
+            if len(cell_info['cid_map']) != 0:
                 return cell_info
             else:
                 print('MESSAGE: not all catchment IDs requested were found in cache!')
@@ -736,16 +786,16 @@ class GisRegionModelRepository(RegionModelRepository):
             return None
 
     @classmethod
-    def update_cache(cls, catchment_regulated_type, service_id_field_name, grid_specification, id_list):
+    def update_cache(cls, catchment_regulated_type: str, service_id_field_name: str, grid_specification: GridSpecification, id_list: List[int]):
         cell_info = cls.get_cell_data_from_gis(catchment_regulated_type, service_id_field_name, grid_specification, id_list)
         cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
 
     @classmethod
-    def remove_cache(cls, service_id_field_name, grid_specification):
+    def remove_cache(cls, service_id_field_name: str, grid_specification: GridSpecification):
         cls.cell_data_cache.remove_cache(service_id_field_name, grid_specification)
 
     @classmethod
-    def save_cell_data_to_cache(cls, service_id_field_name, grid_specification, cell_info):
+    def save_cell_data_to_cache(cls, service_id_field_name: str, grid_specification: GridSpecification, cell_info):
         cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
 
     @classmethod
@@ -753,8 +803,7 @@ class GisRegionModelRepository(RegionModelRepository):
         print('Building cell_vector from cell_data...')
         return region_model_type.cell_t.vector_t.create_from_geo_cell_data_vector(np.ravel(cell_geo_data))
 
-
-    def get_region_model(self, region_id, catchments=None):
+    def get_region_model(self, region_id: str, catchments: List[int] = None):
         """
         Return a fully specified shyft api region_model for region_id.
 
@@ -795,7 +844,7 @@ class GisRegionModelRepository(RegionModelRepository):
             cell_info = self.get_cell_data_from_gis(rm.catchment_regulated_type, rm.service_id_field_name,
                                                     rm.grid_specification, rm.id_list,
                                                     calc_forest_frac=rm.calc_forest_frac)
-        catchment_id_map, cell_geo_data, polygons = [cell_info[k] for k in['cid_map', 'geo_data', 'polygons']]
+        catchment_id_map, cell_geo_data, polygons = [cell_info[k] for k in ['cid_map', 'geo_data', 'polygons']]
         cell_vector = self.build_cell_vector(rm.region_model_type, cell_geo_data)
 
         catchment_parameter_map = rm.region_model_type.parameter_t.map_t()
@@ -805,8 +854,8 @@ class GisRegionModelRepository(RegionModelRepository):
         region_model = rm.region_model_type(cell_vector, rm.region_parameters, catchment_parameter_map)
         region_model.bounding_region = rm.grid_specification  # mandatory for orchestration
         region_model.catchment_id_map = catchment_id_map.tolist()  # needed to map from externa c_id to 0-based c_id used internally in
-        #region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
-        region_model.gis_info = polygons # opt:needed for internal statkraft use/presentation
+        # region_model.gis_info = result  # opt:needed for internal statkraft use/presentation
+        region_model.gis_info = polygons  # opt:needed for internal statkraft use/presentation
 
         def do_clone(x):
             clone = x.__class__(x)
@@ -820,17 +869,13 @@ class GisRegionModelRepository(RegionModelRepository):
         return region_model
 
 
-def get_grid_spec_from_catch_poly(catch_ids, catchment_type, identifier, epsg_id, dxy, pad,
-                                  server_name=None, server_name_preprod=None):
-    if server_name is None:
-        server_name = "oslwvagi002p"
-    if server_name_preprod is None:
-        server_name_preprod = "oslwvagi001q"
+def get_grid_spec_from_catch_poly(catch_ids: List[int], catchment_type: str, identifier: str, epsg_id: int, dxy: int, pad: int,
+                                  server_name: str = primary_server, server_name_preprod: str = secondary_server):
     catchment_fetcher = CatchmentFetcher(catchment_type, identifier, epsg_id,
                                          server_name=server_name, server_name_preprod=server_name_preprod)
     catch = catchment_fetcher.fetch(id_list=catch_ids)
-    box = np.array(MultiPolygon(polygons=list(catch.values())).bounds)  # [xmin, ymin, xmax, ymax]
-    box_ = box / dxy
+    bbox = np.array(MultiPolygon(polygons=list(catch.values())).bounds)  # [xmin, ymin, xmax, ymax]
+    box_ = bbox/dxy
     xll, yll, xur, yur = (np.array(
-        [np.floor(box_[0]), np.floor(box_[1]), np.ceil(box_[2]), np.ceil(box_[3])]) + [-pad, -pad, pad, pad]) * dxy
-    return GridSpecification(epsg_id, int(xll), int(yll), dxy, dxy, int((xur - xll) / dxy), int((yur - yll) / dxy))
+        [np.floor(box_[0]), np.floor(box_[1]), np.ceil(box_[2]), np.ceil(box_[3])]) + [-pad, -pad, pad, pad])*dxy
+    return GridSpecification(epsg_id, int(xll), int(yll), dxy, dxy, int((xur - xll)/dxy), int((yur - yll)/dxy))
