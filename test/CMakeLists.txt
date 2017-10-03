@@ -47,6 +47,7 @@ add_test(serialization ${target} -nv --test-suite=serialization)
 add_test(routing ${target} -nv --test-suite=routing)
 add_test(dtss ${target} -nv --test-suite=dtss)
 add_test(qm ${target} -nv --test-suite=qm)
+add_test(predictors ${target} -nv --test-suite=predictors)
 add_test(ts_merge ${target} -nv --test-suite=ts_merge)
 
 

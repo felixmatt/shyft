@@ -235,6 +235,8 @@ namespace shyft{
 				find_ts_bind_info(ext->rhs.ts, r);
 			} else if ( dynamic_cast<const api::rating_curve_ts*>(its.get()) ) {
 				find_ts_bind_info(dynamic_cast<const api::rating_curve_ts*>(its.get())->ts.level_ts.ts, r);
+			} else if ( dynamic_cast<const api::krls_interpolation_ts*>(its.get()) ) {
+				find_ts_bind_info(dynamic_cast<const api::krls_interpolation_ts*>(its.get())->ts.ts, r);
 			}
         }
 
@@ -311,6 +313,17 @@ namespace shyft{
 		apoint_ts apoint_ts::rating_curve(const rating_curve_parameters & rc_param) const {
 			return apoint_ts(std::make_shared<shyft::api::rating_curve_ts>(*this, rc_param));
 		}
+
+        apoint_ts apoint_ts::krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const {
+            return apoint_ts(std::make_shared<shyft::api::krls_interpolation_ts>(*this, dt, rbf_gamma, tol, size));
+        }
+        prediction::krls_rbf_predictor apoint_ts::get_krls_predictor(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const {
+            if ( needs_bind() )
+                throw std::runtime_error("cannot get predictor for unbound ts");
+            shyft::prediction::krls_rbf_predictor predictor{ dt, rbf_gamma, tol, size };
+            predictor.train(*this);
+            return predictor;
+        }
 
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& tsv1,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());

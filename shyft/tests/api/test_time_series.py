@@ -7,13 +7,13 @@ import unittest
 
 class TimeSeries(unittest.TestCase):
     """Verify and illustrate TimeSeries
-     
+
      a) point time-series:
-        defined by a set of points, 
+        defined by a set of points,
         projection from point to f(t) (does the point represent state in time, or average of a period?)
         projection of f(t) to average/integral ts, like
         ts_avg_1=average_accessor(ts1,time_axis)
-        
+
      """
 
     def setUp(self):
@@ -285,10 +285,10 @@ class TimeSeries(unittest.TestCase):
         """ the percentiles function now also supports picking out the min-max peak value
             within each interval.
             Setup test-data so that we have a well known percentile result,
-            but also have peak-values within the interval that we can 
+            but also have peak-values within the interval that we can
             verify.
             We let hour ts 0..9 have values 0..9 constant 24*10 days
-               then modify ts[1], every day first  value to a peak min value equal to - day_no*1 
+               then modify ts[1], every day first  value to a peak min value equal to - day_no*1
                                   every day second value to a peak max value equal to + day_no*1
                                   every day 3rd    value to a nan value
             ts[1] should then have same average value for each day (so same percentile)
@@ -929,7 +929,7 @@ class TimeSeries(unittest.TestCase):
 
         self.assertTrue(rcsts_2.needs_bind())
         fbi = rcsts_2.find_ts_bind_info()
-        self.assertTrue(len(fbi), 1)
+        self.assertEqual(len(fbi), 1)
         fbi[0].ts.bind(ts)
         rcsts_2.bind_done()
         self.assertFalse(rcsts_2.needs_bind())
@@ -939,6 +939,57 @@ class TimeSeries(unittest.TestCase):
             expected = (1*ts.get(i).v if ts.get(i).v < 5 else 2*ts.get(i).v) if ts.get(i).t < t0 + api.deltahours(24) else (3*ts.get(i).v if ts.get(i).v < 8 else 4*ts.get(i).v)
             self.assertEqual(rcsts_2.get(i).t, ts.get(i).t)
             self.assertEqual(rcsts_2.get(i).v, expected)
+
+    def test_krls_ts(self):
+        t0 = api.utctime_now()
+        ta = api.TimeAxis(t0, api.deltahours(1), 30*24)
+        data = np.sin(np.linspace(0, 2*np.pi, ta.size()))
+        ts_data = api.TimeSeries(ta, data)
+
+        ts = api.TimeSeries("a")
+        ts_krls = ts.krls_interpolation(api.deltahours(3))
+
+        ts_krls_blob = ts_krls.serialize()
+        ts2_krls = api.TimeSeries.deserialize(ts_krls_blob)
+
+        self.assertTrue(ts2_krls.needs_bind())
+        fbi = ts2_krls.find_ts_bind_info()
+        self.assertEqual(len(fbi), 1)
+        fbi[0].ts.bind(ts_data)
+        ts2_krls.bind_done()
+        self.assertFalse(ts2_krls.needs_bind())
+
+        self.assertEqual(len(ts2_krls), len(ts_data))
+        for i in range(len(ts2_krls)):
+            self.assertAlmostEqual(ts2_krls.values[i], ts_data.values[i], places=1)
+
+    def test_ts_get_krls_predictor(self):
+        t0 = api.utctime_now()
+        ta = api.TimeAxis(t0, api.deltahours(1), 30*24)
+        data = np.sin(np.linspace(0, 2*np.pi, ta.size()))
+        ts_data = api.TimeSeries(ta, data)
+
+        ts = api.TimeSeries("a")
+
+        try:
+            ts.get_krls_predictor()
+            self.fail("should not be able to get predictor for unbound")
+        except: pass
+
+        fbi = ts.find_ts_bind_info()
+        fbi[0].ts.bind(ts_data)
+        ts.bind_done()
+
+        pred = ts.get_krls_predictor(api.deltahours(3))
+
+        ts_krls = pred.predict(ta)
+        self.assertEqual(len(ts_krls), len(ts_data))
+        ts_mse = pred.mse_ts(ts_data)
+        self.assertEqual(len(ts_mse), len(ts_data))
+        for i in range(len(ts_krls)):
+            self.assertAlmostEqual(ts_krls.values[i], ts_data.values[i], places=1)
+            self.assertAlmostEqual(ts_mse.values[i], 0, places=2)
+        self.assertAlmostEqual(pred.predictor_mse(ts_data), 0, places=2)
 
 
 if __name__ == "__main__":

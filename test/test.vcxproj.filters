@@ -110,6 +110,7 @@
     <ClCompile Include="merge_test.cpp">
       <Filter>time_series</Filter>
     </ClCompile>
+    <ClCompile Include="predictor_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

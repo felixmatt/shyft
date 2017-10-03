@@ -85,16 +85,16 @@ TEST_CASE("test_melt") {
         });
 
     const double total_water = s.swe*s.sca;
-    double agg_outflow(0.0); // For checking mass balance
+    double agg_outflow{0.0}; // For checking mass balance
 
     // Single melt event
-    tp = std::vector<std::pair<double, double>>(1, std::pair<double, double>(10.0, 0.0)); // No precip, but 10.0 degrees for one day
+    tp = std::vector<std::pair<double, double>>(1, std::pair<double, double>{10.0, 0.0}); // No precip, but 10.0 degrees for one day
 	for_each(tp.begin(), tp.end(), [&dt, &p, &model, &radiation, &wind_speed, &s, &r, &agg_outflow](std::pair<double, double> pair) {
             model.step(dt, p, pair.first, pair.second, radiation, wind_speed, s, r);
             agg_outflow += r.outflow;
         });
     const double total_water_after_melt = s.sca*(s.swe + s.free_water);
-    TS_ASSERT(total_water_after_melt <= total_water); // Less water after melt due to runoff
+    TS_ASSERT_LESS_THAN(total_water_after_melt , total_water); // Less water after melt due to runoff
     TS_ASSERT(r.outflow + s.free_water >= 1.0); // Some runoff or free water in snow
     TS_ASSERT_DELTA(r.outflow + s.sca*(s.free_water + s.swe), total_water, 1.0e-6);
 

@@ -143,6 +143,9 @@
 		<Unit filename="precipitation_correction.h">
 			<Option virtualFolder="methods/" />
 		</Unit>
+		<Unit filename="predictions.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="priestley_taylor.h">
 			<Option virtualFolder="methods/" />
 		</Unit>

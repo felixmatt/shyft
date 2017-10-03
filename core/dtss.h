@@ -43,6 +43,11 @@ namespace fs=boost::filesystem;
 #include "utctime_utilities.h"
 
 
+#include <dlib/server.h>
+#include <dlib/iosockstream.h>
+#include <dlib/logger.h>
+#include <dlib/misc_api.h>
+
 namespace shyft {
     namespace dtss {
         using namespace std;

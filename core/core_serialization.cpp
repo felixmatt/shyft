@@ -33,9 +33,12 @@
 #include "pt_ss_k.h"
 #include "pt_hs_k.h"
 #include "time_series_info.h"
+#include "predictions.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
 
+
+#include <dlib/serialize.h>
 
 //
 // 2. Then implement each class serialization support
@@ -415,6 +418,40 @@ void shyft::dtss::ts_info::serialize(Archive& ar, const unsigned int file_versio
         ;
 }
 
+//-- predictor serialization
+template < typename A, typename K >
+inline void serialize_helper(A & ar, const dlib::krls<K> & krls) {
+
+    using namespace dlib;
+
+    std::ostringstream ostream{ std::ios_base::out | std::ios_base::binary };
+    serialize(krls, ostream);
+    auto blob = ostream.str();
+    ar & make_nvp("krls_data", blob);
+}
+
+template < typename A, typename K >
+inline void deserialize_helper(A & ar, dlib::krls<K> & krls) {
+
+    using namespace dlib;
+
+    std::string tmp;
+    ar & make_nvp("krls_data", tmp);
+    std::istringstream istream{ tmp, std::ios_base::in | std::ios_base::binary };
+    deserialize(krls, istream);
+}
+
+template <class Archive>
+void shyft::prediction::krls_rbf_predictor::serialize(Archive& ar, const unsigned int file_version) {
+    ar & make_nvp("_dt", _dt) &make_nvp("train_point_fx",train_point_fx);
+
+    if ( Archive::is_saving::value ) {
+        serialize_helper(ar, this->_krls);
+    } else {
+        deserialize_helper(ar, this->_krls);
+    }
+}
+
 //-- export dtss stuff
 x_serialize_implement(shyft::dtss::ts_info);
 
@@ -484,6 +521,9 @@ x_serialize_implement(shyft::core::pt_hs_k::state);
 x_serialize_implement(shyft::core::pt_ss_k::state);
 x_serialize_implement(shyft::core::hbv_stack::state);
 
+//-- export predictors
+x_serialize_implement(shyft::prediction::krls_rbf_predictor);
+
 //
 // 4. Then include the archive supported
 //
@@ -552,3 +592,5 @@ x_arch(shyft::core::pt_gs_k::state);
 x_arch(shyft::core::pt_hs_k::state);
 x_arch(shyft::core::pt_ss_k::state);
 x_arch(shyft::core::hbv_stack::state);
+
+x_arch(shyft::prediction::krls_rbf_predictor);

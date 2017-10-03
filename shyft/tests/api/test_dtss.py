@@ -180,7 +180,7 @@ class DtssTestCase(unittest.TestCase):
             # setup data to be calculated
             utc = Calendar()
             d = deltahours(1)
-            n = 240
+            n = 365*24
             t = utc.time(2016, 1, 1)
             ta = TimeAxis(t, d, n)
             n_ts = 10
@@ -191,11 +191,15 @@ class DtssTestCase(unittest.TestCase):
                 return "shyft://test/{}".format(name)  # shyft:// maps to internal, test= container-name
 
             for i in range(n_ts):
-                pts = TimeSeries(ta, np.linspace(start=0, stop=1.0 * i, num=ta.size()),
+                pts = TimeSeries(ta, np.sin(np.linspace(start=0, stop=1.0 * i, num=ta.size())),
                                  point_fx.POINT_AVERAGE_VALUE)
                 ts_id = ts_url("{0}".format(i))
                 tsv.append(float(1.0) * TimeSeries(ts_id))  # make an expression that returns what we store
                 store_tsv.append(TimeSeries(ts_id, pts))  # generate a bound pts to store
+            # krls with some extra challenges related to serialization
+            tsv_krls = TsVector()
+            krls_ts = TimeSeries(ts_url("9")).krls_interpolation(dt=d, gamma=1e-3, tolerance=0.01, size=ta.size())
+            tsv_krls.append(krls_ts)
 
             # then start the server
             dtss = DtsServer()
@@ -212,6 +216,7 @@ class DtssTestCase(unittest.TestCase):
             dts.store_ts(store_tsv)
             r1 = dts.evaluate(tsv, ta.total_period())
             f1 = dts.find(r"shyft://test/\d")  # find all ts with one digit, 0..9
+            r2 = dts.evaluate(tsv_krls,ta.total_period())
             dts.close()  # close connection (will use context manager later)
             dtss.clear()  # close server
 
@@ -222,6 +227,7 @@ class DtssTestCase(unittest.TestCase):
                 assert_array_almost_equal(r1[i].values.to_numpy(), store_tsv[i].values.to_numpy(), decimal=4)
 
             self.assertEqual(len(f1), 10)
+            self.assertEqual(len(r2),len(tsv_krls))
             # notice that the created, and delta_t is always no_utctime, and delta_t is 0 (since we don't waste
             # time digging to much into the file to figure it out.
             # the created time could possibly be computed as file-creation time (if avail via file-api).

@@ -116,7 +116,7 @@ namespace fs=boost::filesystem; // it's a standard c++ 17
 
 #include <dlib/optimization.h>
 #include <dlib/statistics.h>
-
+#include <dlib/svm.h>
 
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
@@ -182,6 +182,7 @@ namespace fs=boost::filesystem; // it's a standard c++ 17
  */
 #   define x_serialize_implement(T)  BOOST_CLASS_EXPORT_IMPLEMENT(T)
 
+
 /** in the library implementation files after x_serialize_implement
  */
 #   define x_serialize_archive(T,AO,AI) \
@@ -189,3 +190,4 @@ namespace fs=boost::filesystem; // it's a standard c++ 17
     template void T::serialize( boost::archive::AI &,const unsigned int);
 
 #endif
+
