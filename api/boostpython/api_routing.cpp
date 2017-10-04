@@ -26,7 +26,7 @@ namespace expose {
           .def(init<optional<double,double,double>>(args("velocity","alpha","beta"),"a new object with specified parameters"))
             .def_readwrite("velocity",&routing::uhg_parameter::velocity,"default 1.0, unit [m/s]")
             .def_readwrite("alpha", &routing::uhg_parameter::alpha,"default 3.0,unit-less, ref. shape of gamma-function")
-            .def_readwrite("beta", &routing::uhg_parameter::beta,"default 0.7, unit-less, ref. shape of gamma-function")
+            .def_readwrite("beta", &routing::uhg_parameter::beta,"default 0.0, unit-less, added to pdf of gamma(alpha,1.0)")
         ;
 
         def("make_uhg_from_gamma",&routing::make_uhg_from_gamma,args("n_steps","alpha","beta"),
@@ -36,7 +36,7 @@ namespace expose {
              "and that it has a min-size of one element (1.0)\n"
              "n_steps: int, number of time-steps, elements, in the vector\n"
              "alpha: float, the gamma_distribution gamma-factor\n"
-             "beta: float, the gamma_distribution beta-factor\n"
+             "beta: float, the base-line, added to pdf(gamma(alpha,1))\n"
              "return unit hydro graph factors, normalized to sum 1.0\n"
         );
     }
