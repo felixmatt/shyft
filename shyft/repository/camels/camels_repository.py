@@ -7,6 +7,7 @@ import glob
 from os import path
 import numpy as np
 import pandas as pd
+import datetime as dt
 from pyproj import Proj
 from pyproj import transform
 from shyft import api
@@ -324,10 +325,9 @@ class CamelsTargetRepository(TsRepository):
     def _convert_to_timeseries(self, data, t, ts_id):
         ta = api.TimeAxisFixedDeltaT(int(t[0]), int(t[1]) - int(t[0]), len(t))
         tsc = api.TsFactory().create_point_ts
-
         def construct(d):
             return tsc(ta.size(), ta.start, ta.delta_t,
-                       api.DoubleVector.FromNdArray(d))
+                       api.DoubleVector.FromNdArray(d), api.POINT_AVERAGE_VALUE)
 
         ts = [construct(data[:])]
         return {k: v for k, v in zip(ts_id, ts)}
@@ -339,8 +339,11 @@ class CamelsTargetRepository(TsRepository):
         #time = dataset.variables.get("time", None)
         #data = dataset.variables.get(self.var_name, None)
         keys = ['sgid','Year','Month', 'Day', 'discharge', 'quality']
-        data_dict = pd.read_table(filename, names=keys, delim_whitespace=True)
-        time = self._get_utc_time_from_daily_camels_streamgauge(data_dict['Year'].values, data_dict['Month'].values, data_dict['Day'].values)
+        dataframe = pd.read_table(filename, names=keys, delim_whitespace=True)
+        dataframe = self._reindex_dataframe(dataframe)
+        dataframe.index = dataframe.index + dt.timedelta(hours=12) # TODO: + timedelta(12) gives better restults... why?
+
+        time = self._get_utc_time_from_daily_camels_streamgauge(dataframe.index.year, dataframe.index.month, dataframe.index.day, dataframe.index.hour)
         idx_min = np.searchsorted(time, utc_period.start, side='left')
         if time[idx_min] > utc_period.start and idx_min > 0:  # important ! ensure data *cover* the requested period, Shyft ts do take care of resolution etc.
             idx_min -= 1  # extend range downward so we cover the entire requested period
@@ -349,15 +352,22 @@ class CamelsTargetRepository(TsRepository):
             idx_max += 1  # extend range upward so that we cover the requested period
         time_slice = slice(idx_min, idx_max)
         ts_id_in_file = ts_id_to_extract
-        extracted_data = data_dict['discharge'].values[time_slice]
+        extracted_data = dataframe['discharge'].values[time_slice]
         missing = -999.0
         extracted_data[np.isclose(missing, extracted_data)] = np.nan # set missing values to nan
         extracted_data *= 0.0283168466 # cubic feet per sec to cubic meter per sec
         return self._convert_to_timeseries(extracted_data, time[time_slice], ts_id_in_file)
 
-    def _get_utc_time_from_daily_camels_streamgauge(self, year, month, day):
+    def _reindex_dataframe(self, dataframe):
+        dates = [dt.datetime(year, month, day, 12) for year, month, day in zip(dataframe['Year'].values, dataframe['Month'].values, dataframe['Day'].values)]
+        dataframe.index = dates
+        dates_nan = pd.date_range(start='1979-12-31 12', end='2015-01-01 12', freq='d')
+        dataframe = dataframe.reindex(dates_nan)
+        return dataframe
+
+    def _get_utc_time_from_daily_camels_streamgauge(self, year, month, day, hour):
         utc = api.Calendar()
-        time = [utc.time(int(y), int(m), int(d), 12) for y,m,d in zip(year, month, day)]
+        time = [utc.time(int(y), int(m), int(d), int(h)) for y,m,d,h in zip(year, month, day, hour)]
         return np.array(time)
 
 
@@ -489,7 +499,7 @@ class CamelsRegionModelRepository(interfaces.RegionModelRepository):
             else:
                 raise RegionConfigError("Unknown parameter set '{}'".format(p_type_name))
 
-        radiation_slope_factor = 0.9  # TODO: Move into yaml file similar to p_corr_scale_factor
+        radiation_slope_factor = 1.0  # TODO: Move into yaml file similar to p_corr_scale_factor
         unknown_fraction = 1.0 - gf - lf - rf - ff
 
         # Construct cells
