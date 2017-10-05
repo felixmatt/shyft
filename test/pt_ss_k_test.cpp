@@ -85,7 +85,7 @@ TEST_CASE("test_call_stack") {
     const double free_water = 0.0;
     const double residual = 0.0;
     const unsigned long nnn = 0;
-    kr::state kirchner_state = {5.0};
+    kr::state kirchner_state{5.0};
     ss::state snow_state(nu, alpha, sca, swe, free_water, residual, nnn);
 
     // Initialize response

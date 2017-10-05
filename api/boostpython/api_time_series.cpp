@@ -3,6 +3,7 @@
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/time_series.h"
+#include "core/predictions.h"
 #include "api/api.h"
 #include "api/time_series.h"
 
@@ -253,7 +254,7 @@ namespace expose {
                 doc_returns("qm_forecast", "TsVector", "quantile mapped forecast with the requested time-axis")
                 ;
 
-            def("quantile_map_forecast",quantile_map_forecast_5, 
+            def("quantile_map_forecast",quantile_map_forecast_5,
                 args("forecast_sets","set_weights","historical_data","time_axis","interpolation_start"),
                 qm_doc
                 );
@@ -336,7 +337,6 @@ namespace expose {
             .def(vector_indexing_suite<TsBindInfoVector>())
             ;
 
-
 		class_<shyft::api::apoint_ts>("TimeSeries",
                 doc_intro("A time-series providing mathematical and statistical operations and functionality.")
                 doc_intro("")
@@ -387,13 +387,29 @@ namespace expose {
 
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(args("pattern", "dt", "ta"), "construct a timeseries given a equally spaced dt pattern and a timeaxis ta"))
 			.def(init<const vector<double>&, utctimespan,utctime, const time_axis::generic_dt&>(args("pattern", "dt","t0", "ta"), "construct a timeseries given a equally spaced dt pattern, starting at t0, and a timeaxis ta"))
-            .def(init<std::string>(args("id"),
-                "constructs a bind-able ts,\n"
-                "providing a symbolic possibly unique id that at a later time\n"
-                "can be bound, using the .bind(ts) method to concrete values\n"
-                "if the ts is used as ts, like size(),.value(),time() before it\n"
-                "is bound, then a runtime-exception is raised\n"
+            .def(init<std::string>(args("ts_id"),
+                doc_intro("constructs a bind-able ts,")
+                doc_intro("providing a symbolic possibly unique id that at a later time")
+                doc_intro("can be bound, using the .bind(ts) method to concrete values")
+                doc_intro("if the ts is used as ts, like size(),.value(),time() before it")
+                doc_intro("is bound, then a runtime-exception is raised")
+                doc_parameters()
+                doc_parameter("ts_id","str","url-like identifier for the time-series,notice that shyft://<container>/<path> is for shyft-internal store")
                 )
+            )
+            .def(init<std::string,const apoint_ts&>(args("ts_id","bts"),
+                doc_intro("constructs a ready bound ts,")
+                doc_intro("providing a symbolic possibly unique id that at a later time")
+                doc_intro("can be used to correlate with back-end store\n")
+                doc_parameters()
+                doc_parameter("ts_id","str","url-type of id, notice that shyft://<container>/<path> is for shyft-internal store")
+                doc_parameter("bts","TimeSeries","A concrete time-series, with point_fx policy, time_axis and values")
+                )
+            )
+            .def("ts_id",&apoint_ts::id,
+                doc_intro("returns ts_id of symbolic ts, or empty string if not symbolic ts")
+                doc_returns("ts_id","str","url-like ts_id as passed to constructor or empty if the ts is not a ts with ts_id")
+                doc_see_also("TimeSeries('url://like/id'),TimeSeries('url://like/id',ts_with_values)")
             )
 			DEF_STD_TS_STUFF()
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
@@ -467,11 +483,127 @@ namespace expose {
                 doc_returns("ts","TimeSeries","a new time-series that is evaluated on request to the convolution of self")
                 doc_see_also("ConvolvePolicy")
             )
+            .def("krls_interpolation", &shyft::api::apoint_ts::krls_interpolation,
+                ( py::arg("dt"), py::arg("gamma") = 1.E-3, py::arg("tolerance") = 0.01, py::arg("size") = 1000000u ),
+                doc_intro("Compute a new TS that is a krls interpolation of self.")
+                doc_intro("")
+                doc_intro("The KRLS algorithm is a kernel regression algorithm for aproximating data, the implementation")
+                doc_intro("used here is from DLib: http://dlib.net/ml.html#krls")
+                doc_intro("The new time-series has the same time-axis as self, and the values vector contain no `nan` entries.")
+                doc_intro("")
+                doc_intro("If you also want the mean-squared error of the interpolation use get_krls_predictor instead, and")
+                doc_intro("use the predictor api to generate a interpolation and a mse time-series.")
+                doc_parameters()
+                doc_parameter("dt", "float", "The time-step in seconds the underlying predictor is specified for.\n"
+                    "    Note that this does not put a limit on time-axes used, but for best results it should be\n"
+                    "    approximatly equal to the time-step of time-axes used with the predictor. In addition it\n"
+                    "    should not be to long, else you will get poor results. Try to keep the dt less than a day,\n"
+                    "    3-8 hours is usually fine." )
+                doc_parameter("gamma", "float (optional)", "Determines the width of the radial basis functions for the KRLS algorithm.\n"
+                    "    Lower values mean wider basis functions, wider basis functions means faster computation but lower\n"
+                    "    accuracy. Note that the tolerance parameter also affects speed and accurcy.\n"
+                    "    A large value is around `1E-2`, and a small value depends on the time step. By using values larger\n"
+                    "    than `1E-2` the computation will probably take to long. Testing have reveled that `1E-3` works great\n"
+                    "    for a time-step of 3 hours, while a gamma of `1E-2` takes a few minutes to compute. Use `1E-4` for a\n"
+                    "    fast and tolerably accurate prediction.\n"
+                    "    Defaults to `1E-3`" )
+                doc_parameter("tolerance", "float (optional)", "The krls training tolerance. Lower values makes the prediction more accurate,\n"
+                    "    but slower. This typically have less effect than gamma, but is usefull for tuning. Usually it should be\n"
+                    "    either `0.01` or `0.001`.\n"
+                    "    Defaults to `0.01`" )
+                doc_parameter("size", "int (optional)", "The size of the \"memory\" of the underlying predictor. The default value is\n"
+                    "    usually enough. Defaults to `1000000`." )
+                doc_intro("")
+                doc_intro("Examples\n--------\n")
+                doc_intro(">>> import numpy as np")
+                doc_intro(">>> import scipy.stats as stat")
+                doc_intro(">>> from shyft.api import (")
+                doc_intro("...     Calendar, utctime_now, deltahours,")
+                doc_intro("...     TimeAxis, TimeSeries")
+                doc_intro("... )")
+                doc_intro(">>>")
+                doc_intro(">>> cal = Calendar()")
+                doc_intro(">>> t0 = utctime_now()")
+                doc_intro(">>> dt = deltahours(1)")
+                doc_intro(">>> n = 365*24  # one year")
+                doc_intro(">>>")
+                doc_intro(">>> # generate random bell-shaped data")
+                doc_intro(">>> norm = stat.norm()")
+                doc_intro(">>> data = np.linspace(0, 20, n)")
+                doc_intro(">>> data = stat.norm(10).pdf(data) + norm.pdf(np.random.rand(*data.shape))")
+                doc_intro(">>> # -----")
+                doc_intro(">>> ta = TimeAxis(cal, t0, dt, n)")
+                doc_intro(">>> ts = TimeSeries(ta, data)")
+                doc_intro(">>>")
+                doc_intro(">>> # compute the interpolation")
+                doc_intro(">>> ts_ipol = ts.krls_interpolation(deltahours(3))")
+                doc_returns("krls_ts", "TimeSeries", "A new time series being the KRLS interpolation of self.")
+                doc_see_also("TimeSeries.get_krls_predictor, KrlsRbfPredictor")
+            )
+            .def("get_krls_predictor", &shyft::api::apoint_ts::get_krls_predictor,
+                ( py::arg("dt"), py::arg("gamma") = 1.E-3, py::arg("tolerance") = 0.01, py::arg("size") = 1000000u ),
+                doc_intro("Get a KRLS predictor trained on this time-series.")
+                doc_intro("")
+                doc_intro("If you only want a interpolation of self use krls_interpolation instead, this method")
+                doc_intro("return the underlying predictor instance that can be used to generate mean-squared error")
+                doc_intro("estimates, or can be further trained on more data.")
+                doc_notes()
+                doc_note("A predictor can only be generated for a bound time-series.")
+                doc_parameters()
+                doc_parameter("dt", "float", "The time-step in seconds the underlying predictor is specified for.\n"
+                    "    Note that this does not put a limit on time-axes used, but for best results it should be\n"
+                    "    approximatly equal to the time-step of time-axes used with the predictor. In addition it\n"
+                    "    should not be to long, else you will get poor results. Try to keep the dt less than a day,\n"
+                    "    3-8 hours is usually fine." )
+                doc_parameter("gamma", "float (optional)", "Determines the width of the radial basis functions for the KRLS algorithm.\n"
+                    "    Lower values mean wider basis functions, wider basis functions means faster computation but lower\n"
+                    "    accuracy. Note that the tolerance parameter also affects speed and accurcy.\n"
+                    "    A large value is around `1E-2`, and a small value depends on the time step. By using values larger\n"
+                    "    than `1E-2` the computation will probably take to long. Testing have reveled that `1E-3` works great\n"
+                    "    for a time-step of 3 hours, while a gamma of `1E-2` takes a few minutes to compute. Use `1E-4` for a\n"
+                    "    fast and tolerably accurate prediction.\n"
+                    "    Defaults to `1E-3`" )
+                doc_parameter("tolerance", "float (optional)", "The krls training tolerance. Lower values makes the prediction more accurate,\n"
+                    "    but slower. This typically have less effect than gamma, but is usefull for tuning. Usually it should be\n"
+                    "    either `0.01` or `0.001`.\n"
+                    "    Defaults to `0.01`" )
+                doc_parameter("size", "int (optional)", "The size of the \"memory\" of the underlying predictor. The default value is\n"
+                    "    usually enough. Defaults to `1000000`." )
+                doc_intro("")
+                doc_intro("Examples\n--------\n")
+                doc_intro(">>> import numpy as np")
+                doc_intro(">>> import scipy.stats as stat")
+                doc_intro(">>> from shyft.api import (")
+                doc_intro("...     Calendar, utctime_now, deltahours,")
+                doc_intro("...     TimeAxis, TimeSeries")
+                doc_intro("... )")
+                doc_intro(">>>")
+                doc_intro(">>> cal = Calendar()")
+                doc_intro(">>> t0 = utctime_now()")
+                doc_intro(">>> dt = deltahours(1)")
+                doc_intro(">>> n = 365*24  # one year")
+                doc_intro(">>>")
+                doc_intro(">>> # generate random bell-shaped data")
+                doc_intro(">>> norm = stat.norm()")
+                doc_intro(">>> data = np.linspace(0, 20, n)")
+                doc_intro(">>> data = stat.norm(10).pdf(data) + norm.pdf(np.random.rand(*data.shape))")
+                doc_intro(">>> # -----")
+                doc_intro(">>> ta = TimeAxis(cal, t0, dt, n)")
+                doc_intro(">>> ts = TimeSeries(ta, data)")
+                doc_intro(">>>")
+                doc_intro(">>> # create a predictor")
+                doc_intro(">>> pred = ts.get_krls_predictor()")
+                doc_intro(">>> total_mse = pred.predictor_mse(ts)  # compute mse relative to ts")
+                doc_intro(">>> krls_ts = pred.predict(ta)  # generate a prediction, this is the result from ts.krls_interpolation")
+                doc_intro(">>> krls_mse_ts = pred.mse_ts(ts, points=6)  # compute a mse time-series using 6 points around each sample")
+                doc_returns("krls_predictor", "KrlsRbfPredictor", "A KRLS predictor pre-trained once on self.")
+                doc_see_also("TimeSeries.krls_interpolation, KrlsRbfPredictor")
+            )
 			.def("rating_curve", &shyft::api::apoint_ts::rating_curve, py::arg("rc_param"),
 				doc_intro("Create a new TimeSeries that is computed using a RatingCurveParameter instance.")
 				doc_intro("")
-				doc_intro("Example:")
-				doc_intro("")
+                doc_intro("Examples\n--------\n")
+                doc_intro("")
 				doc_intro(">>> import numpy as np")
 				doc_intro(">>> from shyft.api import (")
 				doc_intro("...     utctime_now, deltaminutes,")
@@ -632,8 +764,8 @@ namespace expose {
     }
 
 	static void expose_rating_curve_classes() {
-		
-		// overloads for rating_curve_segment::flow 
+
+		// overloads for rating_curve_segment::flow
 		double (shyft::core::rating_curve_segment::*rcs_flow_1)(double) const = &shyft::core::rating_curve_segment::flow;
 		std::vector<double> (shyft::core::rating_curve_segment::*rcs_flow_2)(const std::vector<double> &, std::size_t, std::size_t) const = &shyft::core::rating_curve_segment::flow;
 
@@ -681,10 +813,10 @@ namespace expose {
 			.def("__str__", &shyft::core::rating_curve_segment::operator std::string, "Stringify the segment.")
 			;
 
-		// overloads for rating_curve_function::flow 
+		// overloads for rating_curve_function::flow
 		double (shyft::core::rating_curve_function::*rcf_flow_val)(double) const = &shyft::core::rating_curve_function::flow;
 		std::vector<double> (shyft::core::rating_curve_function::*rcf_flow_vec)(const std::vector<double> & ) const = &shyft::core::rating_curve_function::flow;
-		// overloads for rating_curve_function::add_segment 
+		// overloads for rating_curve_function::add_segment
 		void (shyft::core::rating_curve_function::*rcf_add_args)(double, double, double, double) = &shyft::core::rating_curve_function::add_segment;
 		void (shyft::core::rating_curve_function::*rcf_add_obj)(const rating_curve_segment & ) = &shyft::core::rating_curve_function::add_segment;
 
@@ -722,10 +854,10 @@ namespace expose {
 			.def("__str__", &shyft::core::rating_curve_function::operator std::string, "Stringify the function.")
 			;
 
-		// overloads for rating_curve_function::flow 
+		// overloads for rating_curve_function::flow
 		double (shyft::core::rating_curve_parameters::*rcp_flow_val)(utctime, double) const = &shyft::core::rating_curve_parameters::flow;
 		std::vector<double> (shyft::core::rating_curve_parameters::*rcp_flow_ts)(const shyft::api::apoint_ts & ) const = &shyft::core::rating_curve_parameters::flow<shyft::api::apoint_ts>;
-		// overloads for rating_curve_function::add_segment 
+		// overloads for rating_curve_function::add_segment
 		void (shyft::core::rating_curve_parameters::*rcp_add_obj)(utctime, const rating_curve_function & ) = &shyft::core::rating_curve_parameters::add_curve;
 
 		class_<shyft::core::rating_curve_parameters>("RatingCurveParameters",
@@ -807,6 +939,152 @@ namespace expose {
 		def("create_periodic_pattern_ts", shyft::api::create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
 
 	}
+
+	static void expose_krls() {
+
+        using krls_rbf_predictor = shyft::prediction::krls_rbf_predictor;
+
+		class_<krls_rbf_predictor>("KrlsRbfPredictor",
+			    doc_intro("Time-series predictor using the KRLS algorithm with radial basis functions.")
+                doc_intro("")
+                doc_intro("The KRLS (Kernel Recursive Least-Squares) algorithm is a kernel regression")
+                doc_intro("algorithm for aproximating data, the implementation used here is from")
+                doc_intro("DLib: http://dlib.net/ml.html#krls.")
+                doc_intro("This predictor uses KRLS with radial basis functions (RBF).")
+                doc_intro("")
+                doc_intro("Examples\n--------\n")
+                doc_intro(">>>")
+                doc_intro(">>> import numpy as np")
+                doc_intro(">>> import matplotlib.pyplot as plt")
+                doc_intro(">>> from shyft.api import (")
+                doc_intro("...     Calendar, utctime_now, deltahours,")
+                doc_intro("...     TimeAxis, TimeSeries,")
+                doc_intro("...     KrlsRbfPredictor")
+                doc_intro("... )")
+                doc_intro(">>>")
+                doc_intro(">>> # setup")
+                doc_intro(">>> cal = Calendar()")
+                doc_intro(">>> t0 = utctime_now()")
+                doc_intro(">>> dt = deltahours(3)")
+                doc_intro(">>> n = 365*8  # one year")
+                doc_intro(">>>")
+                doc_intro(">>> # ready plot")
+                doc_intro(">>> fig, ax = plt.subplots()")
+                doc_intro(">>> ")
+                doc_intro(">>> # shyft objects")
+                doc_intro(">>> ta = TimeAxis(t0, dt, n)")
+                doc_intro(">>> pred = KrlsRbfPredictor(")
+                doc_intro("...     dt=deltahours(8),")
+                doc_intro("...     gamma=1e-5,  # NOTE: this should be 1e-3 for real data")
+                doc_intro("...     tolerance=0.001")
+                doc_intro("... )")
+                doc_intro(">>>")
+                doc_intro(">>> # generate data")
+                doc_intro(">>> total_series = 4")
+                doc_intro(">>> data_range = np.linspace(0, 2*np.pi, n)")
+                doc_intro(">>> ts = None  # to store the final data-ts")
+                doc_intro(">>> # -----")
+                doc_intro(">>> for i in range(total_series):")
+                doc_intro(">>>     data = np.sin(data_range) + (np.random.random(data_range.shape) - 0.5)/5")
+                doc_intro(">>>     ts = TimeSeries(ta, data)")
+                doc_intro(">>>     # -----")
+                doc_intro(">>>     training_mse = pred.train(ts)  # train the predictor")
+                doc_intro(">>>     # -----")
+                doc_intro(">>>     print(f'training step {i+1:2d}: mse={training_mse}')")
+                doc_intro(">>>     ax.plot(ta.time_points[:-1], ts.values, 'bx')  # plot data")
+                doc_intro(">>>")
+                doc_intro(">>> # prediction")
+                doc_intro(">>> ts_pred = pred.predict(ta)")
+                doc_intro(">>> ts_mse = pred.mse_ts(ts, points=3)  # mse using 7 point wide filter")
+                doc_intro(">>>                                     # (3 points before/after)")
+                doc_intro(">>>")
+                doc_intro(">>> # plot interpolation/predicton on top of results")
+                doc_intro(">>> ax.plot(ta.time_points[:-1], ts_mse.values, '0.6', label='mse')")
+                doc_intro(">>> ax.plot(ta.time_points[:-1], ts_pred.values, 'r-', label='prediction')")
+                doc_intro(">>> ax.legend()")
+                doc_intro(">>> plt.show()")
+                doc_see_also("TimeSeries.krls_interpolation, TimeSeries.get_krls_predictor")
+			)
+			.def(init<core::utctimespan, double, double, std::size_t>(
+                    ( py::arg("dt"), py::arg("gamma") = 1.E-3, py::arg("tolerance") = 0.01, py::arg("size") = 1000000u ),
+                    doc_intro("Construct a new predictor.")
+                    doc_parameters()
+                    doc_parameter("dt", "float", "The time-step in seconds the predictor is specified for.\n"
+                        "    Note that this does not put a limit on time-axes used, but for best results it should be\n"
+                        "    approximatly equal to the time-step of time-axes used with the predictor. In addition it\n"
+                        "    should not be to long, else you will get poor results. Try to keep the dt less than a day,\n"
+                        "    3-8 hours is usually fine." )
+                    doc_parameter("gamma", "float (optional)", "Determines the width of the radial basis functions for\n"
+                        "    the KRLS algorithm. Lower values mean wider basis functions, wider basis functions means faster\n"
+                        "    computation but lower accuracy. Note that the tolerance parameter also affects speed and accurcy.\n"
+                        "    A large value is around `1E-2`, and a small value depends on the time step. By using values larger\n"
+                        "    than `1E-2` the computation will probably take to long. Testing have reveled that `1E-3` works great\n"
+                        "    for a time-step of 3 hours, while a gamma of `1E-2` takes a few minutes to compute. Use `1E-4` for a\n"
+                        "    fast and tolerably accurate prediction.\n"
+                        "    Defaults to `1E-3`" )
+                    doc_parameter("tolerance", "float (optional)", "The krls training tolerance. Lower values makes the prediction more accurate,\n"
+                        "    but slower. This typically have less effect than gamma, but is usefull for tuning. Usually it should be\n"
+                        "    either `0.01` or `0.001`.\n"
+                        "    Defaults to `0.01`" )
+                    doc_parameter("size", "int (optional)", "The size of the \"memory\" of the predictor. The default value is\n"
+                        "    usually enough. Defaults to `1000000`." )
+                ) )
+			.def("train", &krls_rbf_predictor::train<shyft::api::apoint_ts>,
+				    ( py::arg("ts"),
+                      py::arg("offset") = 0u, py::arg("count") = std::numeric_limits<std::size_t>::max(), py::arg("stride") = 1u,
+                      py::arg("iterations") = 1u, py::arg("mse_tol") = 0.001 ),
+				    doc_intro("Train the predictor using samples from ts.")
+                    doc_parameters()
+                    doc_parameter("ts", "TimeSeries", "Time-series to train on.")
+                    doc_parameter("offset", "int (optional)", "Positive offset from the start of the time-series. Default to 0.")
+                    doc_parameter("count", "int (optional)", "Positive number of samples to to use. Default to the maximum value.")
+                    doc_parameter("stride", "int (optional)", "Positive stride between samples from the time-series. Defaults to 1.")
+                    doc_parameter("iterations", "int (optional)", "Positive maximum number of times to train on the samples. Defaults to 1.")
+                    doc_parameter("mse_tol", "float (optional)", "Positive tolerance for the mean-squared error over the training data.\n"
+                        "    If the mse after a training session is less than this skip training further. Defaults to `1E-9`." )
+                    doc_returns("mse", "float (optional)", "Mean squared error of the predictor relative to the time-series trained on.")
+                )
+			.def("predict", &krls_rbf_predictor::predict<shyft::api::apoint_ts,shyft::api::gta_t>,
+                    py::arg("ta"),
+				    doc_intro("Predict a time-series for for time-axis.")
+                    doc_notes()
+                    doc_note("The predictor will predict values outside the range of the values it is trained on, but these")
+                    doc_note("values will often be zero. This may also happen if there are long gaps in the training data")
+                    doc_note("and you try to predict values for the gap. Using wider basis functions partly remedies this,")
+                    doc_note("but makes the prediction overall less accurate.")
+                    doc_parameters()
+                    doc_parameter("ta", "TimeAxis", "Time-axis to predict values for.")
+                    doc_returns("ts", "TimeSeries", "Predicted time-series.")
+                    doc_see_also("KrlsRbfPredictor.mse_ts, KrlsRbfPredictor.predictor_mse")
+			    )
+            .def("mse_ts", &krls_rbf_predictor::mse_ts<shyft::api::apoint_ts, shyft::api::apoint_ts>,
+                    ( py::arg("ts"), py::arg("points") = 0u ),
+                    doc_intro("Compute a mean-squared error time-series of the predictor relative to the supplied ts.")
+                    doc_parameters()
+                    doc_parameter("ts", "TimeSeries", "Time-series to compute mse against.")
+                    doc_parameter("points", "int (optional)", "Positive number of extra points around each point to use for mse.\n"
+                        "    Defaults to 0." )
+                    doc_returns("mse_ts", "TimeSeries", "Time-series with mean-squared error values.")
+                    doc_see_also("KrlsRbfPredictor.predictor_mse, KrlsRbfPredictor.predict")
+                )
+			.def("predictor_mse", &krls_rbf_predictor::predictor_mse<shyft::api::apoint_ts>,
+                    ( py::arg("ts"),
+                      py::arg("offset") = 0u, py::arg("count") = std::numeric_limits<std::size_t>::max(), py::arg("stride") = 1u ),
+                    doc_intro("Compute the predictor mean-squared prediction error for count first from ts.")
+                    doc_parameters()
+                    doc_parameter("ts", "TimeSeries", "Time-series to compute mse against.")
+                    doc_parameter("offset", "int (optional)", "Positive offset from the start of the time-series. Default to 0.")
+                    doc_parameter("count", "int (optional)", "Positive number of samples from the time-series to to use.\n"
+                        "    Default to the maximum value." )
+                    doc_parameter("stride", "int (optional)", "Positive stride between samples from the time-series. Defaults to 1.")
+                    doc_see_also("KrlsRbfPredictor.predict, KrlsRbfPredictor.mse_ts")
+            )
+            .def("clear", &krls_rbf_predictor::clear,
+                    doc_intro("Clear all training data from the predictor.")
+                )
+			;
+	}
+
     void timeseries() {
         enum_<time_series::ts_point_fx>("point_interpretation_policy")
             .value("POINT_INSTANT_VALUE",time_series::POINT_INSTANT_VALUE)
@@ -829,6 +1107,7 @@ namespace expose {
             .value("FILL_NAN",   time_series::api::extend_ts_fill_policy::EPF_NAN)
             .value("USE_LAST",   time_series::api::extend_ts_fill_policy::EPF_LAST)
             .value("FILL_VALUE", time_series::api::extend_ts_fill_policy::EPF_FILL)
+            .export_values()
             ;
         enum_<time_series::api::extend_ts_split_policy>(
             "extend_split_policy",
@@ -840,6 +1119,7 @@ namespace expose {
             .value("LHS_LAST",  time_series::api::extend_ts_split_policy::EPS_LHS_LAST)
             .value("RHS_FIRST", time_series::api::extend_ts_split_policy::EPS_RHS_FIRST)
             .value("AT_VALUE",  time_series::api::extend_ts_split_policy::EPS_VALUE)
+            .export_values()
             ;
 
         enum_<time_series::convolve_policy>(
@@ -867,5 +1147,6 @@ namespace expose {
 		expose_periodic_ts();
 		expose_correlation_functions();
 		expose_ats_vector();
+		expose_krls();
     }
 }

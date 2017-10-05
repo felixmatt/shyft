@@ -1,4 +1,15 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <memory>
+#include <utility>
+#include <algorithm>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "cell_model.h"
 #include "hbv_stack.h"
 
@@ -38,7 +49,7 @@ namespace shyft {
 				response_t end_reponse;///<< end_response, at the end of collected
 
 				all_response_collector() : destination_area(0.0) {}
-				all_response_collector(const double destination_area) : destination_area(destination_area) {}
+				explicit all_response_collector(const double destination_area) : destination_area(destination_area) {}
 				all_response_collector(const double destination_area, const timeaxis_t& time_axis)
 					: destination_area(destination_area), pe_output(time_axis, 0.0), snow_outflow(time_axis, 0.0),glacier_melt(time_axis,0.0),snow_sca(time_axis,0.0),snow_swe(time_axis,0), ae_output(time_axis, 0.0),
 						soil_outflow(time_axis, 0.0), avg_discharge(time_axis, 0.0),charge_m3s(time_axis, 0.0) {}
@@ -91,7 +102,7 @@ namespace shyft {
 				pts_t snow_swe;
 
 				discharge_collector() : destination_area(0.0), collect_snow(false) {}
-				discharge_collector(const double destination_area) : destination_area(destination_area), collect_snow(false) {}
+				explicit discharge_collector(const double destination_area) : destination_area(destination_area), collect_snow(false) {}
 				discharge_collector(const double destination_area, const timeaxis_t& time_axis)
 					: destination_area(destination_area), avg_discharge(time_axis, 0.0),charge_m3s(time_axis, 0.0), collect_snow(false),
 					snow_sca(timeaxis_t(time_axis.start(), time_axis.delta(), 0), 0.0),
@@ -144,7 +155,7 @@ namespace shyft {
 				pts_t tank_lz;
 
 				state_collector() : collect_state(false), destination_area(0.0) {}
-				state_collector(const timeaxis_t& time_axis)
+				explicit state_collector(const timeaxis_t& time_axis)
 					: collect_state(false), destination_area(0.0), snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0),
 						soil_moisture(time_axis, 0.0), tank_uz(time_axis, 0.0), tank_lz(time_axis, 0.0) { /* Do nothing */}
 				/** brief called before run, prepares state time-series

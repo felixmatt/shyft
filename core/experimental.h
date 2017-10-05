@@ -1,17 +1,5 @@
 #pragma once
-
-#include "geo_cell_data.h"
-#include "utctime_utilities.h"
-#include "time_series.h"
-
-#include "region_model.h"
-#include "pt_gs_k_cell_model.h"
-
-// SiH: Had serious trouble with exceptions using the intersection method..
-// still unresolved
-//#define BOOST_GEOMETRY_DEBUG_HAS_SELF_INTERSECTIONS
-// THis one ignore the problem
-
+#ifdef SHYFT_NO_PCH
 #define BOOST_GEOMETRY_OVERLAY_NO_THROW
 
 #include <boost/geometry.hpp>
@@ -21,6 +9,14 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
+
+#endif // SHYFT_NO_PCH
+#include "geo_cell_data.h"
+#include "utctime_utilities.h"
+#include "time_series.h"
+
+#include "region_model.h"
+#include "pt_gs_k_cell_model.h"
 
 
 
@@ -250,7 +246,7 @@ namespace shyft {
                         } break;
                         case 2: {
                             char ts_type[200];ts_type[0]=0;
-                            if(sscanf(line.c_str(),"time %s",ts_type)!=1) {
+                            if(sscanf(line.c_str(),"time %40s",ts_type)!=1) {
                                 report_error(report_tag,line_no,"expected 2.line staring with time <ts_type>");
                                 return r;
                             }

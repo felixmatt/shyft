@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=accessor_policy" />
+				<Option parameters="-nv -tc=dtss_store_basics" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -127,12 +127,17 @@
 		<Unit filename="kriging_test.cpp">
 			<Option virtualFolder="interpolation/" />
 		</Unit>
-		<Unit filename="merge_test.cpp" />
+		<Unit filename="merge_test.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="mocks.cpp">
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="mocks.h">
 			<Option virtualFolder="compiler_etc/" />
+		</Unit>
+		<Unit filename="predictor_test.cpp">
+			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="priestley_taylor_test.cpp">
 			<Option virtualFolder="methods/" />

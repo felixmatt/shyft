@@ -17,9 +17,23 @@
 ///
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
+#ifdef SHYFT_NO_PCH
+#include <string>
+//#include <vector>
+//#include <iterator>
+#include <algorithm>
+#include <cmath>
+//#include <limits>
+#include <stdexcept>
+#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/tools/roots.hpp>
+#include <boost/math/tools/minima.hpp>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
-#include <boost/math/special_functions/gamma.hpp>
 #include "utctime_utilities.h"
 
 #ifdef __UNIT_TEST__
@@ -169,7 +183,7 @@ namespace shyft {
                 const double water_heat = 4180.0;
                 const double ice_heat = 2050.0;
                 const double sigma = 5.670373e-8;
-                const double BB0{0.98*sigma*pow(273.15, 4)};
+                const double BB0{0.98*sigma*std::pow(273.15, 4)};
                 typedef boost::math::policies::policy< boost::math::policies::digits10<10> > high_precision_type;
                 typedef boost::math::policies::policy< boost::math::policies::digits10<5> > low_precision_type;
                 const high_precision_type high_precision = high_precision_type();
@@ -183,13 +197,13 @@ namespace shyft {
                 double lgamma(double a) const {
                     return a < precision_threshold ? boost::math::lgamma(a, high_precision) : boost::math::lgamma(a, low_precision);
                 }
-
+                /*xx
                 inline double calc_df(const double a, const double b, const double z) const {
                     return a*b*exp(-(a + 1.0)*log(b) - lgamma(a + 1.0) + a*log(z) - z/b)
                             + 1.0 - z*exp(-a*log(b) - lgamma(a) + (a - 1.0)*log(z) - z/b)
                             - gamma_p(a, z/b);
                 }
-
+                */
                 inline double calc_q(const double a, const double b, const double z) const
                 {
                     return a*b*gamma_p(a + 1.0, z/b) + z*(1.0 - gamma_p(a, z/b));
@@ -258,6 +272,7 @@ namespace shyft {
                   }
 
               public:
+                  calculator()=default;
                   /*
                   * \brief step the snow model forward from time t to t+dt, state, parameters and input
                   * updates the state and response upon return.

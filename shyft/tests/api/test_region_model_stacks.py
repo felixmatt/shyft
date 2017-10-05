@@ -270,7 +270,7 @@ class RegionModel(unittest.TestCase):
         #
         # 1st: add a river, with 36.000 meter hydro length, a UHGParameter with 1m/hour speed, alpha/beta suitable
         model.river_network.add(
-            api.River(1, api.RoutingInfo(0, 3000.0), api.UHGParameter(1 / 3.60, 1.0, 0.7)))  # river id =1
+            api.River(1, api.RoutingInfo(0, 3000.0), api.UHGParameter(1 / 3.60, 7.0, 0.0)))  # river id =1
         # 2nd: let cells route to the river
         model.connect_catchment_to_river(0, 1)  # now all cells in catchment 0 routes to river with id 1.
         self.assertTrue(model.has_routing())
@@ -281,7 +281,7 @@ class RegionModel(unittest.TestCase):
         river_upstream_inflow_m3s = model.river_upstream_inflow_m3s(
             1)  # should be 0.0 in this case, since we do not have a routing network
         self.assertIsNotNone(river_out_m3s)
-        self.assertAlmostEqual(river_out_m3s.value(0), 108.441, 0)
+        self.assertAlmostEqual(river_out_m3s.value(8), 30.9962, 0)
         self.assertIsNotNone(river_local_m3s)
         self.assertIsNotNone(river_upstream_inflow_m3s)
         model.connect_catchment_to_river(0, 0)

@@ -1,4 +1,14 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <iterator>
+//#include <cmath>
+//#include <limits>
+#include <stdexcept>
+#include <armadillo>
+#endif // SHYFT_NO_PCH
+
 #include "time_series.h"
 
 /**
@@ -318,7 +328,6 @@ namespace shyft {
 	            const size_t num_timesteps = time_axis.size();
 	            std::vector<double> temperatures;
 	            temperatures.reserve(num_sources);
-	            size_t idx;
 
 	            std::vector<arma::uword> valid_inds, prev_valid_inds;
 	            valid_inds.reserve(num_sources);
@@ -326,7 +335,7 @@ namespace shyft {
 	                temperatures.clear();
 	                prev_valid_inds = valid_inds;
 	                valid_inds.clear();
-	                idx = 0;
+	                size_t idx = 0;
 	                for (auto& a: source_accessors) {
 	                    double v = a.value(t_step);
 	                    if (std::isfinite(v)) {

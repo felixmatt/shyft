@@ -1,11 +1,24 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cstdint>
+#include <cmath>
+#include <string>
+#include <stdexcept>
+#include <vector>
+#include <memory>
+#include <utility>
+#include <stdexcept>
+#include <type_traits>
+#include <algorithm>
+#include <sstream>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
-
-#include <map>
 
 #ifndef M_PI
 # define M_PI           3.14159265358979323846  /* pi */
@@ -38,7 +51,7 @@ namespace shyft{
 
         /** \brief point a and b are considered equal if same time t and value-diff less than EPS
         */
-        inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && fabs(a.v-b.v)< EPS;}
+        inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && std::fabs(a.v-b.v)< EPS;}
 
         /** \brief Enumerates how points are mapped to f(t)
          *
@@ -48,7 +61,7 @@ namespace shyft{
          * State-in-time values are typically POINT_INSTANT_VALUES; and we could as an approximation
          * draw a straight line between the points.
          */
-        enum ts_point_fx {
+        enum ts_point_fx:int8_t {
             POINT_INSTANT_VALUE, ///< the point value represents the value at the specific time (or centered around that time),typically linear accessor
             POINT_AVERAGE_VALUE///< the point value represents the average of the interval, typically stair-case start of step accessor
 
@@ -79,7 +92,7 @@ namespace shyft{
          * \see ref_ts
          */
         template<class T> struct needs_bind {static const bool value=true;};
-        
+
 		/** Resolves compiletime to dispatch runtime calls to needs_bind where supported.
 		 * Additionally allows for querying if a type supports needs_bind.
 		 */
@@ -302,25 +315,38 @@ namespace shyft{
          */
         template <class TA>
         struct point_ts {
-            typedef TA ta_t;
+			typedef TA ta_t;
+
             TA ta;
-            const TA& time_axis() const {return ta;}
             vector<double> v;
-            ts_point_fx fx_policy;
+			ts_point_fx fx_policy = POINT_INSTANT_VALUE;
 
             ts_point_fx point_interpretation() const { return fx_policy; }
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
-            point_ts():fx_policy(ts_point_fx::POINT_INSTANT_VALUE){}
-            point_ts(const TA& ta, double fill_value,ts_point_fx fx_policy=POINT_INSTANT_VALUE):ta(ta),v(ta.size(),fill_value),fx_policy(fx_policy) {}
-            point_ts(const TA& ta,const vector<double>&vx,ts_point_fx fx_policy=POINT_INSTANT_VALUE):ta(ta),v(vx),fx_policy(fx_policy) {
+			point_ts() = default;
+			point_ts(const TA & ta, double fill_value, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
+				: ta{ ta }, v(ta.size(), fill_value), fx_policy{ fx_policy } { }
+			point_ts(const TA & ta, const vector<double> & vx, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
+				: ta{ ta }, v{ vx }, fx_policy{ fx_policy }
+			{
                 if(ta.size() != v.size())
                     throw runtime_error("point_ts: time-axis size is different from value-size");
             }
+			point_ts(TA && tax, std::vector<double> && vx, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
+				: ta{ std::forward<TA>(tax) }, v{ std::forward<std::vector<double>>(vx) }, fx_policy{ fx_policy }
+			{
+				if(ta.size() != v.size())
+					throw runtime_error("point_ts: time-axis size is different from value-size");
+			}
+
             //TODO: move/cp constructors needed ?
             //TODO should we provide/hide v ?
             // TA ta, ta is expected to provide 'time_axis' functions as needed
             // so we do not re-pack and provide functions like .size(), .index_of etc.
+
+			const TA & time_axis() const { return ta; }
+
             /**\brief the function value f(t) at time t, fx_policy taken into account */
             double operator()(utctime t) const {
                 size_t i = ta.index_of(t);
@@ -778,7 +804,7 @@ namespace shyft{
                 ts = tsn;
             }
             // useful constructors goes here:
-            ref_ts(string sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
+            explicit ref_ts(const string& sym_ref) :ref(sym_ref) {}//, fx_policy(POINT_AVERAGE_VALUE) {}
             const ta_t& time_axis() const {return bts().time_axis();}
             /**\brief the function value f(t) at time t, fx_policy taken into account */
             double operator()(utctime t) const {
@@ -1212,7 +1238,7 @@ namespace shyft{
 			 * Does _not_ check if `h` is valid according to `lower`.
 			 */
 			double flow(double level) const {
-				return std::pow(a*(level - b), c);
+				return a * std::pow(level - b, c);
 			}
 			/** Compute the flow for a list of water levels.
 			* Does _not_ check if the water levels are valid according to `lower`.
@@ -1225,7 +1251,7 @@ namespace shyft{
 				std::vector<double> flow;
 				flow.reserve(levels.size());
 				for (std::size_t i = i0, idx_end = std::min(levels.size(), iN); i < idx_end; ++i) {
-					flow.emplace_back(std::pow(a*(levels[i] - b), c));
+					flow.emplace_back(a * std::pow(levels[i] - b, c));
 				}
 				return flow;
 			}
@@ -1259,7 +1285,7 @@ namespace shyft{
 				: segments{ segment_vector }
 			{
 				if ( ! sorted )
-					std::sort(segments.begin(), segments.end());  
+					std::sort(segments.begin(), segments.end());
 			}
 			rating_curve_function(std::vector<rating_curve_segment> && segment_vector, bool sorted = false)
 				: segments{ std::move(segment_vector) }
@@ -1376,7 +1402,7 @@ namespace shyft{
 			template <typename InputIt>
 			rating_curve_parameters(InputIt first, InputIt last)
 				: curves{ first, last } { }
-			rating_curve_parameters(const std::vector<std::pair<utctime, rating_curve_function>> & curves)
+			explicit rating_curve_parameters(const std::vector<std::pair<utctime, rating_curve_function>> & curves)
 				: rating_curve_parameters{ curves.cbegin(), curves.cend() } { }
 			// -----
 			~rating_curve_parameters() = default;
@@ -1562,7 +1588,7 @@ namespace shyft{
 				ensure_bound();
 				return rc_param.flow(time(i), level_ts.value(i));
 			}
-			
+
 			x_serialize_decl();
 		};
 
@@ -1776,7 +1802,7 @@ namespace shyft{
             average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE), ext_policy(policy){ /* Do nothing */ }
-            average_accessor(std::shared_ptr<S> source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            average_accessor(const std::shared_ptr<S>& source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
                 source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
                 ext_policy(policy) {}
@@ -1823,7 +1849,7 @@ namespace shyft{
             accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), ext_policy(policy) { /* Do nothing */
             }
-            accumulate_accessor(std::shared_ptr<S> source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            accumulate_accessor(const std::shared_ptr<S>& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
             }
 
@@ -2037,7 +2063,7 @@ namespace shyft{
                 double tv = observed_ts.value(i);
                 double dv = model_ts.value(i);
                 if (isfinite(tv) && isfinite(dv))
-                    abs_diff_sum +=fabs(tv-dv);
+                    abs_diff_sum +=std::fabs(tv-dv);
             }
             return abs_diff_sum;
         }
@@ -2121,7 +2147,7 @@ namespace shyft{
             time_shift.do_bind();
         }
         template <class Ts,class Ta,class Fbind>
-        void bind_ref_ts(average_ts<Ts,Ta> avg, Fbind&& f_bind) {
+        void bind_ref_ts(const average_ts<Ts,Ta>& avg, Fbind&& f_bind) {
             bind_ref_ts(d_ref(avg.ts),f_bind);
         }
         template <class Ts,class Ta,class Fbind>

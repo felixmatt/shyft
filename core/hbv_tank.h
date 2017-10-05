@@ -1,4 +1,12 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "utctime_utilities.h"
 
 namespace shyft {
@@ -50,18 +58,18 @@ namespace shyft {
 			template<class P>
 			struct calculator {
 				P param;
-				calculator(const P& p) :param(p) {}
+				explicit calculator(const P& p) :param(p) {}
 				template <class R, class S>
 				void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, double soil_outflow) {
 					double temp = s.uz + soil_outflow;				//compute of q11 & q12 at end of time after adding soil_outflow
 					double q12 = std::max(0.0, (temp - param.uz1)*param.kuz2);
-					double q11 = std::min(temp, param.uz1)*param.kuz1;	
+					double q11 = std::min(temp, param.uz1)*param.kuz1;
 					s.uz = s.uz + soil_outflow - param.perc - (q12+q11);
 
 					double q2 = (s.lz + param.perc) *param.klz;  ////compute of q2 at end of timestep after adding perc
 					s.lz = s.lz + param.perc - q2 ;
 					r.outflow = q12 + q11 + q2;
-	
+
 				}
 			};
 		}

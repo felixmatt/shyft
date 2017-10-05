@@ -1,5 +1,12 @@
 #pragma once
-#include "core/core_pch.h"
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+#endif // SHYFT_NO_PCH
+
 
 /**
  * \file
@@ -166,7 +173,7 @@ namespace shyft {
     template <typename cell>
     struct basic_cell_statistics {
         shared_ptr<vector<cell>> cells;
-        basic_cell_statistics( shared_ptr<vector<cell>> cells):cells(cells) {}
+        explicit basic_cell_statistics( const shared_ptr<vector<cell>>& cells):cells(cells) {}
 
 		double total_area(const vector<int>& catchment_indexes) const {
 			double sum = 0.0;
@@ -349,7 +356,7 @@ namespace shyft {
     template <typename cell>
     struct kirchner_cell_state_statistics {
         shared_ptr<vector<cell>> cells;
-        kirchner_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit kirchner_cell_state_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts discharge(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -371,7 +378,7 @@ namespace shyft {
 	template <typename cell>
 	struct hbv_soil_cell_state_statistics {
 		shared_ptr<vector<cell>> cells;
-		hbv_soil_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+		explicit hbv_soil_cell_state_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts discharge(const vector<int>& catchment_indexes) const {
 			return apoint_ts(*shyft::core::cell_statistics::
@@ -393,7 +400,7 @@ namespace shyft {
 	template <typename cell>											//To be checked & controlled
 	struct hbv_tank_cell_state_statistics {
 		shared_ptr<vector<cell>> cells;
-		hbv_tank_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+		explicit hbv_tank_cell_state_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts discharge(const vector<int>& catchment_indexes) const {
 			return apoint_ts(*shyft::core::cell_statistics::
@@ -417,7 +424,7 @@ namespace shyft {
     template <typename cell>
     struct gamma_snow_cell_state_statistics {
         shared_ptr<vector<cell>> cells;
-        gamma_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit gamma_snow_cell_state_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts albedo(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -552,7 +559,7 @@ namespace shyft {
     template <typename cell>
     struct gamma_snow_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        gamma_snow_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit gamma_snow_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts sca(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -627,7 +634,7 @@ namespace shyft {
     template <typename cell>
     struct skaugen_cell_state_statistics {
         shared_ptr<vector<cell>> cells;
-        skaugen_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit skaugen_cell_state_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts alpha(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -730,7 +737,7 @@ namespace shyft {
     template <typename cell>
     struct skaugen_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        skaugen_cell_response_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
+        explicit skaugen_cell_response_statistics(const shared_ptr<vector<cell>>& cells) : cells(cells) {}
 
 		apoint_ts outflow(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -789,7 +796,7 @@ namespace shyft {
     template <typename cell>
     struct hbv_snow_cell_state_statistics {
         shared_ptr<vector<cell>> cells;
-        hbv_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) : cells(move(cells)) {}
+        explicit hbv_snow_cell_state_statistics(const shared_ptr<vector<cell>>& cells) : cells(move(cells)) {}
 
 		apoint_ts swe(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -828,7 +835,7 @@ namespace shyft {
     template <typename cell>
     struct hbv_snow_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        hbv_snow_cell_response_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
+        explicit hbv_snow_cell_response_statistics(const shared_ptr<vector<cell>>& cells) : cells(cells) {}
 
 		apoint_ts outflow(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -871,7 +878,7 @@ namespace shyft {
     template <typename cell>
     struct priestley_taylor_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        priestley_taylor_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit priestley_taylor_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts output(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -893,7 +900,7 @@ namespace shyft {
 	template <typename cell>
 	struct hbv_soil_cell_response_statistics {
 		shared_ptr<vector<cell>> cells;
-		hbv_soil_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+		explicit hbv_soil_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts output(const vector<int>& catchment_indexes) const {
 			return apoint_ts(*shyft::core::cell_statistics::
@@ -914,7 +921,7 @@ namespace shyft {
     template <typename cell>
     struct actual_evapotranspiration_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
-        actual_evapotranspiration_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+        explicit actual_evapotranspiration_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts output(const vector<int>& catchment_indexes) const {
             return apoint_ts(*shyft::core::cell_statistics::
@@ -936,7 +943,7 @@ namespace shyft {
 	template <typename cell>
 	struct hbv_actual_evapotranspiration_cell_response_statistics {
 		shared_ptr<vector<cell>> cells;
-		hbv_actual_evapotranspiration_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+		explicit hbv_actual_evapotranspiration_cell_response_statistics(const shared_ptr<vector<cell>>& cells) :cells(cells) {}
 
 		apoint_ts output(const vector<int>& catchment_indexes) const {
 			return apoint_ts(*shyft::core::cell_statistics::

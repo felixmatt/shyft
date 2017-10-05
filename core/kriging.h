@@ -1,4 +1,10 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#include <stdexcept>
+#include <armadillo>
+
+#endif // SHYFT_NO_PCH
 
 namespace shyft {
     namespace core {
@@ -31,7 +37,7 @@ namespace shyft {
                      * \return exponential type covariance using specified h, a and c from constructor
                      */
                     inline double operator()(double h) const {
-                        return c*exp(h*minus3_over_a);
+                        return c*std::exp(h*minus3_over_a);
                     }
                 };
 
@@ -51,7 +57,7 @@ namespace shyft {
                      * \return gaussian covariance using specified h2, a and c from constructor
                      */
                     inline double operator()(double h2) const {
-                        return c*exp(h2*minus3_over_a2);
+                        return c*std::exp(h2*minus3_over_a2);
                     }
 
                 };

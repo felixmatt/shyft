@@ -56,22 +56,29 @@ endif()
 message("include_numpy: " ${include_numpy})
 
 # Include files in core directory
-include_directories(${PROJECT_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/dlib
-  ${CMAKE_SOURCE_DIR} ${include_python} ${SHYFT_DEPENDENCIES}/boost
-  ${SHYFT_DEPENDENCIES}/armadillo/include ${include_numpy})
+# ensure to have python last, since it could contain ref to another boost version
+include_directories(
+  ${PROJECT_SOURCE_DIR} 
+  ${CMAKE_SOURCE_DIR}
+  ${SHYFT_DEPENDENCIES}/dlib
+  ${SHYFT_DEPENDENCIES}/boost
+  ${SHYFT_DEPENDENCIES}/armadillo/include 
+  ${include_python} 
+  ${include_numpy}
+)
 
 # Set the compiler flags (for gcc and clang)
-set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11)
+set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DSHYFT_NO_PCH )
 #set(CMAKE_CXX_FLAGS ${C_FLAGS} CACHE STRING "CXX flags." FORCE)
 
 # Set the common C++ files
 set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/core_serialization.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api_serialization.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp ${CMAKE_SOURCE_DIR}/api/time_series.cpp)
 
 # Create the API destination directory
-file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
+#file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # Additional libraries
-set(LIBS "-lblas -llapack -lboost_python3 -lboost_serialization -ldlib")
+set(LIBS "-lblas -llapack -L${SHYFT_DEPENDENCIES}/boost/stage/lib -lboost_python3 -lboost_serialization -lboost_filesystem -lboost_system -ldlib")
 
 # Compile extensions api extension
 foreach(python_api_extension  "api" )

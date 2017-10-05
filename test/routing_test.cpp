@@ -41,7 +41,11 @@ namespace shyft {
 }
 
 TEST_SUITE("routing") {
-
+TEST_CASE("uhg") {
+    using shyft::core::routing::make_uhg_from_gamma;
+    FAST_CHECK_EQ(make_uhg_from_gamma(0,1,1).size(),1);
+    FAST_CHECK_EQ(make_uhg_from_gamma(3,0.6,0.1).size(),3);
+}
 TEST_CASE("test_build_valid_river_network") {
 
     using namespace std;

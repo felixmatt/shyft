@@ -1,14 +1,3 @@
-Improve consistency
-===================
+Ref. to issues lists on github.com/statkraft/shyft
 
-* The parameters section in calibration.yaml and model.yaml are quite different and should be unified.  For example::
-
-  calibration.yaml::
-    ae_scale_factor:
-      min: 1.5
-      max: 1.5
-
-  model.yaml::
-    actual_evapotranspiration:
-      scale_factor: 1.5
 

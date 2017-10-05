@@ -1,5 +1,7 @@
 #include "boostpython_pch.h"
-#include <boost/python/docstring_options.hpp>
+#ifdef SHYFT_NO_PCH
+#include <fstream>
+#endif // SHYFT_NO_PCH
 
 char const* version() {
    return "v1.1";

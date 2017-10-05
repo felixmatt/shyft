@@ -1,5 +1,8 @@
 #pragma once
-#include "core/core_pch.h"
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#endif // SHYFT_NO_PCH
 #include "core/pt_hs_k.h"
 
 namespace shyft {

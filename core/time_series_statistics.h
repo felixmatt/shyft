@@ -1,4 +1,15 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+
+#endif // SHYFT_NO_PCH
+
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
@@ -84,7 +95,7 @@ namespace shyft {
             template <class Ts_, class Ta_>
             statistics(Ts_&&tsx, Ta_&tax) :ts(forward<Ts_>(tsx)), ta(forward<Ta_>(tax)) {}
             template <class Ts_>
-            statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
+            explicit statistics(Ts_&&tsx) : ts(forward<Ts_>(tsx)) {
                 ta = ts.time_axis();
             }
             template <typename Fx>

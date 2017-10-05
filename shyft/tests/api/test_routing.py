@@ -22,21 +22,21 @@ class Routing(unittest.TestCase):
     def test_unit_hydrograph_parameter(self):
         p = UHGParameter()
         self.assertIsNotNone(p)
-        self.assertAlmostEqual(p.alpha, 3.0)  # default values
-        self.assertAlmostEqual(p.beta, 0.7)
+        self.assertAlmostEqual(p.alpha, 7.0)  # default values
+        self.assertAlmostEqual(p.beta, 0.0)
         self.assertAlmostEqual(p.velocity, 1.0)
         p.alpha = 2.7
-        p.beta = 0.77
+        p.beta = 0.07
         p.velocity = 1 / 3600.0
         self.assertAlmostEqual(p.alpha, 2.7)
-        self.assertAlmostEqual(p.beta, 0.77)
+        self.assertAlmostEqual(p.beta, 0.07)
         self.assertAlmostEqual(p.velocity, 1.0 / 3600.0)
 
     def test_river(self):
         r1 = River(1)
         self.assertIsNotNone(r1)
         self.assertEqual(r1.id, 1)
-        r2 = River(2, RoutingInfo(3, 1000.0), UHGParameter(1 / 3600.0, 1.0, 0.7))
+        r2 = River(2, RoutingInfo(3, 1000.0), UHGParameter(1 / 3600.0, 7.0, 0.0))
         self.assertEqual(r2.id, 2)
         r3 = River(3, RoutingInfo(id=1, distance=36000.00))
         self.assertEqual(r3.id, 3)
@@ -46,10 +46,10 @@ class Routing(unittest.TestCase):
         r3_uhg = r3.uhg(deltahours(1))
         self.assertEqual(len(r3_uhg), 10)
         r2.parameter.alpha = 2.0
-        r2.parameter.beta = 0.99
+        r2.parameter.beta = 0.00
         r2.parameter.velocity = 1 / 3600.0
         self.assertAlmostEqual(r2.parameter.alpha, 2.0)
-        self.assertAlmostEqual(r2.parameter.beta, 0.99)
+        self.assertAlmostEqual(r2.parameter.beta, 0.00)
         self.assertAlmostEqual(r2.parameter.velocity, 1 / 3600.0)
         r2.downstream = RoutingInfo(2, 2000.0)
         self.assertEqual(r2.downstream.id, 2)
@@ -61,7 +61,7 @@ class Routing(unittest.TestCase):
         self.assertIsNotNone(rn)
         rn.add(River(1))
         rn.add(River(2))  # important detail, #2 must be added before referred
-        rn.add(River(3, RoutingInfo(2, 1000.0), UHGParameter(1 / 3600.0, 1.0, 0.7)))
+        rn.add(River(3, RoutingInfo(2, 1000.0), UHGParameter(1 / 3600.0, 7.0, 0.0)))
         rn.set_downstream_by_id(1, 2)
         # already done as pr. constuction above: rn.set_downstream_by_id(3,2)
         rn.add(River(4))

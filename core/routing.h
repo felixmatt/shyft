@@ -1,4 +1,22 @@
 #pragma once
+
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+#include <future>
+#include <mutex>
+#include <boost/math/distributions/gamma.hpp>
+// no serialize here: #include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "geo_cell_data.h"
 #include "time_axis.h"
 #include "time_series.h"
@@ -55,10 +73,10 @@ namespace shyft {
              * <a ref="https://en.wikipedia.org/wiki/Gamma_distribution">gamma distribution</a>
              */
             struct uhg_parameter {
-                uhg_parameter(double velocity=1.0,double alpha=3.0,double beta=0.7):velocity(velocity),alpha(alpha),beta(beta) {}
+                uhg_parameter(double velocity=1.0,double alpha=7.0,double beta=0.0):velocity(velocity),alpha(alpha),beta(beta) {}
                 double velocity= 1.0;///< in units of [m/s]
-                double alpha=3.0; ///< gamma function alpha factor
-                double beta =0.7; ///< gamma function beta factor
+                double alpha=7.0; ///< gamma function alpha factor
+                double beta =0.0; ///< base-line offset, added to pdf(gamma(alpha,1.0))
             };
 
             inline std::vector<double>  make_uhg_from_gamma(int n_steps, double alpha, double beta);// fwd decl
@@ -271,11 +289,11 @@ namespace shyft {
                 std::shared_ptr<std::vector<C>> cells; ///< shared with the region_model !
                 time_axis::fixed_dt ta;///< shared with the region_model,  should be the simulation time-axis
 
-                model(std::shared_ptr<river_network> rivers,
-                      std::shared_ptr<std::vector<C>> cells,
+                model(const std::shared_ptr<river_network> &rivers,
+                      const std::shared_ptr<std::vector<C>>& cells,
                       const time_axis::fixed_dt& ta):rivers(rivers),cells(cells),ta(ta) {}
                 model(const river_network& rivers,// hmm. clumsy, the region model keeps no shared pointer, which is ok..
-                      std::shared_ptr<std::vector<C>> cells,
+                      const std::shared_ptr<std::vector<C>>& cells,
                       const time_axis::fixed_dt& ta):rivers(std::make_shared<river_network>(rivers)),cells(cells),ta(ta) {}
                 // constructors etc.
                 model() = default;
@@ -375,22 +393,29 @@ namespace shyft {
              * model.
              * \param n_steps number of time-steps, elements, in the vector
              * \param alpha the gamma_distribution gamma-factor
-             * \param beta the gamma_distribution beta-factor
+             * \param base offset added to the gdf(alpa,1.0)
              * \return unit hydro graph factors, normalized to sum 1.0
              */
-            inline std::vector<double>  make_uhg_from_gamma(int n_steps, double alpha, double beta) {
+            inline std::vector<double>  make_uhg_from_gamma(int n_steps, double alpha, double base) {
                 using boost::math::gamma_distribution;
+                double beta = 1.0;
                 gamma_distribution<double> gdf(alpha, beta);
                 std::vector<double> r;r.reserve(n_steps);
-                double s = 0.0;
-                double d = 1.0 / double(n_steps);
-                for (double q = d;q < 1.0; q += d) {
-                    double x = quantile(gdf, q);
-                    double y = pdf(gdf, x);
-                    s += y;
-                    r.push_back(y);
+                if(n_steps>1) {
+                    double s = 0.0;
+                    double x_max = quantile(gdf,0.99);
+                    double d = x_max / double(n_steps);
+                    for (int i=0;i<n_steps;++i) {
+                        double x=   d*i;
+                        double y = std::max(0.0,pdf(gdf, x)+base);
+                        s += y;
+                        r.push_back(y);
+                    }
+                    if (s>0.0)
+                        for (auto& y : r) y /= s;
+                    else
+                        for (auto& y:r) y=1/double(n_steps);
                 }
-                for (auto& y : r) y /= s;
                 if (r.size() == 0) r.push_back(1.0);// at a minimum 1.0, no delay
                 return r;
             };

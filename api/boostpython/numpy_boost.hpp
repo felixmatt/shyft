@@ -30,13 +30,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __NUMPY_BOOST_HPP__
 #define __NUMPY_BOOST_HPP__
 
-#include <boost/python.hpp>
-#include <numpy/arrayobject.h>
-#include <boost/multi_array.hpp>
-#include <boost/cstdint.hpp>
-#include <complex>
-#include <algorithm>
-#include <stdexcept>
+//#include <boost/python.hpp>
+
+//
+//#include <boost/cstdint.hpp>
+//#include <complex>
+//#include <algorithm>
+//#include <stdexcept>
 
 /* numpy_type_map<T>
    Provides a mapping from C++ datatypes to Numpy type
@@ -46,7 +46,7 @@ namespace detail {
   int numpy_type_map() {
     throw std::runtime_error("numpy_type_map(): Illegal conversion requested");
   }
-  
+
   // Must be inlined to avoid multiple definitions since they are fully
   // specialized function templates.
   template<> inline int numpy_type_map<float>()                      { return NPY_FLOAT; }

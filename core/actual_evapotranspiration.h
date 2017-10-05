@@ -17,6 +17,9 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#endif // SHYFT_NO_PCH
 
 #include "utctime_utilities.h"
 /**
@@ -28,7 +31,7 @@ namespace shyft {
 			/**<  keeps the parameters (potential calibration/localization) for the AE */
 			struct parameter {
 				double ae_scale_factor = 1.5; ///<default value is 1.5
-				parameter(double ae_scale_factor=1.5) : ae_scale_factor(ae_scale_factor) {}
+				explicit parameter(double ae_scale_factor=1.5) : ae_scale_factor(ae_scale_factor) {}
 			};
 
 			/**<  keeps the formal response of the AE method */
@@ -53,7 +56,7 @@ namespace shyft {
 				const double scale_factor,
 				const double snow_fraction,
 				const utctime dt) {
-				return potential_evapotranspiration*(1.0 - exp(-water_level*3.0/ scale_factor))*(1.0 - snow_fraction);
+				return potential_evapotranspiration*(1.0 - std::exp(-water_level*3.0/ scale_factor))*(1.0 - snow_fraction);
 			}
 		};
 	};

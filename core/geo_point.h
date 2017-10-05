@@ -1,5 +1,8 @@
 #pragma once
-
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 namespace shyft {
     namespace core {
 
@@ -36,7 +39,7 @@ namespace shyft {
              * \return the 3D distance measure between supplied arguments a and b, by using an optional z scale factor
              */
             static inline double distance_measure(const geo_point& a, const geo_point& b, double p, double zscale) {
-                return pow((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale, p/2.0);
+                return std::pow((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale, p/2.0);
             }
 
             /** \brief Z scaled, non-eucledian distance between points a and b.
@@ -44,7 +47,7 @@ namespace shyft {
              * \return sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale)
              */
             static inline double zscaled_distance(const geo_point& a, const geo_point& b, double zscale) {
-                return sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale);
+                return std::sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale);
             }
 
                         /** \brief Z scaled, non-eucledian distance between points a and b.
@@ -60,7 +63,7 @@ namespace shyft {
              * return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y))
              */
             static inline double xy_distance(const geo_point& a, const geo_point& b) {
-                return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+                return std::sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
             }
             /** \brief Euclidian distance^2 between points a and b, first projected onto x-y plane.
             *

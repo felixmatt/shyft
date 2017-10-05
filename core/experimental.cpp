@@ -1,16 +1,27 @@
 #include "core_pch.h"
-#include "experimental.h"
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <stdexcept>
+#include <memory>
+#include <limits>
+#include <algorithm>
+#include <sstream>
 
-// for test purposes, we need relative addressing of file paths, easiest to use boost
 #include <boost/filesystem.hpp>
+namespace fs=boost::filesystem;
+#endif // SHYFT_NO_PCH
+#include "experimental.h"
 
 namespace shyft {
 	namespace experimental {
 		namespace io {
 			/**\brief in a clever way, figure out the root directory for tests so that we can use relative paths for the remaining names */
-			static boost::filesystem::path test_root_dir() {
-				auto cwd = boost::filesystem::current_path();
-				boost::filesystem::path test_path = cwd / ".." / ".." / ".." / "shyft-data"; // cwd has to be <shyftroot>/bin/Debug|Release
+			static fs::path test_root_dir() {
+				auto cwd = fs::current_path();
+				fs::path test_path = cwd / ".." / ".." / ".." / "shyft-data"; // cwd has to be <shyftroot>/bin/Debug|Release
 				if (auto data_dir = getenv("SHYFTDATA"))
 					test_path = data_dir;
 				test_path.normalize();
@@ -57,7 +68,7 @@ namespace shyft {
 			shared_ptr<vector<geo_xts_t>>
 				load_from_directory(wkt_reader& wkt_io, function<ec::geo_point(int)> id_to_geo_point, const string& subdir, const string& suffix) {
 				auto filenames = find(subdir, suffix);
-				
+
                 vector<future<geo_xts_t>> reads;
 				for (auto f : filenames) {
                     reads.emplace_back(

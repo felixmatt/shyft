@@ -141,6 +141,9 @@
     <ClInclude Include="time_series_info.h">
       <Filter>time_series</Filter>
     </ClInclude>
+    <ClInclude Include="predictions.h">
+      <Filter>time_series</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

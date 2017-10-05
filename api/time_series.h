@@ -1,10 +1,21 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <map>
 
 #include "core/core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/time_series.h"
 #include "core/time_series_statistics.h"
+#include "core/predictions.h"
+
 namespace shyft {
     namespace api {
         using namespace shyft::core;
@@ -172,7 +183,7 @@ namespace shyft {
 
             apoint_ts(const time_axis::point_dt& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
             apoint_ts(const time_axis::point_dt& ta,const std::vector<double>& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
-            apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
+            explicit apoint_ts(const rts_t & rts);// ct for result-ts at cell-level that we want to wrap.
             apoint_ts(const vector<double>& pattern, utctimespan dt, const time_axis::generic_dt& ta);
             apoint_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const time_axis::generic_dt& ta);
             // these are the one we need.
@@ -182,15 +193,17 @@ namespace shyft {
 
             apoint_ts(gta_t&& ta,std::vector<double>&& values,ts_point_fx point_fx=POINT_INSTANT_VALUE);
             apoint_ts(gta_t&& ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE);
-            apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
+            explicit apoint_ts(const std::shared_ptr<ipoint_ts>& c):ts(c) {}
 
-            apoint_ts(std::string ref_ts_id);
+            explicit apoint_ts(std::string ref_ts_id);
+            apoint_ts(std::string ref_ts_id, const apoint_ts& x);
             // some more exotic stuff like average_ts
 
             apoint_ts()=default;
             bool needs_bind() const {
                 return sts()->needs_bind();
             }
+            string id() const;///< if the ts is aref_ts return it's id (or maybe better url?)
             void do_bind() {
                 sts()->do_bind();
             }
@@ -244,6 +257,9 @@ namespace shyft {
             apoint_ts convolve_w(const std::vector<double>& w, shyft::time_series::convolve_policy conv_policy) const;
             apoint_ts abs() const;
 			apoint_ts rating_curve(const rating_curve_parameters & rc_param) const;
+            
+            apoint_ts krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
+            prediction::krls_rbf_predictor get_krls_predictor(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
 
             //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
             //   we would like these to be working (exception if it's not possible,i.e. an expression)
@@ -299,6 +315,8 @@ namespace shyft {
         struct gpoint_ts:ipoint_ts {
             gts_t rep;
             // To create gpoint_ts, we use const ref, move ct wherever possible:
+            explicit gpoint_ts(gts_t&&x):rep(std::move(x)){};
+            explicit gpoint_ts(const gts_t&x):rep(x){}
             // note (we would normally use ct template here, but we are aiming at exposing to python)
             gpoint_ts(const gta_t&ta,double fill_value,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(ta,fill_value,point_fx){}
             gpoint_ts(const gta_t&ta,const std::vector<double>& v,ts_point_fx point_fx=POINT_INSTANT_VALUE):rep(ta,v,point_fx) {}
@@ -331,7 +349,7 @@ namespace shyft {
         struct aref_ts:ipoint_ts {
             typedef shyft::time_series::ref_ts<gts_t> ref_ts_t;
             ref_ts_t rep;
-            aref_ts(string sym_ref):rep(sym_ref) {}
+            explicit aref_ts(const string& sym_ref):rep(sym_ref) {}
             aref_ts() = default; // default for serialization conv
             // implement ipoint_ts contract:
             virtual ts_point_fx point_interpretation() const {return rep.point_interpretation();}
@@ -627,18 +645,18 @@ namespace shyft {
             abs_ts() = default;
 
             //-- useful ct goes here
-            abs_ts(const apoint_ts& ats)
+            explicit abs_ts(const apoint_ts& ats)
                 :ts(ats.ts) {
                 if (!ts->needs_bind())
 					local_do_bind();
 
             }
-            abs_ts(apoint_ts&& ats)
+            explicit abs_ts(apoint_ts&& ats)
                 :ts(std::move(ats.ts)){
                 if (!ts->needs_bind())
 					local_do_bind();
             }
-            abs_ts(const std::shared_ptr<ipoint_ts> &ts)
+            explicit abs_ts(const std::shared_ptr<ipoint_ts> &ts)
                 :ts(ts) {
                 if (!ts->needs_bind())
 					local_do_bind();
@@ -658,8 +676,8 @@ namespace shyft {
             virtual utctime time(size_t i) const { return ta.time(i); };
             virtual double value(size_t i) const { return abs(ts->value(i)); }
             virtual double value_at(utctime t) const { return abs(ts->value_at(t)); }
-            virtual std::vector<double> values() const { 
-                auto vv=ts->values(); 
+            virtual std::vector<double> values() const {
+                auto vv=ts->values();
                 for (auto &v : vv) v = abs(v);
                 return vv;
             }
@@ -756,10 +774,10 @@ namespace shyft {
             utctime split_at;
             extend_ts_fill_policy ets_fill_p = EPF_NAN;
             double fill_value;
-            
+
             gta_t ta;
             ts_point_fx fx_policy = POINT_AVERAGE_VALUE;  // how f(t) are mapped to t
-            
+
             bool bound = false;
 
             ts_point_fx point_interpretation() const {
@@ -867,7 +885,7 @@ namespace shyft {
 			rating_curve_ts(rating_curve_ts &&) = default;
 			rating_curve_ts & operator= (rating_curve_ts &&) = default;
 
-			virtual bool needs_bind() const { return ts.needs_bind(); } 
+			virtual bool needs_bind() const { return ts.needs_bind(); }
 			virtual void do_bind() { ts.do_bind(); }
 			// -----
 			virtual ts_point_fx point_interpretation() const { return ts.point_interpretation(); }
@@ -893,6 +911,75 @@ namespace shyft {
 			x_serialize_decl();
 
 		};
+
+        struct krls_interpolation_ts : ipoint_ts
+        {
+            using krls_p = prediction::krls_rbf_predictor;
+
+            apoint_ts ts;
+            krls_p predictor;
+
+            bool bound=false;
+
+            krls_interpolation_ts() = default;
+            krls_interpolation_ts(apoint_ts && ts,
+                    core::utctimespan dt, double rbf_gamma, double tol, std::size_t size
+                ) : ts{ std::forward<apoint_ts>(ts) }, predictor{ dt, rbf_gamma, tol, size }
+            {
+                if( ! needs_bind() )
+                    local_do_bind();
+            }
+            krls_interpolation_ts(const apoint_ts & ts,
+                core::utctimespan dt, double rbf_gamma, double tol, std::size_t size
+            ) : ts{ ts }, predictor{ dt, rbf_gamma, tol, size }
+            {
+                if( ! needs_bind() )
+                    local_do_bind();
+            }
+            // -----
+            virtual ~krls_interpolation_ts() = default;
+            // -----
+            krls_interpolation_ts(const krls_interpolation_ts &) = default;
+            krls_interpolation_ts & operator= (const krls_interpolation_ts &) = default;
+            // -----
+            krls_interpolation_ts(krls_interpolation_ts &&) = default;
+            krls_interpolation_ts & operator= (krls_interpolation_ts &&) = default;
+
+            virtual bool needs_bind() const { return ts.needs_bind(); } 
+            virtual void do_bind() { ts.do_bind(); local_do_bind(); }
+            void local_do_bind() {
+                if ( ! bound ) {
+                    predictor.train(ts);
+                    bound=true;
+                }
+            }
+            void bind_check() const {
+                if ( ! bound ) {
+                    throw runtime_error("attempting to use unbound timeseries, context krls_interpolation_ts");
+                }
+            }
+            // -----
+            virtual ts_point_fx point_interpretation() const { return ts.point_interpretation(); }
+            virtual void set_point_interpretation(ts_point_fx policy) { ts.set_point_interpretation(policy); }
+            // -----
+            virtual std::size_t size() const { return ts.size(); }
+            virtual utcperiod total_period() const { return ts.total_period(); }
+            virtual const gta_t & time_axis() const { return ts.time_axis(); }
+            // -----
+            virtual std::size_t index_of(utctime t) const { return ts.index_of(t); }
+            virtual double value_at(utctime t) const { bind_check(); return predictor.predict(t); }
+            // -----
+            virtual utctime time(std::size_t i) const { return ts.time(i); }
+            virtual double value(std::size_t i) const { bind_check(); return predictor.predict(ts.time(i)); }
+            // -----
+            virtual std::vector<double> values() const {
+                bind_check();
+                return predictor.predict_vec(ts.time_axis());
+            }
+
+            x_serialize_decl();
+
+        };
 
         /** The iop_t represent the basic 'binary' operation,
          *   a stateless function that takes two doubles and returns the binary operation.
@@ -1156,9 +1243,9 @@ namespace shyft {
             // constructor stuff that needs to be complete for boost::python
             ats_vector()=default;
             ats_vector(ats_vec const&c):ats_vec(c) {}
-            ats_vector(ats_vec&& c):ats_vec(c) {}
+            ats_vector(ats_vec&& c):ats_vec(std::move(c)) {}
             ats_vector(ats_vector const&c):ats_vec(c) {}
-            ats_vector(size_t sz):ats_vec(sz) {}
+            explicit ats_vector(size_t sz):ats_vec(sz) {}
             ats_vector(ats_vector&&c):ats_vec(move(c)) {}
             ats_vector& operator=(ats_vector const&c) {
                 if(this !=&c) {
@@ -1337,6 +1424,7 @@ x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>)
 x_serialize_export_key(shyft::api::convolve_w_ts);
 x_serialize_export_key(shyft::time_series::rating_curve_ts<shyft::api::apoint_ts>);
 x_serialize_export_key(shyft::api::rating_curve_ts);
+x_serialize_export_key(shyft::api::krls_interpolation_ts);
 x_serialize_export_key(shyft::api::apoint_ts);
 x_serialize_export_key(shyft::api::ats_vector);
 x_serialize_export_key(shyft::api::abs_ts);

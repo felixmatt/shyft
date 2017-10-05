@@ -1,4 +1,14 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "priestley_taylor.h"
 #include "kirchner.h"
@@ -133,7 +143,7 @@ namespace shyft {
             state() {}
             state(const snow_state_t& snow, const kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
-            state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
+            //xx state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
             bool operator==(const state& x) const {return snow==x.snow && kirchner==x.kirchner;}
             x_serialize_decl();
         };

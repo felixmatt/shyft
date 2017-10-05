@@ -1,4 +1,18 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <iterator>
+#include <algorithm>
+#include <cmath>
+#include <thread>
+#include <future>
+//#include <limits>
+#include <stdexcept>
+#include <armadillo>
+
+#endif // SHYFT_NO_PCH
+
 #ifdef WIN32
 #pragma warning(disable:4503)
 #endif // WIN32
@@ -266,13 +280,13 @@ namespace shyft {
 				}
 
 				struct temp_point {
-					temp_point(const geo_point p, double t) :point(p), temperature(t) {}
+					temp_point(const geo_point& p, double t) :point(p), temperature(t) {}
 					geo_point point;
 					double temperature;
 				};
 				static bool is_source_based() { return true; }
 				template <typename P>
-				temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()), gradient_by_equation(p.gradient_by_equation) { pt.reserve(p.max_members); }
+				explicit temperature_gradient_scale_computer(const P&p) : default_gradient(p.default_gradient()), gradient_by_equation(p.gradient_by_equation) { pt.reserve(p.max_members); }
 				template<typename T, typename S> void add(const S &s, T tx) {
                     pt.emplace_back(s.mid_point(), s.value(tx));
 				}
@@ -317,7 +331,7 @@ namespace shyft {
 			struct temperature_default_gradient_scale_computer {
 				static bool is_source_based() { return false; }
 				template <typename P>
-				temperature_default_gradient_scale_computer(const P& p) : default_gradient(p.default_gradient()) { ; }
+				explicit temperature_default_gradient_scale_computer(const P& p) : default_gradient(p.default_gradient()) { ; }
 				template<typename T, typename S>
 				void add(const S &s, T tx) {}
 				double compute() const { return default_gradient; }
@@ -370,7 +384,7 @@ namespace shyft {
 			struct radiation_model {
 				struct scale_computer {
 					static  bool is_source_based() { return false; }
-					scale_computer(const P&) {}
+					explicit scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
 					void clear() {}
@@ -397,7 +411,7 @@ namespace shyft {
 					static  bool is_source_based() { return false; }
 
 					double precipitation_gradient;
-					scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
+					explicit scale_computer(const P& p) : precipitation_gradient(p.precipitation_scale_factor()) {}
 					void add(const S &, utctime) {}
 					double compute() const { return precipitation_gradient; }
 					void clear() {}
@@ -420,7 +434,7 @@ namespace shyft {
 			struct wind_speed_model {
 				struct scale_computer {
 					static bool is_source_based() { return false; }
-					scale_computer(const P&) {}
+					explicit scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
 					void clear() {}
@@ -441,7 +455,7 @@ namespace shyft {
 			struct rel_hum_model {
 				struct scale_computer {
 					static  bool is_source_based() { return false; }
-					scale_computer(const P&) {}
+					explicit scale_computer(const P&) {}
 					void add(const S &, utctime) {}
 					double compute() const { return 1.0; }
 					void clear() {}
@@ -464,7 +478,7 @@ namespace shyft {
 			class idw_timeaxis {
 				size_t n;
 			public:
-				idw_timeaxis(TA time_axis) :n(time_axis.size()) {}
+				explicit idw_timeaxis(TA time_axis) :n(time_axis.size()) {}
 				size_t size() const { return n; }
 				size_t operator()(const size_t i) const { return i; }
 			};

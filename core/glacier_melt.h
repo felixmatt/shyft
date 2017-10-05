@@ -19,14 +19,13 @@
 /// Implemented by Felix Matt
 
 #pragma once
-#include "utctime_utilities.h"
 namespace shyft {
     namespace core {
 		namespace glacier_melt {
 
 		    struct parameter {
                 double dtf = 6.0;///<degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
-                parameter(double dtf=6.0):dtf(dtf) {}
+                explicit parameter(double dtf=6.0):dtf(dtf) {}
             };
 
             /** Glacier Melt model

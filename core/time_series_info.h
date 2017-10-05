@@ -1,4 +1,10 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+#include "utctime_utilities.h"
+
 namespace shyft {
     namespace dtss {
         using shyft::core::utctime;
@@ -18,7 +24,7 @@ namespace shyft {
         struct ts_info {
             //--some stuff that need to be here for the python exposure
             ts_info() = default;
-            ts_info(std::string name, time_series::ts_point_fx point_fx, utctimespan delta_t, std::string olson_tz_id, utcperiod data_period, utctime created, utctime modified)
+            ts_info(const std::string& name, time_series::ts_point_fx point_fx, utctimespan delta_t, const std::string& olson_tz_id, utcperiod data_period, utctime created, utctime modified)
                 :name(name), point_fx(point_fx), delta_t(delta_t), olson_tz_id(olson_tz_id), data_period(data_period), created(created), modified(modified) {}
             ts_info(const ts_info&) = default;
             bool operator==(const ts_info&o) const { return name == o.name && point_fx == o.point_fx && delta_t == o.delta_t && olson_tz_id == o.olson_tz_id&& data_period == o.data_period && created == o.created && modified == o.modified; }
@@ -27,7 +33,7 @@ namespace shyft {
             std::string name; ///< the 'unique' name of the ts, url-formatted?
             time_series::ts_point_fx point_fx = time_series::ts_point_fx::POINT_AVERAGE_VALUE; ///< how to interpret points, stair-case/linear
             utctimespan delta_t = 0L;///< time-axis, fixed delta_t, or 0 if breakpoint
-            std::string olson_tz_id; ///< time-axis, empty, or if delta_t g.t. hour, 
+            std::string olson_tz_id; ///< time-axis, empty, or if delta_t g.t. hour,
             utcperiod data_period; ///< stored data period, if that gives meaning(not for expressions)
                                    // we could have:
             utctime created = no_utctime; ///< when ts was created, IF supported by underlying driver else no_utctime

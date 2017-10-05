@@ -19,7 +19,6 @@
 cmake_minimum_required(VERSION 3.2.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/CMakePCHCompiler")
 
 project(shyft)
 
@@ -55,14 +54,12 @@ endif()
 get_filename_component(SHYFT_DEPENDENCIES ${SHYFT_DEPENDENCIES_DIR} ABSOLUTE)
 message("SHYFT_DEPENDENCIES directory: " ${SHYFT_DEPENDENCIES})
 message("You can override the above via the $SHYFT_DEPENDENCIES_DIR environment variable.")
-# Create the dependencies directory
-file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
 # The flags for compile the beast
 set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/local/lib" CACHE STRING "CXX flags." FORCE)
 
 # add defines that need to be consistent across sub-projects
-add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG -DDLIB_NO_GUI_SUPPORT")
+add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG -DDLIB_NO_GUI_SUPPORT -DSHYFT_NO_PCH ")
 
 # The directories to be included
 include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/doctest ${SHYFT_DEPENDENCIES}/dlib ${SHYFT_DEPENDENCIES}/armadillo/include ${SHYFT_DEPENDENCIES}/local/include)
@@ -75,12 +72,12 @@ set(DLIB_TARBALL ${DLIB_PREFIX}-${DLIB_VERSION}.tar.bz2)
 set(DLIB_URL http://sourceforge.net/projects/dclib/files/dlib/v${DLIB_VERSION}/${DLIB_TARBALL}/download)
 
 set(ARMADILLO_PREFIX "armadillo")
-set(ARMADILLO_VERSION "7.800.2")
+set(ARMADILLO_VERSION "7.960.2")
 set(ARMADILLO_TARBALL ${ARMADILLO_PREFIX}-${ARMADILLO_VERSION}.tar.xz)
 set(ARMADILLO_URL http://sourceforge.net/projects/arma/files/${ARMADILLO_TARBALL})
 
 set(BOOST_PREFIX "boost")
-set(BOOST_VERSION "1.63.0")
+set(BOOST_VERSION "1.65.1")
 string(REPLACE "." "_" BOOST__VERSION ${BOOST_VERSION})
 set(BOOST_TARBALL ${BOOST_PREFIX}_${BOOST__VERSION}.tar.gz)
 set(BOOST_URL http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/${BOOST_TARBALL}/download)
@@ -92,6 +89,7 @@ set(DOCTEST_URL https://github.com/onqtam/doctest/archive/${DOCTEST_VERSION}.tar
 
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 include("${CMAKE_SOURCE_DIR}/cmake/DownloadAndExtractTarball.cmake")
 message(STATUS "Downloading dependencies.  This may take a while...")
 

@@ -175,7 +175,7 @@ TEST_CASE("test_one_source_one_dest_calculation") {
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n](const MCell &d) { return d.set_count == n; }), nx*ny);
 
 	double expected_v = TestTemperatureModel::transform(s[0].value(utcperiod(Tstart, Tstart + dt)), p.default_gradient(), s[0], d[0]);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [ expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
 TEST_CASE("test_two_sources_one_dest_calculation") {
@@ -214,7 +214,7 @@ TEST_CASE("test_two_sources_one_dest_calculation") {
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
 TEST_CASE("test_using_finite_sources_only") {
@@ -253,7 +253,7 @@ TEST_CASE("test_using_finite_sources_only") {
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell& d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
 TEST_CASE("test_eliminate_far_away_sources") {
@@ -291,7 +291,7 @@ TEST_CASE("test_eliminate_far_away_sources") {
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
 TEST_CASE("test_using_up_to_max_sources") {
@@ -328,7 +328,7 @@ TEST_CASE("test_using_up_to_max_sources") {
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 
 TEST_CASE("test_handling_different_sources_pr_timesteps") {
@@ -371,7 +371,7 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	double v1 = w1*TestTemperatureModel::transform(s[0].value(Tstart), comp_gradient, s[0], d[0]);
 	double v2 = w2*TestTemperatureModel::transform(s[1].value(Tstart), comp_gradient, s[1], d[0]);
 	double expected_v = (v1 + v2) / (w1 + w2);
-	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [n, expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
+	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
 TEST_CASE("test_performance") {
     using namespace shyft;
@@ -407,7 +407,7 @@ TEST_CASE("test_performance") {
             re.temperature->emplace_back(p, api::apoint_ts(gta, v, POINT_AVERAGE_VALUE));
         }
     }
-    vector<MCell> d(move(MCell::GenerateTestGrid(nx, ny)));
+    vector<MCell> d{MCell::GenerateTestGrid(nx, ny)};
     Parameter p(s_dxy * 2, min(4, n_sources / 2)); // for practical purposes, 8 neighbours or less.
     typedef shyft::time_series::average_accessor<api::apoint_ts, timeaxis_t> temperature_tsa_t;
 

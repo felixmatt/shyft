@@ -1,4 +1,14 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "priestley_taylor.h"
 #include "hbv_snow.h"
@@ -35,12 +45,12 @@ namespace shyft {
                 typedef glacier_melt::parameter glacier_parameter_t;
             	typedef routing::uhg_parameter routing_parameter_t;
 
-				parameter(pt_parameter_t pt,
-					snow_parameter_t snow,
-					ae_parameter_t ae,
-					soil_parameter_t soil,
-					tank_parameter_t tank,
-					precipitation_correction_parameter_t p_corr,
+				parameter(const pt_parameter_t& pt,
+					const snow_parameter_t& snow,
+					const ae_parameter_t& ae,
+					const soil_parameter_t& soil,
+					const tank_parameter_t& tank,
+					const precipitation_correction_parameter_t& p_corr,
                     glacier_parameter_t gm = glacier_parameter_t(),
 					routing_parameter_t routing=routing_parameter_t())
 					: pt(pt), snow(snow), ae(ae), soil(soil), tank(tank), p_corr(p_corr),gm(gm),routing(routing)  { /*Do nothing */}

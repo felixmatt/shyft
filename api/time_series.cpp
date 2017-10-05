@@ -1,9 +1,11 @@
-#include "core/core_pch.h"
+#include "api_pch.h"
+#ifdef SHYFT_NO_PCH
+#include <dlib/statistics.h>
+#endif // SHYFT_NO_PCH
 #include "time_series.h"
 #include "core/time_series_merge.h"
 #include "core/time_series_qm.h"
 
-#include <dlib/statistics.h>
 
 namespace shyft{
     namespace api {
@@ -123,12 +125,22 @@ namespace shyft{
         apoint_ts::apoint_ts(std::string ref_ts_id)
              :ts(std::make_shared<aref_ts>(ref_ts_id)) {
         }
+        apoint_ts::apoint_ts(std::string ref_ts_id,const apoint_ts&bts)
+             :ts(std::make_shared<aref_ts>(ref_ts_id)) {
+            bind(bts);// bind the symbolic ts directly
+        }
+
         void apoint_ts::bind(const apoint_ts& bts) {
             if(!dynamic_cast<aref_ts*>(ts.get()))
                 throw runtime_error("this time-series is not bindable");
             if(!dynamic_cast<gpoint_ts*>(bts.ts.get()))
                 throw runtime_error("the supplied argument time-series must be a point ts");
             dynamic_cast<aref_ts*>(ts.get())->rep.set_ts( make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep ));
+        }
+        string apoint_ts::id() const {
+            if(!dynamic_cast<aref_ts*>(ts.get()))
+                return string{};
+            return dynamic_cast<aref_ts*>(ts.get())->rep.ref;
         }
 
         // and python needs these:
@@ -181,7 +193,7 @@ namespace shyft{
         ) const {
             return shyft::api::extend(
                 *this, ts,
-                split_policy, fill_policy, 
+                split_policy, fill_policy,
                 split_at, fill_value
             );
         }
@@ -223,6 +235,8 @@ namespace shyft{
 				find_ts_bind_info(ext->rhs.ts, r);
 			} else if ( dynamic_cast<const api::rating_curve_ts*>(its.get()) ) {
 				find_ts_bind_info(dynamic_cast<const api::rating_curve_ts*>(its.get())->ts.level_ts.ts, r);
+			} else if ( dynamic_cast<const api::krls_interpolation_ts*>(its.get()) ) {
+				find_ts_bind_info(dynamic_cast<const api::krls_interpolation_ts*>(its.get())->ts.ts, r);
 			}
         }
 
@@ -291,7 +305,7 @@ namespace shyft{
 
         apoint_ts apoint_ts::max(const apoint_ts &a, const apoint_ts&b){return shyft::api::max(a,b);}
         apoint_ts apoint_ts::min(const apoint_ts &a, const apoint_ts&b){return shyft::api::min(a,b);}
-        
+
 		apoint_ts apoint_ts::convolve_w(const std::vector<double> &w, shyft::time_series::convolve_policy conv_policy) const {
             return apoint_ts(std::make_shared<shyft::api::convolve_w_ts>(*this, w, conv_policy));
         }
@@ -299,6 +313,17 @@ namespace shyft{
 		apoint_ts apoint_ts::rating_curve(const rating_curve_parameters & rc_param) const {
 			return apoint_ts(std::make_shared<shyft::api::rating_curve_ts>(*this, rc_param));
 		}
+
+        apoint_ts apoint_ts::krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const {
+            return apoint_ts(std::make_shared<shyft::api::krls_interpolation_ts>(*this, dt, rbf_gamma, tol, size));
+        }
+        prediction::krls_rbf_predictor apoint_ts::get_krls_predictor(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const {
+            if ( needs_bind() )
+                throw std::runtime_error("cannot get predictor for unbound ts");
+            shyft::prediction::krls_rbf_predictor predictor{ dt, rbf_gamma, tol, size };
+            predictor.train(*this);
+            return predictor;
+        }
 
         std::vector<apoint_ts> percentiles(const std::vector<apoint_ts>& tsv1,const gta_t& ta, const vector<int>& percentile_list) {
             std::vector<apoint_ts> r;r.reserve(percentile_list.size());
@@ -601,7 +626,7 @@ namespace shyft{
             const auto lhs_p = this->lhs.time_axis().total_period();
             const auto rhs_p = this->rhs.time_axis().total_period();
 
-            // get values 
+            // get values
             std::vector<double> lhs_values{}, rhs_values{};
             if ( split_at >= lhs_p.start ) lhs_values = this->lhs.values();
             if ( split_at <= lhs_p.end )   rhs_values = this->rhs.values();

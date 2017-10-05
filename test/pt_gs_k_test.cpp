@@ -138,7 +138,7 @@ TEST_CASE("test_raster_call_stack") {
 
 
     const std::clock_t start = std::clock();
-    for_each(model_cells.begin(), model_cells.end(), [&time_axis, &catchment_discharge,&state_axis] (PTGSKCell& d) mutable {
+    for_each(model_cells.begin(), model_cells.end(), [&time_axis,&state_axis] (PTGSKCell& d) mutable {
         auto time = time_axis.time(0);
 
         shyfttest::mock::StateCollector<ta::point_dt> sc(state_axis);

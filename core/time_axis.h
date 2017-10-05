@@ -1,4 +1,15 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <stdexcept>
+#include <vector>
+#include <memory>
+#include <utility>
+#include <stdexcept>
+#include <type_traits>
+#include <algorithm>
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 #include "utctime_utilities.h"
 namespace shyft {
 
@@ -155,7 +166,7 @@ namespace shyft {
             }
             /** equality, notice that calendar is equal if they refer to exactly same calendar pointer */
             bool operator==(const calendar_dt & other) const {
-                return cal.get() == other.cal.get()
+                return (cal.get() == other.cal.get() || cal->tz_info->name()== other.cal->tz_info->name())
                     && t == other.t
                     && dt == other.dt
                     && n == other.n;
@@ -241,14 +252,14 @@ namespace shyft {
                 if(t.size()==0 || t.back()>=t_end )
                     throw runtime_error("time_axis::point_dt() illegal initialization parameters");
             }
-            point_dt(const vector<utctime>& all_points):t(all_points){
+            explicit point_dt(const vector<utctime>& all_points):t(all_points){
                 if(t.size()<2)
                     throw runtime_error("time_axis::point_dt() needs at least two time-points");
 				t_end = t.back();
 				t.pop_back();
 
             }
-			point_dt(vector<utctime> && all_points):t(move(all_points)) {
+			explicit point_dt(vector<utctime> && all_points):t(move(all_points)) {
 				if (t.size() < 2)
 					throw runtime_error("time_axis::point_dt() needs at least two time-points");
 				t_end = t.back();
@@ -338,7 +349,7 @@ namespace shyft {
 
             /** \brief Possible time-axis types.
              */
-            enum generic_type {
+            enum generic_type:int8_t {
                 FIXED = 0,     /**< Represents storage of fixed_dt. */
                 CALENDAR = 1,  /**< Represents storage of calendar_dt. */
                 POINT = 2      /**< Represents storage of point_dt. */
@@ -361,7 +372,7 @@ namespace shyft {
             generic_dt(const vector<utctime> & t, utctime t_end)
                 : gt(POINT),
                   p(t, t_end) { }
-            generic_dt(const vector<utctime> & all_points)
+            explicit generic_dt(const vector<utctime> & all_points)
                 : gt(POINT),
                   p(all_points) { }
 
@@ -520,7 +531,7 @@ namespace shyft {
             calendar_dt cta;
             vector<utcperiod> p;// sub-periods within each cta.period, using cta.period.start as t0
             calendar_dt_p(){}
-            calendar_dt_p( const shared_ptr< calendar>& cal, utctime t, utctimespan dt, size_t n, vector<utcperiod> p )
+            calendar_dt_p( const shared_ptr< calendar>& cal, utctime t, utctimespan dt, size_t n, const vector<utcperiod>& p )
                 : cta( cal, t, dt, n ), p( move( p ) ) {
                 // TODO: validate p, each p[i] non-overlapping and within ~ dt
                 // possibly throw if invalid period, but
@@ -607,7 +618,7 @@ namespace shyft {
         struct period_list:continuous<false>{
             vector<utcperiod> p;
             period_list() {}
-            period_list( const vector<utcperiod>& p ) : p( p ) {
+            explicit period_list( const vector<utcperiod>& p ) : p( p ) {
                 //TODO: high cost, consider doing this in DEBUG only!
                 for(size_t i=1;i<p.size();++i) {
                     if(p[i].start<p[i-1].end)
@@ -705,7 +716,7 @@ namespace shyft {
             template<>
             struct extend_helper<fixed_dt> {
                 /** \brief Wrap the supplied time-axis as a generic_dt.
-                * 
+                *
                 * \warning Use with caution, there is not bounds checking done!
                 *
                 * \param base   Time-axis.
@@ -719,7 +730,7 @@ namespace shyft {
             template<>
             struct extend_helper<calendar_dt> {
                 /** \brief Wrap the supplied time-axis as a generic_dt.
-                * 
+                *
                 * \warning Use with caution, there is not bounds checking done!
                 *
                 * \param base   Time-axis.
@@ -733,7 +744,7 @@ namespace shyft {
             template<>
             struct extend_helper<point_dt> {
                 /** \brief Wrap the supplied time-axis as a generic_dt.
-                * 
+                *
                 * \warning Use with caution, there is not bounds checking done!
                 *
                 * \param base   Time-axis.
@@ -755,7 +766,7 @@ namespace shyft {
             template<>
             struct extend_helper<generic_dt> {
                 /** \brief Wrap the supplied time-axis as a generic_dt.
-                * 
+                *
                 * \warning Use with caution, there is not bounds checking done!
                 *
                 * \param base   Time-axis.
@@ -775,7 +786,7 @@ namespace shyft {
 
         /** \brief Extend time-axis `a` with time-axis `b`.
          *
-         * 
+         *
          *
          * Values are only added after time-axis `a`, never inside.
          *
@@ -833,7 +844,7 @@ namespace shyft {
                 }
             }
 
-            // sliced spans for a and b 
+            // sliced spans for a and b
             const utcperiod sa(  // span a
                     pa.start,
                     min(max(pa.start + ((split_at - pa.start) / a.dt) * a.dt, pa.start), pa.end) );
@@ -842,7 +853,7 @@ namespace shyft {
                     pb.end );
 
             // aligned and consecutive
-            if ( 
+            if (
                 a.dt == b.dt && pa.start == pb.start + ((pa.start - pb.start) / b.dt)*b.dt  // aligned
                 && (sa.start == sa.end || sb.start == sb.end || sa.end == sb.start)  // consecutive
             ) {
@@ -967,7 +978,7 @@ namespace shyft {
                 utctimespan remainder;
                 size_t n = static_cast<size_t>(a.cal->diff_units(pa.start, pb.end, a.dt, remainder));
 
-                // no offset 
+                // no offset
                 if ( remainder == 0 ) {
                     if ( span_a.start != span_a.end ) {  // non-empty
                         if ( span_b.start != span_b.end ) {  // non-empty

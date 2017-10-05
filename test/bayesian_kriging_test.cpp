@@ -5,10 +5,12 @@
 #include "core/time_series.h"
 #include "core/geo_point.h"
 
-
+#ifdef SHYFT_NO_PCH
+#include <iomanip>
+#endif // SHYFT_NO_PCH
 using namespace std;
 namespace shyfttest {
-	const double EPS = 1.0e-8;
+
 	using namespace shyft::core;
 	using namespace shyft::time_series;
 	using namespace shyft;

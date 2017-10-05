@@ -1,4 +1,21 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <future>
+#include <utility>
+#include <memory>
+#include <stdexcept>
+#include <iostream>
+#include <dlib/optimization/optimization_bobyqa.h>
+#include <dlib/matrix.h>
+#include <dlib/statistics.h>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "cell_model.h"
 #include "region_model.h"
@@ -58,7 +75,7 @@ namespace shyft {
             template<class M>
             struct dream_fx : public shyft::core::optimizer::ifx {
                 M& m;
-                dream_fx(M & m) : m(m) {}
+                explicit dream_fx(M & m) : m(m) {}
                 double evaluate(const vector<double> &x) {
                     return -m(x); // notice that dream find maximumvalue, so we need to negate the goal function, effectively finding the minimum value.
                 }
@@ -87,7 +104,7 @@ namespace shyft {
             template<class M>
             struct sceua_fx : public shyft::core::optimizer::ifx {
                 M& m;
-                sceua_fx(M & m) : m(m) {}
+                explicit sceua_fx(M & m) : m(m) {}
                 double evaluate(const vector<double> &x) {
                     return m(x);
                 }
@@ -229,7 +246,7 @@ namespace shyft {
                  * \param catchment_property_ determines if this target specification is for DISCHARGE|SNOW_COVERED_AREA|SNOW_WATER_EQUIVALENT
                  * \param uid a user supplied uid, string, to help user correlate this target to external data-sources
                  */
-                target_specification(const target_time_series_t& ts, vector<int> cids, double scale_factor,
+                target_specification(const target_time_series_t& ts, const vector<int>& cids, double scale_factor,
                     target_spec_calc_type calc_mode = NASH_SUTCLIFFE, double s_r = 1.0,
                     double s_a = 1.0, double s_b = 1.0, target_property_type catchment_property_ = DISCHARGE, std::string uid = "")
                     : ts(ts), catchment_indexes(cids), scale_factor(scale_factor),
@@ -363,7 +380,7 @@ namespace shyft {
                 vector<double> p_min; // min==max, no- optimization..
                 vector<double> p_max;
                 int print_progress_level;
-                size_t n_catchments;///< optimized counted number of model.catchments available
+                size_t n_catchments=0;///< optimized counted number of model.catchments available
                 //Need to handle expanded/reduced parameter vector based on min..max range to optimize speed for bobyqa
                 const double activate_limit = 0.000001;
                 bool is_active_parameter(size_t i) const { return fabs(p_max[i] - p_min[i]) > activate_limit; }
@@ -413,7 +430,7 @@ namespace shyft {
                  * To optimize, first call set_target_specification(), then
                  * call any of optimize_xxx(...)
                  */
-                optimizer(region_model_t& model) :
+                explicit optimizer(region_model_t& model) :
                     parameter_accessor(model.get_region_parameter()),
                     model(model),print_progress_level(0) {
 
@@ -509,15 +526,14 @@ namespace shyft {
                  * \param tr_stop is the trust region stop, default 1e-5, ref bobyqa
                  * \return the optimized parameter vector
                  */
-                vector<double> optimize(vector<double> p, size_t max_n_evaluations = 1500, double tr_start = 0.1, double tr_stop = 1.0e-5) {
+                vector<double> optimize(const vector<double>& p, size_t max_n_evaluations = 1500, double tr_start = 0.1, double tr_stop = 1.0e-5) {
                     prepare_optimize();
                     // reduce using min..max the parameter space,
                     p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
                     auto rp = reduce_p_vector(p);
                     min_bobyqa(*this, rp, max_n_evaluations, tr_start, tr_stop);
                     // expand,put inplace p to return vector.
-                    p = expand_p_vector(rp);
-                    return p;
+                    return  expand_p_vector(rp);
                 }
 
                 /**optimize using minbobyqa, using p as starting parameters, return new optimized parameters */
@@ -535,14 +551,13 @@ namespace shyft {
                  * \param max_n_evaluations stop after n calls of the objective functions, i.e. simulations.
                  * \return the optimized parameter vector
                  */
-                vector<double> optimize_dream(vector<double> p, size_t max_n_evaluations = 1500) {
+                vector<double> optimize_dream(const vector<double>& p, size_t max_n_evaluations = 1500) {
                     prepare_optimize();
                     // reduce using min..max the parameter space,
                     p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
                     auto rp = reduce_p_vector(p);
                     min_dream<optimizer>(*this, rp, max_n_evaluations);
-                    p = expand_p_vector(rp);// expand,put inplace p to return vector.
-                    return p;
+                    return expand_p_vector(rp);// expand,put inplace p to return vector.
                 }
                 /** optimize using the dream algorithm, returning the new optimized parameter set*/
                 PA optimize_dream(const PA &p, size_t max_n_evaluations = 1500) {
@@ -561,14 +576,13 @@ namespace shyft {
                  * \param y_eps is stop condition, and search is stopped when goal function does not improve anymore within this range
                  * \return the optimized parameter vector
                  */
-                vector<double> optimize_sceua(vector<double> p, size_t max_n_evaluations = 1500, double x_eps = 0.0001, double y_eps = 1.0e-5) {
+                vector<double> optimize_sceua(const vector<double>& p, size_t max_n_evaluations = 1500, double x_eps = 0.0001, double y_eps = 1.0e-5) {
                     prepare_optimize();
                     // reduce using min..max the parameter space,
                     p_expanded = p;//put all parameters into class scope so that we can reduce/expand as needed during optimization
                     auto rp = reduce_p_vector(p);
                     min_sceua(*this, rp, max_n_evaluations, x_eps, y_eps);
-                    p = expand_p_vector(rp);				// expand,put inplace p to return vector.
-                    return p;
+                    return expand_p_vector(rp);				// expand,put inplace p to return vector.
                 }
 
                 /** optimize using the dream algorithm, returning the new optimized parameter set*/
@@ -596,7 +610,7 @@ namespace shyft {
                  * \param full_vector_of_parameters contains all parameters that will be applied to the run.
                  *  \returns the goal-function, weigthed nash_sutcliffe sum
                  */
-                double calculate_goal_function(std::vector<double> full_vector_of_parameters) {
+                double calculate_goal_function(const std::vector<double>& full_vector_of_parameters) {
                     p_expanded = full_vector_of_parameters;// ensure all parameters are  according to full_vector..
                     return run(reduce_p_vector(full_vector_of_parameters));// then run with parameters as if from optimize
                 }
@@ -635,7 +649,7 @@ namespace shyft {
                     return p;
                 }
                 /** called by bobyqua: reduced parameter space p */
-                vector<double> from_scaled(vector<double> p_s) const {
+                vector<double> from_scaled(const vector<double>& p_s) const {
                     if (p_min.size() == 0) throw runtime_error("Parameter ranges are not set");
                     vector<double> p;
                     auto rp_min = reduce_p_vector(p_min);

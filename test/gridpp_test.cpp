@@ -137,8 +137,8 @@ TEST_CASE("test_interpolate_sources_should_populate_grids") {
 	const double g0 = -500; // Coordinate of grid origin in m
 	Parameter p(2 * dss, 4); // Distance and neighbors
 
-	auto s(move(Source::GenerateTestSourceGrid(ta, nss, nss, g0, g0, dss)));
-	auto d(move(MCell::GenerateTestGrid(ngs, ngs)));
+	auto s{Source::GenerateTestSourceGrid(ta, nss, nss, g0, g0, dss)};
+	auto d{MCell::GenerateTestGrid(ngs, ngs)};
 
 	run_interpolation<TestTemperatureModel>(begin(s), end(s), begin(d), end(d), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](MCell& d, size_t ix, double v) {d.set_value(ix, v); });
@@ -166,14 +166,14 @@ TEST_CASE("test_main_workflow_should_populate_grids") {
 	auto const_ts = point_ts<ta::fixed_dt>(ta, temp);
 
 	// Tsour = vector<Source(geopoint)>(ts<> = 1)
-	auto temp_set(move(PointTimeSerieSource::make_source_set(ta, nx, ny)));
+	auto temp_set{PointTimeSerieSource::make_source_set(ta, nx, ny)};
 	for_each(temp_set.begin(), temp_set.end(), [&](auto& a) { a.SetTs(const_ts); });
 
 	// Sanity check
 	TS_ASSERT_EQUALS(count_if(temp_set.begin(), temp_set.end(), [=](auto& a) { return a.value(0) == temp; }), nx * ny);
 
 	// Tdest = vector<Cell(grid)>(ts<> = 0) => IDW<TemperatureModel>(Tsour, Tdest, fixed_dt)
-	auto temp_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
+	auto temp_grid{PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)};
 	Parameter p;
 	run_interpolation<TestTemperatureModel_1>(temp_set.begin(), temp_set.end(), temp_grid.begin(), temp_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
@@ -182,7 +182,7 @@ TEST_CASE("test_main_workflow_should_populate_grids") {
 	TS_ASSERT_EQUALS(count_if(temp_grid.begin(), temp_grid.end(), [=](auto& a) {return TS0_EQUAL(a, temp); }), ngx * ngy);
 
 	// Tbias = vector<MCell(grid)>(ts<> = 1, fixed_dt)
-	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)));
+	auto bias_grid{PointTimeSerieCell::make_cell_grid(ta, ngx, ngy)};
 	const double bias = 1;
 	auto bias_ts = point_ts<ta::fixed_dt>(ta, bias);
 	for_each(bias_grid.begin(), bias_grid.end(), [&](auto& b) { b.SetTs(bias_ts); });
@@ -212,7 +212,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 
 	// IDW transform observation from set to grid 10 x 10 km. Call it forecast grid
 	const int ng = 10;
-	auto fc_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
+	auto fc_grid{PointTimeSerieCell::make_cell_grid(ta, ng, ng)};
 	Parameter p;
 	run_interpolation<TestTemperatureModel_1>(obs_set.begin(), obs_set.end(), fc_grid.begin(), fc_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
@@ -232,7 +232,7 @@ TEST_CASE("test_calc_bias_should_match_observations") {
 		(*it_bias).pts.add_scale((*it_fc).pts, -1);
 
 	// IDW transform bias from set to grid
-	auto bias_grid(move(PointTimeSerieCell::make_cell_grid(ta, ng, ng)));
+	auto bias_grid{(PointTimeSerieCell::make_cell_grid(ta, ng, ng))};
 	run_interpolation<TestTemperatureModel_1>(bias_set.begin(), bias_set.end(), bias_grid.begin(), bias_grid.end(), idw_timeaxis<ta::fixed_dt>(ta),
 		p, [](auto& d, size_t ix, double v) { d.set_value(ix, v); });
 

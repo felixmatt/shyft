@@ -17,6 +17,17 @@
 ///
 /// This implementation is a slightly improved and ported version of Skaugen's snow routine
 /// implemented in R, see [ref].
+#ifdef SHYFT_NO_PCH
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/tools/roots.hpp>
+#include <boost/math/tools/minima.hpp>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "utctime_utilities.h"
 #include "time_series.h"
@@ -208,7 +219,7 @@ namespace shyft {
                     statistics stat(alpha_0, p.d_range, unit_size);
 
                     unsigned long n = 0;
-                    unsigned long u = 0;
+                    //xx unsigned long u = 0;
 
                     // Accumulation
                     if (total_new_snow > unit_size) {
@@ -221,7 +232,7 @@ namespace shyft {
 
                     // Melting
                     if (pot_melt > unit_size) {
-                        u = lrint(pot_melt/unit_size);
+                        unsigned long u = lrint(pot_melt/unit_size);
                         if (nnn < u + 2) {
                             nnn = 0;
                             alpha = alpha_0;

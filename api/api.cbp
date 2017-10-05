@@ -51,8 +51,19 @@
 			<Add option="-pthread" />
 			<Add library="armadillo" />
 		</Linker>
-		<Unit filename="api.cpp" />
+		<Unit filename="api.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="api.h" />
+		<Unit filename="api_pch.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="api_pch.h">
+			<Option compile="1" />
+			<Option weight="1" />
+		</Unit>
 		<Unit filename="api_serialization.cpp" />
 		<Unit filename="api_state.h" />
 		<Unit filename="hbv_stack.h" />

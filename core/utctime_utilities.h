@@ -1,5 +1,16 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <memory>
+#include <vector>
+#include <string>
+#include <map>
+#include <stdexcept>
+#include <iosfwd>
+#include <algorithm>
+#include <ctime>
 
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 namespace shyft {
 	namespace core {
         /** \brief utctime
@@ -27,7 +38,7 @@ namespace shyft {
          * \param n number of hours
          * \return utctimespan representing number of hours specified
          */
-		inline utctimespan deltahours(int n) { return n*3600; }
+		inline utctimespan deltahours(int n) { return n*utctimespan(3600); }
 
         /** \brief deltaminutes
          * \param n number of minutes
@@ -129,11 +140,11 @@ namespace shyft {
                 * suitable for non-dst time-zones and data-exchange.
                 * \param dt of type utctimespan, positive for tz east of GMT
                 */
-                tz_table(utctimespan dt):start_year(0) {
+                explicit tz_table(utctimespan dt):start_year(0) {
                     char s[100];sprintf(s,"UTC%+02d",int(dt/deltahours(1)));
                     tz_name=s;
                 }
-                tz_table():start_year(0){tz_name="UTC+00";}
+                tz_table():start_year(0),tz_name("UTC+00"){}
                 inline bool is_dst() const {return dst.size()>0;}
                 string name() const {return tz_name;}
                 utctime dst_start(int year) const {return is_dst()?dst[year-start_year].start:no_utctime;}
@@ -167,7 +178,7 @@ namespace shyft {
                 void load_from_iso_db();
 
                 /** \brief load from file that contains all descriptions, ref. boost::date_time for format */
-                void load_from_file(const string filename);
+                void load_from_file(const string& filename);
 
                 /** \brief add one entry, using a specified region_name like Europe/Copenhagen, and a posix description string, ref boost::date_time for spec */
                 void add_tz_info(string region_name,string posix_tz_string);
@@ -324,9 +335,9 @@ namespace shyft {
 			/**\brief returns tz_info (helper for boost python really) */
 			time_zone::tz_info_t_ get_tz_info() const {return tz_info;}
 			/**\brief construct a timezone with standard offset, no dst, name= UTC+01 etc. */
-			calendar(utctimespan tz=0): tz_info(new time_zone::tz_info_t(tz)) {}
+			explicit calendar(utctimespan tz=0): tz_info(new time_zone::tz_info_t(tz)) {}
 			/**\brief construct a timezone from tz_info shared ptr provided from typically time_zone db */
-			calendar(time_zone::tz_info_t_ tz_info):tz_info(tz_info) {}
+			explicit calendar(time_zone::tz_info_t_ tz_info):tz_info(tz_info) {}
             calendar(calendar const&o) :tz_info(o.tz_info) {}
             calendar(calendar&&o) :tz_info(std::move(o.tz_info)) {}
             calendar& operator=(calendar const &o) {
@@ -342,7 +353,7 @@ namespace shyft {
              * uses internal tz_info_database to lookup the name.
              * \param region_id like Europe/Oslo, \sa time_zone::tz_info_database
              */
-            calendar(std::string region_id);
+            explicit calendar(std::string region_id);
             /**\brief get list of available time zone region */
             static std::vector<std::string> region_id_list();
 
@@ -357,7 +368,7 @@ namespace shyft {
 			 * \return utctime
 			 */
 			utctime time(YMDhms c) const;
-            utctime time(YWdhms c) const; 
+            utctime time(YWdhms c) const;
 
             ///<short hand for calendar::time(YMDhms)
             utctime time(int Y,int M=1,int D=1,int h=0,int m=0,int s=0) const {

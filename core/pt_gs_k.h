@@ -1,4 +1,13 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "priestley_taylor.h"
 #include "kirchner.h"
@@ -32,11 +41,11 @@ namespace shyft {
             typedef precipitation_correction::parameter precipitation_correction_parameter_t;
             typedef glacier_melt::parameter glacier_melt_parameter_t;
             typedef routing::uhg_parameter routing_parameter_t;
-            parameter(pt_parameter_t pt,
-                      gs_parameter_t gs,
-                      ae_parameter_t ae,
-                      kirchner_parameter_t k,
-                      precipitation_correction_parameter_t p_corr,
+            parameter(const pt_parameter_t& pt,
+                      const gs_parameter_t& gs,
+                      const ae_parameter_t& ae,
+                      const kirchner_parameter_t& k,
+                      const precipitation_correction_parameter_t& p_corr,
                       glacier_melt_parameter_t gm=glacier_melt_parameter_t(),
                       routing_parameter_t routing=routing_parameter_t())
              : pt(pt), gs(gs), ae(ae), kirchner(k), p_corr(p_corr) ,gm(gm),routing(routing){ /*Do nothing */ }
@@ -179,7 +188,7 @@ namespace shyft {
             typedef gamma_snow::state gs_state_t;
             typedef kirchner::state kirchner_state_t;
             state() {}
-            state(gs_state_t gs, kirchner_state_t k) : gs(gs), kirchner(k) {}
+            state(const gs_state_t& gs, const kirchner_state_t& k) : gs(gs), kirchner(k) {}
             gs_state_t gs;
             kirchner_state_t kirchner;
             bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}

@@ -1,4 +1,12 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
+
 #include "utctime_utilities.h"
 namespace shyft {
 	namespace core {
@@ -6,9 +14,9 @@ namespace shyft {
 			using namespace std;
 
 			struct parameter {
-				parameter(double fc = 300.0, double beta = 2.0) 
+				parameter(double fc = 300.0, double beta = 2.0)
 					:fc(fc), beta(beta) {
-					if (fc < .0) 
+					if (fc < .0)
 						throw runtime_error("fc should be > 0.0");
 				}
 				double fc=300; // mm
@@ -16,7 +24,7 @@ namespace shyft {
 			};
 
 			struct state {
-				state(double sm = 0.0) :sm(sm) {}
+				explicit state(double sm = 0.0) :sm(sm) {}
 				double sm=50.0; // mm
 				bool operator==(const state&x) const {
 					const double eps = 1e-6;
@@ -41,8 +49,8 @@ namespace shyft {
 			template<class P>
 			struct calculator {
 				P param;
-				calculator(const P& p):param(p) {}
-				template <class R,class S> 
+				explicit calculator(const P& p):param(p) {}
+				template <class R,class S>
 				void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, double insoil, double act_evap) {
 					double temp = s.sm + insoil;					//compute fraction at end of time after adding insoil
 					double outflow = insoil*pow(temp/param.fc, param.beta);

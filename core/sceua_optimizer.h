@@ -23,6 +23,13 @@
 ///  of first SCEUA implemented in
 ///  the Enki project by Sjur Kolberg, Sintef
 ///
+#ifdef SHYFT_NO_PCH
+#include <algorithm>
+#include <cmath>
+#include <random>
+
+#endif // SHYFT_NO_PCH
+
 #include "optimizer_utils.h"
 
 namespace shyft {
@@ -33,7 +40,7 @@ namespace shyft {
             template <class vec>
             struct sort_by_value_asc {
                 const vec& v;
-                sort_by_value_asc(const vec& v_):v(v_) {}
+                explicit sort_by_value_asc(const vec& v_):v(v_) {}
                 bool operator()(size_t a,size_t b) const {
                     return v[a]<v[b];
                 }

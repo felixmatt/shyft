@@ -1,4 +1,10 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <cmath>
+#include <boost/numeric/odeint.hpp>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
 
@@ -22,7 +28,7 @@ namespace shyft {
                     double t_start = 0.0; // Start of integration period
                     double t_a = 0.0; // Left hand side time of next integration subinterval
                 public:
-                    trapezoidal_average(S& stepper) {}
+                    explicit trapezoidal_average(S& stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -69,7 +75,7 @@ namespace shyft {
                     S& stepper;
                     typename S::state_type x; // Storage for the intermediate state
                 public:
-                    composite_trapezoidal_average(S& stepper): stepper(stepper) {}
+                    explicit composite_trapezoidal_average(S& stepper): stepper(stepper) {}
 
                     /** \brief initialize must be called to reset states before being used during ode integration.
                      */
@@ -121,10 +127,10 @@ namespace shyft {
 
             struct state {
                 double q=0.0001; //< water content in [mm/h], it defaults to 0.0001 mm, zero is not a reasonable valid value
-                state(double q=0.0001):q(q){}
+                explicit state(double q=0.0001):q(q){}
                 bool operator==(const state&x) const {
                     const double eps=1e-6;
-                    return fabs(q-x.q)<eps;
+                    return std::fabs(q-x.q)<eps;
                 }
                 x_serialize_decl();
             };
@@ -184,11 +190,11 @@ namespace shyft {
                  */
                 double log_transform_f(double ln_q, double p, double e) const {
                     const double gln_q = g(ln_q);
-                    return gln_q >= 1.e-30 ? gln_q*((p - e)*exp(-ln_q) - 1.0) : 0.0;
+                    return gln_q >= 1.e-30 ? gln_q*((p - e)*std::exp(-ln_q) - 1.0) : 0.0;
                 }
 
               public:
-                calculator(const P& param) : param(param) { /* Do nothing */ }
+                explicit calculator(const P& param) : param(param) { /* Do nothing */ }
 
                 calculator(double abs_err, double rel_err, const P& param)
                     : dense_stepper(boost::numeric::odeint::make_dense_output(abs_err, rel_err,
@@ -219,7 +225,7 @@ namespace shyft {
                             average_computer.add(exp(dense_stepper.current_state()), current_time);
                     }
                     dense_stepper.calc_state(t1, x_tmp);
-                    q = exp(x_tmp); // Invert log transform
+                    q = std::exp(x_tmp); // Invert log transform
                     average_computer.add(q, t1);
                     q_avg = average_computer.result();
                 }

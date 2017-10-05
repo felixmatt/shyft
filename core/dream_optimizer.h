@@ -23,6 +23,14 @@
 ///  of first DREAM implemented in
 ///  the Enki project by Sjur Kolberg, Sintef
 ///
+#ifdef SHYFT_NO_PCH
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <random>
+
+#endif // SHYFT_NO_PCH
 
 #include "optimizer_utils.h"
 
@@ -44,8 +52,8 @@ namespace shyft {
               */
             class dream  {
                 // TODO: get rid of these, use std::random for all needed functionality
-                mutable bool super_hack_stored;
-                mutable double stored_std_norm_super_hack;
+                mutable bool super_hack_stored=false;
+                mutable double stored_std_norm_super_hack=0.0;
 #ifdef WIN32
 				mutable std::mt19937 generator;
 #else
@@ -85,7 +93,7 @@ namespace shyft {
                 double normal(double mean, double sd) const { return std_norm()*sd + mean; }; // Normal random number generator taking mean and standard deviation as input and returning N(mean,sd^2) random number
                 double random01() const { return distribution(generator); } // Helper function for accessing the random number generator.
                 double random11() const { return random01()*2.0-1.0; } // Helper function for accessing the random number generator and scaling the result.
-                double random(double min, double max) const { return min + random01()*(max-min); } // Helper function for accessing the random number generator and scaling the result.
+                double random(double minv, double maxv) const { return minv + random01()*(maxv-minv); } // Helper function for accessing the random number generator and scaling the result.
             };
         }
     }

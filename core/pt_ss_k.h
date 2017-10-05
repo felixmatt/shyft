@@ -1,4 +1,14 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+#include "core_pch.h"
+#endif // SHYFT_NO_PCH
 
 #include "priestley_taylor.h"
 #include "kirchner.h"
@@ -27,11 +37,11 @@ namespace shyft {
             precipitation_correction_parameter_t p_corr;
             glacier_melt_parameter_t gm;
             routing_parameter_t routing;
-            parameter(pt_parameter_t pt,
-                      snow_parameter_t snow,
-                      ae_parameter_t ae,
-                      kirchner_parameter_t kirchner,
-                      precipitation_correction_parameter_t p_corr,
+            parameter(const pt_parameter_t& pt,
+                      const snow_parameter_t& snow,
+                      const ae_parameter_t& ae,
+                      const kirchner_parameter_t& kirchner,
+                      const precipitation_correction_parameter_t& p_corr,
                       glacier_melt_parameter_t gm=glacier_melt_parameter_t(),
                       routing_parameter_t routing=routing_parameter_t())
              : pt(pt), ss(snow), ae(ae), kirchner(kirchner), p_corr(p_corr),gm(gm),routing(routing) { /* Do nothing */ }
@@ -136,7 +146,7 @@ namespace shyft {
             state() {}
             state(const snow_state_t& snow, const kirchner_state_t& kirchner)
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
-            state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
+            //xx state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
             bool operator==(const state& x) const {return kirchner==x.kirchner && snow==x.snow;}
             x_serialize_decl();
         };

@@ -85,7 +85,9 @@
 		<Unit filename="dream_optimizer.h">
 			<Option virtualFolder="optimizers/" />
 		</Unit>
-		<Unit filename="dtss.h" />
+		<Unit filename="dtss.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="experimental.cpp">
 			<Option virtualFolder="experimental/" />
 		</Unit>
@@ -141,6 +143,9 @@
 		<Unit filename="precipitation_correction.h">
 			<Option virtualFolder="methods/" />
 		</Unit>
+		<Unit filename="predictions.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="priestley_taylor.h">
 			<Option virtualFolder="methods/" />
 		</Unit>
@@ -177,6 +182,9 @@
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_info.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_merge.h">

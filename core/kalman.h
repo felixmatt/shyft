@@ -1,4 +1,15 @@
 #pragma once
+#ifdef SHYFT_NO_PCH
+#include <string>
+#include <vector>
+#include <iterator>
+#include <algorithm>
+#include <cmath>
+//#include <limits>
+#include <stdexcept>
+#include <armadillo>
+
+#endif // SHYFT_NO_PCH
 
 namespace shyft {
     namespace core {
@@ -62,7 +73,7 @@ namespace shyft {
                        double hourly_correlation=0.93,
                        double covariance_init=0.5,
                        double std_error_bias_measurements=2.0,
-                       double ratio_std_w_over_v=0.15 
+                       double ratio_std_w_over_v=0.15
                        ):
                        n_daily_observations(n_daily_observations),
                        hourly_correlation(hourly_correlation),
