@@ -592,7 +592,7 @@ TEST_CASE("test_average_value_staircase") {
     TS_ASSERT_DELTA((0.5*2+3.0)/1.5,average_value(ps1,full_period,ix,false),0.00001);
     TS_ASSERT_DELTA((1.0*0.5+0.5*2+3.0)/2.0,average_value(ps2,full_period,ix,false),0.00001);
     TS_ASSERT_DELTA((1.0*0.5+0.5*2+0.0)/1.0,average_value(ps3,full_period,ix,false),0.00001);
-    TS_ASSERT_DELTA(1,average_value(ps4,full_period,ix,false),0.00001);
+    TS_ASSERT_DELTA(1.0,average_value(ps4,full_period,ix,false),0.00001);
     ix=-1;
     v=average_value(ps5,full_period,ix,false);// no points should give nan
     TS_ASSERT(!std::isfinite(v));
@@ -854,11 +854,13 @@ TEST_CASE("test_api_ts") {
     size_t  n = 4;
     double a_value=3.0;
     double b_value=2.0;
+    auto osl = make_shared<calendar>("Europe/Oslo");
 
-    gta_t ta(shyft::time_axis::fixed_dt(start,dt,n));
-    apoint_ts a(ta,a_value);
-    apoint_ts b(ta,b_value);
-    test_bin_op<apoint_ts>(a,b,ta,a_value,b_value);
+    gta_t ta_a(shyft::time_axis::fixed_dt(start,dt,n));
+    gta_t ta_b(osl,start,dt,n);
+    apoint_ts a(ta_a,a_value);
+    apoint_ts b(ta_b,b_value);
+    test_bin_op<apoint_ts>(a,b,ta_a,a_value,b_value);
 
     gta_t ta2(shyft::time_axis::fixed_dt(start,dt*2,n/2));
     auto c= average( a+3*b,ta2) * 4 + (b*a/2.0).average(ta2);

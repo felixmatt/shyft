@@ -8,16 +8,94 @@
 #include "core/time_series_merge.h"
 
 
-
-using namespace shyft;
-using namespace std;
-using ta_t = time_axis::fixed_dt;
-using ts_t = time_series::point_ts<ta_t>;
-using tsa_t = time_series::average_accessor<ts_t,ta_t>;
-using tsv_t = std::vector<ts_t>;
-
 TEST_SUITE("ts_merge") {
-    TEST_CASE("ts_merge") { // to run this test: test_shyft -tc=ts_vector_to_quantile_ix_list
+    TEST_CASE("vector_merge") {
+        using shyft::time_axis::merge_info;
+        using shyft::time_axis::merge;
+        using std::vector;
+        FAST_CHECK_EQ(vector<int>{1,1,2,2}, merge(vector<int>{1,1}, vector<int>{2,2}, merge_info{0,0,2}));
+        FAST_CHECK_EQ(vector<int>{1, 1}, merge(vector<int>{1, 1}, vector<int>{2, 2}, merge_info{ 0,0,0 }));
+        FAST_CHECK_EQ(vector<int>{2,2,1, 1}, merge(vector<int>{1, 1}, vector<int>{2, 2}, merge_info{ 2,0,0 }));
+        FAST_CHECK_EQ(vector<int>{2, 1, 1,2}, merge(vector<int>{1, 1}, vector<int>{2, 2}, merge_info{ 1,1,1 }));
+        FAST_CHECK_EQ(vector<int>{2, 1, 1}, merge(vector<int>{1, 1}, vector<int>{2, 2}, merge_info{ 1,0,0 }));
+        FAST_CHECK_EQ(vector<int>{1, 1, 2}, merge(vector<int>{1, 1}, vector<int>{2, 2}, merge_info{ 0,1,1 }));
+    }
+    TEST_CASE("point_merge") {
+        using shyft::time_series::point_ts;
+        using shyft::core::utcperiod;
+        using shyft::core::utctime;
+        using shyft::core::calendar;
+        using shyft::core::deltahours;
+        using shyft::time_series::merge;
+        const auto stair_case = shyft::time_series::POINT_AVERAGE_VALUE;
+        calendar c;
+        auto t1 = c.time(2017, 1, 1,0);
+        auto t2 = c.time(2017, 1, 1, 3);
+        auto dt = deltahours(1);
+        size_t n = 3;
+        SUBCASE("fixed_dt") {
+            using shyft::time_axis::fixed_dt;
+            fixed_dt ta1{ t1,dt,n };
+            fixed_dt ta2{ t2,dt,n };
+            fixed_dt ta12{ t1,dt,2 * n };
+            point_ts<fixed_dt> a(ta1, 1.0, stair_case);
+            point_ts<fixed_dt> b(ta2, 2.0, stair_case);
+            point_ts<fixed_dt> ab(ta12, { 1.0,1.0,1.0,2.0,2.0,2.0 }, stair_case);
+            auto m_ab = merge(a, b);
+            auto m_ba = merge(b, a);// in this case, gives same result
+            FAST_CHECK_EQ(m_ab.v, ab.v);
+            FAST_CHECK_EQ(m_ba.v, ab.v);
+        }
+        SUBCASE("calendar_dt") {
+            using shyft::time_axis::calendar_dt;
+            using std::make_shared;
+            auto u = make_shared<calendar>(deltahours(1));
+            calendar_dt ta1{u, t1,dt,n };
+            calendar_dt ta2{u, t2,dt,n };
+            calendar_dt ta12{u, t1,dt,2 * n };
+            point_ts<calendar_dt> a(ta1, 1.0, stair_case);
+            point_ts<calendar_dt> b(ta2, 2.0, stair_case);
+            point_ts<calendar_dt> ab(ta12, { 1.0,1.0,1.0,2.0,2.0,2.0 }, stair_case);
+            auto m_ab = merge(a, b);
+            auto m_ba = merge(b, a);// in this case, gives same result
+            FAST_CHECK_EQ(m_ab.v, ab.v);
+            FAST_CHECK_EQ(m_ba.v, ab.v);
+        }
+        SUBCASE("point_dt") {
+            using shyft::time_axis::point_dt;
+            point_dt ta1{ {t1 + 0*dt,t1 + 1*dt,t1 + 2*dt}, t1+3*dt };
+            point_dt ta2{ { t2 + 0*dt,t2 + 1*dt,t2 + 2*dt }, t2 + 3*dt };
+            point_dt ta12{ { t1 + 0*dt,t1 + 1*dt,t1 + 2*dt, t1 + 3*dt, t1 + 4*dt, t1+5*dt }, t1 + 6*dt };
+            point_ts<point_dt> a(ta1, 1.0, stair_case);
+            point_ts<point_dt> b(ta2, 2.0, stair_case);
+            point_ts<point_dt> ab(ta12, { 1.0,1.0,1.0,2.0,2.0,2.0 }, stair_case);
+            auto m_ab = merge(a, b);
+            auto m_ba = merge(b, a);// in this case, gives same result
+            FAST_CHECK_EQ(m_ab.v, ab.v);
+            FAST_CHECK_EQ(m_ba.v, ab.v);
+            FAST_CHECK_EQ(m_ba.ta.t, ab.ta.t);
+        }
+        SUBCASE("generic_dt") {
+            using shyft::time_axis::fixed_dt;
+            using shyft::time_axis::generic_dt;
+            generic_dt ta1{ fixed_dt{ t1,dt,n } };
+            generic_dt ta2{ fixed_dt { t2,dt,n } };
+            generic_dt ta12{ fixed_dt { t1,dt,2*n } };
+            point_ts<generic_dt> a(ta1, 1.0, stair_case);
+            point_ts<generic_dt> b(ta2, 2.0, stair_case);
+            point_ts<generic_dt> ab(ta12, { 1.0,1.0,1.0,2.0,2.0,2.0 }, stair_case);
+            auto m_ab = merge(a, b);
+            auto m_ba = merge(b, a);// in this case, gives same result
+            FAST_CHECK_EQ(m_ab.v, ab.v);
+            FAST_CHECK_EQ(m_ba.v, ab.v);
+        }
+    }
+    TEST_CASE("forecast_merge") {
+		using namespace shyft;
+		using namespace std;
+		using ta_t = time_axis::fixed_dt;
+		using ts_t = time_series::point_ts<ta_t>;
+		using tsv_t = std::vector<ts_t>;
         // standard triple A testing
 
         // #1:Arrange
@@ -81,6 +159,11 @@ TEST_SUITE("ts_merge") {
     }
     TEST_CASE("tsv_nash_sutcliffe") {
         // arrange
+		using namespace shyft;
+		using namespace std;
+		using ta_t = time_axis::fixed_dt;
+		using ts_t = time_series::point_ts<ta_t>;
+		using tsv_t = std::vector<ts_t>;
         size_t n_fc=100;
         size_t fc_steps =66;
 

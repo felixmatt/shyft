@@ -270,7 +270,7 @@ namespace shyft {
                 time_points.emplace_back(ec::max_utctime);// open-ended time-axis
 
                 shyft::time_axis::point_dt pts(time_points);
-                r.ts= xts_t(pts,values);
+                r.ts= xts_t(pts,values,et::POINT_INSTANT_VALUE);
                 return r;
             }
         };

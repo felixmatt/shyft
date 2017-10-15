@@ -353,7 +353,45 @@ namespace expose {
                           )
 
             )
+            .def("set_auto_cache",&DtsServer::set_auto_cache,args("active"),
+                doc_intro("set auto caching all reads active or passive.")
+                doc_intro("Default is off, and caching must be done through")
+                doc_intro("explicit calls to .cache(ts_ids,ts_vector)")
+                doc_parameters()
+                doc_parameter("active","bool","if set True, all reads will be put into cache")
+            )
+            .def("cache",&DtsServer::add_to_cache,args("ts_ids","ts_vector"),
+                doc_intro("add/update specified ts_ids with corresponding ts to cache")
+                doc_intro("please notice that there is no validation of the tds_ids, they")
+                doc_intro("are threated identifiers,not verified against any existing containers etc.")
+                doc_intro("Requests that follows, will use the cached item as long as it satisfies")
+                doc_intro("the identifier and the coverage period requested")
 
+                doc_parameters()
+                doc_parameter("ts_ids","StringVector","a list of time-series ids")
+                doc_parameter("ts_vector","TsVector","a list of corresponding time-series")
+            )
+            .def("flush_cache",&DtsServer::remove_from_cache,args("ts_ids"),
+                doc_intro("flushes the *specified* ts_ids from cache")
+                doc_intro("Has only effect for ts-ids that are in cache, non-existing items are ignored")
+                doc_parameters()
+                doc_parameter("ts_ids","StringVector","a list of time-series ids to flush out")
+            )
+            .def("flush_cache_all",&DtsServer::flush_cache,
+                doc_intro("flushes all items out of cache (cache_stats remain un-touched)")
+            )
+            .add_property("cache_stats",&DtsServer::get_cache_stats,
+                doc_intro("return the current cache statistics")
+            )
+            .def("clear_cache_stats",&DtsServer::clear_cache_stats,
+                doc_intro("clear accumulated cache_stats")
+            )
+            .add_property("cache_max_items",&DtsServer::get_cache_size,&DtsServer::set_cache_size,
+                doc_intro("cache_max_items is the maximum number of time-series identities that are")
+                doc_intro("kept in memory. Elements exceeding this capacity is elided using the least-recently-used")
+                doc_intro("algorithm. Notice that assigning a lower value than the existing value will also flush out")
+                doc_intro("time-series from cache in the least recently used order.")
+            )
             ;
 
     }
@@ -421,10 +459,38 @@ namespace expose {
             ;
 
     }
+    void dtss_cache_stats() {
+        using CacheStats = shyft::dtss::cache_stats;
+        class_<CacheStats>("CacheStats",
+            doc_intro("Cache statistics for the DtsServer.")
+            )
+            .def_readwrite("hits", &CacheStats::hits,
+                doc_intro("number of hits by time-series id")
+            )
+            .def_readwrite("misses", &CacheStats::misses,
+                doc_intro("number of misses by time-series id")
+            )
+            .def_readwrite("coverage_misses", &CacheStats::coverage_misses,
+                doc_intro("number of misses where we did find the time-series id, but the period coverage was insufficient")
+            )
+            .def_readwrite("id_count", &CacheStats::id_count,
+
+                doc_intro("number of unique time-series identities in cache")
+            )
+            .def_readwrite("point_count", &CacheStats::point_count,
+                doc_intro("total number of time-series points in the cache")
+            )
+            .def_readwrite("fragment_count", &CacheStats::fragment_count,
+                doc_intro("number of time-series fragments in the cache, (greater or equal to id_count)")
+            )
+            ;
+
+    }
 
     void dtss() {
         dtss_messages();
         dtss_server();
         dtss_client();
+        dtss_cache_stats();
     }
 }

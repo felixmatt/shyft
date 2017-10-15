@@ -125,7 +125,6 @@
     </ClInclude>
     <ClInclude Include="unit_conversion.h" />
     <ClInclude Include="routing.h" />
-    <ClInclude Include="dtss.h" />
     <ClInclude Include="time_series.h">
       <Filter>time_series</Filter>
     </ClInclude>
@@ -143,6 +142,12 @@
     </ClInclude>
     <ClInclude Include="predictions.h">
       <Filter>time_series</Filter>
+    </ClInclude>
+    <ClInclude Include="dtss.h">
+      <Filter>dtss</Filter>
+    </ClInclude>
+    <ClInclude Include="dtss_cache.h">
+      <Filter>dtss</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -175,6 +180,9 @@
     </Filter>
     <Filter Include="time_series">
       <UniqueIdentifier>{13f6913a-d13d-40c2-9f91-4a3df6583322}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dtss">
+      <UniqueIdentifier>{5957704b-1c79-4c20-afd7-1735eb03a226}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

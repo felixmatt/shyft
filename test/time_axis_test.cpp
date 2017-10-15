@@ -4,7 +4,10 @@
 using namespace shyft;
 using namespace shyft::core;
 using namespace std;
-
+namespace shyft {
+	namespace time_axis {
+	}
+}
 
 /** \brief Utility function to verify one time-axis are conceptually equal to another */
 template <class TA, class TB>
@@ -45,7 +48,59 @@ static bool test_if_equal( const TA& e, const TB& t ) {
 
 	return !equivalent_time_axis(u,e) && !equivalent_time_axis(u,t);
 }
+
 TEST_SUITE("time_axis") {
+
+TEST_CASE("time_axis_merge_fixed_dt") {
+	using namespace shyft::time_axis;
+	utctime t0{ 0 }, t3{ 3 }, t4{ 4 };
+	utctimespan dt{ 1 };
+	FAST_CHECK_EQ(merge(fixed_dt{ t0,dt,4 }, fixed_dt{ t4,dt,4 }), fixed_dt{ t0,dt,8 });
+	FAST_CHECK_EQ(merge(fixed_dt{ t0,dt,4 }, fixed_dt{ t3,dt,4 }), fixed_dt{ t0,dt,7 });
+	FAST_CHECK_EQ(merge(fixed_dt{ t4,dt,4 }, fixed_dt{ t0,dt,4 }), fixed_dt{ t0,dt,8 });
+	FAST_CHECK_EQ(merge(fixed_dt{ t3,dt,4 }, fixed_dt{ t0,dt,4 }), fixed_dt{ t0,dt,7 });
+    CHECK_THROWS(merge(fixed_dt{ 0,1,4 }, fixed_dt{ 2,2,4 }));
+    CHECK_THROWS(merge(fixed_dt{ 0,1,0 }, fixed_dt{ 0,1,4 }));
+    CHECK_THROWS(merge(fixed_dt{ 0,1,3 }, fixed_dt{ 4,1,1 }));
+}
+TEST_CASE("time_axis_merge_calendar_dt") {
+	using namespace shyft::time_axis;
+	auto c = make_shared<calendar>("Europe/Oslo");
+    auto u = make_shared<calendar>(deltahours(1));
+	utctime t0{ 0 }, t3{ 3*calendar::DAY }, t4{ 4*calendar::DAY };
+	utctimespan dt{ calendar::DAY };
+	FAST_CHECK_EQ(merge(calendar_dt{ c,t0,dt,4 }, calendar_dt{ c,t4,dt,4 }), calendar_dt{ c,t0,dt,8 });
+	FAST_CHECK_EQ(merge(calendar_dt{ c,t0,dt,4 }, calendar_dt{ c,t3,dt,4 }), calendar_dt{ c,t0,dt,7 });
+	FAST_CHECK_EQ(merge(calendar_dt{ c,t4,dt,4 }, calendar_dt{ c,t0,dt,4 }), calendar_dt{ c,t0,dt,8 });
+	FAST_CHECK_EQ(merge(calendar_dt{ c,t3,dt,4 }, calendar_dt{ c,t0,dt,4 }), calendar_dt{ c,t0,dt,7 });
+    CHECK_THROWS(merge(calendar_dt{ c,t3,dt,4 }, calendar_dt{ u,t0,dt,4 })); // different calendars
+    CHECK_THROWS(merge(calendar_dt{ c,t3,dt*2,4 }, calendar_dt{ c,t0,dt,4 })); // different time-step
+    CHECK_THROWS(merge(calendar_dt{ c,t3,dt,4 }, calendar_dt{ c,t0,dt,1 })); // disjoint periods
+
+}
+TEST_CASE("time_axis_merge_point_dt") {
+    using namespace shyft::time_axis;
+    test_if_equal(merge(point_dt{ {0,1,2},3 }, point_dt{ {3,4,5},6 }), point_dt{ {0,1,2,3,4,5},6 });// a-b perfect
+    test_if_equal(merge(point_dt{ { 0,1,2 },3 }, point_dt{ { 2,4,5 },6 }), point_dt{ { 0,1,2,4,5 },6 }); // a b overlap
+    test_if_equal(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 0,1,2 },3 }), point_dt{ { 0,1,2,3,4,5 },6 }); // a after b, perfect
+    test_if_equal(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 0,1,2 },10 }), point_dt{ { 0,1,2,3,4,5 },10 });// b-a-b-extend t_end
+    test_if_equal(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 0,1,2,6 },10 }), point_dt{ { 0,1,2,3,4,5,6 },10 });// b-a-b
+    test_if_equal(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 3 },10 }), point_dt{ { 3,4,5,6 },10 });// no points,just end
+    test_if_equal(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 3 },4 }), point_dt{ { 3,4,5,6 },10 });// b with no contrib
+    CHECK_THROWS(merge(point_dt{ { 3,4,5 },6 }, point_dt{ { 7 },10 }));// not mergable
+    CHECK_THROWS(merge(point_dt{ { 3,4,5 },6 }, point_dt{ }));// not mergable
+}
+TEST_CASE("time_axis_merge_generic_dt") {
+    using namespace shyft::time_axis;
+    auto c = make_shared<calendar>("Europe/Oslo");
+    utctime t0{ 0 }, t4{ 4 * calendar::DAY };
+    utctimespan dt{ calendar::DAY };
+    FAST_CHECK_EQ(merge(generic_dt{ fixed_dt{ t0,dt,4 } }, generic_dt{ fixed_dt{ t4,dt,4 } }), generic_dt{ fixed_dt{ t0,dt,8 } });
+    test_if_equal(merge(generic_dt{ point_dt{ { 0,1,2 },3 } }, generic_dt{ point_dt{ { 3,4,5 },6 } }), generic_dt{ point_dt{ { 0,1,2,3,4,5 },6 } });// a-b perfect
+    FAST_CHECK_EQ(merge(generic_dt{ calendar_dt{ c,t0,dt,4 } }, generic_dt{ calendar_dt{ c,t4,dt,4 } }), generic_dt{ calendar_dt{ c,t0,dt,8 } });
+    CHECK_THROWS( merge(generic_dt{ calendar_dt{ c,t0,dt,4 } }, generic_dt{ fixed_dt{t4,dt,4 } }));// not mergable
+}
+
 TEST_CASE("test_all") {
     // Verify that if all types of time-axis are setup up to have the same periods
     // they all have the same properties.

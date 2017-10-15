@@ -41,7 +41,7 @@ namespace fs=boost::filesystem;
 #include "api/time_series.h"
 #include "time_series_info.h"
 #include "utctime_utilities.h"
-
+#include "dtss_cache.h"
 
 #include <dlib/server.h>
 #include <dlib/iosockstream.h>
@@ -512,15 +512,19 @@ namespace shyft {
         *
         */
         struct server : dlib::server_iostream {
+            using ts_cache_t = cache<apoint_ts_frag,apoint_ts>;
             // callbacks for extensions
             read_call_back_t bind_ts_cb; ///< called to read non shyft:// unbound ts
             find_call_back_t find_ts_cb; ///< called for all non shyft:// find operations
             store_call_back_t store_ts_cb;///< called for all non shyft:// store operations
             // shyft-internal implementation
             map<string,ts_db> container;///< mapping of internal shyft <container> -> ts_db
-
+            ts_cache_t ts_cache{1000000};// default 1 mill ts in cache
+            bool cache_all_reads{false};
             // constructors
+
             server()=default;
+
             template <class CB>
             explicit server(CB&& cb):bind_ts_cb(std::forward<CB>(cb)) {
             }
@@ -544,13 +548,29 @@ namespace shyft {
                 container[container_name]=ts_db(root_dir);
             }
 
-
             const ts_db& internal(const string& container_name) const {
                 auto f=container.find(container_name);
                 if(f == end(container))
                     throw runtime_error(string("Failed to find shyft container:")+container_name);
                 return f->second;
             }
+            //-- expose cache functions
+            // or just leak them through ts_cache ?
+            void add_to_cache(id_vector_t&ids, ts_vector_t& tss) { ts_cache.add(ids,tss);}
+
+            void remove_from_cache(id_vector_t &ids) { ts_cache.remove(ids);}
+
+            cache_stats get_cache_stats() { return ts_cache.get_cache_stats();}
+
+            void clear_cache_stats() { ts_cache.clear_cache_stats();}
+
+            void flush_cache() { return ts_cache.flush();}
+
+            void set_cache_size(size_t max_size) { ts_cache.set_capacity(max_size);}
+
+            void set_auto_cache(bool active) { cache_all_reads=active;}
+
+            size_t get_cache_size() const {return ts_cache.get_capacity();}
 
             ts_info_vector_t do_find_ts(const string& search_expression) {
                 //TODO:
@@ -568,11 +588,17 @@ namespace shyft {
             string extract_url(const apoint_ts&ats) const {
                 auto rts = dynamic_pointer_cast<aref_ts>(ats.ts);
                 if(rts)
-                    return rts->rep.ref;
+                    return rts->id;
                 throw runtime_error("dtss store.extract_url:supplied type must be of type ref_ts");
             }
 
-            void do_store_ts(const ts_vector_t&tsv) const {
+            void do_cache_update_on_write(const ts_vector_t&tsv) {
+                for (size_t i = 0; i<tsv.size(); ++i) {
+                    auto rts = dynamic_pointer_cast<aref_ts>(tsv[i].ts);
+                    ts_cache.add(rts->id, apoint_ts(rts->rep));
+                }
+            }
+            void do_store_ts(const ts_vector_t&tsv) {
                 if(tsv.size()==0) return;
                 // 1. filter out all shyft://<container>/<ts-path> elements
                 //    and route these to the internal storage controller (threaded)
@@ -582,9 +608,12 @@ namespace shyft {
                 for(size_t i=0;i<tsv.size();++i) {
                     auto rts = dynamic_pointer_cast<aref_ts>(tsv[i].ts);
                     if(!rts) throw runtime_error("dtss store: require ts with url-references");
-                    auto c= extract_shyft_url_container(rts->rep.ref);
+                    auto c= extract_shyft_url_container(rts->id);
                     if(c.size()) {
-                        internal(c).save(rts->rep.ref.substr(shyft_prefix.size()+c.size()+1),rts->rep.bts());
+                        internal(c).save(rts->id.substr(shyft_prefix.size()+c.size()+1),rts->core_ts());
+                        if (cache_all_reads) { // ok, this ends up in a copy, and lock for each item(can be optimized if many)
+                            ts_cache.add(rts->id, apoint_ts(rts->rep));
+                        }
                     } else {
                         other.push_back(i); // keep idx of those we have not saved
                     }
@@ -595,35 +624,50 @@ namespace shyft {
                 if(store_ts_cb && other.size()) {
                     if(other.size()==tsv.size()) { //avoid copy/move if possible
                         store_ts_cb(tsv);
+                        if (cache_all_reads) do_cache_update_on_write(tsv);
                     } else { // have to do a copy to new vector
                         ts_vector_t r;
                         for(auto i:other) r.push_back(tsv[i]);
                         store_ts_cb(r);
+                        if (cache_all_reads) do_cache_update_on_write(r);
                     }
                 }
             }
 
-            ts_vector_t do_read(const id_vector_t& ts_ids,utcperiod p) const {
+            ts_vector_t do_read(const id_vector_t& ts_ids,utcperiod p) {
                 if(ts_ids.size()==0) return ts_vector_t{};
-                // 1. filter out shyft://
-                //    if all shyft: return internal read
+                // 0. filter out cached ts
+                auto cc = ts_cache.get(ts_ids,p);
                 ts_vector_t r(ts_ids.size());
                 vector<size_t> other;other.reserve(ts_ids.size());
+                // 1. filter out shyft://
+                //    if all shyft: return internal read
                 for(size_t i=0;i<ts_ids.size();++i) {
-                    auto c=extract_shyft_url_container(ts_ids[i]);
-                    if(c.size())
-                        r[i]=apoint_ts(make_shared<gpoint_ts>(internal(c).read(ts_ids[i].substr(shyft_prefix.size()+c.size()+1),p)));
-                    else
-                        other.push_back(i);
+                    if(cc.find(ts_ids[i])==cc.end()) {
+                        auto c=extract_shyft_url_container(ts_ids[i]);
+                        if(c.size()) {
+                            r[i]=apoint_ts(make_shared<gpoint_ts>(internal(c).read(ts_ids[i].substr(shyft_prefix.size()+c.size()+1),p)));
+                            if(cache_all_reads) ts_cache.add(ts_ids[i],r[i]);
+                        } else
+                            other.push_back(i);
+                    } else {
+                        r[i]=cc[ts_ids[i]];
+                    }
                 }
                 // 2. if other/more than shyft
                 //    get all those
                 if(other.size()) {
                     if(!bind_ts_cb)
                         throw runtime_error("dtss: read-request to external ts, without external handler");
-                    if(other.size()==ts_ids.size()) // only other series, just return result
-                        return bind_ts_cb(ts_ids,p);
-                    auto o=bind_ts_cb(ts_ids,p);
+                    if(other.size()==ts_ids.size()) {// only other series, just return result
+                        auto rts= bind_ts_cb(ts_ids,p);
+                        if(cache_all_reads) ts_cache.add(ts_ids,rts);
+                        return rts;
+                    }
+                    vector<string> o_ts_ids;o_ts_ids.reserve(other.size());
+                    for(auto i:other) o_ts_ids.push_back(ts_ids[i]);
+                    auto o=bind_ts_cb(o_ts_ids,p);
+                    if(cache_all_reads) ts_cache.add(o_ts_ids,o);
                     // if 1 and 2, merge into one ordered result vector
                     //
                     for(size_t i=0;i<o.size();++i)
@@ -633,7 +677,7 @@ namespace shyft {
             }
 
             void
-            do_bind_ts(utcperiod bind_period, ts_vector_t& atsv) const {
+            do_bind_ts(utcperiod bind_period, ts_vector_t& atsv)  {
                 std::map<string, vector<api::ts_bind_info>> ts_bind_map;
                 vector<string> ts_id_list;
                 // step 1: bind not yet bound time-series ( ts with only symbol, needs to be resolved using bind_cb)
@@ -808,7 +852,7 @@ namespace shyft {
                 for(auto const &ats:tsv) {
                     auto rts = dynamic_cast<api::aref_ts*>(ats.ts.get());
                     if(!rts) throw std::runtime_error(string("attempt to store a null ts"));
-                    if(rts->needs_bind()) throw std::runtime_error(string("attempt to store unbound ts:")+rts->rep.ref);
+                    if(rts->needs_bind()) throw std::runtime_error(string("attempt to store unbound ts:")+rts->id);
                 }
                 msg::write_type(message_type::STORE_TS,io);{
                     boost::archive::binary_oarchive oa(io);

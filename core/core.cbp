@@ -4,7 +4,7 @@
 	<Project>
 		<Option title="core" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="methods/;interpolation/;method_stacks/;time_and_calendar/;geo/;time_series/;compiler_etc/;experimental/;optimizers/;serialization/;" />
+		<Option virtualFolders="methods/;interpolation/;method_stacks/;time_and_calendar/;geo/;time_series/;compiler_etc/;experimental/;optimizers/;serialization/;dtss/;" />
 		<Option show_notes="0">
 			<notes>
 				<![CDATA[The core parts, - basically our target is a header-only concept, but there is still a need for a tiny static library]]>
@@ -86,7 +86,10 @@
 			<Option virtualFolder="optimizers/" />
 		</Unit>
 		<Unit filename="dtss.h">
-			<Option virtualFolder="time_series/" />
+			<Option virtualFolder="dtss/" />
+		</Unit>
+		<Unit filename="dtss_cache.h">
+			<Option virtualFolder="dtss/" />
 		</Unit>
 		<Unit filename="experimental.cpp">
 			<Option virtualFolder="experimental/" />

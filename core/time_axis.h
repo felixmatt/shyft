@@ -1227,6 +1227,29 @@ namespace shyft {
                 r.t.pop_back();
             return generic_dt( r );
         }
+        /**ensure generic_dt optimizes fixed-interval cases */
+        inline generic_dt combine( const generic_dt& a, const generic_dt & b ) {
+            switch(a.gt) {
+            case generic_dt::FIXED:switch(b.gt) {
+                case generic_dt::FIXED: return generic_dt{combine(a.f,b.f)};//fast
+                case generic_dt::CALENDAR: return combine(a.f,b.c);
+                case generic_dt::POINT: return combine(a.f,b.p);
+                }
+            break;
+            case generic_dt::CALENDAR:switch(b.gt) {
+                case generic_dt::FIXED:return combine(a.c,b.f);
+                case generic_dt::CALENDAR:return combine(a.c,b.c);
+                case generic_dt::POINT:return combine(a.c,b.p);
+                }
+
+            case generic_dt::POINT:switch(b.gt) {
+                case generic_dt::FIXED:return combine(a.p,b.f);
+                case generic_dt::CALENDAR:return combine(a.p,b.c);
+                case generic_dt::POINT:return combine(a.p,b.p);
+                }
+            }
+            return generic_dt{};//never reached
+        }
 
         /**\brief TODO write the combine sparse time-axis algorithm
          *  for calendar_p_dt and period-list.
@@ -1363,6 +1386,151 @@ namespace shyft {
 		template<class TA1, class TA2>
 		inline auto make_time_axis_map(TA1 const&src, TA2 const&m) {
 			return time_axis_map<TA1, TA2>(src, m);
+		}
+
+		/* The section below contains merge functionality for
+		 * time-axis, but to be used in the context of time-series
+		 * the 'merge(ta a,ta b)' operation
+		 * require the time-axis to be compatible
+		 * and the .total_period() should overlap, or extend.
+		 * It's important that time-axis and values are merged using
+		 * same info/algorithm.
+ 		 */
+
+		/** helper class to keep time-series/axis merge info
+		*  for time-axis a (priority) and b (fillin/extend)
+		*/
+		struct merge_info {
+			size_t b_n{ 0 };///< copy n- first from b before a
+			size_t a_i{ string::npos };///< extend a with  b[a_i]..a_n after a
+			size_t a_n{ 0 };///< number of elements to extend after a is at the end.
+			size_t size() const { return b_n + a_n; }
+			utctime t_end{ no_utctime };///< the t_end, relevant for point_dt time-axis
+		};
+
+        /**returns true if the period a and be union can be one continuous period*/
+		inline bool continuous_merge(const utcperiod& a, const utcperiod& b) {
+			return !(a.end < b.start || b.end < a.start);
+		}
+
+        /**return true if a calendars are reference equal or have same name */
+		inline bool equal_calendars(const shared_ptr<calendar>&a, const shared_ptr<calendar>&b) {
+			return a.get() == b.get() || (a->tz_info->name() == b->tz_info->name());
+		}
+
+		/** return true if fixed time-axis a and b can be merged into one time-axis */
+		inline bool can_merge(const fixed_dt&a, const fixed_dt&b) {
+			return a.dt == b.dt && a.dt != 0 && a.n > 0 && b.n > 0 && continuous_merge(a.total_period(), b.total_period());
+		}
+
+		/** return true if calendar time-axis a and b can be merged into one time-axis */
+		inline bool can_merge(const calendar_dt& a, const calendar_dt& b) {
+			return a.dt == b.dt && a.dt != 0 && a.n > 0 && b.n > 0
+				&& equal_calendars(a.cal, b.cal)
+				&& continuous_merge(a.total_period(), b.total_period());
+		}
+
+		/** return true if point time-axis a and b can be merged into one time-axis */
+		inline bool can_merge(const point_dt &a, const point_dt& b) {
+			return continuous_merge(a.total_period(), b.total_period());
+		}
+
+        /** return true if generic time-axis a and b can be merged into one time-axis */
+		inline bool can_merge(const generic_dt& a, const generic_dt& b) {
+			switch (a.gt) {
+			case generic_dt::FIXED: return can_merge(a.f, b.f);
+			case generic_dt::CALENDAR: return can_merge(a.c, b.c);
+			case generic_dt::POINT: return can_merge(a.p, b.p);
+			}
+			throw runtime_error("unsupported time-axis in can_merge");
+		}
+
+		/**computes the merge-info for two time-axis
+		*
+		* to enable easy and consistent time-series merge
+		* operations.
+		*/
+		template <class TA, enable_if_t< TA::continuous::value,int> =0 >// enable if time-axis
+		inline merge_info compute_merge_info(const TA& a, const TA&b) {
+			const auto a_p = a.total_period();
+			const auto b_p = b.total_period();
+			if (!continuous_merge(a_p, b_p)) throw runtime_error(string("attempt to merge disjoint non-overlapping time-axis"));
+			merge_info r;
+			if (a_p.start > b_p.start) { // a starts after b, so b contribute before a starts
+				r.b_n = b.index_of(a_p.start - 1)+1;
+			}
+			if (a_p.end < b_p.end) { // a ends before b ends, so b extends the result
+				r.a_i = b.index_of(a_p.end); // check if b.time(i) is >= a_p.end, if not increment i.
+				if (b.time(r.a_i) < a_p.end)
+					++r.a_i;
+				r.a_n = b.size() - r.a_i;
+				r.t_end = b_p.end;
+			} else { // a ends after b
+				r.t_end = a_p.end;
+			}
+			return r;
+		}
+
+		/** merge time-axis a and b into one.
+		*  require a.dt equal to b.dt
+		*         and that the two axis covers a contiguous period
+		*/
+		inline fixed_dt merge(const fixed_dt& a, const fixed_dt& b, const merge_info& m) {
+			const auto a_p = a.total_period();
+			const auto b_p = b.total_period();
+			utcperiod p{ min(a_p.start,b_p.start), max(a_p.end, b_p.end) };
+			return fixed_dt{ p.start,a.dt, a.size() + m.size() };
+		}
+
+		/** merge time-axis a and b into one.
+		*  require a.dt equal to b.dt,
+		*         and same calendar (tz-id)
+		*         and that the two axis covers a contiguous period
+		*/
+		inline calendar_dt merge(const calendar_dt& a, const calendar_dt& b, const merge_info& m) {
+			const auto a_p = a.total_period();
+			const auto b_p = b.total_period();
+			utcperiod p{ min(a_p.start,b_p.start), max(a_p.end, b_p.end) };
+			return calendar_dt{ a.cal, p.start,a.dt,a.size() + m.size() };
+		}
+
+		/** merge value-vector from two time-series a and b using merge_info */
+		template <class T>
+		vector<T> merge(const vector<T> &a, const vector<T> &b, const merge_info& m) {
+			auto n = m.size() + a.size();
+			vector<T> r; r.reserve(n);
+			if (m.b_n) copy(begin(b), begin(b) + m.b_n, back_inserter(r));
+			copy(begin(a), end(a), back_inserter(r));
+			if (m.a_n) copy(begin(b) + m.a_i, begin(b) + m.a_i + m.a_n, back_inserter(r));
+			return r;
+		}
+
+		/** merge time-axis a and b into one using merge_info.
+		*  require a validated merg_info for a and b
+		*  \return a new point_dt where the points are
+		*           all points of a, plus points of b not covered by a
+		*/
+		inline point_dt merge(const point_dt& a, const point_dt& b, const merge_info& m) {
+			return point_dt{ merge(a.t,b.t,m),m.t_end };
+		}
+
+		inline generic_dt merge(const generic_dt& a, const generic_dt& b, const merge_info& m) {
+			switch (a.gt) {
+			case generic_dt::FIXED:return generic_dt(merge(a.f, b.f, compute_merge_info(a.f, b.f)));
+			case generic_dt::CALENDAR:return generic_dt(merge(a.c, b.c, compute_merge_info(a.c, b.c)));
+			case generic_dt::POINT:return generic_dt(merge(a.c, b.c, compute_merge_info(a.c, b.c)));
+			}
+			throw runtime_error("merge(generic_dt..): unsupported time-axis type");
+		}
+
+		/** simple template that merges two equally typed time-series
+		 *
+		 *  \returns the merged time-series, or throws if not compatible
+		 */
+		template<class TA,enable_if_t< TA::continuous::value,int> =0>
+		TA merge(const TA& a, const TA& b) {
+			if (!can_merge(a, b)) throw runtime_error("can not merge time-axis, not compatible or disjoint total_period");
+			return merge(a, b, compute_merge_info(a, b));
 		}
     }
 }
