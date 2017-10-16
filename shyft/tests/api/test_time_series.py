@@ -864,7 +864,7 @@ class TimeSeries(unittest.TestCase):
         extension = api.TimeSeries(ta=ta, fill_value=8.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
 
         # extend after all time-series in the vector
-        extended_tsvector = tsvector.extend(extension)
+        extended_tsvector = tsvector.extend_ts(extension)
 
         # assert first element
         for i in range(2*n):
@@ -889,7 +889,7 @@ class TimeSeries(unittest.TestCase):
             fill_value=20.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
         # extend each element in tsvector by the corresponding element in tsvector_2
-        extended_tsvector = tsvector.extend(tsvector_2)
+        extended_tsvector = tsvector.extend_ts(tsvector_2)
 
         # assert first element
         for i in range(2*n):
