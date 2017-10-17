@@ -290,7 +290,15 @@ class ShyftApi(unittest.TestCase):
         tsa.set(1, 3.0)
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # make sure the ts passed onto target spec, is a copy
         self.assertAlmostEqual(tsa.value(1), 3.0)  # and that we really did change the source
-
+        # Create a clone of target specification vector
+        tv2 = api.TargetSpecificationVector(tv)
+        self.assertEqual(2, tv2.size())
+        self.assertAlmostEqual(tv2[0].ts.value(1), 1.5)  # average value 0..1 ->0.5
+        self.assertAlmostEqual(tv2[0].ts.value(2), 2.5)  # average value 0..1 ->0.5
+        self.assertAlmostEqual(tv2[0].ts.value(3), 3.0)  # average value 0..1 ->0.5
+        tv2[0].scale_factor = 10.0
+        self.assertAlmostEqual(tv[0].scale_factor, 1.0)
+        self.assertAlmostEqual(tv2[0].scale_factor, 10.0)
     def test_create_target_spec_from_std_time_series(self):
         """
         Verify we can create target-spec giving ordinary ts,
