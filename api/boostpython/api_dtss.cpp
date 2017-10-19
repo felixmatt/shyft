@@ -53,6 +53,7 @@ namespace shyft {
             ~py_server() {
                 cb = boost::python::object();
                 fcb = boost::python::object();
+				scb = boost::python::object();
             }
 
             void handle_pyerror() {
