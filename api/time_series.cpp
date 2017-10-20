@@ -506,26 +506,31 @@ namespace shyft{
             //  the objective is to avoid traffic over the 'switch' in generic_dt
             //  and provide direct access to representative time-axis instead
             if(all_same_generic_time_axis_type(tsvx)) {
-                auto gt = tsvx[0].time_axis().gt;
-                switch(gt) {
+                if (tsvx.size()) {
+                    auto gt = tsvx[0].time_axis().gt;
+                    switch (gt) {
                     case time_axis::generic_dt::FIXED: {
-                        std::vector<point_ts<time_axis::fixed_dt>> tsv;tsv.reserve(tsvx.size());
-                        for(auto&ts:tsvx) tsv.emplace_back(move(ts.ta.f),move(ts.v),ts.fx_policy);
-                        auto rp=shyft::time_series::calculate_percentiles(ta,tsv,percentile_list);
-                        for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
+                        std::vector<point_ts<time_axis::fixed_dt>> tsv; tsv.reserve(tsvx.size());
+                        for (auto&ts:tsvx) tsv.emplace_back(move(ts.ta.f), move(ts.v), ts.fx_policy);
+                        auto rp = shyft::time_series::calculate_percentiles(ta, tsv, percentile_list);
+                        for (auto&ts:rp) r.emplace_back(ta, std::move(ts.v), POINT_AVERAGE_VALUE);
                     } break;
                     case time_axis::generic_dt::CALENDAR: {
-                        std::vector<point_ts<time_axis::calendar_dt>> tsv;tsv.reserve(tsvx.size());
-                        for(auto&ts:tsvx) tsv.emplace_back(move(ts.ta.c),move(ts.v),ts.fx_policy);
-                        auto rp=shyft::time_series::calculate_percentiles(ta,tsv,percentile_list);
-                        for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
+                        std::vector<point_ts<time_axis::calendar_dt>> tsv; tsv.reserve(tsvx.size());
+                        for (auto&ts:tsvx) tsv.emplace_back(move(ts.ta.c), move(ts.v), ts.fx_policy);
+                        auto rp = shyft::time_series::calculate_percentiles(ta, tsv, percentile_list);
+                        for (auto&ts:rp) r.emplace_back(ta, std::move(ts.v), POINT_AVERAGE_VALUE);
                     } break;
                     case time_axis::generic_dt::POINT: {
-                        std::vector<point_ts<time_axis::point_dt>> tsv;tsv.reserve(tsvx.size());
-                        for(auto&ts:tsvx) tsv.emplace_back(move(ts.ta.p),move(ts.v),ts.fx_policy);
-                        auto rp=shyft::time_series::calculate_percentiles(ta,tsv,percentile_list);
-                        for(auto&ts:rp) r.emplace_back(ta,std::move(ts.v),POINT_AVERAGE_VALUE);
+                        std::vector<point_ts<time_axis::point_dt>> tsv; tsv.reserve(tsvx.size());
+                        for (auto&ts:tsvx) tsv.emplace_back(move(ts.ta.p), move(ts.v), ts.fx_policy);
+                        auto rp = shyft::time_series::calculate_percentiles(ta, tsv, percentile_list);
+                        for (auto&ts:rp) r.emplace_back(ta, std::move(ts.v), POINT_AVERAGE_VALUE);
                     } break;
+                    }
+                } else {
+                    for (size_t i = 0;i<percentile_list.size();++i) 
+                        r.emplace_back(ta, shyft::nan, POINT_AVERAGE_VALUE);
                 }
             } else {
                 auto rp= shyft::time_series::calculate_percentiles(ta,tsvx,percentile_list);
