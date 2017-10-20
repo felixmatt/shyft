@@ -808,6 +808,15 @@ namespace shyft {
 
             vector<apoint_ts>
             percentiles(ts_vector_t const& tsv, utcperiod p,api::gta_t const&ta,const vector<int>& percentile_spec) {
+                if (tsv.size()==0)
+                    throw std::runtime_error("percentiles requires a source ts-vector with more than 0 time-series");
+                if (percentile_spec.size()==0)
+                    throw std::runtime_error("percentile function require more than 0 percentiles specified");
+                if (!p.valid())
+                    throw std::runtime_error("percentiles require a valid period-specification");
+                if (ta.size()==0)
+                    throw std::runtime_error("percentile function require a time-axis with more than 0 steps");
+
                 msg::write_type(message_type::EVALUATE_TS_VECTOR_PERCENTILES, io);
                 {
                     boost::archive::binary_oarchive oa(io);
@@ -830,6 +839,10 @@ namespace shyft {
 
             vector<apoint_ts>
             evaluate(ts_vector_t const& tsv, utcperiod p) {
+                if (tsv.size()==0)
+                    throw std::runtime_error("evaluate requires a source ts-vector with more than 0 time-series");
+                if (!p.valid())
+                    throw std::runtime_error("percentiles require a valid period-specification");
                 msg::write_type(message_type::EVALUATE_TS_VECTOR,io);{
                     boost::archive::binary_oarchive oa(io);
                     oa<<p<<tsv;
@@ -848,6 +861,8 @@ namespace shyft {
                 throw std::runtime_error(string("Got unexpected response:")+std::to_string((int)response_type));
             }
             void store_ts(const ts_vector_t &tsv) {
+                if (tsv.size()==0)
+                    return; //trivial and considered valid case
                 // verify that each member of tsv is a gpoint_ts
                 for(auto const &ats:tsv) {
                     auto rts = dynamic_cast<api::aref_ts*>(ats.ts.get());
