@@ -649,7 +649,7 @@ TEST_CASE("dtss_store") { /*
         auto f0 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f0.size(),0);// expect zero to start with
         auto t0=timing::now();
-        dtss.store_ts(tsv);
+        dtss.store_ts(tsv,false);
         auto t1=timing::now();
         auto f1 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f1.size(),tsv.size());

@@ -36,7 +36,7 @@ class GridPP(unittest.TestCase):
     
     def _make_fc_from_obs(self, obs_set, bias):
         fc_set = api.TemperatureSourceVector()
-        bias_ts = api.TimeSeries(self.ta, fill_value=bias)
+        bias_ts = api.TimeSeries(self.ta, fill_value=bias,point_fx=api.point_interpretation_policy.POINT_INSTANT_VALUE)
         for obs in obs_set:
             geo_ts = api.TemperatureSource(obs.mid_point(), obs.ts + bias_ts)
             fc_set.append(geo_ts)

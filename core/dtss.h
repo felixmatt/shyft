@@ -598,7 +598,7 @@ namespace shyft {
                     ts_cache.add(rts->id, apoint_ts(rts->rep));
                 }
             }
-            void do_store_ts(const ts_vector_t&tsv) {
+            void do_store_ts(const ts_vector_t&tsv,bool cache_on_write) {
                 if(tsv.size()==0) return;
                 // 1. filter out all shyft://<container>/<ts-path> elements
                 //    and route these to the internal storage controller (threaded)
@@ -611,7 +611,7 @@ namespace shyft {
                     auto c= extract_shyft_url_container(rts->id);
                     if(c.size()) {
                         internal(c).save(rts->id.substr(shyft_prefix.size()+c.size()+1),rts->core_ts());
-                        if (cache_all_reads) { // ok, this ends up in a copy, and lock for each item(can be optimized if many)
+                        if (cache_on_write) { // ok, this ends up in a copy, and lock for each item(can be optimized if many)
                             ts_cache.add(rts->id, apoint_ts(rts->rep));
                         }
                     } else {
@@ -624,12 +624,12 @@ namespace shyft {
                 if(store_ts_cb && other.size()) {
                     if(other.size()==tsv.size()) { //avoid copy/move if possible
                         store_ts_cb(tsv);
-                        if (cache_all_reads) do_cache_update_on_write(tsv);
+                        if (cache_on_write) do_cache_update_on_write(tsv);
                     } else { // have to do a copy to new vector
                         ts_vector_t r;
                         for(auto i:other) r.push_back(tsv[i]);
                         store_ts_cb(r);
-                        if (cache_all_reads) do_cache_update_on_write(r);
+                        if (cache_on_write) do_cache_update_on_write(r);
                     }
                 }
             }
@@ -775,11 +775,11 @@ namespace shyft {
                                 }
                             } break;
                             case message_type::STORE_TS: {
-                                ts_vector_t rtsv;{
+								ts_vector_t rtsv; bool cache_on_write{false}; {
                                     boost::archive::binary_iarchive ia(in);
-                                    ia>>rtsv;
+                                    ia>>rtsv>>cache_on_write;
                                 }
-                                do_store_ts(rtsv); {
+                                do_store_ts(rtsv,cache_on_write); {
                                     msg::write_type(message_type::STORE_TS,out);
                                 }
                             } break;
@@ -860,7 +860,7 @@ namespace shyft {
                 }
                 throw std::runtime_error(string("Got unexpected response:")+std::to_string((int)response_type));
             }
-            void store_ts(const ts_vector_t &tsv) {
+            void store_ts(const ts_vector_t &tsv,bool cache_on_write) {
                 if (tsv.size()==0)
                     return; //trivial and considered valid case
                 // verify that each member of tsv is a gpoint_ts
@@ -871,7 +871,7 @@ namespace shyft {
                 }
                 msg::write_type(message_type::STORE_TS,io);{
                     boost::archive::binary_oarchive oa(io);
-                    oa<<tsv;
+                    oa<<tsv<<cache_on_write;
                 }
                 auto response_type= msg::read_type(io);
                 if(response_type==message_type::SERVER_EXCEPTION) {

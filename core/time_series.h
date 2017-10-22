@@ -2121,7 +2121,7 @@ namespace shyft{
             std::vector<rts_t> r;r.reserve(n);
             for (size_t i = 0;i<n;++i)
                 r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
-            return std::move(r);
+            return r;
         }
 
         /**bind ref_ts

@@ -295,9 +295,14 @@ namespace shyft{
         void apoint_ts::bind(const apoint_ts& bts) {
             if(!dynamic_pointer_cast<aref_ts>(ts))
                 throw runtime_error("this time-series is not bindable");
-            if(!dynamic_pointer_cast<gpoint_ts>(bts.ts))
-                throw runtime_error("the supplied argument time-series must be a point ts");
-            dynamic_pointer_cast<aref_ts>(ts)->rep=dynamic_pointer_cast<gpoint_ts>(bts.ts);//rep.set_ts( make_shared<gts_t>( dynamic_cast<gpoint_ts*>(bts.ts.get())->rep ));
+			if (dynamic_pointer_cast<gpoint_ts>(bts.ts)) {
+				dynamic_pointer_cast<aref_ts>(ts)->rep = dynamic_pointer_cast<gpoint_ts>(bts.ts);
+			} else if(!bts.needs_bind()) {
+				dynamic_pointer_cast<aref_ts>(ts)->rep = make_shared<gpoint_ts>(bts.time_axis(), bts.values(), bts.point_interpretation());
+			} else {
+				throw runtime_error("the supplied argument time-series must be a point ts or something that directly resolves to one");
+			}
+            
         }
         string apoint_ts::id() const {
             if(!dynamic_pointer_cast<aref_ts>(ts))

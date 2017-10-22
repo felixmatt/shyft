@@ -170,7 +170,7 @@ class DtssTestCase(unittest.TestCase):
             assert_array_almost_equal(r1[i].values.to_numpy(), tsv[i].values.to_numpy(), decimal=4)
 
         self.assertEqual(len(r2), len(percentile_list))
-        dummy_ts.bind(TimeSeries(ta, fill_value=1.0))
+        dummy_ts.bind(TimeSeries(ta, fill_value=1.0, point_fx=point_fx.POINT_AVERAGE_VALUE))
         p2 = tsv.percentiles(ta24, percentile_list)
         # r2 = tsv.percentiles(ta24,percentile_list)
 
@@ -291,7 +291,7 @@ class DtssTestCase(unittest.TestCase):
             dtss.cb = self.dtss_read_callback  # rig external callbacks as well.
             self.callback_count = 0
             self.rd_throws = False
-
+            cache_on_write = True
             port_no = find_free_port()
             host_port = 'localhost:{0}'.format(port_no)
             dtss.set_auto_cache(True)
@@ -301,7 +301,7 @@ class DtssTestCase(unittest.TestCase):
 
             dts = DtsClient(host_port)
             cs0 = dtss.cache_stats
-            dts.store_ts(store_tsv)
+            dts.store_ts(store_tsv, cache_on_write)
             r1 = dts.evaluate(tsv, ta.total_period())
             cs1 = dtss.cache_stats
             dtss.flush_cache_all()  # force the cache empty

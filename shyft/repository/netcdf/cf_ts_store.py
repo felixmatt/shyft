@@ -15,7 +15,7 @@ from pyproj import Proj
 # from shyft.api import TemperatureSource
 from shyft.api import TimeSeries
 from shyft.api import TimeAxis
-#from shyft.api import point_interpretation_policy as point_fx
+from shyft.api import point_interpretation_policy as point_fx
 #from shyft.api import deltahours, deltaminutes
 from shyft.api import DoubleVector as dv
 #from shyft.api import GeoPoint
@@ -256,7 +256,7 @@ class TimeSeriesStore:
                     ta = TimeAxis(UtcTimeVector.from_numpy(time_cropped.astype(np.int64)), int(last_time_point))
                     # print(var_cropped)
                     # print(type(var_cropped))
-                    time_series_cropped = TimeSeries(ta, dv.from_numpy(var_cropped))
+                    time_series_cropped = TimeSeries(ta, dv.from_numpy(var_cropped), point_fx.POINT_INSTANT_VALUE)  # TODO: is this right policy?
 
             else:
                 time[:] = time_series.time_axis.time_points[:-1]
@@ -311,7 +311,7 @@ class TimeSeriesStore:
                     ta = TimeAxis(UtcTimeVector.from_numpy(time_cropped.astype(np.int64)), int(last_time_point))
                     # print(var_cropped)
                     # print(type(var_cropped))
-                    time_series_cropped = TimeSeries(ta, dv.from_numpy(var_cropped))
+                    time_series_cropped = TimeSeries(ta, dv.from_numpy(var_cropped), point_fx.POINT_INSTANT_VALUE)  # TODO: is this correct point policy?
 
         # 4. save the cropped data
         self.create_new_file()
