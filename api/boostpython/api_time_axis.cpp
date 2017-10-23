@@ -31,13 +31,13 @@ namespace expose {
                 .def("index_of",&C_::index_of,args("t"),
                      doc_parameters()
                      doc_parameter("t","int","utctime in seconds 1970.01.01")
-                     doc_returns("index","int","the index of the time-axis period that contains t, -1 if outside range")
+                     doc_returns("index","int","the index of the time-axis period that contains t, npos if outside range")
                 )
                 .def("open_range_index_of",&C_::open_range_index_of,args("t"),
                      "returns the index that contains t, or is before t"
                      doc_parameters()
                      doc_parameter("t","int","utctime in seconds 1970.01.01")
-                     doc_returns("index","int","the index the time-axis period that contains t, -1 if before first period n-1, if t is after last period")
+                     doc_returns("index","int","the index the time-axis period that contains t, -npos if before first period n-1, if t is after last period")
                 )
                 .def(self == self)
                 .def(self != self)
@@ -235,14 +235,14 @@ namespace expose {
                     doc_parameters()
                     doc_parameter("t", "int", "utctime in seconds 1970.01.01")
                     doc_parameter("ix_hint","int","index-hint to make search in point-time-axis faster")
-                    doc_returns("index", "int", "the index of the time-axis period that contains t, -1 if outside range")
+                    doc_returns("index", "int", "the index of the time-axis period that contains t, npos if outside range")
                 )
                 .def("open_range_index_of", &generic_dt::open_range_index_of, (py::arg("t"), py::arg("ix_hint") = string::npos),
                     "returns the index that contains t, or is before t"
                     doc_parameters()
                     doc_parameter("t", "int", "utctime in seconds 1970.01.01")
                     doc_parameter("ix_hint", "int", "index-hint to make search in point-time-axis faster")
-                    doc_returns("index", "int", "the index the time-axis period that contains t, -1 if before first period n-1, if t is after last period")
+                    doc_returns("index", "int", "the index the time-axis period that contains t, npos if before first period n-1, if t is after last period")
                 )
                 .def(self == self)
                 .def(self != self)

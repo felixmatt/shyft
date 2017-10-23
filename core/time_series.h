@@ -325,16 +325,26 @@ namespace shyft{
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 
 			point_ts() = default;
+
 			point_ts(const TA & ta, double fill_value, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
 				: ta{ ta }, v(ta.size(), fill_value), fx_policy{ fx_policy } { }
+
 			point_ts(const TA & ta, const vector<double> & vx, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
 				: ta{ ta }, v{ vx }, fx_policy{ fx_policy }
 			{
                 if(ta.size() != v.size())
                     throw runtime_error("point_ts: time-axis size is different from value-size");
             }
-			point_ts(TA && tax, std::vector<double> && vx, ts_point_fx fx_policy = POINT_INSTANT_VALUE)
-				: ta{ std::forward<TA>(tax) }, v{ std::forward<std::vector<double>>(vx) }, fx_policy{ fx_policy }
+
+			point_ts(TA && tax, vector<double> && vx, ts_point_fx fx_policy= POINT_INSTANT_VALUE )
+				: ta{ std::move(tax) }, v{ std::move(vx) }, fx_policy{ fx_policy }
+			{
+				if(ta.size() != v.size())
+					throw runtime_error("point_ts: time-axis size is different from value-size");
+			}
+
+			point_ts(const TA & tax, vector<double> && vx, ts_point_fx fx_policy= POINT_INSTANT_VALUE )
+				: ta{ tax }, v{ std::move(vx) }, fx_policy{ fx_policy }
 			{
 				if(ta.size() != v.size())
 					throw runtime_error("point_ts: time-axis size is different from value-size");
@@ -2111,7 +2121,7 @@ namespace shyft{
             std::vector<rts_t> r;r.reserve(n);
             for (size_t i = 0;i<n;++i)
                 r.emplace_back(make_time_shift_fx(ts, t0 - cal.add(t, dt, i)));
-            return std::move(r);
+            return r;
         }
 
         /**bind ref_ts

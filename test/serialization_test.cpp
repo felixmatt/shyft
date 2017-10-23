@@ -191,9 +191,9 @@ TEST_CASE("test_serialization") {
     TS_ASSERT(is_equal(apts,apts2));
 
     api::aref_ts arts("netcdf://file.nc");
-    arts.rep.ts=make_shared<api::gts_t>(tag,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+    arts.rep=make_shared<api::gpoint_ts>(tag,1.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
     auto arts2=serialize_loop(arts);
-    TS_ASSERT_EQUALS(arts.rep.ref,arts2.rep.ref);
+    TS_ASSERT_EQUALS(arts.id,arts2.id);
     TS_ASSERT(is_equal(arts,arts2));
 
     auto aexpr = (agts*2.0 + agts/4.0 + 12)/agts;

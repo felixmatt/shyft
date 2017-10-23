@@ -1,9 +1,16 @@
-#include "test_pch.h"
+﻿#include "test_pch.h"
 
 #include "core/dtss.h"
+#include "core/dtss_cache.h"
+
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
+#include "core/time_series_merge.h"
 #include "api/time_series.h"
+
+#ifdef SHYFT_NO_PCH
+#include <future>
+#include <mutex>
 #include <regex>
 #include <boost/filesystem.hpp>
 #include <cstdint>
@@ -18,6 +25,8 @@
 #include <fcntl.h>
 
 namespace  fs=boost::filesystem;
+#include <armadillo>
+#endif // SHYFT_PCH
 
 using namespace std;
 using namespace shyft;
@@ -32,15 +41,249 @@ api::apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
     auto a = aa*3.0 + aa;
     return a;
 }
-namespace shyft {
-    namespace dtss {
-        using namespace shyft::api;
 
-    }
-}
 dlib::logger dlog("dlib.log");
 
+#define TEST_SECTION(x)
+
 TEST_SUITE("dtss") {
+
+TEST_CASE("dtss_lru_cache") {
+	using shyft::dtss::lru_cache;
+	using std::map;
+	using std::list;
+	using std::vector;
+	using std::string;
+	using std::back_inserter;
+	using shyft::api::apoint_ts;
+	using shyft::api::gta_t;
+	const auto stair_case=shyft::time_series::POINT_AVERAGE_VALUE;
+	lru_cache<string, apoint_ts, map > c(2);
+
+	apoint_ts r;
+	vector<string> mru;
+	gta_t ta(0, 1, 10);
+
+	TEST_SECTION("empty_cache") {
+		FAST_CHECK_UNARY_FALSE(c.try_get_item("a", r));
+	}
+	TEST_SECTION("add_one_item") {
+		c.add_item("a", apoint_ts(ta, 1.0, stair_case));
+		FAST_CHECK_UNARY(c.try_get_item("a", r));
+		FAST_CHECK_EQ(ta.size(), r.time_axis().size());
+		FAST_CHECK_UNARY_FALSE(c.try_get_item("b", r));
+	}
+	TEST_SECTION("add_second_item") {
+		c.add_item("b", apoint_ts(ta, 2.0, stair_case));
+		FAST_CHECK_UNARY(c.try_get_item("a", r));
+		FAST_CHECK_UNARY(c.try_get_item("b", r));
+		c.get_mru_keys(back_inserter(mru));
+		FAST_CHECK_EQ(string("b"), mru[0]);
+		FAST_CHECK_EQ(string("a"), mru[1]);
+	}
+	TEST_SECTION("mru_item_in_front") {
+		c.try_get_item("a", r);
+		mru.clear(); c.get_mru_keys(back_inserter(mru));
+		FAST_CHECK_EQ(string("a"), mru[0]);
+		FAST_CHECK_EQ(string("b"), mru[1]);
+	}
+	TEST_SECTION("excessive_lru_item_evicted_when_adding") {
+		c.add_item("c", apoint_ts(ta, 3.0, stair_case));
+		FAST_CHECK_UNARY_FALSE(c.try_get_item("b", r));
+		FAST_CHECK_UNARY(c.try_get_item("c", r));
+		FAST_CHECK_UNARY(c.try_get_item("a", r));
+	}
+	TEST_SECTION("remove_item") {
+		c.remove_item("a");
+		FAST_CHECK_UNARY_FALSE(c.try_get_item("a", r));
+	}
+	TEST_SECTION("ensure_items_added_are_first") {
+		c.add_item("d", apoint_ts(ta, 4.0, stair_case));
+		mru.clear(); c.get_mru_keys(back_inserter(mru));
+		FAST_CHECK_EQ(string("d"), mru[0]);
+		FAST_CHECK_EQ(string("c"), mru[1]);
+	}
+	TEST_SECTION("update_existing") {
+		c.try_get_item("c", r);//just to ensure "c" is in first position
+		c.add_item("d", apoint_ts(ta, 4.2, stair_case)); //update "d"
+		c.try_get_item("d", r);
+		FAST_CHECK_GT(r.value(0), 4.1);
+		mru.clear(); c.get_mru_keys(back_inserter(mru));
+		FAST_CHECK_EQ(string("d"), mru[0]);
+		FAST_CHECK_EQ(string("c"), mru[1]);
+	}
+}
+TEST_CASE("dtss_ts_cache") {
+    using std::vector;
+    using std::string;
+    using shyft::core::utctime;
+    using shyft::core::deltahours;
+    using shyft::dtss::cache_stats;
+    using shyft::api::apoint_ts;
+    using shyft::api::gta_t;
+    using shyft::dtss::apoint_ts_frag;
+    using dtss_cache=shyft::dtss::cache<apoint_ts_frag,apoint_ts>;
+    const auto stair_case=shyft::time_series::POINT_AVERAGE_VALUE;
+    size_t max_ids=10;
+
+    dtss_cache c(max_ids);
+
+    apoint_ts x;
+    utcperiod p{0,10};
+    FAST_CHECK_EQ(false,c.try_get("a",p,x));
+
+    utctime t0{5};
+    utctime t1{10};
+
+    utctimespan dt{1};
+    size_t n{3};
+    apoint_ts ts_a{gta_t{t0,dt,n},1.0,stair_case};
+    apoint_ts ts_a2{gta_t{t1,dt,n},1.0,stair_case};
+
+    c.add("a",ts_a);
+    FAST_REQUIRE_EQ(true,c.try_get("a",utcperiod{t0,t0+dt},x));
+    FAST_CHECK_EQ(1.0,x.value(0));
+
+    c.add("a",ts_a2);// test we can add twice, a fragment (replace)
+
+    FAST_REQUIRE_EQ(false,c.try_get("a",utcperiod{t0,t0+ 10*dt},x));
+
+    auto s=c.get_cache_stats();
+    FAST_CHECK_EQ(s.hits,2);
+    FAST_CHECK_EQ(s.misses,1);
+    FAST_CHECK_EQ(s.coverage_misses,1);
+    FAST_CHECK_EQ(s.point_count,6);
+    FAST_CHECK_EQ(s.fragment_count,2);
+    FAST_CHECK_EQ(s.id_count,1);
+
+    c.clear_cache_stats();
+    c.flush();
+    s = c.get_cache_stats();
+    FAST_CHECK_EQ(s.hits, 0);
+    FAST_CHECK_EQ(s.misses, 0);
+    FAST_CHECK_EQ(s.coverage_misses, 0);
+    FAST_CHECK_EQ(s.point_count, 0);
+    FAST_CHECK_EQ(s.fragment_count, 0);
+    FAST_CHECK_EQ(s.id_count, 0);
+
+    c.add("a", ts_a2);
+
+    c.remove("a");
+    FAST_REQUIRE_EQ(false,c.try_get("a",utcperiod{t0,t0+dt},x));
+
+    //-- test vector operations
+    // arrange n_ts
+    vector<string> ids;
+    vector<apoint_ts> tss;
+    size_t n_ts = 3;
+    gta_t mta{ t0,dt,n };
+    for (size_t i = 0; i<n_ts; ++i) {
+        ids.push_back(to_string(i));
+        tss.emplace_back(mta, double(i), stair_case);
+    }
+
+    c.add(ids, tss); // add a vector of ids|tss
+
+    auto mts = c.get(ids, mta.total_period());// get a vector of  ids back as map[id]=ts
+    FAST_REQUIRE_EQ(n_ts, mts.size());
+    for (size_t i = 0; i<n_ts; ++i) {
+        FAST_REQUIRE_UNARY(mts.find(ids[i])!=mts.end());
+        FAST_CHECK_EQ(mts[ids[i]].value(0), double(i)); // just check one value unique for ts.
+    }
+
+    auto ids2 = ids; ids2.push_back("not there");// ask for something that's not there
+    auto mts2 = c.get(ids2, mta.total_period());
+    FAST_REQUIRE_EQ(n_ts, mts.size());
+    for (size_t i = 0; i<n_ts; ++i) {
+        FAST_REQUIRE_UNARY(mts2.find(ids[i])!=mts.end());
+        FAST_CHECK_EQ(mts2[ids[i]].value(0), double(i)); // just check one value unique for ts.
+    }
+
+    c.remove(ids2); // remove by vector (even with elem not there)
+    s = c.get_cache_stats();
+    FAST_CHECK_EQ(s.point_count, 0);
+    FAST_CHECK_EQ(s.fragment_count, 0);
+    FAST_CHECK_EQ(s.id_count, 0);
+
+}
+TEST_CASE("dtss_mini_frag") {
+    using std::vector;
+    using std::string;
+    using std::min;
+    using std::max;
+    using shyft::core::utcperiod;
+    using shyft::core::utctime;
+    using shyft::dtss::mini_frag;
+
+    struct tst_frag {
+        utcperiod p;
+        int id{0};
+        tst_frag(utctime f,utctime u):p(f,u){}
+        tst_frag(utctime f,utctime u,int id):p(f,u),id(id){}
+        utcperiod total_period() const {return p;}
+        size_t size() const {return size_t(p.timespan());}
+        tst_frag merge(const tst_frag&o) const {
+            return tst_frag{min(o.p.start,p.start),max(o.p.end,p.end)};
+        }
+    };
+
+    mini_frag<tst_frag> m;
+
+    FAST_CHECK_EQ(m.count_fragments(),0);
+    FAST_CHECK_EQ(m.estimate_size(),0);
+    FAST_CHECK_EQ(m.get_ix(utcperiod(0,10)),string::npos);
+
+    m.add(tst_frag(5,10));// add first
+    FAST_CHECK_EQ(m.count_fragments(),1);
+    FAST_CHECK_EQ(m.estimate_size(),5);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{5,10}),0);
+
+    m.add(tst_frag(4,5));// add merge element
+    FAST_CHECK_EQ(m.count_fragments(),1);
+    FAST_CHECK_EQ(m.estimate_size(),6);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{4,6}),0);
+
+    m.add(tst_frag(1,3));// add before first
+    FAST_CHECK_EQ(m.count_fragments(),2);
+    FAST_CHECK_EQ(m.estimate_size(),8);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{4,6}),1);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{1,2}),0);
+
+    m.add(tst_frag(3,4));// add a piece that merge [0] [1]
+    FAST_CHECK_EQ(m.count_fragments(),1);
+    FAST_CHECK_EQ(m.estimate_size(),9);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{4,6}),0);
+
+    m.add(tst_frag{11,12}); // append a frag at the end
+    FAST_CHECK_EQ(m.count_fragments(),2);
+    FAST_CHECK_EQ(m.estimate_size(),10);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{4,6}),0);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{11,12}),1);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{11,13}),string::npos);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{1,12}),string::npos);
+
+    m.add(tst_frag{13,15}); // append a frag at the end
+    FAST_CHECK_EQ(m.count_fragments(),3);
+    FAST_CHECK_EQ(m.estimate_size(),12);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{13,14}),2);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{11,12}),1);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{5,6}),0);
+
+    m.add(tst_frag{11,14});// append a frag that melts [1]..[2] into one
+    FAST_CHECK_EQ(m.count_fragments(),2);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{11,15}),1);
+
+    m.add(tst_frag{0,20}); // append a frag that melts all into one
+    FAST_CHECK_EQ(m.count_fragments(),1);
+    FAST_CHECK_EQ(m.estimate_size(),20);
+
+    m.add(tst_frag{0,20,1}); // append a marked frag that is exactly equal
+    FAST_CHECK_EQ(m.count_fragments(),1);
+    FAST_CHECK_EQ(m.estimate_size(),20);
+    FAST_CHECK_EQ(m.get_ix(utcperiod{0,10}),0);
+    FAST_CHECK_EQ(m.get_by_ix(0).id,1);// verify we got the marked in place
+
+}
 
 TEST_CASE("dlib_server_basics") {
     dlog.set_level(dlib::LALL);
@@ -339,12 +582,15 @@ TEST_CASE("dtss_store_basics") {
             //fs::remove_all("*.db");
         }
 #ifdef _WIN32
-        this_thread::sleep_for(chrono::duration<int, std::milli>(1000));
-        try {
-            fs::remove_all(tmpdir);
-        }
-        catch (...) {
-            std::cout << "Failed to remove " << tmpdir << "\n";
+        for (int i = 0; i<10; ++i) {
+            this_thread::sleep_for(chrono::duration<int, std::milli>(1000));
+            try {
+                fs::remove_all(tmpdir);
+                break;
+            }
+            catch (...) {
+                std::cout <<"Try #"<<i+1<< ":Failed to remove " << tmpdir << "\n";
+            }
         }
 #else
         fs::remove_all(tmpdir);
@@ -388,47 +634,222 @@ TEST_CASE("dtss_store") { /*
     SUBCASE("save_find_read") {
         size_t n_ts=100;
         time_axis::fixed_dt fta(t, dt, n);
-
+        time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
+        const auto stair_case=ts_point_fx::POINT_AVERAGE_VALUE;
         ts_vector_t tsv;
+        vector<point_ts<time_axis::fixed_dt>> ftsv;
+
         for(size_t i=0;i<n_ts;++i) {
-            tsv.push_back(
-                apoint_ts{
+            tsv.emplace_back(
                     shyft_url(tc,to_string(i)),
-                    apoint_ts{fta,i*10.0,ts_point_fx::POINT_AVERAGE_VALUE}
-                }
+                    apoint_ts{fta,i*10.0,stair_case}
             );
+            ftsv.emplace_back(fta,i*10.0,stair_case);
         }
         auto f0 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f0.size(),0);// expect zero to start with
         auto t0=timing::now();
-        dtss.store_ts(tsv);
+        dtss.store_ts(tsv,false);
         auto t1=timing::now();
         auto f1 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f1.size(),tsv.size());
         ts_vector_t ev;
         for(size_t i=0;i<tsv.size();++i)
-            ev.push_back(3.0*apoint_ts(shyft_url(tc,to_string(i))));
+            ev.push_back(
+                         3.0*apoint_ts(shyft_url(tc,to_string(i)))
+                           //+ apoint_ts(shyft_url(tc,to_string(i>0?i-1:i)))
+                         );
+        // activate auto-cache, to prepare for next
+        our_server.set_auto_cache(true);
+        vector<int> pc{10,50,90};
         auto t2 = timing::now();
-        auto er= dtss.evaluate(ev,fta.total_period());
+        //auto er= dtss.percentiles(ev,fta.total_period(),gta,pc);//uncached read
+        auto er= dtss.evaluate(ev,fta.total_period());//uncached read
         auto t3 = timing::now();
+        //auto ec = dtss.percentiles(ev, fta.total_period(),gta,pc);
+        auto ec = dtss.evaluate(ev, fta.total_period());
+        auto t4 = timing::now();// cached read.
+        //-- establish benchmark
+        vector<vector<double>> bmr;bmr.reserve(n_ts);
+        for(const auto &ts:ftsv) {
+            auto calc= 3.0* ts;
+            vector<double> r;r.reserve(calc.size());
+            for(size_t i=0;i<calc.size();++i)
+                r.emplace_back(calc.value(i));
+            bmr.emplace_back(move(r));
+        }
+        auto t5 =timing::now();
+        FAST_CHECK_EQ(bmr.size(),n_ts);
+//        FAST_CHECK_EQ(er.size(),pc.size());
+//        FAST_CHECK_EQ(ec.size(), pc.size());
         FAST_CHECK_EQ(er.size(),ev.size());
+        FAST_CHECK_EQ(ec.size(), ev.size());
         std::cout<<"store mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t0,t1))/1000.0)/1e6<<"\n";
         std::cout<<"evalr mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t2,t3))/1000.0)/1e6<<"\n";
+        std::cout<<"evalc mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t3,t4))/1000.0)/1e6<<"\n";
+        std::cout<<"bench mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t4,t5))/1000.0)/1e6<<"\t time :"<<double(elapsed_ms(t4,t5))<<"\n";
+        auto cs = our_server.get_cache_stats();
+        std::cout<<"cache stats(hits,misses,cover_misses,id_count,frag_count,point_count):\n "<<cs.hits<<","<<cs.misses<<","<<cs.coverage_misses<<","<<cs.id_count<<","<<cs.fragment_count<<","<<cs.point_count<<")\n";
     }
 
     our_server.clear();
 #ifdef _WIN32
-    this_thread::sleep_for(chrono::duration<int,std::milli>(1000));
-    try {
-        fs::remove_all(tmpdir);
-    }
-    catch (...) {
-        std::cout << "Failed to remove " << tmpdir << "\n";
+    for (int i = 0; i<10; ++i) {
+        this_thread::sleep_for(chrono::duration<int, std::milli>(1000));
+        try {
+            fs::remove_all(tmpdir);
+            break;
+        }
+        catch (...) {
+            std::cout<<"Try #"<<i+1 << ": Failed to remove " << tmpdir << "\n";
+        }
     }
 #else
     fs::remove_all(tmpdir);
 #endif
 
+
+}
+TEST_CASE("dtss_baseline") {
+    using namespace shyft::dtss;
+    using namespace shyft::api;
+    using time_series::ts_point_fx;
+    using std::cout;
+    auto utc=make_shared<calendar>();
+    auto t = utc->time(2016, 1, 1);
+    auto dt = deltahours(1);
+    const int n = 24 * 365 * 5/3;//24*365*5;
+
+    vector<point_ts<time_axis::fixed_dt>> ftsv;
+    const size_t n_ts=100*83;
+    arma::mat a_mat(n,n_ts);
+    time_axis::fixed_dt fta(t, dt, n);
+    //time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
+    const auto stair_case=ts_point_fx::POINT_AVERAGE_VALUE;
+    ts_vector_t tsv;
+    for(size_t i=0;i<n_ts;++i) {
+        tsv.emplace_back(to_string(i),apoint_ts(fta,i*10.0,stair_case));
+        ftsv.emplace_back(fta,i*10.0,stair_case);
+        for(size_t t =0;t<n;++t)
+            a_mat(t,i) = i*10.0;
+    }
+    tsv = 3.0*tsv;
+
+
+    //-- establish benchmark core-ts
+    auto t0 = timing::now();
+
+    vector<vector<double>> bmr;bmr.reserve(n_ts);
+    for(const auto &ts:ftsv) {
+        auto calc= 3.0* ts;
+        vector<double> r;r.reserve(calc.size());
+        for(size_t i=0;i<calc.size();++i)
+            r.emplace_back(calc.value(i));
+        bmr.emplace_back(move(r));
+    }
+    auto t1 =timing::now();
+
+    //-- establish benchmark armadillo
+    vector<vector<double>> amr;amr.reserve(n_ts);
+    auto a_res= (a_mat*3.0).eval();
+    for(size_t i=0;i<n_ts;++i) {
+        amr.emplace_back(arma::conv_to<vector<double>>::from(a_res.col(i)) );
+    }
+    auto t2 = timing::now();
+
+    //-- establish timing for apoint_ts eval.
+    vector<vector<double>> xmr;xmr.reserve(n_ts);
+    //auto xtsv = deflate_ts_vector<point_ts<time_axis::generic_dt>>(tsv);
+    for(const auto &ts:tsv) {
+        xmr.emplace_back(move(ts.values()));
+    }
+    auto t3 = timing::now();
+
+    FAST_CHECK_EQ(bmr.size(),n_ts);
+    FAST_CHECK_EQ(amr.size(),n_ts);
+    FAST_CHECK_EQ(xmr.size(),n_ts);
+
+    cout<<"core-ts base-line n_ts= "<<n_ts<<", n="<<n<<", time="<<double(elapsed_us(t0,t1))/1000.0<<"ms ->"
+    << double(n*n_ts)/(elapsed_us(t0,t1)/1e6)/1e6<<" mops/s \n";
+
+    cout<<"api -ts base-line n_ts= "<<n_ts<<", n="<<n<<", time="<<double(elapsed_us(t2,t3))/1000.0<<"ms ->"
+    << double(n*n_ts)/(elapsed_us(t2,t3)/1e6)/1e6<<" mops/s \n";
+
+    cout<<"armavec base-line n_ts= "<<n_ts<<", n="<<n<<", time="<<double(elapsed_us(t1,t2))/1000.0<<"ms ->"
+    << double(n*n_ts)/(elapsed_us(t1,t2)/1e6)/1e6<<" mops/s \n";
+
+}
+
+TEST_CASE("dtss_ltm") {
+    // this is basically just for performance study of
+    // for api type of ts-expressions,
+    using namespace shyft::dtss;
+    using namespace shyft::api;
+    using time_series::ts_point_fx;
+    using std::cout;
+    auto utc=make_shared<calendar>();
+    auto t = utc->time(2016, 1, 1);
+    auto dt = deltahours(1);
+    const int n = 24 * 365 * 5/3;//24*365*5;
+
+    const size_t n_scn=83;
+    const size_t n_obj =10;
+    const size_t n_ts=n_obj*2*n_scn;
+
+    vector<point_ts<time_axis::fixed_dt>> ftsv;
+    arma::mat a_mat(n,n_ts);
+    time_axis::fixed_dt fta(t, dt, n);
+    time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
+    const auto stair_case=ts_point_fx::POINT_AVERAGE_VALUE;
+    map<string,apoint_ts> rtsv;
+    ts_vector_t stsv;
+    for(size_t i=0;i<n_ts;++i) {
+        rtsv[to_string(i)] = apoint_ts(fta,i*10.0,stair_case);
+        stsv.emplace_back(to_string(i));
+        ftsv.emplace_back(fta,i*10.0,stair_case);
+        for(size_t t =0;t<n;++t)
+            a_mat(t,i) = i*10.0;
+    }
+    ts_vector_t tsv;
+    for(size_t i =0; i<n_scn;++i) {
+        apoint_ts sum;
+        for(size_t j=0;j<n_obj;++j) {
+            size_t p = i*(2*n_obj) + (2*j);
+            size_t c = p+1;
+            apoint_ts eff=3.0*(stsv[p]-stsv[c]);
+            if(j==0)
+                sum = eff;
+            else
+                sum = sum + eff;
+        }
+        tsv.emplace_back(sum);
+    }
+    tsv = 1000.0*(tsv.average(gta));
+
+
+    //-- establish compute binding time
+    auto t0 = timing::now();
+    size_t bind_count{0};
+    for(auto&sts:tsv) {
+        auto ts_refs=sts.find_ts_bind_info();
+        for(auto& bi:ts_refs) {
+            bi.ts.bind(rtsv[bi.reference]);
+            bind_count++;
+        }
+    }
+    for(auto&sts:tsv)
+        sts.do_bind();
+
+    auto t1 =timing::now();
+    //-- establish timing for apoint_ts eval.
+    auto xmr = deflate_ts_vector<point_ts<time_axis::generic_dt>>(tsv);
+    auto t2 = timing::now();
+
+    FAST_CHECK_EQ(xmr.size(),n_scn);
+    FAST_CHECK_EQ(bind_count,n_ts);
+    cout<<"bind phase n_ts= "<<n_ts<<", n="<<n<<", time="<<double(elapsed_us(t0,t1))/1000.0<<"ms\n";
+    cout<<"eval phase n_ts= "<<n_ts<<", n="<<n<<", time="<<double(elapsed_us(t1,t2))/1000.0<<"ms ->"
+    << double(n*n_ts*(2+1))/(elapsed_us(t1,t2)/1e6)/1e6<<" mops/s \n";
 
 }
 }

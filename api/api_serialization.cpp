@@ -56,7 +56,9 @@ template<class Archive>
 void shyft::api::aref_ts::serialize(Archive & ar, const unsigned int version) {
     ar
     & make_nvp("ipoint_ts",base_object<shyft::api::ipoint_ts>(*this))
-    & make_nvp("rep", rep)
+    & make_nvp("id", id)
+    & make_nvp("rep",rep)
+
     ;
 }
 

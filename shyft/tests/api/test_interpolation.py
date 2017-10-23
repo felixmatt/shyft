@@ -115,13 +115,18 @@ class BayesianKriging(unittest.TestCase):
         observation_sites = api.TemperatureSourceVector()
         ta_obs = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         ta_grid = api.TimeAxisFixedDeltaT(self.t, self.d, self.n)
-
-        ts_site_1 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (20.0 - 0.6 * 5.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+        linear = api.point_interpretation_policy.POINT_INSTANT_VALUE
+        ts_site_1 = api.TimeSeries(ta_obs,
+                                   values=api.DoubleVector.from_numpy(
+            (20.0 - 0.6 * 5.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)
+                                   ),
+                                   point_fx=linear)
         ts_site_2 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (20.0 - 0.6 * 500.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+            (20.0 - 0.6 * 500.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)),
+                                   point_fx=linear)
         ts_site_3 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (20.0 - 0.6 * 1050.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+            (20.0 - 0.6 * 1050.0 / 100) + 3.0 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)),
+                                   point_fx=linear)
 
         observation_sites.append(api.TemperatureSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
 
@@ -163,13 +168,13 @@ class BayesianKriging(unittest.TestCase):
         observation_sites = api.GeoPointSourceVector()
         ta_obs = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         ta_grid = api.TimeAxisFixedDeltaT(self.t, self.d, self.n)
-
+        linear = api.point_interpretation_policy.POINT_INSTANT_VALUE
         ts_site_1 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (1.0) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+            (1.0) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)), point_fx=linear)
         ts_site_2 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (0.8) + 0.2 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+            (0.8) + 0.2 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)), point_fx=linear)
         ts_site_3 = api.TimeSeries(ta_obs, values=api.DoubleVector.from_numpy(
-            (1.2) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)))
+            (1.2) + 0.1 * np.sin(np.arange(start=0, stop=ta_obs.size(), step=1) * 2 * np.pi / 8.0 - np.pi / 2.0)), point_fx=linear)
 
         observation_sites.append(api.GeoPointSource(api.GeoPoint(50.0, 50.0, 5.0), ts_site_1))
 

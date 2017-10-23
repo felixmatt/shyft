@@ -36,7 +36,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=accessor_policy" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_api_ts" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>

@@ -453,7 +453,7 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
                                 1452211200])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
         data = np.array([1000, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 1003, 1004, 1005, 1006, 1007, 1008])
-        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data),point_fx.POINT_INSTANT_VALUE)  # TODO: is this correct policy to use
 
         # now read back the result using a *standard* shyft cf geo repository
         selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
@@ -489,7 +489,7 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
                                 1452211200])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
         data = np.array([18, 19, 20, 21, 22, 23, 1003, 1004, 1005, 1006, 1007, 1008])
-        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data), point_fx.POINT_INSTANT_VALUE)  # TODO: is this correct policy to use for this test
 
         # now read back the result using a *standard* shyft cf geo repository
         selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
@@ -524,7 +524,7 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
                                 1451692800, 1451779200, 1451865600, 1451952000])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
         data = np.array([18, 19, 20, 21, 22, 23, 1003, 1004, 1005])
-        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data), point_fx.POINT_INSTANT_VALUE)
 
         # now read back the result using a *standard* shyft cf geo repository
         selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
@@ -589,7 +589,7 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
         data = np.array([0, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
                          27, 28, 29, 30, 31, 32, 1])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
-        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data), point_fx.POINT_INSTANT_VALUE)  # TODO: is this correct policy value for this case
 
         # now read back the result using a *standard* shyft cf geo repository
         selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}
@@ -639,7 +639,7 @@ class NetCDFGeoTsRWTestCase(unittest.TestCase):
                          19, 20, 21, 22, 23, 24, 25, 26,
                          27, 28, 29, 30, 31, 32, 1])
         ta = TimeAxis(UtcTimeVector.from_numpy(time_points))
-        ts_exp = TimeSeries(ta, dv.from_numpy(data))
+        ts_exp = TimeSeries(ta, dv.from_numpy(data), point_fx.POINT_INSTANT_VALUE)  # TODO: policy right ?
 
         # now read back the result using a *standard* shyft cf geo repository
         selection_criteria = {'bbox': [[x0, x1, x1, x0], [y0, y0, y1, y1]]}

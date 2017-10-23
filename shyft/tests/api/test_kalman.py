@@ -139,7 +139,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
         fc_set = self._create_geo_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)
         n_obs = 24
         obs_ta = api.TimeAxis(t0, dt, n_obs)
-        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0)
+        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0, point_fx=api.POINT_INSTANT_VALUE)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
         kalman_ta = api.TimeAxis(t0, kalman_dt, 8)
         bp.update_with_forecast(fc_set, obs_ts, kalman_ta)  # here we feed in forecast-set and observation into kalman
@@ -170,7 +170,7 @@ class KalmanAndBiasPrediction(unittest.TestCase):
 
         n_obs = n_fc_steps
         obs_ta = api.TimeAxis(t0, dt, n_obs)
-        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0)
+        obs_ts = api.TimeSeries(obs_ta, fill_value=0.0, point_fx=api.POINT_INSTANT_VALUE)
         kalman_dt = api.deltahours(3)  # suitable average for prediction temperature
         kalman_ta = api.TimeAxis(t0, kalman_dt, n_obs // 3)
         fc_ts = self._create_forecast_set(n_fc, t0, dt, n_fc_steps, fc_dt, fc_fx)[0]

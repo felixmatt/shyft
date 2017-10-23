@@ -272,6 +272,8 @@ namespace expose {
         typedef vector<TargetSpecificationPts> TargetSpecificationVector;
         class_<TargetSpecificationVector>("TargetSpecificationVector","A list of (weighted) target specifications to be used for model calibration")
             .def(vector_indexing_suite<TargetSpecificationVector>())
+			.def(init<const TargetSpecificationVector&>(args("clone"))
+			)
          ;
 
         shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::api::apoint_ts& )=&TsTransform::to_average;
