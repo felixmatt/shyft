@@ -214,6 +214,7 @@ TEST_CASE("dtss_mini_frag") {
     using shyft::core::utcperiod;
     using shyft::core::utctime;
     using shyft::dtss::mini_frag;
+    using shyft::time_axis::continuous_merge;
 
     struct tst_frag {
         utcperiod p;
@@ -223,6 +224,8 @@ TEST_CASE("dtss_mini_frag") {
         utcperiod total_period() const {return p;}
         size_t size() const {return size_t(p.timespan());}
         tst_frag merge(const tst_frag&o) const {
+            if(!continuous_merge(p,o.p))
+                throw runtime_error("Wrong merge op attempted");
             return tst_frag{min(o.p.start,p.start),max(o.p.end,p.end)};
         }
     };
@@ -282,6 +285,20 @@ TEST_CASE("dtss_mini_frag") {
     FAST_CHECK_EQ(m.estimate_size(),20);
     FAST_CHECK_EQ(m.get_ix(utcperiod{0,10}),0);
     FAST_CHECK_EQ(m.get_by_ix(0).id,1);// verify we got the marked in place
+
+    m.add(tst_frag{21,23});// two frags
+    m.add(tst_frag{25,27});// three
+    m.add(tst_frag{0,23});// exactly cover second frag
+    FAST_CHECK_EQ(m.count_fragments(),2);
+
+    m.add(tst_frag{1,24});
+    FAST_CHECK_EQ(m.count_fragments(),2);
+
+    m.add(tst_frag{2,27});// parts p1, p2.end
+    FAST_CHECK_EQ(m.count_fragments(),1);
+
+    m.add(tst_frag{-1,27});
+    FAST_CHECK_EQ(m.count_fragments(),1);
 
 }
 
