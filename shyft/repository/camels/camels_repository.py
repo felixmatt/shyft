@@ -8,8 +8,8 @@ from os import path
 import numpy as np
 import pandas as pd
 import datetime as dt
-from pyproj import Proj
-from pyproj import transform
+import copy
+
 from shyft import api
 from shyft import shyftdata_dir
 from shyft.repository import interfaces
@@ -175,7 +175,7 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
         return time_series
 
     def _get_data_from_camels_database(self, filename, input_source_types, utc_period,
-                               geo_location_criteria, ensemble_member=None):
+                               geo_location_criteria):
         ts_id = None
         if self.selection_criteria is None:
             self.selection_criteria = {'bbox':geo_location_criteria}
@@ -197,8 +197,10 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
         data_dict.pop("tmax")
         data_dict["wind_speed"] = data_dict["temperature"] * 0.0 + 2.0 # no wind speed in camels
         data_dict["relative_humidity"] = data_dict["temperature"] * 0.0 + 0.7 # no relative humidity in camels
-
+        data_dict = self._expand_data_dict(data_dict)
         time = self._get_utc_time_from_daily_camels(data_dict['Date'].values)
+
+
         #data_cs = dataset.variables.get("crs", None)
         data_cs = 32633 #"epsg:1234" # TODO which crs?
         idx_min = np.searchsorted(time, utc_period.start, side='left')
@@ -208,6 +210,10 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
         if time[idx_max] < utc_period.end and idx_max + 1 < len(time):
             idx_max += 1  # extend range upward so that we cover the requested period
         time_slice = slice(idx_min, idx_max)
+
+        if utc_period.start < 315532800: # 1980-1-1
+            print("Spinup-time initiated earlier to 1980-01-01.")
+
 
         for k in data_dict.keys():
             if k in input_source_types:
@@ -232,6 +238,19 @@ class CamelsDataRepository(interfaces.GeoTsRepository):
         extracted_data = self._transform_raw(raw_data, time[time_slice])
         self.extracted_data = extracted_data
         return self._geo_ts_to_vec(self._convert_to_timeseries(extracted_data), pts)
+
+    def _expand_data_dict(self, data_dict):
+        expander = copy.deepcopy(data_dict[0:366])
+        years = range(1979,1969,-1)
+        for year in years:
+            start, end = "{}-01-01-12".format(year), "{}-12-31-12".format(year)
+            dates = pd.date_range(start=start, end=end)
+            datestr = ["{} {:02} {:02} {:02}".format(d.year, d.month, d.day, d.hour) for d in  dates]
+            tmp = copy.deepcopy(expander[0:len(datestr)])
+            tmp['Date'] = datestr
+            data_dict = pd.concat([tmp, data_dict])
+        data_dict.index = range(len(data_dict.index))
+        return data_dict
 
     def _calculate_temperature(self, data_dict):
         pass
@@ -341,13 +360,13 @@ class CamelsTargetRepository(TsRepository):
         keys = ['sgid','Year','Month', 'Day', 'discharge', 'quality']
         dataframe = pd.read_table(filename, names=keys, delim_whitespace=True)
         dataframe = self._reindex_dataframe(dataframe)
-        dataframe.index = dataframe.index + dt.timedelta(hours=12) # TODO: + timedelta(12) gives better restults... why?
+        dataframe.index = dataframe.index + dt.timedelta(hours=0) # TODO: + timedelta(12) gives better restults... why?
 
         time = self._get_utc_time_from_daily_camels_streamgauge(dataframe.index.year, dataframe.index.month, dataframe.index.day, dataframe.index.hour)
         idx_min = np.searchsorted(time, utc_period.start, side='left')
         if time[idx_min] > utc_period.start and idx_min > 0:  # important ! ensure data *cover* the requested period, Shyft ts do take care of resolution etc.
             idx_min -= 1  # extend range downward so we cover the entire requested period
-        idx_max = np.searchsorted(time, utc_period.end, side='right')
+        idx_max = np.searchsorted(time, utc_period.end, side='left')
         if time[idx_max] < utc_period.end and idx_max + 1 < len(time):
             idx_max += 1  # extend range upward so that we cover the requested period
         time_slice = slice(idx_min, idx_max)
