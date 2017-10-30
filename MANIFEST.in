@@ -1,9 +1,0 @@
-include *.txt *.rst
-recursive-include shyft *.py *.yaml *.nc
-recursive-include api *
-recursive-exclude api *.o
-recursive-include core *
-recursive-exclude core *.o
-recursive-include test *
-recursive-exclude test *.o
-recursive-include doc *
