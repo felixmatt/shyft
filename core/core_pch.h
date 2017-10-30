@@ -45,6 +45,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstddef>
+#include <cstdio>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <cmath>

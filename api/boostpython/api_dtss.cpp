@@ -167,9 +167,9 @@ namespace shyft {
                 scoped_gil_release gil;
                 return impl.find(search_expression);
             }
-            void store_ts(const ts_vector_t&tsv,bool cache_on_write) {
+            void store_ts(const ts_vector_t&tsv, bool overwrite_on_write, bool cache_on_write) {
                 scoped_gil_release gil;
-                impl.store_ts(tsv,cache_on_write);
+                impl.store_ts(tsv, overwrite_on_write, cache_on_write);
             }
 
         };
@@ -469,18 +469,27 @@ namespace expose {
                 doc_returns("ts_info_vector","TsInfoVector","The search result, as vector of TsInfo objects")
                 doc_see_also("TsInfo,TsInfoVector")
             )
-            .def("store_ts",&DtsClient::store_ts,(py::arg("self"),py::arg("tsv"),py::arg("cache_on_write")=false),
-                doc_intro("Store the time-series in the ts-vector in the dtss backend")
-                doc_intro("The current internal shyft-container implementation ")
-				doc_intro("replaces any existing ts with same url with the new contents.")
-				doc_intro("The intention is that the backend should overwrite the time-period they cover")
-				doc_intro("with the new time-points.")
+            .def("store_ts", &DtsClient::store_ts,
+                (   py::arg("self"),
+                    py::arg("tsv"),
+                    py::arg("overwrite_on_write") = true,
+                    py::arg("cache_on_write") = false
+                ),
+                doc_intro("Store the time-series in the ts-vector in the dtss backend.")
+                doc_intro("The current internal shyft-container implementation overwrite the data by default, but can")
+                doc_intro("update existing data if called with `overwrite_on_write = False`.")
+				doc_intro("The intention is that the backend should overwrite the time-period they cover with")
+                doc_intro("the new time-points unless asked explisitly to update it.")
                 doc_intro("The time-series should be created like this, with url and a concrete point-ts:")
+                doc_intro("")
                 doc_intro(">>>   a=sa.TimeSeries(ts_url,ts_points)")
                 doc_intro(">>>   tsv.append(a)")
                 doc_parameters()
                 doc_parameter("tsv","TsVector","ts-vector with time-series, url-reference and values to be stored at dtss server")
-				doc_parameter("cache_on_write","bool","if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
+                doc_parameter("overwrite_on_write", "bool",
+                    "When False the backend updates existing data matching the time-series to be saved instead of overwriting.\n"
+                    "    Defaults to True.")
+                doc_parameter("cache_on_write", "bool", "if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
                 doc_returns("None","","")
                 doc_see_also("TsVector")
             )
