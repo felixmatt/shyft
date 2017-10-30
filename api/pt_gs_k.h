@@ -1,8 +1,6 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
 #include <string>
 #include <vector>
-#endif // SHYFT_NO_PCH
 
 #include "core/pt_gs_k.h"
 

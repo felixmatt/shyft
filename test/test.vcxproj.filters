@@ -111,6 +111,7 @@
       <Filter>time_series</Filter>
     </ClCompile>
     <ClCompile Include="predictor_test.cpp" />
+    <ClCompile Include="time_series_average_test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

@@ -20,10 +20,9 @@
 ///  Sampling. Int. J. of Nonlinear Sciences and Numerical Simulation 10(3) 2009.
 ///
 /// Thanks to Powel for contributing with the reimplementation
-#ifdef SHYFT_NO_PCH
+
 #include <vector>
 #include <cstring>
-#endif // SHYFT_NO_PCH
 
 namespace shyft {
     namespace core {

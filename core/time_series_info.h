@@ -1,8 +1,7 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 #include "utctime_utilities.h"
 
 namespace shyft {

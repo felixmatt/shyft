@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <cstdint>
 #include <cmath>
 #include <string>
@@ -12,8 +12,6 @@
 #include <algorithm>
 #include <sstream>
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
-
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
@@ -190,7 +188,7 @@ namespace shyft{
 
 
         /** \brief accumulate_value provides a projection/interpretation
-        * of the values of a pointsource on to a time-axis as provided.
+        * of the values of a point source on to a time-axis as provided.
         * This includes interpolation and true average, linear between points
         * and nan-handling semantics.
         * In addition the Accessor allows fast sequential access to these values
@@ -207,10 +205,11 @@ namespace shyft{
         * \param last_idx  position of the last time point used on the source, updated after each call.
         * \param tsum      the sum of time under non-nan areas of the curve
         * \param linear    interpret points as linear between, if set to false, use stair-case start of step def
+        * \param strict_linear_between enforces strict linear between points, needs two-points to form a line, no +oo|rhs-nan extensions
         * \return the area under the non-nan areas of the curve, specified by tsum reference-parameter
         */
         template <class S>
-        double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
+        double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true,bool strict_linear_between=true) {
             const size_t n = source.size();
             if (n == 0) // early exit if possible
                 return shyft::nan;
@@ -218,23 +217,25 @@ namespace shyft{
 
             if (i == std::string::npos) { // this might be a case
                 last_idx = 0;// we update the hint to the left-most possible index
-                return shyft::nan; // and is equivalent to no points, or all points after requested period.
+                i=0;
             }
             point l;// Left point
             bool l_finite = false;
 
             double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
             tsum = 0; // length of non-nan f(t) time-axis
-
+            bool extrapolate_flat = !linear || (linear && !strict_linear_between);
             while (true) { //there are two exit criteria: no more points, or we pass the period end.
                 if (!l_finite) {//search for 'point' anchor phase
                     l = source.get(i++);
                     l_finite = std::isfinite(l.v);
                     if (i == n) { // exit condition
                         if (l_finite && l.t < p.end) {//give contribution
-                            utctimespan dt = p.end - l.t;
-                            tsum += dt;
-                            area += dt* l.v; // extrapolate value flat
+                            if (extrapolate_flat) {
+                                utctimespan dt = p.end - l.t;
+                                tsum += dt;
+                                area += dt* l.v; // extrapolate value flat
+                            }
                         }
                         break;//done
                     }
@@ -246,22 +247,27 @@ namespace shyft{
                     bool r_finite = std::isfinite(r.v);
                     utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
                     utctimespan dt = px.timespan();
-                    tsum += dt;
+
 
                     // now add area contribution for l..r
                     if (linear && r_finite) {
                         double a = (r.v - l.v) / (r.t - l.t);
                         double b = r.v - a*r.t;
-                        //area += dt* 0.5*( a*px.start+b + a*px.end+b);
                         area += dt * (0.5*a*(px.start + px.end) + b);
+                        tsum += dt;
                     } else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
-                        area += l.v*dt;
+                        if (extrapolate_flat) {
+                            area += l.v*dt;
+                            tsum += dt;
+                        }
                     }
                     if (i == n) { // exit condition: final value in sequence, then we need to finish, but
                         if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
-                            dt = p.end - r.t;
-                            tsum += dt;
-                            area += dt* r.v; // extrapolate value flat
+                            if (extrapolate_flat) {
+                                dt = p.end - r.t;
+                                tsum += dt;
+                                area += dt* r.v; // extrapolate value flat
+                            }
                         }
                         break;//done
                     }
@@ -270,7 +276,6 @@ namespace shyft{
                     l_finite = r_finite;
                     l = r;
                 }
-
             }
             last_idx = i - 1;
             return tsum ? area : shyft::nan;
@@ -654,7 +659,8 @@ namespace shyft{
             double value(size_t i) const {
                 auto p = ta.period(i);
                 size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-                return average_value(*this, p, ix, ts_point_fx::POINT_INSTANT_VALUE == fx_policy);
+				utctimespan t_sum{ 0 };
+                return accumulate_value(*this, p, ix,t_sum, ts_point_fx::POINT_INSTANT_VALUE == fx_policy, false)/double(t_sum); // allow extending last point in pattern
             }
             // provided functions to the average_value<..> function
             size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }

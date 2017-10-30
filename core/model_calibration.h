@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -15,7 +15,6 @@
 #include <dlib/statistics.h>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "cell_model.h"
 #include "region_model.h"

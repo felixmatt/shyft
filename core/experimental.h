@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #define BOOST_GEOMETRY_OVERLAY_NO_THROW
 
 #include <boost/geometry.hpp>
@@ -10,7 +10,6 @@
 #include <boost/geometry/geometries/multi_polygon.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
-#endif // SHYFT_NO_PCH
 #include "geo_cell_data.h"
 #include "utctime_utilities.h"
 #include "time_series.h"

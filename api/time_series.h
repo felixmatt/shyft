@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -8,7 +8,6 @@
 #include <map>
 
 #include "core/core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"

@@ -1,11 +1,9 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <cmath>
 #include <boost/numeric/odeint.hpp>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
-
 #include "time_series.h"
 
 namespace shyft {

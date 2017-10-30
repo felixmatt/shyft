@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <cstddef>
 #include <vector>
 #include <algorithm>
@@ -8,7 +8,6 @@
 #include <limits>
 #include <dlib/svm.h>
 
-#endif // SHYFT_NO_PCH
 
 #include "time_axis.h"
 #include "time_series.h"

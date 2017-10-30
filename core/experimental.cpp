@@ -1,5 +1,5 @@
 #include "core_pch.h"
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <map>
@@ -12,7 +12,6 @@
 
 #include <boost/filesystem.hpp>
 namespace fs=boost::filesystem;
-#endif // SHYFT_NO_PCH
 #include "experimental.h"
 
 namespace shyft {

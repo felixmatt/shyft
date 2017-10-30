@@ -17,13 +17,10 @@
 ///
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
-#ifdef SHYFT_NO_PCH
+
 #include <string>
-//#include <vector>
-//#include <iterator>
 #include <algorithm>
 #include <cmath>
-//#include <limits>
 #include <stdexcept>
 #include <boost/math/distributions/gamma.hpp>
 #include <boost/math/special_functions/gamma.hpp>
@@ -31,7 +28,6 @@
 #include <boost/math/tools/minima.hpp>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
 #include "utctime_utilities.h"

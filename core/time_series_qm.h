@@ -1,10 +1,9 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <future>
-#endif // SHYFT_NO_PCH
 
 #include "utctime_utilities.h"
 #include "time_series.h"

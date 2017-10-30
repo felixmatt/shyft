@@ -1,10 +1,8 @@
 #include "boostpython_pch.h"
-#ifdef SHYFT_NO_PCH
 #include <fstream>
-#endif // SHYFT_NO_PCH
 
 char const* version() {
-   return "v1.1";
+   return "v4.x";
 }
 namespace expose {
     extern void api_geo_point();

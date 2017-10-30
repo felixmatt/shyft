@@ -8,7 +8,7 @@
 #include "core/time_series_merge.h"
 #include "api/time_series.h"
 
-#ifdef SHYFT_NO_PCH
+
 #include <future>
 #include <mutex>
 #include <regex>
@@ -26,7 +26,6 @@
 
 namespace  fs=boost::filesystem;
 #include <armadillo>
-#endif // SHYFT_PCH
 
 using namespace std;
 using namespace shyft;
@@ -418,7 +417,7 @@ TEST_CASE("dlib_server_performance") {
         auto dt24 = deltahours(24);
         int n = 24 * 365 * 5;// 5years of hourly data
         int n24 = n / 24;
-		int n_ts = 83;
+        int n_ts = 10;//83;
         shyft::time_axis::fixed_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
@@ -514,7 +513,7 @@ TEST_CASE("dtss_store_basics") {
 
         vector<utctime> tp;for(std::size_t i=0;i<fta.size();++i)tp.push_back(fta.time(i));
         time_axis::point_dt pta(tp,fta.total_period().end);
-        
+
         auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
         ts_db db(tmpdir.string());
 
@@ -540,7 +539,7 @@ TEST_CASE("dtss_store_basics") {
 
             auto fr = db.find(string("measurements/.*\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(), 1 );
-            
+
             db.remove(fn);
             fr = db.find(string("measurements/.*\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(),0);
@@ -695,7 +694,7 @@ TEST_CASE("dtss_store") { /*
     // make corresponding client that we will use for the test.
     client dtss(host_port);
     SUBCASE("save_find_read") {
-        size_t n_ts=100;
+        size_t n_ts=10;
         time_axis::fixed_dt fta(t, dt, n);
         time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
         const auto stair_case=ts_point_fx::POINT_AVERAGE_VALUE;
@@ -747,10 +746,10 @@ TEST_CASE("dtss_store") { /*
 //        FAST_CHECK_EQ(ec.size(), pc.size());
         FAST_CHECK_EQ(er.size(),ev.size());
         FAST_CHECK_EQ(ec.size(), ev.size());
-        std::cout<<"store mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t0,t1))/1000.0)/1e6<<"\n";
-        std::cout<<"evalr mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t2,t3))/1000.0)/1e6<<"\n";
-        std::cout<<"evalc mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t3,t4))/1000.0)/1e6<<"\n";
-        std::cout<<"bench mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t4,t5))/1000.0)/1e6<<"\t time :"<<double(elapsed_ms(t4,t5))<<"\n";
+        std::cout<<"store mpts/s "<<double(n_ts*n)/(double(elapsed_us(t0,t1))/1000000.0)/1e6<<"\n";
+        std::cout<<"evalr mpts/s "<<double(n_ts*n)/(double(elapsed_us(t2,t3))/1000000.0)/1e6<<"\n";
+        std::cout<<"evalc mpts/s "<<double(n_ts*n)/(double(elapsed_us(t3,t4))/1000000.0)/1e6<<"\n";
+        std::cout<<"bench mpts/s "<<double(n_ts*n)/(double(elapsed_us(t4,t5))/1000000.0)/1e6<<"\t time :"<<double(elapsed_ms(t4,t5))<<"\n";
         auto cs = our_server.get_cache_stats();
         std::cout<<"cache stats(hits,misses,cover_misses,id_count,frag_count,point_count):\n "<<cs.hits<<","<<cs.misses<<","<<cs.coverage_misses<<","<<cs.id_count<<","<<cs.fragment_count<<","<<cs.point_count<<")\n";
     }
@@ -783,7 +782,7 @@ TEST_CASE("dtss_store_merge_write") {
     // setup db
     auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
     dtss::ts_db db(tmpdir.string());
-    
+
     SUBCASE("error_handling") {
         SUBCASE("extending with different ta") {
             // data
@@ -799,7 +798,7 @@ TEST_CASE("dtss_store_merge_write") {
             ts::point_ts<ta::generic_dt> pts_d{ c_ta_d, 0. };
             // -----
             std::string fn("dtss_save_merge/ext_diff_ta.db");
-            
+
             // save initital data
             db.save(fn, pts_d, false);
             auto find_res = db.find(string("dtss_save_merge/ext_diff_ta\\.db"));
@@ -1845,7 +1844,7 @@ TEST_CASE("dtss_store_merge_write") {
                 FAST_CHECK_EQ(res.v.at(n/2), 1.);
                 FAST_CHECK_EQ(res.v.at(n/2 + 1), 10.);
                 FAST_CHECK_EQ(res.v.at(n + n/2), 10.);
-            
+
                 // cleanup
                 db.remove(fn);
                 find_res = db.find(string("dtss_save_merge/point_new_over_end\\.db"));
@@ -1869,7 +1868,7 @@ TEST_CASE("dtss_store_merge_write") {
                 db.save(fn, pts_old, false);
                 auto find_res = db.find("dtss_save_merge/point_consec\\.db");
                 FAST_CHECK_EQ(find_res.size(), 1);
-            
+
                 // add data to the same path
                 db.save(fn, pts_new, false);
 
@@ -1908,10 +1907,10 @@ TEST_CASE("dtss_store_merge_write") {
                 db.save(fn, pts_old, false);
                 auto find_res = db.find("dtss_save_merge/point_gap_after\\.db");
                 FAST_CHECK_EQ(find_res.size(), 1);
-            
+
                 // add data to the same path
                 db.save(fn, pts_new, false);
-            
+
                 // check merged data
                 ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_gap_after.db", core::utcperiod{ });
                 // time-axis
@@ -1925,7 +1924,7 @@ TEST_CASE("dtss_store_merge_write") {
                 FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
                 FAST_CHECK_EQ(res.v.at(n + 1), 10.);
                 FAST_CHECK_EQ(res.v.at(2 * n), 10.);
-            
+
                 // cleanup
                 db.remove(fn);
                 find_res = db.find(string("dtss_save_merge/point_gap_after\\.db"));
@@ -1944,15 +1943,15 @@ TEST_CASE("dtss_store_merge_write") {
                 ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_gap_before.db");
-            
+
                 // save initital data
                 db.save(fn, pts_old, false);
                 auto find_res = db.find("dtss_save_merge/point_gap_before\\.db");
                 FAST_CHECK_EQ(find_res.size(), 1);
-            
+
                 // add data to the same path
                 db.save(fn, pts_new, false);
-            
+
                 // check merged data
                 ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_gap_before.db", core::utcperiod{ });
                 // time-axis
@@ -1966,7 +1965,7 @@ TEST_CASE("dtss_store_merge_write") {
                 FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
                 FAST_CHECK_EQ(res.v.at(n + 1), 1.);
                 FAST_CHECK_EQ(res.v.at(2 * n), 1.);
-            
+
                 // cleanup
                 db.remove(fn);
                 find_res = db.find(string("dtss_save_merge/point_gap_before\\.db"));
@@ -2026,7 +2025,7 @@ TEST_CASE("dtss_baseline") {
     const int n = 24 * 365 * 5/3;//24*365*5;
 
     vector<point_ts<time_axis::fixed_dt>> ftsv;
-    const size_t n_ts=100*83;
+    const size_t n_ts=10*83;
     arma::mat a_mat(n,n_ts);
     time_axis::fixed_dt fta(t, dt, n);
     //time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
@@ -2098,7 +2097,7 @@ TEST_CASE("dtss_ltm") {
     const int n = 24 * 365 * 5/3;//24*365*5;
 
     const size_t n_scn=83;
-    const size_t n_obj =10;
+    const size_t n_obj =2;
     const size_t n_ts=n_obj*2*n_scn;
 
     vector<point_ts<time_axis::fixed_dt>> ftsv;

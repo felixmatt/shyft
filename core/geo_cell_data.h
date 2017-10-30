@@ -1,10 +1,10 @@
 #pragma once
-#include "geo_point.h"
-#ifdef SHYFT_NO_PCH
 #include <stdexcept>
 #include <cmath>
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
+#include "geo_point.h"
+
+
 namespace shyft {
     namespace core {
 

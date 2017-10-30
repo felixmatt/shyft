@@ -1,5 +1,5 @@
 #include "api_pch.h"
-#ifdef SHYFT_NO_PCH
+
 /**
  serializiation implemented using boost,
   see reference: http://www.boost.org/doc/libs/1_62_0/libs/serialization/doc/
@@ -17,7 +17,6 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/nvp.hpp>
 
-#endif // SHYFT_NO_PCH
 //
 // 1. first include std stuff and the headers for
 //    files with serializeation support

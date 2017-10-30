@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <map>
@@ -15,7 +15,6 @@
 #include <mutex>
 #include <boost/math/distributions/gamma.hpp>
 // no serialize here: #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "geo_cell_data.h"
 #include "time_axis.h"

@@ -70,7 +70,7 @@ class TimeSeries(unittest.TestCase):
         v = api.DoubleVector.from_numpy(dv)
         xv = v.to_numpy()
 
-        tsfixed = api.TsFixed(self.ta, v, api.POINT_INSTANT_VALUE)
+        tsfixed = api.TsFixed(self.ta, v, api.POINT_AVERAGE_VALUE)
         self.assertEqual(tsfixed.size(), self.ta.size())
         self.assertAlmostEqual(tsfixed.get(0).v, v[0])
         vv = tsfixed.values.to_numpy()  # introduced .values for compatibility
@@ -106,7 +106,7 @@ class TimeSeries(unittest.TestCase):
             t.push_back(self.ta(i).start)
         t.push_back(self.ta(self.ta.size() - 1).end)
         ta = api.TimeAxisByPoints(t)
-        tspoint = api.TsPoint(ta, v, api.POINT_INSTANT_VALUE)
+        tspoint = api.TsPoint(ta, v, api.POINT_AVERAGE_VALUE)
         ts_ta = tspoint.time_axis  # a TsPoint do have .time_axis and .values
         self.assertEqual(len(ts_ta), len(self.ta))  # should have same length etc.
 

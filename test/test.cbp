@@ -12,13 +12,17 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=dtss_store_basics" />
+				<Option parameters="-nv -tc=test_average_value_linear_between_points" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
 					<Add directory="../bin/Debug" />
 				</Linker>
+				<ExtraCommands>
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -ts=time_series" />
+					<Mode after="always" />
+				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />
@@ -36,7 +40,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_api_ts" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -ts=time_series" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -183,6 +187,9 @@
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="time_axis_test.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_average_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_test.cpp">

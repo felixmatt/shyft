@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -37,7 +37,6 @@ namespace fs = boost::filesystem;
 
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
-#endif // SHYFT_NO_PCH
 
 #include "api/time_series.h"
 #include "time_series_info.h"
@@ -455,7 +454,7 @@ private:
             // questionable: should we allow outside container specs?
             //  - if determined to be fully allowed: remove this branch or throw
         }
-        // not a directory and create missing path 
+        // not a directory and create missing path
         if ( fs::is_directory(fn_path) ) {
             throw std::runtime_error(fn_path.string()+" is a directory. Should be a file.");
         } else if ( ! fs::exists(fn_path) && create_paths ) {
@@ -750,7 +749,7 @@ private:
                 merged_t.emplace_back(old_ta.p.t_end);
                 // store portion of old values to keep
                 std::size_t to_insert = std::distance(old_begin, old_ta.p.t.cend());
-                // new end INSIDE of AT start of old  =>  insert value from old where new end 
+                // new end INSIDE of AT start of old  =>  insert value from old where new end
                 if ( new_p.end >= old_p.start ) {
                     to_insert += 1;
                 }
@@ -790,7 +789,7 @@ private:
             switch ( old_header.ta_type ) {
             case time_axis::generic_dt::FIXED:
             {
-                if ( old_ta.f.dt != ats.ta.f.dt || (old_ta.f.t - ats.ta.f.t) % old_ta.f.dt != 0  ) { 
+                if ( old_ta.f.dt != ats.ta.f.dt || (old_ta.f.t - ats.ta.f.t) % old_ta.f.dt != 0  ) {
                     throw std::runtime_error("dtss_store: cannot merge unaligned fixed_dt");
                 }
             } break;
@@ -799,7 +798,7 @@ private:
                 if ( ats.ta.c.cal->tz_info->tz.tz_name == old_ta.c.cal->tz_info->tz.tz_name ) {
                     core::utctimespan remainder;
                     ats.ta.c.cal->diff_units(old_ta.c.t, ats.ta.c.t, old_ta.c.dt, remainder);
-                    if ( old_ta.c.dt != ats.ta.c.dt || remainder != 0  ) { 
+                    if ( old_ta.c.dt != ats.ta.c.dt || remainder != 0  ) {
                         throw std::runtime_error("dtss_store: cannot merge unaligned calendar_dt");
                     }
                 } else {

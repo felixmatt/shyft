@@ -1,5 +1,4 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -8,7 +7,6 @@
 #include <stdexcept>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "priestley_taylor.h"
 #include "kirchner.h"

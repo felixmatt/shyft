@@ -61,7 +61,7 @@ class RegionModel(unittest.TestCase):
         tv.push_back(utc_period.start)
         vv = api.DoubleVector()
         vv.push_back(value)
-        cts = api.TsFactory().create_time_point_ts(utc_period, tv, vv)
+        cts = api.TsFactory().create_time_point_ts(utc_period, tv, vv, api.POINT_AVERAGE_VALUE)
         return geo_ts_type(geo_point, cts)
 
     def test_source_uid(self):

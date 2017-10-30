@@ -23,12 +23,11 @@
 ///  of first SCEUA implemented in
 ///  the Enki project by Sjur Kolberg, Sintef
 ///
-#ifdef SHYFT_NO_PCH
+
 #include <algorithm>
 #include <cmath>
 #include <random>
 
-#endif // SHYFT_NO_PCH
 
 #include "optimizer_utils.h"
 

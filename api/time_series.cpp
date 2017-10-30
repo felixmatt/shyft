@@ -1,8 +1,7 @@
 #include "api_pch.h"
-#ifdef SHYFT_NO_PCH
+
 #include <dlib/statistics.h>
 #include <memory>
-#endif // SHYFT_NO_PCH
 #include "time_series.h"
 #include "core/time_series_merge.h"
 #include "core/time_series_qm.h"
@@ -302,7 +301,7 @@ namespace shyft{
 			} else {
 				throw runtime_error("the supplied argument time-series must be a point ts or something that directly resolves to one");
 			}
-            
+
         }
         string apoint_ts::id() const {
             if(!dynamic_pointer_cast<aref_ts>(ts))
@@ -534,7 +533,7 @@ namespace shyft{
                     } break;
                     }
                 } else {
-                    for (size_t i = 0;i<percentile_list.size();++i) 
+                    for (size_t i = 0;i<percentile_list.size();++i)
                         r.emplace_back(ta, shyft::nan, POINT_AVERAGE_VALUE);
                 }
             } else {

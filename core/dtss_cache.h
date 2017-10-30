@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -11,7 +11,6 @@
 #include <mutex>
 #include <stdexcept>
 
-#endif
 
 #include "utctime_utilities.h"
 #include "time_series.h"

@@ -5,6 +5,7 @@ import unittest
 from contextlib import closing
 
 import numpy as np
+from time import clock as time_now
 from numpy.testing import assert_array_almost_equal
 
 from shyft.api import Calendar
@@ -372,3 +373,4 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(cs6.id_count, 1)
             self.assertEqual(cs6.point_count, 1*n)
             self.assertEqual(cs6.fragment_count,  1)
+

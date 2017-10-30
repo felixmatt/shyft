@@ -17,9 +17,8 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <cmath>
-#endif // SHYFT_NO_PCH
 
 
 namespace shyft {

@@ -1,11 +1,10 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <memory>
 #include <stdexcept>
 #include "core/core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "core/geo_cell_data.h"
 #include "core/cell_model.h"

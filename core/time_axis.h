@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <stdexcept>
 #include <vector>
@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <algorithm>
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 #include "utctime_utilities.h"
 namespace shyft {
 

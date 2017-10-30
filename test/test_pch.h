@@ -9,13 +9,10 @@
 #pragma warning (disable : 4244)
 #pragma warning (disable : 4503)
 #endif
-#ifdef SHYFT_NO_PCH
+
 #include <chrono>
 #include <iostream>
 #include <cmath>
-#else
-#include "core/core_pch.h"
-#endif // SHYFT_NO_PCH
 #include <doctest/doctest.h>
 
 #ifndef M_PI
