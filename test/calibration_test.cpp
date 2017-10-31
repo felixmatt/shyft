@@ -447,23 +447,28 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 	for (size_t i = 0; i < n; i++) {
 		double a = M_PI*100.0*i / n;
 		double ov = 10.0 + 5 * sin(a);
-		obs.set(i,ov);
+            obs.set(i,ov);
+        
 		sim.set(i, i<n/2?ov:0.0);//9.5 + 4 * sin(a + 0.02)
 	}
 	double nsg_perfect = nash_sutcliffe_goal_function(obs, obs);
 	TS_ASSERT_DELTA(nsg_perfect, 0.0, 0.000001);// because obs and obs are equal, 0.0
 	double nsg_ok = nash_sutcliffe_goal_function(obs, sim);
-	TS_ASSERT_DELTA(nsg_ok, 4.5, 0.000001);// because obs and obs are equal, 0.0
+	TS_ASSERT_DELTA(nsg_ok, 4.5, 0.001);// because obs and obs are equal, 0.0
 
 	// manually testing with two values, and hardcoded formula
-	ta::fixed_dt ta1(start, dt, 2);
-	pts_t o1(ta1, 1.0); o1.set(1, 10.0);
+	ta::fixed_dt ta1(start, dt, 3);
+	pts_t o1(ta1, 1.0); 
+    o1.set(1, 10.0);
+    o1.set(2, shyft::nan);
 	pts_t s1(ta1, 2.0);
 	double nsg1 = nash_sutcliffe_goal_function(o1, s1);
 
 	TS_ASSERT_DELTA(nsg1,
 		(((2.0 - 1.0)*(2.0 - 1.0)) + ((2.0 - 10.0)*(2.0 - 10.0))) /
 		((1.0 - 5.5)*(1.0 - 5.5) + (10.0 - 5.5)*(10.0 - 5.5)), 0.00001);
+    
+
 
 }
 TEST_CASE("test_kling_gupta_goal_function") {

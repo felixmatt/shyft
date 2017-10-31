@@ -2006,6 +2006,7 @@ namespace shyft{
         * <a ref href=http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient">NS coeffecient</a>
         * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
         * \note if obs. is a constant, we get 1/0
+        * \note we skip any nans in obs/model
         * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
         * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
         * \param observed_ts contains the observed values for the model
@@ -2018,16 +2019,26 @@ namespace shyft{
                 throw runtime_error("nash_sutcliffe needs equal sized ts accessors with elements >1");
             double sum_of_obs_measured_diff2 = 0;
             double obs_avg = 0;
+            size_t obs_count = 0;
             for (size_t i = 0; i < observed_ts.size(); ++i) {
-                double diff_i = observed_ts.value(i) - model_ts.value(i);
-                sum_of_obs_measured_diff2 += diff_i*diff_i;
-                obs_avg += observed_ts.value(i);
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - m;
+                    sum_of_obs_measured_diff2 += diff_i*diff_i;
+                    obs_avg += observed_ts.value(i);
+                    ++obs_count;
+                }
             }
-            obs_avg /= double(observed_ts.size());
+            obs_avg /= double(obs_count);
             double sum_of_obs_obs_mean_diff2 = 0;
             for (size_t i = 0; i < observed_ts.size(); ++i) {
-                double diff_i = observed_ts.value(i) - obs_avg;
-                sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - obs_avg;
+                    sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
+                }
             }
             return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
         }
