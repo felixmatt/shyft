@@ -94,6 +94,20 @@ void finalize_api() {
     //extern void expose::dtss_finalize();
     expose::dtss_finalize();
 }
+#ifdef _WIN32
+#include "Windows.h"
+std::string win_short_path(const std::string& long_path) {
+    long length = GetShortPathName(long_path.c_str(), NULL, 0);
+    std::string r(length+1, '\0');
+    length = GetShortPathName(long_path.c_str(),(char*) r.data(), length);
+    r.resize(length);
+    return r;
+}
+#else
+std::string win_short_path(const std::string& long_path) {
+    return long_path;
+}
+#endif
 
 BOOST_PYTHON_MODULE(_api) {
     namespace py = boost::python;
@@ -105,6 +119,14 @@ BOOST_PYTHON_MODULE(_api) {
     // will be called _before_ the Python C-API is unloaded.
     // needed for proper clean-up on windows platform
     // otherwise python hangs on dlib::shared_ptr_thread_safe destruction
+    py::def("win_short_path", win_short_path, py::arg("path"),
+            doc_intro("WinApi function GetShortPath exposed to python")
+            doc_intro("https://msdn.microsoft.com/en-us/library/windows/desktop/aa364989(v=vs.85).aspx")
+            doc_intro("Note that it only works for file-paths that exists, returns null string for not-existing files")
+            doc_parameters()
+            doc_parameter("path","str","a long path form")
+            doc_returns("short_path","str","windows 8.3 path string if on windows for *existing* files, otherwise same as input path")
+            );
     py::def("_finalize", &finalize_api);
     py::object atexit = py::object(py::handle<>(PyImport_ImportModule("atexit")));
     py::object finalize = py::scope().attr("_finalize");
