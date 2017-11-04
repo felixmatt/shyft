@@ -858,6 +858,15 @@ TEST_SUITE("time_series") {
 		FAST_CHECK_UNARY(!std::isfinite(a.value(a.size() - 1)));
 		FAST_CHECK_UNARY(!std::isfinite(av[a.size()-1]));
 	}
+	TEST_CASE("extend_calendar_and_fixed_dt") {
+		using namespace shyft::api;
+		auto utc = make_shared<calendar>();
+		apoint_ts a{ gta_t{ 0, 1, 3 }, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
+		apoint_ts b{ gta_t{ utc,0, 1, 10 }, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
+		auto c = a.extend(b, extend_ts_split_policy::EPS_LHS_LAST,extend_ts_fill_policy::EPF_LAST,0L,0.0);
+		FAST_CHECK_EQ(c.time_axis().size(), 10);
+
+	}
 
     TEST_CASE("test_rating_curve_ts") {
         namespace core = shyft::core;

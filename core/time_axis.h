@@ -375,13 +375,13 @@ namespace shyft {
                 : gt(POINT),
                   p(all_points) { }
 
-            generic_dt(const fixed_dt&f)
+            explicit generic_dt(const fixed_dt&f)
                 : gt(FIXED),
                   f(f) { }
-            generic_dt(const calendar_dt &c)
+            explicit generic_dt(const calendar_dt &c)
                 : gt(CALENDAR),
                   c(c) { }
-            generic_dt(const point_dt& p)
+            explicit generic_dt(const point_dt& p)
                 : gt(POINT),
                   p(p) { }
 
@@ -1030,6 +1030,89 @@ namespace shyft {
             }
         }
 
+		template<class TA, class TB>
+		inline auto extend(const TA & a, const TB & b, const utctime split_at)
+			-> typename std::enable_if<TA::continuous::value && TB::continuous::value, generic_dt>::type  // SFINAE
+		{
+			namespace core = shyft::core;
+
+			const size_t a_sz = a.size(),
+				b_sz = b.size();
+			const core::utcperiod pa = a.total_period(),
+				pb = b.total_period();
+
+			// determine number of intervals to use
+			const size_t a_idx = a.index_of(split_at),
+				a_end_idx = a_idx != std::string::npos  // split index not after a?
+				? a_idx : (a_sz == 0 || split_at < pa.start ? 0 : a_sz);
+			// -----
+			const size_t b_idx = b.index_of(split_at),
+				b_start_idx = b_idx != std::string::npos  // split index not before b?
+				? b_idx : (b_sz == 0 || split_at < pb.start ? 0 : b_sz);
+
+			// one empty?
+			if (a_end_idx == 0 || b_start_idx == b_sz) {
+				if (a_end_idx == 0 && b_start_idx == b_sz) {
+					return std::move(generic_dt(point_dt::null_range()));
+				}
+				// b empty? (remember then a can't be)
+				else if (b_start_idx == b_sz) {
+					if (a_end_idx == 0) {
+						return generic_dt(a);
+					} else {
+						return extend_helper<TA>::as_generic(a, 0, a_end_idx);
+					}
+				} else {
+					if (b_start_idx == 0) {
+						return generic_dt(b);
+					} else {
+						return extend_helper<TB>::as_generic(b, b_start_idx, b_sz - b_start_idx);
+					}
+				}
+			}
+
+			std::vector<utctime> points;
+
+			// any a points to use?
+			if (a_sz > 0 && split_at >= a.period(0).end) {
+				for (size_t i = 0; i < a_end_idx; ++i) {
+					points.push_back(a.period(i).start);
+				}
+				points.push_back(a.period(a_end_idx - 1).end);
+			}
+
+			// any b points to use?
+			if (b_sz > 0 && pa.start < pb.end && split_at < pb.end) {
+				if (
+					pa.start == pa.end      // a is empty
+					|| pb.start > pa.end    // OR b starts after end of a
+					|| split_at > pa.end    // OR split is after end of a
+					|| pb.start > split_at  // OR the start of b is after the split
+					) {
+					// then push the first point of b (otherwise it is included as the last from a)
+					points.push_back(b.period(b_start_idx).start);
+				}
+				for (size_t i = b_start_idx + 1; i < b_sz; ++i) {
+					points.push_back(b.period(i).start);
+				}
+				points.push_back(b.period(b_sz - 1).end);
+			}
+
+			// finalize
+			if (points.size() >= 2) {
+				return generic_dt(point_dt(std::move(points)));
+			} else {
+				return generic_dt(point_dt::null_range());
+			}
+		}
+
+		template<class TA, class TB>
+		inline auto extend(const TA & a, const TB & b, const utctime split_at)
+			-> typename std::enable_if<!TA::continuous::value || !TB::continuous::value, generic_dt>::type  // SFINAE
+		{
+			throw std::runtime_error("extension of/with discontinuous time-axis not supported");
+		}
+
         inline generic_dt extend(const generic_dt & a, const generic_dt & b, const utctime split_at) {
             if ( a.gt == generic_dt::FIXED && b.gt == generic_dt::FIXED ) {
                 return extend(a.f, b.f, split_at);
@@ -1060,88 +1143,7 @@ namespace shyft {
             }
         }
 
-        template<class TA, class TB>
-        inline auto extend(const TA & a, const TB & b, const utctime split_at)
-            -> typename std::enable_if<TA::continuous::value && TB::continuous::value, generic_dt>::type  // SFINAE
-        {
-            namespace core = shyft::core;
-
-            const size_t a_sz = a.size(),
-                         b_sz = b.size();
-            const core::utcperiod pa = a.total_period(),
-                                  pb = b.total_period();
-
-            // determine number of intervals to use
-            const size_t a_idx = a.index_of(split_at),
-                         a_end_idx = a_idx != std::string::npos  // split index not after a?
-                ? a_idx : (a_sz == 0 || split_at < pa.start ? 0 : a_sz);
-            // -----
-            const size_t b_idx = b.index_of(split_at),
-                         b_start_idx = b_idx != std::string::npos  // split index not before b?
-                ? b_idx : (b_sz == 0 || split_at < pb.start ? 0 : b_sz);
-
-            // one empty?
-            if ( a_end_idx == 0 || b_start_idx == b_sz ) {
-                if ( a_end_idx == 0 && b_start_idx == b_sz ) {
-                    return std::move(generic_dt(point_dt::null_range()));
-                }
-                // b empty? (remember then a can't be)
-                else if ( b_start_idx == b_sz ) {
-                    if ( a_end_idx == 0 ) {
-                        return generic_dt(a);
-                    } else {
-                        return extend_helper<TA>::as_generic(a, 0, a_end_idx);
-                    }
-                } else {
-                    if ( b_start_idx == 0 ) {
-                        return generic_dt(b);
-                    } else {
-                        return extend_helper<TB>::as_generic(b, b_start_idx, b_sz - b_start_idx);
-                    }
-                }
-            }
-
-            std::vector<utctime> points;
-
-            // any a points to use?
-            if ( a_sz > 0 && split_at >= a.period(0).end ) {
-                for ( size_t i = 0; i < a_end_idx; ++i ) {
-                    points.push_back(a.period(i).start);
-                }
-                points.push_back(a.period(a_end_idx - 1).end);
-            }
-
-            // any b points to use?
-            if ( b_sz > 0 && pa.start < pb.end && split_at < pb.end ) {
-                if (
-                    pa.start == pa.end      // a is empty
-                    || pb.start > pa.end    // OR b starts after end of a
-                    || split_at > pa.end    // OR split is after end of a
-                    || pb.start > split_at  // OR the start of b is after the split
-                ) {
-                    // then push the first point of b (otherwise it is included as the last from a)
-                    points.push_back(b.period(b_start_idx).start);
-                }
-                for ( size_t i = b_start_idx + 1; i < b_sz; ++i ) {
-                    points.push_back(b.period(i).start);
-                }
-                points.push_back(b.period(b_sz-1).end);
-            }
-
-            // finalize
-            if ( points.size() >= 2 ) {
-                return generic_dt(point_dt(std::move(points)));
-            } else {
-                return generic_dt(point_dt::null_range());
-            }
-        }
-
-        template<class TA, class TB>
-        inline auto extend(const TA & a, const TB & b, const utctime split_at)
-            -> typename std::enable_if<! TA::continuous::value || ! TB::continuous::value, generic_dt>::type  // SFINAE
-        {
-            throw std::runtime_error("extension of/with discontinuous time-axis not supported");
-        }
+ 
 
         /** \brief fast&efficient combine for two fixed_dt time-axis */
         inline fixed_dt combine( const fixed_dt& a, const fixed_dt& b )  {

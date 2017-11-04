@@ -418,7 +418,7 @@ TEST_CASE("dlib_server_performance") {
         int n = 24 * 365 * 5;// 5years of hourly data
         int n24 = n / 24;
         int n_ts = 10;//83;
-        shyft::time_axis::fixed_dt ta(t, dt, n);
+        shyft::time_axis::generic_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
 		ts_vector_t from_disk; from_disk.reserve(n_ts);
@@ -518,7 +518,7 @@ TEST_CASE("dtss_store_basics") {
         ts_db db(tmpdir.string());
 
         SUBCASE("store_fixed_dt") {
-            gts_t o(fta,10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            gts_t o(gta_t(fta),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
             std::string fn("measurements/tssf.db");  // verify we can have path-parts
             db.save(fn,o);
@@ -533,7 +533,7 @@ TEST_CASE("dtss_store_basics") {
             core::utctime te = t + (2u*n - 3u)*dt/2u;
             auto r2 = db.read(fn, utcperiod{ tb, te });
             FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
-            FAST_CHECK_EQ(r2.time_axis(), time_axis::fixed_dt(t + dt, dt, n - 2u));
+            FAST_CHECK_EQ(r2.time_axis(), time_axis::generic_dt(t + dt, dt, n - 2u));
             FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
             FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
 
@@ -546,7 +546,7 @@ TEST_CASE("dtss_store_basics") {
         }
 
         SUBCASE("store_calendar_utc_dt") {
-            gts_t o(cta1, 10.0, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            gts_t o(gta_t(cta1), 10.0, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
             std::string fn("tssf.db");
             db.save(fn, o);
@@ -561,7 +561,7 @@ TEST_CASE("dtss_store_basics") {
             core::utctime te = cta1.cal->add(t, dt_half, 2*n - 3);
             auto r2 = db.read(fn, utcperiod{ tb, te });
             FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
-            FAST_CHECK_EQ(r2.time_axis(), time_axis::calendar_dt{ cta1.cal, cta1.cal->add(t, dt, 1), dt, n - 2u });
+            FAST_CHECK_EQ(r2.time_axis(), time_axis::generic_dt{ cta1.cal, cta1.cal->add(t, dt, 1), dt, n - 2u });
             FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
             FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
 
@@ -577,7 +577,7 @@ TEST_CASE("dtss_store_basics") {
             db.remove(fn);
         }
         SUBCASE("store_calendar_osl_dt") {
-            gts_t o(cta2,10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            gts_t o(gta_t(cta2),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             string fn("tssf.db");
             db.save(fn,o);
             auto r=db.read(fn,utcperiod{});
@@ -586,7 +586,7 @@ TEST_CASE("dtss_store_basics") {
             db.remove(fn);
         }
         SUBCASE("store_point_dt") {
-            gts_t o(pta, 10.0, time_series::ts_point_fx::POINT_INSTANT_VALUE);
+            gts_t o(gta_t(pta), 10.0, time_series::ts_point_fx::POINT_INSTANT_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
             string fn("tssf.db");
             db.save(fn, o);
@@ -602,7 +602,7 @@ TEST_CASE("dtss_store_basics") {
             auto r2 = db.read(fn, utcperiod{ tb, te });
             FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
             time_axis::point_dt exp{ std::vector<core::utctime>( &o.ta.p.t[1], &o.ta.p.t[o.ta.p.t.size()-1] ), o.ta.p.t[o.ta.p.t.size()-1] };
-            FAST_CHECK_EQ(r2.time_axis(), exp);
+            FAST_CHECK_EQ(r2.time_axis(), gta_t(exp));
             FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
             FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
 
@@ -619,7 +619,7 @@ TEST_CASE("dtss_store_basics") {
 			vector<gts_t> tsv; tsv.reserve(n_ts);
             double fv = 1.0;
             for (int i = 0; i < n_ts; ++i)
-                tsv.emplace_back(fta, fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+                tsv.emplace_back(gta_t(fta), fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             FAST_CHECK_EQ(n_ts,tsv.size());
 
             auto t0 = timing::now();
@@ -778,7 +778,7 @@ TEST_CASE("dtss_store_merge_write") {
     namespace dtss = shyft::dtss;
     namespace ta = shyft::time_axis;
     namespace ts = shyft::time_series;
-
+	using shyft::api::gta_t;
     // setup db
     auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
     dtss::ts_db db(tmpdir.string());
@@ -794,8 +794,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::fixed_dt f_ta_h{ t0, dt_h, n };
             ta::calendar_dt c_ta_d{ utc_ptr, t0, dt_d, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ c_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(c_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_diff_ta.db");
 
@@ -823,8 +823,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::fixed_dt f_ta_h{ t0, dt_h, n };
             ta::fixed_dt f_ta_d{ t0, dt_d, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0., ts::POINT_INSTANT_VALUE };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0., ts::POINT_AVERAGE_VALUE };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0., ts::POINT_INSTANT_VALUE };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0., ts::POINT_AVERAGE_VALUE };
             // -----
             std::string fn("dtss_save_merge/ext_diff_fx.db");
 
@@ -851,8 +851,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::fixed_dt f_ta_h{ t0, dt_h, n };
             ta::fixed_dt f_ta_d{ t0, dt_d, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_fixed_diff_dt.db");  // verify we can have path-parts
 
@@ -880,8 +880,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::fixed_dt f_ta_h{ t0_1, dt_h, n };
             ta::fixed_dt f_ta_d{ t0_2, dt_h, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_fixed_unaligned.db");  // verify we can have path-parts
 
@@ -909,8 +909,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::calendar_dt f_ta_h{ utc_ptr, t0, dt_h, n };
             ta::calendar_dt f_ta_d{ utc_ptr, t0, dt_d, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_cal_diff_dt.db");  // verify we can have path-parts
 
@@ -938,8 +938,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::calendar_dt f_ta_h{ utc_ptr, t0_1, dt_h, n };
             ta::calendar_dt f_ta_d{ utc_ptr, t0_2, dt_h, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_cal_unaligned.db");  // verify we can have path-parts
 
@@ -968,8 +968,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::calendar_dt f_ta_h{ utc_ptr, t0_1, dt_h, n };
             ta::calendar_dt f_ta_d{ osl_ptr, t0_2, dt_h, n };
-            ts::point_ts<ta::generic_dt> pts_h{ f_ta_h, 0. };
-            ts::point_ts<ta::generic_dt> pts_d{ f_ta_d, 0. };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
             // -----
             std::string fn("dtss_save_merge/ext_cal_diff_cal.db");  // verify we can have path-parts
 
@@ -1000,8 +1000,8 @@ TEST_CASE("dtss_store_merge_write") {
                 const core::utctime t0 = utc_ptr->time(2016, 1, 1);
                 // -----
                 ta::fixed_dt f_ta{ t0, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_exact.db");
 
@@ -1039,8 +1039,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n - 2*drop };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_new_in_old.db");
 
@@ -1082,8 +1082,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n + extra };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_old_in_new.db");
 
@@ -1119,8 +1119,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_new_over_start.db");
 
@@ -1160,8 +1160,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_new_over_end.db");
 
@@ -1199,8 +1199,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_consec.db");
 
@@ -1238,8 +1238,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_gap_after.db");
 
@@ -1280,8 +1280,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::fixed_dt f_ta_old{ t0_old, dt, n };
                 ta::fixed_dt f_ta_new{ t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/fixed_gap_before.db");
 
@@ -1322,8 +1322,8 @@ TEST_CASE("dtss_store_merge_write") {
                 const core::utctime t0 = utc_ptr->time(2016, 1, 1);
                 // -----
                 ta::calendar_dt c_ta{ utc_ptr, t0, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_exact.db");
 
@@ -1361,8 +1361,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n - 2*drop };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_new_in_old.db");
 
@@ -1404,8 +1404,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n + extra };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_old_in_new.db");
 
@@ -1441,8 +1441,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_new_over_start.db");
 
@@ -1482,8 +1482,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_new_over_end.db");
 
@@ -1521,8 +1521,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_consec.db");
 
@@ -1560,8 +1560,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_gap_after.db");
 
@@ -1602,8 +1602,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
                 ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
-                ts::point_ts<ta::generic_dt> pts_old{ c_ta_old, 1. };
-                ts::point_ts<ta::generic_dt> pts_new{ c_ta_new, 10. };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
                 // -----
                 std::string fn("dtss_save_merge/calendar_gap_before.db");
 
@@ -1657,8 +1657,8 @@ TEST_CASE("dtss_store_merge_write") {
             SUBCASE("exact") {
                 // data
                 ta::point_dt p_ta{ old_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_exact.db");
 
@@ -1698,8 +1698,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_new_in_old.db");
 
@@ -1744,8 +1744,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_old_in_new.db");
 
@@ -1781,8 +1781,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_new_over_start.db");
 
@@ -1820,8 +1820,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_new_over_end.db");
 
@@ -1859,8 +1859,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_consec.db");
 
@@ -1898,8 +1898,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_gap_after.db");
 
@@ -1939,8 +1939,8 @@ TEST_CASE("dtss_store_merge_write") {
                 // -----
                 ta::point_dt p_ta_old{ old_timepoints };
                 ta::point_dt p_ta_new{ new_timepoints };
-                ts::point_ts<ta::generic_dt> pts_old{ p_ta_old, old_values };
-                ts::point_ts<ta::generic_dt> pts_new{ p_ta_new, new_values };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
                 // -----
                 std::string fn("dtss_save_merge/point_gap_before.db");
 
@@ -1983,8 +1983,8 @@ TEST_CASE("dtss_store_merge_write") {
             // -----
             ta::fixed_dt f_ta_old{ t0_old, dt, n };
             ta::fixed_dt f_ta_new{ t0_new, dt, n - 2*drop };
-            ts::point_ts<ta::generic_dt> pts_old{ f_ta_old, 1. };
-            ts::point_ts<ta::generic_dt> pts_new{ f_ta_new, 10. };
+            ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+            ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
             // -----
             std::string fn("dtss_save_merge/force_overwrite.db");
 

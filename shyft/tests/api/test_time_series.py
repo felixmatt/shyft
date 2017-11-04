@@ -850,6 +850,16 @@ class TimeSeries(unittest.TestCase):
         for i in range(2*n):  # extension
             self.assertEqual(ad(t0 + (3*n + i)*dt), 8.0)
 
+        # check extend with more exotic combination of time-axis(we had an issue with this..)
+        a = api.TimeSeries(api.TimeAxis(0, 1, 10), fill_value=1.0, point_fx=api.POINT_AVERAGE_VALUE)
+        b = api.TimeSeries(api.TimeAxis(api.Calendar(),0, 1, 20), fill_value=2.0, point_fx=api.POINT_AVERAGE_VALUE)
+        ab = a.extend(b)
+        ba = b.extend(a, split_policy=api.extend_split_policy.AT_VALUE, split_at=a.time_axis.time(5))
+        self.assertAlmostEqual(ab.value(0), 1.0)
+        self.assertAlmostEqual(ab.value(11), 2.0)
+        self.assertAlmostEqual(ba.value(0), 2.0)
+        self.assertAlmostEqual(ab.value(7), 1.0)
+
     def test_extend_vector_of_timeseries(self):
         t0 = api.utctime_now()
         dt = api.deltahours(1)
