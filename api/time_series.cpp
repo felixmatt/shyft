@@ -46,19 +46,19 @@ namespace shyft{
          */
         template<>
         inline size_t hint_based_search<ts_src<time_axis::fixed_dt>>(const ts_src<time_axis::fixed_dt>& source, const utcperiod& p, size_t i) {
-            return source.ta.open_range_index_of(p.start);
+            return source.ta.index_of(p.start);
         }
         template<>
         inline size_t hint_based_search<ts_src<time_axis::calendar_dt>>(const ts_src<time_axis::calendar_dt>& source, const utcperiod& p, size_t i) {
-            return source.ta.open_range_index_of(p.start);
+            return source.ta.index_of(p.start);
         }
         template<>
         inline size_t hint_based_search<ts_src<time_axis::point_dt>>(const ts_src<time_axis::point_dt>& source, const utcperiod& p, size_t i) {
-            return source.ta.open_range_index_of(p.start,i);
+            return source.ta.index_of(p.start,i);
         }
         template<>
         inline size_t hint_based_search<ts_src<time_axis::generic_dt>>(const ts_src<time_axis::generic_dt>& source, const utcperiod& p, size_t i) {
-            return source.ta.open_range_index_of(p.start,i);
+            return source.ta.index_of(p.start,i);
         }
     }
     namespace api {

@@ -230,6 +230,7 @@ namespace shyft {
             const gta_t& time_axis() const { return sts()->time_axis();};
             utcperiod total_period() const {return ts?ts->total_period():utcperiod();};   ///< Returns period that covers points, given
             size_t index_of(utctime t) const {return ts?ts->index_of(t):std::string::npos;};
+			size_t index_of(utctime t,size_t ix_hint) const { return ts ? ts->time_axis().index_of(t,ix_hint) : std::string::npos; };
             size_t open_range_index_of(utctime t, size_t ix_hint = std::string::npos) const {
                 return ts ? ts->time_axis().open_range_index_of(t, ix_hint):std::string::npos; }
             size_t size() const {return ts?ts->size():0;};        ///< number of points that descr. y=f(t) on t ::= period
@@ -1411,11 +1412,11 @@ namespace shyft {
     namespace time_series {
         template<>
         inline size_t hint_based_search<api::apoint_ts>(const api::apoint_ts& source, const utcperiod& p, size_t i) {
-            return source.open_range_index_of(p.start, i);
+            return source.index_of(p.start, i);
         }
 		template<>
 		inline size_t hint_based_search<api::ipoint_ts>(const api::ipoint_ts& source, const utcperiod& p, size_t i) {
-			return source.time_axis().open_range_index_of(p.start, i);
+			return source.time_axis().index_of(p.start, i);
 		}
 	}
 }

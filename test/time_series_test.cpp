@@ -819,14 +819,16 @@ TEST_SUITE("time_series") {
         for(const auto&v:cv) {
             TS_ASSERT_DELTA(v,(a_value+3*b_value)*4 +(a_value*b_value/2.0), 0.001);
         }
-        SUBCASE("integral_ts") {
-            auto a_i_ts = a.integral(ta2);
+        SUBCASE("integral_ts_end_handling") {
+			gta_t ta3{ start, dt*2, n / 2 + 1 };
+            auto a_i_ts = a.integral(ta3);
             auto a_i_v = a_i_ts.values();
-            TS_ASSERT_EQUALS(a_i_v.size(), ta2.size());
-            for (size_t i = 0; i < ta2.size()-1; ++i) {
-                TS_ASSERT_DELTA(a_i_v[i], a_i_ts.value(i), 0.00001);
-                //outdated, the last interval value linear TS_ASSERT_DELTA(a_i_v[i], a_value*double(ta2.period(i).timespan()),0.00001);
+            TS_ASSERT_EQUALS(a_i_v.size(), ta3.size());
+            for (size_t i = 0; i < ta3.size()-1; ++i) {
+				TS_ASSERT_DELTA(a_i_v[i], a_i_ts.value(i), 0.00001);
             }
+			FAST_CHECK_EQ(false, std::isfinite(a_i_v[ta3.size()-1]));
+			FAST_CHECK_EQ(false, std::isfinite(a_i_ts.value(ta3.size() - 1)));
         }
 
         // verify some special fx
@@ -844,6 +846,18 @@ TEST_SUITE("time_series") {
         a.set(0,b_value);
         TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
     }
+	TEST_CASE("test_api_ts_stair_nan_after_end") {
+		using namespace shyft::api;
+		apoint_ts ts{ gta_t{0, 1, 3}, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
+		auto a = ts.average(gta_t{ 0,1,4 });
+		auto av = a.values();
+		for (size_t i = 0; i < a.size() - 1; ++i) {
+			FAST_CHECK_EQ(a.value(i) , doctest::Approx(1.0));
+			FAST_CHECK_EQ(av[i], doctest::Approx(1.0));
+		}
+		FAST_CHECK_UNARY(!std::isfinite(a.value(a.size() - 1)));
+		FAST_CHECK_UNARY(!std::isfinite(av[a.size()-1]));
+	}
 
     TEST_CASE("test_rating_curve_ts") {
         namespace core = shyft::core;

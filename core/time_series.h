@@ -211,20 +211,31 @@ namespace shyft{
         template <class S>
         double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true,bool strict_linear_between=true) {
             const size_t n = source.size();
-            if (n == 0) // early exit if possible
+			const bool extrapolate_flat = !linear || (linear && !strict_linear_between);
+			if (n == 0) // early exit if possible
                 return shyft::nan;
             size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
+			point l;// Left point
+			bool l_finite = false;
 
             if (i == std::string::npos) { // this might be a case
-                last_idx = 0;// we update the hint to the left-most possible index
-                i=0;
-            }
-            point l;// Left point
-            bool l_finite = false;
+				//  source starts after p.start
+				// or 
+				//  source has no period that contans p.start
+				//  - that is: 
+				i = 0;
+				last_idx = 0;// we update the hint to the left-most possible index
+				if (strict_linear_between) {// investigate if we are after end
+					l = source.get(i++);
+					l_finite = std::isfinite(l.v);
+					if (!p.contains(l.t))
+						return shyft::nan;
+				}
+
+			}
 
             double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
             tsum = 0; // length of non-nan f(t) time-axis
-            bool extrapolate_flat = !linear || (linear && !strict_linear_between);
             while (true) { //there are two exit criteria: no more points, or we pass the period end.
                 if (!l_finite) {//search for 'point' anchor phase
                     l = source.get(i++);

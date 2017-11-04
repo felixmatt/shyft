@@ -279,7 +279,7 @@ namespace expose {
             .def("fill",&pts_t::fill,(py::arg("self"),py::arg("v")),"fill all values with v")\
             .def("scale_by",&pts_t::scale_by,(py::arg("self"),py::arg("v")),"scale all values by the specified factor v")\
             .def("size",&pts_t::size,(py::arg("self")),"returns number of points")\
-            .def("index_of",&pts_t::index_of,(py::arg("self"),py::arg("t")),"return the index of the intervall that contains t, or npos if not found")\
+            .def("index_of", (size_t (pts_t::*)(utctime t) const) &pts_t::index_of,(py::arg("self"),py::arg("t")),"return the index of the intervall that contains t, or npos if not found")\
             .def("total_period",&pts_t::total_period,(py::arg("self")),"returns the total period covered by the time-axis of this time-series")\
             .def("__call__",&pts_t::operator(),(py::arg("self"),py::arg("t")),"return the f(t) value for the time-series")
 
@@ -480,6 +480,7 @@ namespace expose {
                 doc_see_also("TimeSeries('url://like/id'),TimeSeries('url://like/id',ts_with_values)")
             )
 			DEF_STD_TS_STUFF()
+			//--
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 
 			.def("get_time_axis", &shyft::api::apoint_ts::time_axis,(py::arg("self")), "returns the time-axis", return_internal_reference<>())

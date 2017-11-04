@@ -996,6 +996,17 @@ class TimeSeries(unittest.TestCase):
             self.assertAlmostEqual(ts_mse.values[i], 0, places=2)
         self.assertAlmostEqual(pred.predictor_mse(ts_data), 0, places=2)
 
+    def test_average_outside_give_nan(self):
+        ta1 = api.TimeAxis(0, 10, 10)
+        ta2 = api.TimeAxis(-10, 10, 21)
+        tsa = api.TimeSeries(ta1, fill_value=1.0, point_fx=api.POINT_AVERAGE_VALUE)
+        tsb = tsa.average(ta2)
+        self.assertTrue(math.isnan(tsb.value(11)))  # nan when a ends
+        self.assertTrue(math.isnan(tsb.value(0)))  # nan before first a
+        tsa = api.TimeSeries(ta1, fill_value=1.0, point_fx=api.POINT_INSTANT_VALUE)
+        tsb = tsa.average(ta2)
+        self.assertTrue(math.isnan(tsb.value(10)))  # notice we get one less due to linear-between, it ends at last point in tsa.
+        self.assertTrue(math.isnan(tsb.value(0)))
 
 if __name__ == "__main__":
     unittest.main()
