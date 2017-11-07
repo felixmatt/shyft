@@ -118,6 +118,10 @@
     <ClInclude Include="dream_optimizer.h" />
     <ClInclude Include="dtss.h" />
     <ClInclude Include="dtss_cache.h" />
+    <ClInclude Include="dtss_client.h" />
+    <ClInclude Include="dtss_db.h" />
+    <ClInclude Include="dtss_msg.h" />
+    <ClInclude Include="dtss_url.h" />
     <ClInclude Include="experimental.h" />
     <ClInclude Include="hbv_actual_evapotranspiration.h" />
     <ClInclude Include="hbv_soil.h" />

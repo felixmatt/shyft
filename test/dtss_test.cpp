@@ -2,6 +2,7 @@
 
 #include "core/dtss.h"
 #include "core/dtss_cache.h"
+#include "core/dtss_client.h"
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
@@ -407,7 +408,7 @@ TEST_CASE("dlib_server_performance") {
     dlog.set_level(dlib::LALL);
     dlib::set_all_logging_output_streams(std::cout);
     dlib::set_all_logging_levels(dlib::LALL);
-    dlog << dlib::LINFO << "Starting dtss test";
+    dlog << dlib::LINFO << "Starting dtss server performance test";
     using namespace shyft::dtss;
     try {
         // Tell the server to begin accepting connections.
@@ -486,12 +487,14 @@ TEST_CASE("dlib_server_performance") {
                 )
             );
         }
+        dlog << dlib::LINFO << "waiting for test to complete";
+
         for (auto &f : clients) f.get();
         our_server.clear();
         dlog << dlib::LINFO << "done";
-
     } catch (exception& e) {
         cout << e.what() << endl;
+        dlog<<dlib::LERROR<<"exception:"<<e.what();
     }
     dlog << dlib::LINFO << "done";
 }
@@ -513,11 +516,12 @@ TEST_CASE("dtss_store_basics") {
 
         vector<utctime> tp;for(std::size_t i=0;i<fta.size();++i)tp.push_back(fta.time(i));
         time_axis::point_dt pta(tp,fta.total_period().end);
+        dlog << dlib::LINFO << "starting store basics";
 
         auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
         ts_db db(tmpdir.string());
 
-        SUBCASE("store_fixed_dt") {
+        TEST_SECTION("store_fixed_dt") {
             gts_t o(gta_t(fta),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
             std::string fn("measurements/tssf.db");  // verify we can have path-parts
@@ -545,10 +549,10 @@ TEST_CASE("dtss_store_basics") {
             FAST_CHECK_EQ(fr.size(),0);
         }
 
-        SUBCASE("store_calendar_utc_dt") {
+        TEST_SECTION("store_calendar_utc_dt") {
             gts_t o(gta_t(cta1), 10.0, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
-            std::string fn("tssf.db");
+            std::string fn("tssf1.db");
             db.save(fn, o);
 
             // read all
@@ -571,24 +575,24 @@ TEST_CASE("dtss_store_basics") {
             FAST_CHECK_EQ(i.point_fx, o.point_interpretation());
             FAST_CHECK_LE( i.modified, utctime_now());
 
-            auto fr = db.find(string(".ss.\\.db")); // should match our ts.
+            auto fr = db.find(string(".ss.1\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(), 1 );
 
             db.remove(fn);
         }
-        SUBCASE("store_calendar_osl_dt") {
+        TEST_SECTION("store_calendar_osl_dt") {
             gts_t o(gta_t(cta2),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-            string fn("tssf.db");
+            string fn("tssf2.db");
             db.save(fn,o);
             auto r=db.read(fn,utcperiod{});
             FAST_CHECK_EQ(o.point_interpretation(),r.point_interpretation());
             FAST_CHECK_EQ(o.time_axis(),r.time_axis());
             db.remove(fn);
         }
-        SUBCASE("store_point_dt") {
+        TEST_SECTION("store_point_dt") {
             gts_t o(gta_t(pta), 10.0, time_series::ts_point_fx::POINT_INSTANT_VALUE);
             o.set(0, 100.); o.set(o.size()-1, 100.);
-            string fn("tssf.db");
+            string fn("tssf3.db");
             db.save(fn, o);
 
             // read all
@@ -614,8 +618,8 @@ TEST_CASE("dtss_store_basics") {
             db.remove(fn);
         }
 
-        SUBCASE("dtss_db_speed") {
-			int n_ts = 1200;
+        TEST_SECTION("dtss_db_speed") {
+			int n_ts = 120;
 			vector<gts_t> tsv; tsv.reserve(n_ts);
             double fv = 1.0;
             for (int i = 0; i < n_ts; ++i)

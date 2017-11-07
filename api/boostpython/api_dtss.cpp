@@ -2,6 +2,7 @@
 
 #include "api/time_series.h"
 #include "core/dtss.h"
+#include "core/dtss_client.h"
 
 // also consider policy: from https://www.codevate.com/blog/7-concurrency-with-embedded-python-in-a-multi-threaded-c-application
 
