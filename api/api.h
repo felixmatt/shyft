@@ -74,9 +74,9 @@ namespace shyft {
      * for the geo-point located time-series.
      * Typically it contains a GeoPoint (3d position), plus a timeseries
      */
-    class GeoPointSource {
-      public:
-        GeoPointSource(geo_point midpoint=geo_point(), apoint_ts ts=apoint_ts())
+    struct GeoPointSource {
+        GeoPointSource() =default;
+        GeoPointSource(const geo_point& midpoint, const apoint_ts& ts)
           : mid_point_(midpoint), ts(ts) {}
         virtual ~GeoPointSource() {}
         typedef apoint_ts ts_t;
@@ -94,7 +94,8 @@ namespace shyft {
     };
 
     struct TemperatureSource : GeoPointSource {
-        TemperatureSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
+        TemperatureSource()=default;
+        TemperatureSource(const geo_point& p, const apoint_ts& ts)
          : GeoPointSource(p, ts) {}
         const apoint_ts& temperatures() const { return ts; }
 		void set_temperature(size_t ix, double v) { ts.set(ix, v); } //btk dst compliant signature, used during btk-interpolation in gridpp exposure
@@ -103,7 +104,8 @@ namespace shyft {
     };
 
     struct PrecipitationSource : GeoPointSource {
-        PrecipitationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
+        PrecipitationSource()=default;
+        PrecipitationSource(const geo_point& p, const apoint_ts& ts)
          : GeoPointSource(p, ts) {}
         const apoint_ts& precipitations() const { return ts; }
 		void set_value(size_t ix, double v) { ts.set(ix, v); }
@@ -111,19 +113,22 @@ namespace shyft {
     };
 
     struct WindSpeedSource : GeoPointSource {
-        WindSpeedSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
+        WindSpeedSource()=default;
+        WindSpeedSource(const geo_point& p, const apoint_ts& ts)
          : GeoPointSource(p, ts) {}
         bool operator==(const WindSpeedSource& x) const {return is_equal(x);}
     };
 
     struct RelHumSource : GeoPointSource {
-        RelHumSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
+        RelHumSource()=default;
+        RelHumSource(const geo_point& p, const apoint_ts& ts)
          : GeoPointSource(p, ts) {}
         bool operator==(const RelHumSource& x) const {return is_equal(x);}
     };
 
     struct RadiationSource : GeoPointSource {
-        RadiationSource(geo_point p=geo_point(), apoint_ts ts=apoint_ts())
+        RadiationSource()=default;
+        RadiationSource(const geo_point& p, const apoint_ts& ts)
          : GeoPointSource(p, ts) {}
         bool operator==(const RadiationSource& x) const {return is_equal(x);}
     };
