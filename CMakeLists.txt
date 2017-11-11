@@ -1,4 +1,4 @@
-# CMake build system for SHyFT
+# CMake build system for Shyft
 # ============================
 #
 # This requires boost, numpy installed as well as a C++11/C++14 compliant compiler.
@@ -8,7 +8,7 @@
 #   BUILD_TESTING: default ON
 #       build test programs and generates the "test" target
 #   BUILD_PYTHON_EXTENSIONS: default ON
-#       build Python extensions for SHYFT
+#       build Python extensions for Shyft
 #
 # The next environment variables are honored:
 #
@@ -22,10 +22,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 project(shyft)
 
-# Get the full version for SHyFT
+# Get the full version for Shyft
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION SHYFT_VERSION_STRING)
 
-message("Configuring for SHyFT version: " ${SHYFT_VERSION_STRING})
+message("Configuring for Shyft version: " ${SHYFT_VERSION_STRING})
 
 # options
 option(BUILD_TESTING
