@@ -1,3 +1,7 @@
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
+
 #include "core_pch.h"
 
 #include <boost/serialization/serialization.hpp>

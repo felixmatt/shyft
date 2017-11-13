@@ -1,10 +1,12 @@
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
 #include "api_pch.h"
 
 /**
  serializiation implemented using boost,
   see reference: http://www.boost.org/doc/libs/1_62_0/libs/serialization/doc/
  */
-
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/export.hpp>

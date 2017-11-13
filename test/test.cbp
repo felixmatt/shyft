@@ -36,7 +36,6 @@
 					<Add option="-DARMA_NO_DEBUG" />
 				</Compiler>
 				<Linker>
-					<Add option="-O3" />
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
@@ -53,9 +52,7 @@
 			<Add option="-DVERBOSE=0" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add option="-DARMA_DONT_PRINT_ERRORS" />
-			<Add directory="../../cxxtest" />
 			<Add directory=".." />
-			<Add directory="../../dlib" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#dlib.include)" />
 			<Add directory="$(#armadillo.include)" />
@@ -63,6 +60,7 @@
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
+			<Add option="-Wl,-rpath=\\$$$ORIGIN/../../shyft/lib" />
 			<Add library="shyftcore" />
 			<Add library="shyftapi" />
 			<Add library="pthread" />
