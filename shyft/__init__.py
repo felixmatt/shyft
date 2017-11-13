@@ -4,7 +4,8 @@ from __future__ import absolute_import
 import os
 from os import path
 
-os.environ['PATH'] = path.join(path.dirname(__file__), 'lib') + ';' + os.environ['PATH']
+if os.name == 'nt':
+    os.environ['PATH'] = path.join(path.dirname(__file__), 'lib') + ';' + os.environ['PATH']
 
 this_dir = __path__[0]
 __version__ = "development"

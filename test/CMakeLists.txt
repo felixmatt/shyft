@@ -10,9 +10,11 @@ set(target "test_shyft")
 # Flags
 add_definitions("-D__UNIT_TEST__ -DVERBOSE=0 ")
 find_package(PNG REQUIRED)
+find_package(LAPACK REQUIRED)
+
 add_executable(${target} ${sources})
 # Additional libraries
-target_link_libraries(${target} shyftcore shyftapi blas lapack boost_filesystem boost_system boost_serialization dlib ${PNG_LIBRARY} )
+target_link_libraries(${target} shyftcore shyftapi  boost_filesystem boost_system boost_serialization dlib ${PNG_LIBRARY} ${LAPACK_LIBRARIES} )
 
 # This can be made more specific, but we would need the list of tests.
 #add_test(${target} ${target})
