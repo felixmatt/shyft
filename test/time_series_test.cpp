@@ -858,6 +858,19 @@ TEST_SUITE("time_series") {
 		FAST_CHECK_UNARY(!std::isfinite(a.value(a.size() - 1)));
 		FAST_CHECK_UNARY(!std::isfinite(av[a.size()-1]));
 	}
+	TEST_CASE("test_api_ts_integral_fine_resolution") {
+		using namespace shyft::api;
+        using shyft::core::deltahours;
+        auto utc = make_shared<calendar>();
+		apoint_ts ts{ gta_t{utc->time(2017,10,16),deltahours(24*7),219}, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
+		auto a = ts.integral(gta_t{utc->time(2017,10,16),deltahours(3),12264});
+		auto av = a.values();
+		for (size_t i = 0; i < a.size(); ++i) {
+            FAST_CHECK_EQ(a.value(i),av[i]);
+			FAST_CHECK_EQ(av[i], doctest::Approx(deltahours(3)));
+		}
+	}
+
 	TEST_CASE("extend_calendar_and_fixed_dt") {
 		using namespace shyft::api;
 		auto utc = make_shared<calendar>();

@@ -243,7 +243,7 @@ namespace shyft{
                     if (i == n) { // exit condition
                         if (l_finite && l.t < p.end) {//give contribution
                             if (extrapolate_flat) {
-                                utctimespan dt = p.end - l.t;
+                                utctimespan dt = p.end - std::max(p.start, l.t);
                                 tsum += dt;
                                 area += dt* l.v; // extrapolate value flat
                             }

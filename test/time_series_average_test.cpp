@@ -231,7 +231,6 @@ vector<double> accumulate_stair_case(const TA&ta, const TS& ts, bool avg) {
                 e_p.t = tp.end;// total-period end
                 e_finite=false;
             }
-
         //compute_partition: we got a valid partition, defined by two points
         auto s_t = max(s_p.t,p.start);// clip to interval p
         auto e_t = min(e_p.t,p.end); // recall that the points can be anywhere
@@ -253,8 +252,9 @@ vector<double> accumulate_stair_case(const TA&ta, const TS& ts, bool avg) {
         }
         // keep s, next interval.
         r[i] = avg? area/t_sum: area;// stash result
-        if(s+1>=n)
-            return r;// finito
+
+        if(s+1>=n && p.end >= tp.end)
+           return r;// finito
     }
     return r;
 }
@@ -283,14 +283,26 @@ vector<double> old_accumulate_stair_case(const TA&ta, const TS& ts, bool avg) {
     vector<double> r; r.reserve(ta.size());
     size_t ix_hint=0;
     utctimespan t_sum{0};
+	utcperiod tp = ts.total_period();
     if(avg) {
         for(size_t i=0;i<ta.size();++i) {
-            double v = accumulate_value(ts,ta.period(i),ix_hint,t_sum,false,false);
-            r.emplace_back(t_sum?v/double(t_sum):shyft::nan);
+			auto p = ta.period(i);
+			if (p.end > tp.end) p.end = tp.end;
+			if (p.start < tp.end) {
+				double v = accumulate_value(ts, p, ix_hint, t_sum, false, false);
+				r.emplace_back(t_sum ? v / double(t_sum) : shyft::nan);
+			}  else
+				r.emplace_back(shyft::nan);
+            ;
         }
     } else {
         for(size_t i=0;i<ta.size();++i) {
-            r.emplace_back( accumulate_value(ts,ta.period(i),ix_hint,t_sum,false,false));
+			auto p = ta.period(i);
+			if (p.end > tp.end) p.end = tp.end;
+			if (p.start < tp.end)
+				r.emplace_back(accumulate_value(ts, ta.period(i), ix_hint, t_sum, false, false));
+			else
+				r.emplace_back(shyft::nan);
         }
     }
     return r;
@@ -304,14 +316,14 @@ using namespace shyft::core;
 using namespace shyft::time_series;
 using namespace shyft::time_axis;
 using namespace std;
-
+#define TEST_SECTION(x)
 template<class F>
 void test_linear_fx(F&& acc_fn) {
     utctimespan dt{deltahours(1)};
     fixed_dt ta{0,dt,6};
     ts_point_fx linear{POINT_INSTANT_VALUE};
     point_ts<decltype(ta)> ts{ta,vector<double>{1.0,2.0,shyft::nan,4.0,3.0,6.0},linear};
-    SUBCASE("own_axis_average") {
+	TEST_SECTION("own_axis_average") {
         auto r = acc_fn(ta,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta.size());
         CHECK(r[0]==doctest::Approx(1.5));
@@ -321,7 +333,7 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[4]==doctest::Approx(4.5));
         FAST_CHECK_UNARY(!isfinite(r[5]));
     }
-    SUBCASE("own_axis_integral") {
+	TEST_SECTION("own_axis_integral") {
         auto r = acc_fn(ta,ts,false);
         FAST_REQUIRE_EQ(r.size(),ta.size());
         CHECK(r[0]==doctest::Approx(1.5*dt));
@@ -331,18 +343,18 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[4]==doctest::Approx(4.5*dt));
         FAST_CHECK_UNARY(!isfinite(r[5]));
     }
-    SUBCASE("zero_axis") {
+	TEST_SECTION("zero_axis") {
         fixed_dt zta{0,dt,0};
         auto r=acc_fn(zta,ts,true);
         FAST_CHECK_EQ(r.size(),0);
     }
-    SUBCASE("zero_ts") {
+	TEST_SECTION("zero_ts") {
         point_ts<decltype(ta)> zts(fixed_dt{0,dt,0},1.0,linear);
         auto r=acc_fn(ta,zts,true);
         FAST_CHECK_EQ(r.size(),ta.size());
         for(const auto&v:r) FAST_CHECK_UNARY(!isfinite(v));
     }
-    SUBCASE("axis_before") {
+	TEST_SECTION("axis_before") {
         fixed_dt bta{-10000,dt,1};
         auto r=acc_fn(bta,ts,true);
         FAST_CHECK_EQ(r.size(),bta.size());
@@ -354,7 +366,7 @@ void test_linear_fx(F&& acc_fn) {
         FAST_CHECK_EQ(r.size(),ata.size());
         for(const auto&v:r) FAST_CHECK_UNARY(!isfinite(v));
     }
-    SUBCASE("aligned_x2_axis") {
+	TEST_SECTION("aligned_x2_axis") {
         fixed_dt ta2(0,2*dt,ta.size()/2);
         auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
@@ -362,7 +374,7 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[1]==doctest::Approx(3.5));
         CHECK(r[2]==doctest::Approx(4.5));
     }
-    SUBCASE("aligned_/2_axis") {
+	TEST_SECTION("aligned_/2_axis") {
         fixed_dt ta2(0,dt/2,ta.size()*2-2);
         auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
@@ -377,13 +389,13 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[8]==doctest::Approx(0.5*(3.0+4.5)));
         CHECK(r[9]==doctest::Approx(0.5*(4.5+6.0)));
     }
-    SUBCASE("aligned_one_interval") {
+	TEST_SECTION("aligned_one_interval") {
         fixed_dt ta2 {0,ta.total_period().timespan(),1};
         auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx((1.5+3.5+4.5)/3.0));
     }
-    SUBCASE("un_aligned_/2_axis_begins_in_interval") {
+	TEST_SECTION("un_aligned_/2_axis_begins_in_interval") {
         fixed_dt ta2(+dt/4,dt/2,ta.size()*2);
         auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
@@ -400,7 +412,7 @@ void test_linear_fx(F&& acc_fn) {
         FAST_CHECK_UNARY(!isfinite(r[10]));
         FAST_CHECK_UNARY(!isfinite(r[11]));
     }
-    SUBCASE("un_aligned_/2_axis_begins_before_interval") {
+	TEST_SECTION("un_aligned_/2_axis_begins_before_interval") {
         fixed_dt ta2(-dt/4,dt/2,ta.size()*2-2);
         auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
@@ -415,7 +427,7 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[8]==doctest::Approx(3.250));
         CHECK(r[9]==doctest::Approx(4.500));
     }
-    SUBCASE("out_of_points_searching_for_start") {
+	TEST_SECTION("out_of_points_searching_for_start") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,5},vector<double>{shyft::nan,1.0,1.0,shyft::nan,shyft::nan},linear);
         fixed_dt ta2{0,dt*4,2};
         auto r = acc_fn(ta2,nts,true);
@@ -423,7 +435,7 @@ void test_linear_fx(F&& acc_fn) {
         CHECK(r[0]==doctest::Approx(1.0));
         FAST_CHECK_UNARY(!isfinite(r[1]));
     }
-    SUBCASE("just_nans") {
+	TEST_SECTION("just_nans") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,5},vector<double>{shyft::nan,shyft::nan,shyft::nan,shyft::nan,shyft::nan},linear);
         fixed_dt ta2{0,dt*4,2};
         auto r = acc_fn(ta2,nts,true);
@@ -431,7 +443,7 @@ void test_linear_fx(F&& acc_fn) {
         FAST_CHECK_UNARY(!isfinite(r[0]));
         FAST_CHECK_UNARY(!isfinite(r[1]));
     }
-    SUBCASE("just_one_value_in_source") {
+	TEST_SECTION("just_one_value_in_source") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,1},vector<double>{1.0},linear);
         fixed_dt ta2{0,dt*4,2};
         auto r = acc_fn(ta2,nts,true);
@@ -442,14 +454,16 @@ void test_linear_fx(F&& acc_fn) {
 
 }
 
+
+
 template<class F>
 void test_stair_case_fx(F&& acc_fn) {
     utctimespan dt{deltahours(1)};
     fixed_dt ta{0,dt,6};
     ts_point_fx stair_case{POINT_AVERAGE_VALUE};
     point_ts<decltype(ta)> ts{ta,vector<double>{1.0,2.0,shyft::nan,4.0,3.0,6.0},stair_case};
-    SUBCASE("own_axis_average") {
-        auto r = accumulate_stair_case(ta,ts,true);
+	TEST_SECTION("own_axis_average") {
+        auto r = acc_fn(ta,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta.size());
         CHECK(r[0]==doctest::Approx(1.0));
         CHECK(r[1]==doctest::Approx(2.0));
@@ -458,8 +472,8 @@ void test_stair_case_fx(F&& acc_fn) {
         CHECK(r[4]==doctest::Approx(3.0));
         CHECK(r[5]==doctest::Approx(6.0));
     }
-    SUBCASE("own_axis_integral") {
-        auto r = accumulate_stair_case(ta,ts,false);
+	TEST_SECTION("own_axis_integral") {
+        auto r = acc_fn(ta,ts,false);
         FAST_REQUIRE_EQ(r.size(),ta.size());
         CHECK(r[0]==doctest::Approx(1.0*dt));
         CHECK(r[1]==doctest::Approx(2.0*dt));
@@ -468,47 +482,56 @@ void test_stair_case_fx(F&& acc_fn) {
         CHECK(r[4]==doctest::Approx(3.0*dt));
         CHECK(r[5]==doctest::Approx(6.0*dt));
     }
-    SUBCASE("zero_axis") {
+	TEST_SECTION("zero_axis") {
         fixed_dt zta{0,dt,0};
-        auto r=accumulate_stair_case(zta,ts,true);
+        auto r= acc_fn(zta,ts,true);
         FAST_CHECK_EQ(r.size(),0);
     }
-    SUBCASE("zero_ts") {
+	TEST_SECTION("zero_ts") {
         point_ts<decltype(ta)> zts(fixed_dt{0,dt,0},1.0,stair_case);
-        auto r=accumulate_stair_case(ta,zts,true);
+        auto r= acc_fn(ta,zts,true);
         FAST_CHECK_EQ(r.size(),ta.size());
         for(const auto&v:r) FAST_CHECK_UNARY(!isfinite(v));
     }
-    SUBCASE("one_point_ts") {
+	TEST_SECTION("one_point_ts") {
         point_ts<decltype(ta)> zts(fixed_dt{0,dt,1},1.0,stair_case);
-        auto r=accumulate_stair_case(ta,zts,true);
+        auto r= acc_fn(ta,zts,true);
         FAST_CHECK_EQ(r.size(),ta.size());
         CHECK(r[0]==doctest::Approx(1.0));
         for(size_t i=1;i<r.size();++i) FAST_CHECK_UNARY(!isfinite(r[i]));
     }
-    SUBCASE("axis_before") {
+	TEST_SECTION("last_interval_handling") {
+        point_ts<decltype(ta)> ots(fixed_dt{0,dt*(utctimespan)ta.size(),1},1.0,stair_case);
+        auto r=acc_fn(ta,ots,false);
+        FAST_CHECK_EQ(r.size(),ta.size());
+        for(size_t i=0;i<ta.size();++i) {
+            FAST_CHECK_EQ(r[i],doctest::Approx(dt));
+        }
+        
+    }
+	TEST_SECTION("axis_before") {
         fixed_dt bta{-10000,dt,1};
-        auto r=accumulate_stair_case(bta,ts,true);
+        auto r= acc_fn(bta,ts,true);
         FAST_CHECK_EQ(r.size(),bta.size());
         for(const auto&v:r) FAST_CHECK_UNARY(!isfinite(v));
     }
-    SUBCASE("axis_after") {
+	TEST_SECTION("axis_after") {
         fixed_dt ata{ta.total_period().end,dt,10};
-        auto r=accumulate_stair_case(ata,ts,true);
+        auto r= acc_fn(ata,ts,true);
         FAST_CHECK_EQ(r.size(),ata.size());
         for(const auto&v:r) FAST_CHECK_UNARY(!isfinite(v));
     }
-    SUBCASE("aligned_x2_axis") {
+	TEST_SECTION("aligned_x2_axis") {
         fixed_dt ta2(0,2*dt,ta.size()/2);
-        auto r = accumulate_stair_case(ta2,ts,true);
+        auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.5));
         CHECK(r[1]==doctest::Approx(4.0));
         CHECK(r[2]==doctest::Approx(4.5));
     }
-    SUBCASE("aligned_/2_axis") {
+	TEST_SECTION("aligned_/2_axis") {
         fixed_dt ta2(0,dt/2,ta.size()*2-2);
-        auto r = accumulate_stair_case(ta2,ts,true);
+        auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.00));
         CHECK(r[1]==doctest::Approx(1.00));
@@ -521,15 +544,15 @@ void test_stair_case_fx(F&& acc_fn) {
         CHECK(r[8]==doctest::Approx(3.00));
         CHECK(r[9]==doctest::Approx(3.00));
     }
-    SUBCASE("aligned_one_interval") {
+	TEST_SECTION("aligned_one_interval") {
         fixed_dt ta2 {0,ta.total_period().timespan(),1};
-        auto r = accumulate_stair_case(ta2,ts,true);
+        auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx((1+2+4+3+6)/5.0));
     }
-    SUBCASE("un_aligned_/2_axis_begins_in_interval") {
+	TEST_SECTION("un_aligned_/2_axis_begins_in_interval") {
         fixed_dt ta2(+dt/4,dt/2,ta.size()*2);
-        auto r = accumulate_stair_case(ta2,ts,true);
+        auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.000));
         CHECK(r[1]==doctest::Approx(1.500));
@@ -541,12 +564,14 @@ void test_stair_case_fx(F&& acc_fn) {
         CHECK(r[7]==doctest::Approx(3.500));
         CHECK(r[8]==doctest::Approx(3.000));
         CHECK(r[9]==doctest::Approx(4.500));
-        FAST_CHECK_UNARY(!isfinite(r[10]));
-        FAST_CHECK_UNARY(!isfinite(r[11]));
+		CHECK(r[10]==doctest::Approx(6.000));
+		CHECK(r[11]==doctest::Approx(6.000));
+		//FAST_CHECK_UNARY(!isfinite(r[10]));
+        //FAST_CHECK_UNARY(!isfinite(r[11]));
     }
-    SUBCASE("un_aligned_/2_axis_begins_before_interval") {
+	TEST_SECTION("un_aligned_/2_axis_begins_before_interval") {
         fixed_dt ta2(-dt/4,dt/2,ta.size()*2-2);
-        auto r = accumulate_stair_case(ta2,ts,true);
+        auto r = acc_fn(ta2,ts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.000));
         CHECK(r[1]==doctest::Approx(1.000));
@@ -559,26 +584,26 @@ void test_stair_case_fx(F&& acc_fn) {
         CHECK(r[8]==doctest::Approx(3.500));
         CHECK(r[9]==doctest::Approx(3.000));
     }
-    SUBCASE("out_of_points_searching_for_start") {
+	TEST_SECTION("out_of_points_searching_for_start") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,5},vector<double>{shyft::nan,1.0,1.0,shyft::nan,shyft::nan},stair_case);
         fixed_dt ta2{0,dt*4,2};
-        auto r = accumulate_stair_case(ta2,nts,true);
+        auto r = acc_fn(ta2,nts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.0));
         FAST_CHECK_UNARY(!isfinite(r[1]));
     }
-    SUBCASE("just_nans") {
+	TEST_SECTION("just_nans") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,5},vector<double>{shyft::nan,shyft::nan,shyft::nan,shyft::nan,shyft::nan},stair_case);
         fixed_dt ta2{0,dt*4,2};
-        auto r = accumulate_stair_case(ta2,nts,true);
+        auto r = acc_fn(ta2,nts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         FAST_CHECK_UNARY(!isfinite(r[0]));
         FAST_CHECK_UNARY(!isfinite(r[1]));
     }
-    SUBCASE("just_one_value_in_source") {
+	TEST_SECTION("just_one_value_in_source") {
         point_ts<fixed_dt> nts(fixed_dt{0,dt,1},vector<double>{1.0},stair_case);
         fixed_dt ta2{0,dt*4,2};
-        auto r = accumulate_stair_case(ta2,nts,true);
+        auto r = acc_fn(ta2,nts,true);
         FAST_REQUIRE_EQ(r.size(),ta2.size());
         CHECK(r[0]==doctest::Approx(1.0));
         FAST_CHECK_UNARY(!isfinite(r[1]));
@@ -591,16 +616,16 @@ TEST_SUITE("time_series") {
         test_linear_fx(f_lin);
     }
     TEST_CASE("old_ts_avg_linear") {
-        auto f_lin=old_accumulate_linear<fixed_dt,point_ts<fixed_dt>>;
-        test_linear_fx(f_lin);
+        auto f_lin_old=old_accumulate_linear<fixed_dt,point_ts<fixed_dt>>;
+        test_linear_fx(f_lin_old);
     }
     TEST_CASE("ts_avg_stair_case") {
         auto f_stair_case=accumulate_stair_case<fixed_dt,point_ts<fixed_dt>>;
         test_stair_case_fx(f_stair_case);
     }
     TEST_CASE("old_ts_avg_stair_case") {
-        auto f_stair_case=old_accumulate_stair_case<fixed_dt,point_ts<fixed_dt>>;
-        test_stair_case_fx(f_stair_case);
+        auto f_stair_case_old=old_accumulate_stair_case<fixed_dt,point_ts<fixed_dt>>;
+        test_stair_case_fx(f_stair_case_old);
     }
     TEST_CASE("ts_avg_speed_test") {
         using ts_t = point_ts<fixed_dt>;
@@ -645,5 +670,17 @@ TEST_SUITE("time_series") {
         std::cout << "Linear mill pts/ sec " << mpts_s / (us_l / 1e6) << "\n";
         std::cout << "Stairc mill pts/ sec " << mpts_s / (us_s / 1e6) << "\n";
         std::cout << "Old    mill pts/ sec " << mpts_s / (us_o / 1e6) << "\n";
+    }
+    TEST_CASE("ts_core_ts_last_interval_study_case") {
+        using ts_t = point_ts<fixed_dt>;
+        calendar utc{};
+        fixed_dt ta_s{utc.time(2017,10,16),deltahours(24*7),219};
+        fixed_dt ta{utc.time(2017,10,16),deltahours(3),12264};
+        ts_t src(ta_s,1.0,POINT_AVERAGE_VALUE);
+        
+        average_ts<ts_t,fixed_dt> i_src{src,ta};
+        for(size_t i=0;i<ta.size();++i)
+            CHECK( i_src.value(i) == doctest::Approx(1.0));
+
     }
 }

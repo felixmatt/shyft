@@ -1018,5 +1018,18 @@ class TimeSeries(unittest.TestCase):
         self.assertTrue(math.isnan(tsb.value(10)))  # notice we get one less due to linear-between, it ends at last point in tsa.
         self.assertTrue(math.isnan(tsb.value(0)))
 
+    def test_integral_fine_resolution(self):
+        """ Case study for last-interval bug from python"""
+        utc = api.Calendar()
+        ta = api.TimeAxis(utc.time(2017, 10, 16), api.deltahours(24 * 7), 219)
+        tf = api.TimeAxis(utc.time(2017, 10, 16), api.deltahours(3), 12264)
+        src = api.TimeSeries(ta, fill_value=1.0, point_fx=api.POINT_AVERAGE_VALUE)
+        ts = src.integral(tf)
+        self.assertIsNotNone(ts)
+        for i in range(len(tf)):
+            if not math.isclose(ts.value(i), 1.0*api.deltahours(3)):
+                self.assertAlmostEqual(ts.value(i), 1.0*api.deltahours(3))
+
+
 if __name__ == "__main__":
     unittest.main()
