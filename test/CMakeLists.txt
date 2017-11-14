@@ -14,7 +14,16 @@ find_package(LAPACK REQUIRED)
 
 add_executable(${target} ${sources})
 # Additional libraries
-target_link_libraries(${target} shyftcore shyftapi  boost_filesystem boost_system boost_serialization dlib ${PNG_LIBRARY} ${LAPACK_LIBRARIES} )
+target_link_libraries(${target} 
+ shyftcore shyftapi 
+ ${SHYFT_DEPENDENCIES}/lib/libboost_filesystem.so 
+ ${SHYFT_DEPENDENCIES}/lib/libboost_system.so 
+ ${SHYFT_DEPENDENCIES}/lib/libboost_serialization.so 
+ ${SHYFT_DEPENDENCIES}/lib/libdlib.so 
+ ${PNG_LIBRARY} ${LAPACK_LIBRARIES} 
+)
+#set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../../shyft/lib")
+#install(TARGETS ${target} DESTINATION ${CMAKE_SOURCE_DIR}/bin/Release)
 
 # This can be made more specific, but we would need the list of tests.
 #add_test(${target} ${target})
@@ -51,6 +60,5 @@ add_test(dtss ${target} -nv --test-suite=dtss)
 add_test(qm ${target} -nv --test-suite=qm)
 add_test(predictors ${target} -nv --test-suite=predictors)
 add_test(ts_merge ${target} -nv --test-suite=ts_merge)
-
 
 
