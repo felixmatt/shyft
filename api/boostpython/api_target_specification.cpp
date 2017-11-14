@@ -29,8 +29,8 @@ namespace expose {
             return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::core::pts_t>(start,dt,n,src);
         }
     };
-    typedef shyft::core::pts_t target_ts_t;
-
+    typedef shyft::api::apoint_ts target_ts_t;
+    typedef shyft::time_series::pts_t core_ts_t;
     typedef  model_calibration::target_specification<target_ts_t> TargetSpecificationPts;
 
     /** custom constructors needed for target-spec, to accept any type of ts
@@ -46,7 +46,7 @@ namespace expose {
         }
 
         static TargetSpecificationPts* create_cids(
-               const target_ts_t& ts,
+               const core_ts_t& ts,
                vector<int> cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
@@ -56,11 +56,7 @@ namespace expose {
                model_calibration::target_property_type catchment_property_ = model_calibration::DISCHARGE,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(ts,cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
-        }
-        static void ensure_time_axis_requirements(const shyft::api::gta_t& gta) {
-            if(gta.gt != time_axis::generic_dt::FIXED)
-                throw runtime_error("the supplied target specification ts time_axis must be a trivial fixed interval timeaxis");
+            return  acreate_cids(target_ts_t(ts),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
         static TargetSpecificationPts* acreate_cids(
                const shyft::api::apoint_ts& ats,
@@ -73,12 +69,11 @@ namespace expose {
                model_calibration::target_property_type catchment_property_ = model_calibration::DISCHARGE,
                std::string uid = "")
         {
-            ensure_time_axis_requirements(ats.time_axis());
             return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
 
         static TargetSpecificationPts* create_cids2(
-               const target_ts_t& ts,
+               const core_ts_t& ts,
                vector<int> cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
@@ -92,12 +87,11 @@ namespace expose {
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
         {
-            ensure_time_axis_requirements(ats.time_axis());
-            return  create_cids(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode);
+            return  acreate_cids(ats,cids,scale_factor,calc_mode);
         }
 
         static TargetSpecificationPts* create_rid(
-               const target_ts_t& ts,
+               const core_ts_t& ts,
                int river_id,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
@@ -106,7 +100,7 @@ namespace expose {
                double s_b = 1.0,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(ts,river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
+            return  acreate_rid(target_ts_t(ts),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
         static TargetSpecificationPts* acreate_rid(
                const shyft::api::apoint_ts& ats,
@@ -118,7 +112,6 @@ namespace expose {
                double s_b = 1.0,
                std::string uid = "")
         {
-            ensure_time_axis_requirements(ats.time_axis());
             return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
 
@@ -181,6 +174,7 @@ namespace expose {
                 doc_parameter("catchment_property","CatchmentPropertyType","what to extract from catchment(DISCHARGE|SNOW_COVERED_AREA|SNOW_WATER_EQUIVALENT|ROUTED_DISCHARGE|CELL_CHARGE)")
                 doc_parameter("uid","str","user specified string/id to help integration efforts")
              )
+
             .def("__init__",make_constructor(&target_specification_ext::acreate_cids,
                 default_call_policies(),
                 (pyarg("ts"),pyarg("cids"),pyarg("scale_factor"),pyarg("calc_mode"),

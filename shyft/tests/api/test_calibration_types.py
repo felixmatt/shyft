@@ -278,7 +278,7 @@ class ShyftApi(unittest.TestCase):
         self.assertIsNotNone(t2.catchment_indexes)
         for i in range(len(cids)):
             self.assertEqual(cids[i], t2.catchment_indexes[i])
-        t.ts = tsa
+        t.ts = api.TimeSeries(tsa)  # target spec is now a regular TimeSeries
         # TODO: Does not work, list of objects are not yet convertible tv = api.TargetSpecificationVector([t, t2])
         tv = api.TargetSpecificationVector()
         tv.append(t)
