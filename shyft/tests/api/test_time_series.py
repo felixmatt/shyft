@@ -193,11 +193,11 @@ class TimeSeries(unittest.TestCase):
 
         a = api.TimeSeries(ta=ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         self.assertTrue(a)  # should evaluate to true
-        b = api.TimeSeries(ta=ta, fill_value=1.0,point_fx=api.point_interpretation_policy.POINT_INSTANT_VALUE)
+        b = api.TimeSeries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_INSTANT_VALUE)
         b.fill(2.0)  # demo how to fill a point ts
         self.assertAlmostEqual((1.0 - b).values.to_numpy().max(), -1.0)
         self.assertAlmostEqual((b - 1.0).values.to_numpy().max(), 1.0)
-        c = a + b*3.0 - a/2.0  # operator + * - /
+        c = a + b * 3.0 - a / 2.0  # operator + * - /
         d = -a  # unary minus
         e = a.average(ta)  # average
         f = api.max(c, 300.0)
@@ -209,9 +209,9 @@ class TimeSeries(unittest.TestCase):
         self.assertEqual(a.size(), n)
         self.assertEqual(b.size(), n)
         self.assertEqual(c.size(), n)
-        self.assertAlmostEqual(c.value(0), 3.0 + 2.0*3.0 - 3.0/2.0)  # 7.5
+        self.assertAlmostEqual(c.value(0), 3.0 + 2.0 * 3.0 - 3.0 / 2.0)  # 7.5
         for i in range(n):
-            self.assertAlmostEqual(c.value(i), a.value(i) + b.value(i)*3.0 - a.value(i)/2.0, delta=0.0001)
+            self.assertAlmostEqual(c.value(i), a.value(i) + b.value(i) * 3.0 - a.value(i) / 2.0, delta=0.0001)
             self.assertAlmostEqual(d.value(i), - a.value(i), delta=0.0001)
             self.assertAlmostEqual(e.value(i), a.value(i), delta=0.00001)
             self.assertAlmostEqual(f.value(i), +300.0, delta=0.00001)
@@ -264,8 +264,8 @@ class TimeSeries(unittest.TestCase):
                                             api.statistics_property.AVERAGE,
                                             70, 100,
                                             api.statistics_property.MAX_EXTREME])
-        ta_day = api.TimeAxisFixedDeltaT(t0, dt*24, n//24)
-        ta_day2 = api.TimeAxis(t0, dt*24, n//24)
+        ta_day = api.TimeAxisFixedDeltaT(t0, dt * 24, n // 24)
+        ta_day2 = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
         percentiles2 = timeseries.percentiles(ta_day2, wanted_percentiles)  # just to verify it works with alt. syntax
 
@@ -306,8 +306,8 @@ class TimeSeries(unittest.TestCase):
 
         ts = timeseries[1]  # pick this one to insert min/max extremes
         for i in range(0, 240, 24):
-            ts.set(i + 0, 1.0 - 100*i/24.0)
-            ts.set(i + 1, 1.0 + 100*i/24.0)  # notice that when i==0, this gives 1.0
+            ts.set(i + 0, 1.0 - 100 * i / 24.0)
+            ts.set(i + 1, 1.0 + 100 * i / 24.0)  # notice that when i==0, this gives 1.0
             ts.set(i + 2, float('nan'))  # also put in a nan, just to verify it is ignored during average processing
 
         wanted_percentiles = api.IntVector([api.statistics_property.MIN_EXTREME,
@@ -315,15 +315,15 @@ class TimeSeries(unittest.TestCase):
                                             api.statistics_property.AVERAGE,
                                             70, 100,
                                             api.statistics_property.MAX_EXTREME])
-        ta_day = api.TimeAxis(t0, dt*24, n//24)
+        ta_day = api.TimeAxis(t0, dt * 24, n // 24)
         percentiles = api.percentiles(timeseries, ta_day, wanted_percentiles)
         for i in range(len(ta_day)):
             if i == 0:  # first timestep, the min/max extremes are picked from 0'th and 9'th ts.
                 self.assertAlmostEqual(0.0, percentiles[0].value(i), 3, "min-extreme ")
                 self.assertAlmostEqual(9.0, percentiles[7].value(i), 3, "min-extreme ")
             else:
-                self.assertAlmostEqual(1.0 - 100.0*i*24.0/24.0, percentiles[0].value(i), 3, "min-extreme ")
-                self.assertAlmostEqual(1.0 + 100.0*i*24.0/24.0, percentiles[7].value(i), 3, "max-extreme")
+                self.assertAlmostEqual(1.0 - 100.0 * i * 24.0 / 24.0, percentiles[0].value(i), 3, "min-extreme ")
+                self.assertAlmostEqual(1.0 + 100.0 * i * 24.0 / 24.0, percentiles[7].value(i), 3, "max-extreme")
             self.assertAlmostEqual(0.0, percentiles[1].value(i), 3, "  0-percentile")
             self.assertAlmostEqual(0.9, percentiles[2].value(i), 3, " 10-percentile")
             self.assertAlmostEqual(4.5, percentiles[3].value(i), 3, " 50-percentile")
@@ -351,11 +351,11 @@ class TimeSeries(unittest.TestCase):
         ts1.bind_done()
         self.assertFalse(ts1.needs_bind())
 
-        ts2 = 2.0*ts1.time_shift(t0 - t1)  # just to verify it still can take part in an expression
+        ts2 = 2.0 * ts1.time_shift(t0 - t1)  # just to verify it still can take part in an expression
 
         for i in range(ts0.size()):
             self.assertAlmostEqual(ts0.value(i), ts1.value(i), 3, "expect values to be equal")
-            self.assertAlmostEqual(ts0.value(i)*2.0, ts2.value(i), 3, "expect values to be double value")
+            self.assertAlmostEqual(ts0.value(i) * 2.0, ts2.value(i), 3, "expect values to be double value")
             self.assertEqual(ts0.time(i) + (t1 - t0), ts1.time(i), "expect time to be offset delta_t different")
             self.assertEqual(ts0.time(i), ts2.time(i), "expect time to be equal")
 
@@ -366,7 +366,7 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.TimeAxis(t0, dt, n)
         ts0 = api.TimeSeries(ta=ta, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        tsa = 1.0*api.TimeSeries('a') + 0.0  # an expression, that need bind
+        tsa = 1.0 * api.TimeSeries('a') + 0.0  # an expression, that need bind
 
         ts1 = tsa.accumulate(ta)  # ok, maybe we should make method that does time-axis implicit ?
         self.assertTrue(ts1.needs_bind())
@@ -380,7 +380,7 @@ class TimeSeries(unittest.TestCase):
 
         ts1_values = ts1.values
         for i in range(n):
-            expected_value = i*dt*1.0
+            expected_value = i * dt * 1.0
             self.assertAlmostEqual(expected_value, ts1.value(i), 3, "expect integral f(t)*dt")
             self.assertAlmostEqual(expected_value, ts1_values[i], 3, "expect value vector equal as well")
 
@@ -392,8 +392,8 @@ class TimeSeries(unittest.TestCase):
         ta = api.TimeAxis(t0, dt, n)
         fill_value = 1.0
         ts = api.TimeSeries(ta=ta, fill_value=fill_value, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        tsa = api.TimeSeries('a')*1.0 + 0.0  # expression, needing bind
-        tsb = api.TimeSeries('b')*1.0 + 0.0  # another expression, needing bind for different ts
+        tsa = api.TimeSeries('a') * 1.0 + 0.0  # expression, needing bind
+        tsb = api.TimeSeries('b') * 1.0 + 0.0  # another expression, needing bind for different ts
         ts_i1 = tsa.integral(ta)
         ts_i2 = api.integral(tsb, ta)
         # circulate through serialization
@@ -412,7 +412,7 @@ class TimeSeries(unittest.TestCase):
 
         ts_i1_values = ts_i1.values
         for i in range(n):
-            expected_value = dt*fill_value
+            expected_value = dt * fill_value
             self.assertAlmostEqual(expected_value, ts_i1.value(i), 4, "expect integral of each interval")
             self.assertAlmostEqual(expected_value, ts_i2.value(i), 4, "expect integral of each interval")
             self.assertAlmostEqual(expected_value, ts_i1_values[i], 4, "expect integral of each interval")
@@ -424,7 +424,7 @@ class TimeSeries(unittest.TestCase):
         """
 
         def np_nash_sutcliffe(o, p):
-            return 1 - (np.sum((o - p) ** 2))/(np.sum((o - np.mean(o)) ** 2))
+            return 1 - (np.sum((o - p) ** 2)) / (np.sum((o - np.mean(o)) ** 2))
 
         c = api.Calendar()
         t0 = c.time(2016, 1, 1)
@@ -432,16 +432,16 @@ class TimeSeries(unittest.TestCase):
         n = 240
         ta = api.TimeAxis(t0, dt, n)
         from math import sin, pi
-        rad_max = 10*2*pi
-        obs_values = api.DoubleVector.from_numpy(np.array([sin(i*rad_max/n) for i in range(n)]))
-        mod_values = api.DoubleVector.from_numpy(np.array([0.1 + sin(pi/10.0 + i*rad_max/n) for i in range(n)]))
+        rad_max = 10 * 2 * pi
+        obs_values = api.DoubleVector.from_numpy(np.array([sin(i * rad_max / n) for i in range(n)]))
+        mod_values = api.DoubleVector.from_numpy(np.array([0.1 + sin(pi / 10.0 + i * rad_max / n) for i in range(n)]))
         obs_ts = api.TimeSeries(ta=ta, values=obs_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         mod_ts = api.TimeSeries(ta=ta, values=mod_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
 
         self.assertAlmostEqual(api.kling_gupta(obs_ts, obs_ts, ta, 1.0, 1.0, 1.0), 1.0, None, "1.0 for perfect match")
         self.assertAlmostEqual(api.nash_sutcliffe(obs_ts, obs_ts, ta), 1.0, None, "1.0 for perfect match")
         # verify some non trivial cases, and compare to numpy version of ns
-        mod_inv = obs_ts*-1.0
+        mod_inv = obs_ts * -1.0
         kge_inv = obs_ts.kling_gupta(mod_inv)  # also show how to use time-series.method itself to ease use
         ns_inv = obs_ts.nash_sutcliffe(mod_inv)  # similar for nash_sutcliffe, you can reach it directly from a ts
         ns_inv2 = np_nash_sutcliffe(obs_ts.values.to_numpy(), mod_inv.values.to_numpy())
@@ -565,7 +565,7 @@ class TimeSeries(unittest.TestCase):
         a = api.TimeSeries(ta=ta, values=pattern_values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b_id = "netcdf://path_to_file/path_to_ts"
         b = api.TimeSeries(b_id)
-        c = (a + b)*4.0  # make an expression, with a ts-reference, not yet bound
+        c = (a + b) * 4.0  # make an expression, with a ts-reference, not yet bound
         c_blob = c.serialize()  # converts the entire stuff into a blob
         bind_info = c.find_ts_bind_info()
 
@@ -582,19 +582,18 @@ class TimeSeries(unittest.TestCase):
         c.bind_done()
         self.assertEqual(c.needs_bind(), False)  # verify this expression do not need binding anymore
         # and now we can use c expression as pr. usual, evaluate etc.
-        self.assertAlmostEqual(c.value(10), a.value(10)*2*4.0, 3)
+        self.assertAlmostEqual(c.value(10), a.value(10) * 2 * 4.0, 3)
 
         c_resurrected = api.TimeSeries.deserialize(c_blob)
 
         bi = c_resurrected.find_ts_bind_info()
         bi[0].ts.bind(a)
         c_resurrected.bind_done()
-        self.assertAlmostEqual(c_resurrected.value(10), a.value(10)*2*4.0, 3)
+        self.assertAlmostEqual(c_resurrected.value(10), a.value(10) * 2 * 4.0, 3)
         # verify we can create a ref.ts with something that resolves to a point ts.
-        bind_expr_ts = api.TimeSeries("some_sym", 3.0*a)  # notice that we can bind with something that is an expression
+        bind_expr_ts = api.TimeSeries("some_sym", 3.0 * a)  # notice that we can bind with something that is an expression
         self.assertIsNotNone(bind_expr_ts)
-        self.assertAlmostEqual(bind_expr_ts.value(0), 3.0*a.value(0))  # just to check, its for real
-
+        self.assertAlmostEqual(bind_expr_ts.value(0), 3.0 * a.value(0))  # just to check, its for real
 
     def test_a_time_series_vector(self):
         c = api.Calendar()
@@ -638,18 +637,18 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(v_slice_12[0].value(0), 1.0)
 
         # multiplication by scalar
-        v_x_2a = v*2.0
-        v_x_2b = 2.0*v
+        v_x_2a = v * 2.0
+        v_x_2b = 2.0 * v
         for i in range(len(v)):
-            self.assertAlmostEqual(v_x_2a[i].value(0), 2*v[i].value(0))
-            self.assertAlmostEqual(v_x_2b[i].value(0), 2*v[i].value(0))
+            self.assertAlmostEqual(v_x_2a[i].value(0), 2 * v[i].value(0))
+            self.assertAlmostEqual(v_x_2b[i].value(0), 2 * v[i].value(0))
 
         # division by scalar
-        v_d_a = v/3.0
-        v_d_b = 3.0/v
+        v_d_a = v / 3.0
+        v_d_b = 3.0 / v
         for i in range(len(v)):
-            self.assertAlmostEqual(v_d_a[i].value(0), v[i].value(0)/3.0)
-            self.assertAlmostEqual(v_d_b[i].value(0), 3.0/v[i].value(0))
+            self.assertAlmostEqual(v_d_a[i].value(0), v[i].value(0) / 3.0)
+            self.assertAlmostEqual(v_d_b[i].value(0), 3.0 / v[i].value(0))
 
         # addition by scalar
         v_a_a = v + 3.0
@@ -666,18 +665,18 @@ class TimeSeries(unittest.TestCase):
             self.assertAlmostEqual(v_s_b[i].value(0), 3.0 - v[i].value(0))
 
         # multiplication vector by ts
-        v_x_ts = v*c
-        ts_x_v = c*v
+        v_x_ts = v * c
+        ts_x_v = c * v
         for i in range(len(v)):
-            self.assertAlmostEqual(v_x_ts[i].value(0), v[i].value(0)*c.value(0))
-            self.assertAlmostEqual(ts_x_v[i].value(0), c.value(0)*v[i].value(0))
+            self.assertAlmostEqual(v_x_ts[i].value(0), v[i].value(0) * c.value(0))
+            self.assertAlmostEqual(ts_x_v[i].value(0), c.value(0) * v[i].value(0))
 
         # division vector by ts
-        v_d_ts = v/c
-        ts_d_v = c/v
+        v_d_ts = v / c
+        ts_d_v = c / v
         for i in range(len(v)):
-            self.assertAlmostEqual(v_d_ts[i].value(0), v[i].value(0)/c.value(0))
-            self.assertAlmostEqual(ts_d_v[i].value(0), c.value(0)/v[i].value(0))
+            self.assertAlmostEqual(v_d_ts[i].value(0), v[i].value(0) / c.value(0))
+            self.assertAlmostEqual(ts_d_v[i].value(0), c.value(0) / v[i].value(0))
 
         # add vector by ts
         v_a_ts = v + c
@@ -695,18 +694,18 @@ class TimeSeries(unittest.TestCase):
 
         # vector mult vector
         va = v
-        vb = 2.0*v
+        vb = 2.0 * v
 
-        v_m_v = va*vb
+        v_m_v = va * vb
         self.assertEqual(len(v_m_v), len(va))
         for i in range(len(va)):
-            self.assertAlmostEqual(v_m_v[i].value(0), va[i].value(0)*vb[i].value(0))
+            self.assertAlmostEqual(v_m_v[i].value(0), va[i].value(0) * vb[i].value(0))
 
         # vector div vector
-        v_d_v = va/vb
+        v_d_v = va / vb
         self.assertEqual(len(v_d_v), len(va))
         for i in range(len(va)):
-            self.assertAlmostEqual(v_d_v[i].value(0), va[i].value(0)/vb[i].value(0))
+            self.assertAlmostEqual(v_d_v[i].value(0), va[i].value(0) / vb[i].value(0))
 
         # vector add vector
         v_a_v = va + vb
@@ -727,11 +726,11 @@ class TimeSeries(unittest.TestCase):
             self.assertAlmostEqual(v_u[i].value(0), -va[i].value(0))
 
         # integral functions, just to verify exposure works, and one value is according to spec.
-        ta2 = api.TimeAxis(t0, dt*24, n//24)
+        ta2 = api.TimeAxis(t0, dt * 24, n // 24)
         v_avg = v.average(ta2)
         v_int = v.integral(ta2)
         v_acc = v.accumulate(ta2)
-        v_sft = v.time_shift(dt*24)
+        v_sft = v.time_shift(dt * 24)
         self.assertIsNotNone(v_avg)
         self.assertIsNotNone(v_int)
         self.assertIsNotNone(v_acc)
@@ -739,7 +738,7 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(v_avg[0].value(0), 1.0)
         self.assertAlmostEqual(v_int[0].value(0), 86400.0)
         self.assertAlmostEqual(v_acc[0].value(0), 0.0)
-        self.assertAlmostEqual(v_sft[0].time(0), t0 + dt*24)
+        self.assertAlmostEqual(v_sft[0].time(0), t0 + dt * 24)
 
         # min/max functions
         min_v_double = va.min(-1000.0)
@@ -751,7 +750,7 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(min_v_double[0].value(0), -1000.0)
         self.assertAlmostEqual(max_v_double[0].value(0), +1000.0)
         # c = 10.0
-        c1000 = 100.0*c
+        c1000 = 100.0 * c
         min_v_double = va.min(-c1000)
         max_v_double = va.max(c1000)
         self.assertAlmostEqual(min_v_double[0].value(0), -c1000.value(0))
@@ -761,7 +760,7 @@ class TimeSeries(unittest.TestCase):
         self.assertAlmostEqual(min_v_double[0].value(0), -c1000.value(0))
         self.assertAlmostEqual(max_v_double[0].value(0), c1000.value(0))
 
-        v1000 = va*1000.0
+        v1000 = va * 1000.0
         min_v_double = va.min(-v1000)
         max_v_double = va.max(v1000)
         self.assertAlmostEqual(min_v_double[0].value(0), -v1000[0].value(0))
@@ -774,7 +773,7 @@ class TimeSeries(unittest.TestCase):
         # finally, test that exception is raised if we try to multiply two unequal sized vectors
 
         try:
-            x = v_clone*va
+            x = v_clone * va
             self.assertTrue(False, 'We expected exception for unequal sized ts-vector op')
         except RuntimeError as re:
             pass
@@ -783,10 +782,10 @@ class TimeSeries(unittest.TestCase):
         t0 = api.utctime_now()
         dt = api.deltahours(1)
         n = 512
-        ta_a = api.TimeAxisFixedDeltaT(t0, dt, 2*n)
-        ta_b = api.TimeAxisFixedDeltaT(t0 + n*dt, dt, 2*n)
-        ta_c = api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 2*n)
-        ta_d = api.TimeAxisFixedDeltaT(t0 + 3*n*dt, dt, 2*n)
+        ta_a = api.TimeAxisFixedDeltaT(t0, dt, 2 * n)
+        ta_b = api.TimeAxisFixedDeltaT(t0 + n * dt, dt, 2 * n)
+        ta_c = api.TimeAxisFixedDeltaT(t0 + 2 * n * dt, dt, 2 * n)
+        ta_d = api.TimeAxisFixedDeltaT(t0 + 3 * n * dt, dt, 2 * n)
 
         a = api.TimeSeries(ta=ta_a, fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         b = api.TimeSeries(ta=ta_b, fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
@@ -796,63 +795,63 @@ class TimeSeries(unittest.TestCase):
         # default behavior: extend from end of a
         ac = a.extend(c)
 
-        for i in range(2*n):  # valus from first ts
-            self.assertEqual(ac(t0 + i*dt), 1.0)
-        for i in range(2*n):  # values from extension ts
-            self.assertEqual(ac(t0 + (i + 2*n)*dt), 4.0)
+        for i in range(2 * n):  # valus from first ts
+            self.assertEqual(ac(t0 + i * dt), 1.0)
+        for i in range(2 * n):  # values from extension ts
+            self.assertEqual(ac(t0 + (i + 2 * n) * dt), 4.0)
 
         # default behavior: extend from end of a, fill gap with nan
         ad = a.extend(d)
 
-        for i in range(2*n):  # values from first
-            self.assertEqual(ad(t0 + i*dt), 1.0)
+        for i in range(2 * n):  # values from first
+            self.assertEqual(ad(t0 + i * dt), 1.0)
         for i in range(n):  # gap
-            self.assertTrue(math.isnan(ad(t0 + (i + 2*n)*dt)))
-        for i in range(2*n):  # extension
-            self.assertEqual(ad(t0 + (i + 3*n)*dt), 8.0)
+            self.assertTrue(math.isnan(ad(t0 + (i + 2 * n) * dt)))
+        for i in range(2 * n):  # extension
+            self.assertEqual(ad(t0 + (i + 3 * n) * dt), 8.0)
 
         # split at the first value of d instead of last of c
         cd = c.extend(d, split_policy=api.extend_split_policy.RHS_FIRST)
 
         for i in range(n):  # first, only until the extension start
-            self.assertEqual(cd(t0 + (2*n + i)*dt), 4.0)
-        for i in range(2*n):  # extension
-            self.assertEqual(cd(t0 + (3*n + i)*dt), 8.0)
+            self.assertEqual(cd(t0 + (2 * n + i) * dt), 4.0)
+        for i in range(2 * n):  # extension
+            self.assertEqual(cd(t0 + (3 * n + i) * dt), 8.0)
 
         # split at a given time step, and extend the last value through the gap
-        ac = a.extend(c, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + dt*n//2),
+        ac = a.extend(c, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + dt * n // 2),
                       fill_policy=api.extend_fill_policy.USE_LAST)
 
-        for i in range(n//2):  # first, only until the given split value
-            self.assertEqual(ac(t0 + i*dt), 1.0)
-        for i in range(3*n//2):  # gap, uses last value before gap
-            self.assertEqual(ac(t0 + (n//2 + i)*dt), 1.0)
-        for i in range(2*n):  # extension
-            self.assertEqual(ac(t0 + (2*n + i)*dt), 4.0)
+        for i in range(n // 2):  # first, only until the given split value
+            self.assertEqual(ac(t0 + i * dt), 1.0)
+        for i in range(3 * n // 2):  # gap, uses last value before gap
+            self.assertEqual(ac(t0 + (n // 2 + i) * dt), 1.0)
+        for i in range(2 * n):  # extension
+            self.assertEqual(ac(t0 + (2 * n + i) * dt), 4.0)
 
         # split at the beginning of the ts to extend when the extension start before it
-        cb = c.extend(b, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + 2*n*dt))
+        cb = c.extend(b, split_policy=api.extend_split_policy.AT_VALUE, split_at=(t0 + 2 * n * dt))
 
         for i in range(n):  # don't extend before
-            self.assertTrue(math.isnan(cb(t0 + (n + i)*dt)))
+            self.assertTrue(math.isnan(cb(t0 + (n + i) * dt)))
         for i in range(n):  # we split at the beginning => only values from extension
-            self.assertEqual(cb(t0 + (2*n + i)*dt), 2.0)
+            self.assertEqual(cb(t0 + (2 * n + i) * dt), 2.0)
         for i in range(n):  # no values after extension
-            self.assertTrue(math.isnan(cb(t0 + (3*n + i)*dt)))
+            self.assertTrue(math.isnan(cb(t0 + (3 * n + i) * dt)))
 
         # extend with ts starting after the end, fill the gap with a given value
         ad = a.extend(d, fill_policy=api.extend_fill_policy.FILL_VALUE, fill_value=5.5)
 
-        for i in range(2*n):  # first
-            self.assertEqual(ad(t0 + i*dt), 1.0)
+        for i in range(2 * n):  # first
+            self.assertEqual(ad(t0 + i * dt), 1.0)
         for i in range(n):  # gap, filled with 5.5
-            self.assertEqual(ad(t0 + (2*n + i)*dt), 5.5)
-        for i in range(2*n):  # extension
-            self.assertEqual(ad(t0 + (3*n + i)*dt), 8.0)
+            self.assertEqual(ad(t0 + (2 * n + i) * dt), 5.5)
+        for i in range(2 * n):  # extension
+            self.assertEqual(ad(t0 + (3 * n + i) * dt), 8.0)
 
         # check extend with more exotic combination of time-axis(we had an issue with this..)
         a = api.TimeSeries(api.TimeAxis(0, 1, 10), fill_value=1.0, point_fx=api.POINT_AVERAGE_VALUE)
-        b = api.TimeSeries(api.TimeAxis(api.Calendar(),0, 1, 20), fill_value=2.0, point_fx=api.POINT_AVERAGE_VALUE)
+        b = api.TimeSeries(api.TimeAxis(api.Calendar(), 0, 1, 20), fill_value=2.0, point_fx=api.POINT_AVERAGE_VALUE)
         ab = a.extend(b)
         ba = b.extend(a, split_policy=api.extend_split_policy.AT_VALUE, split_at=a.time_axis.time(5))
         self.assertAlmostEqual(ab.value(0), 1.0)
@@ -867,13 +866,13 @@ class TimeSeries(unittest.TestCase):
 
         tsvector = api.TsVector()
 
-        ta = api.TimeAxisFixedDeltaT(t0 + 3*n*dt, dt, 2*n)
+        ta = api.TimeAxisFixedDeltaT(t0 + 3 * n * dt, dt, 2 * n)
 
         tsvector.push_back(api.TimeSeries(
-            ta=api.TimeAxisFixedDeltaT(t0, dt, 2*n),
+            ta=api.TimeAxisFixedDeltaT(t0, dt, 2 * n),
             fill_value=1.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
         tsvector.push_back(api.TimeSeries(
-            ta=api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 2*n),
+            ta=api.TimeAxisFixedDeltaT(t0 + 2 * n * dt, dt, 2 * n),
             fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
         extension = api.TimeSeries(ta=ta, fill_value=8.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
@@ -882,45 +881,45 @@ class TimeSeries(unittest.TestCase):
         extended_tsvector = tsvector.extend_ts(extension)
 
         # assert first element
-        for i in range(2*n):
-            self.assertEqual(extended_tsvector[0](t0 + i*dt), 1.0)
+        for i in range(2 * n):
+            self.assertEqual(extended_tsvector[0](t0 + i * dt), 1.0)
         for i in range(n):
-            self.assertTrue(math.isnan(extended_tsvector[0](t0 + (2*n + i)*dt)))
-        for i in range(2*n):
-            self.assertEqual(extended_tsvector[0](t0 + (3*n + i)*dt), 8.0)
+            self.assertTrue(math.isnan(extended_tsvector[0](t0 + (2 * n + i) * dt)))
+        for i in range(2 * n):
+            self.assertEqual(extended_tsvector[0](t0 + (3 * n + i) * dt), 8.0)
 
         # assert second element
-        for i in range(2*n):
-            self.assertEqual(extended_tsvector[1](t0 + (2*n + i)*dt), 2.0)
+        for i in range(2 * n):
+            self.assertEqual(extended_tsvector[1](t0 + (2 * n + i) * dt), 2.0)
         for i in range(n):
-            self.assertEqual(extended_tsvector[1](t0 + (4*n + i)*dt), 8.0)
+            self.assertEqual(extended_tsvector[1](t0 + (4 * n + i) * dt), 8.0)
 
         tsvector_2 = api.TsVector()
         tsvector_2.push_back(api.TimeSeries(
-            ta=api.TimeAxisFixedDeltaT(t0 + 2*n*dt, dt, 4*n),
+            ta=api.TimeAxisFixedDeltaT(t0 + 2 * n * dt, dt, 4 * n),
             fill_value=10.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
         tsvector_2.push_back(api.TimeSeries(
-            ta=api.TimeAxisFixedDeltaT(t0 + 4*n*dt, dt, 4*n),
+            ta=api.TimeAxisFixedDeltaT(t0 + 4 * n * dt, dt, 4 * n),
             fill_value=20.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE))
 
         # extend each element in tsvector by the corresponding element in tsvector_2
         extended_tsvector = tsvector.extend_ts(tsvector_2)
 
         # assert first element
-        for i in range(2*n):
-            self.assertEqual(extended_tsvector[0](t0 + i*dt), 1.0)
-        for i in range(4*n):
-            self.assertEqual(extended_tsvector[0](t0 + (2*n + i)*dt), 10.0)
+        for i in range(2 * n):
+            self.assertEqual(extended_tsvector[0](t0 + i * dt), 1.0)
+        for i in range(4 * n):
+            self.assertEqual(extended_tsvector[0](t0 + (2 * n + i) * dt), 10.0)
 
         # assert second element
-        for i in range(2*n):
-            self.assertEqual(extended_tsvector[1](t0 + (2*n + i)*dt), 2.0)
-        for i in range(4*n):
-            self.assertEqual(extended_tsvector[1](t0 + (4*n + i)*dt), 20.0)
+        for i in range(2 * n):
+            self.assertEqual(extended_tsvector[1](t0 + (2 * n + i) * dt), 2.0)
+        for i in range(4 * n):
+            self.assertEqual(extended_tsvector[1](t0 + (4 * n + i) * dt), 20.0)
 
     def test_rating_curve_ts(self):
         t0 = api.utctime_now()
-        ta = api.TimeAxis(t0, api.deltaminutes(30), 48*2)
+        ta = api.TimeAxis(t0, api.deltaminutes(30), 48 * 2)
         data = np.linspace(0, 10, ta.size())
         ts = api.TimeSeries(ta, data, api.POINT_INSTANT_VALUE)
 
@@ -951,14 +950,15 @@ class TimeSeries(unittest.TestCase):
 
         self.assertEqual(len(rcsts_2), len(ts))
         for i in range(rcsts_2.size()):
-            expected = (1*ts.get(i).v if ts.get(i).v < 5 else 2*ts.get(i).v) if ts.get(i).t < t0 + api.deltahours(24) else (3*ts.get(i).v if ts.get(i).v < 8 else 4*ts.get(i).v)
+            expected = (1 * ts.get(i).v if ts.get(i).v < 5 else 2 * ts.get(i).v) if ts.get(i).t < t0 + api.deltahours(24) else (
+            3 * ts.get(i).v if ts.get(i).v < 8 else 4 * ts.get(i).v)
             self.assertEqual(rcsts_2.get(i).t, ts.get(i).t)
             self.assertEqual(rcsts_2.get(i).v, expected)
 
     def test_krls_ts(self):
         t0 = api.utctime_now()
-        ta = api.TimeAxis(t0, api.deltahours(1), 30*24)
-        data = np.sin(np.linspace(0, 2*np.pi, ta.size()))
+        ta = api.TimeAxis(t0, api.deltahours(1), 30 * 24)
+        data = np.sin(np.linspace(0, 2 * np.pi, ta.size()))
         ts_data = api.TimeSeries(ta, data, api.POINT_INSTANT_VALUE)
 
         ts = api.TimeSeries("a")
@@ -980,8 +980,8 @@ class TimeSeries(unittest.TestCase):
 
     def test_ts_get_krls_predictor(self):
         t0 = api.utctime_now()
-        ta = api.TimeAxis(t0, api.deltahours(1), 30*24)
-        data = np.sin(np.linspace(0, 2*np.pi, ta.size()))
+        ta = api.TimeAxis(t0, api.deltahours(1), 30 * 24)
+        data = np.sin(np.linspace(0, 2 * np.pi, ta.size()))
         ts_data = api.TimeSeries(ta, data, api.POINT_INSTANT_VALUE)
 
         ts = api.TimeSeries("a")
@@ -989,7 +989,8 @@ class TimeSeries(unittest.TestCase):
         try:
             ts.get_krls_predictor()
             self.fail("should not be able to get predictor for unbound")
-        except: pass
+        except:
+            pass
 
         fbi = ts.find_ts_bind_info()
         fbi[0].ts.bind(ts_data)
@@ -1027,8 +1028,16 @@ class TimeSeries(unittest.TestCase):
         ts = src.integral(tf)
         self.assertIsNotNone(ts)
         for i in range(len(tf)):
-            if not math.isclose(ts.value(i), 1.0*api.deltahours(3)):
-                self.assertAlmostEqual(ts.value(i), 1.0*api.deltahours(3))
+            if not math.isclose(ts.value(i), 1.0 * api.deltahours(3)):
+                self.assertAlmostEqual(ts.value(i), 1.0 * api.deltahours(3))
+
+    def test_calibration_ts_case(self):
+        times = [0, 3600, 3600 + 2 * 3600]
+        ta = api.TimeAxis(api.UtcTimeVector(times[0:-1]), times[-1])
+        values = api.DoubleVector([0.0] * (len(times) - 1))
+        ts = api.TimeSeries(ta, values, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        target = api.TargetSpecificationPts(ts, api.IntVector([0]), 1.0, api.ABS_DIFF, 1.0, 1.0, 1.0, api.CELL_CHARGE, 'water_balance')
+        self.assertIsNotNone(target)
 
 
 if __name__ == "__main__":

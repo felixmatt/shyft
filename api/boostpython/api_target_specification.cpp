@@ -60,7 +60,7 @@ namespace expose {
         }
         static TargetSpecificationPts* acreate_cids(
                const shyft::api::apoint_ts& ats,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
                double s_r = 1.0,
@@ -69,12 +69,12 @@ namespace expose {
                model_calibration::target_property_type catchment_property_ = model_calibration::DISCHARGE,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
+            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis(),ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
 
         static TargetSpecificationPts* create_cids2(
                const core_ts_t& ts,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
         {
@@ -83,7 +83,7 @@ namespace expose {
 
         static TargetSpecificationPts* acreate_cids2(
                const shyft::api::apoint_ts& ats,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
         {
@@ -112,7 +112,7 @@ namespace expose {
                double s_b = 1.0,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
+            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis(),ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
 
 
