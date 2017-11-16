@@ -1,8 +1,9 @@
 ﻿from __future__ import absolute_import
 import requests
 import unicodedata
-from .gis_region_model_repository import BaseGisDataFetcher
+from .gis_region_model_repository import BaseGisDataFetcher, primary_server, secondary_server, port_num
 from .ssa_geo_ts_repository import GeoLocationRepository
+
 
 class StationDataError(Exception):
     pass
@@ -15,10 +16,10 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5, out_fields=[]):
+    def __init__(self, server_name=primary_server, server_name_preprod=secondary_server, server_port=port_num, service_index=5, out_fields=[]):
         super(GeoLocationRepository, self).__init__()
-        self.server_name="oslwvagi002p"
-        self.server_name_preprod="oslwvagi001q"
+        self.server_name=server_name
+        self.server_name_preprod=server_name_preprod
         if server_name is not None:
             self.server_name = server_name
         if server_name_preprod is not None:
@@ -30,6 +31,7 @@ class GisLocationService(GeoLocationRepository):
             self.out_fields = ', '.join([self.out_fields,', '.join(out_fields)])
 
     def _get_response(self, url, **kwargs):
+        kwargs.update({'verify': False})  # to go around authentication error when using https -> ssl.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:749)
         response = requests.get(url, **kwargs)
         if response.status_code != 200:
             raise StationDataError("Could not get data from GIS service!")
