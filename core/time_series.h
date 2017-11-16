@@ -1990,7 +1990,7 @@ namespace shyft{
 
             point get(size_t i) const {
                 point p= source.get(i);// use std. get function
-                if(finite(p.v))
+                if(std::isfinite(p.v))
                     p.v=  neg ? std::max(0.0,-p.v):std::max(0.0,p.v); // manipulate the value
                 return p;
             }
