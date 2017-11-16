@@ -4,7 +4,6 @@
 #include "test_pch.h"
 #include "core/time_series.h"
 #include "core/utctime_utilities.h"
-
 TEST_SUITE("time_series") {
     TEST_CASE("max_abs_average_accessor") {
         using namespace shyft::time_axis;

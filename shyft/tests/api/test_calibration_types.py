@@ -238,6 +238,7 @@ class ShyftApi(unittest.TestCase):
         t.calc_mode = api.NASH_SUTCLIFFE
         t.calc_mode = api.KLING_GUPTA
         t.calc_mode = api.ABS_DIFF
+        t.calc_mode = api.RMSE
         t.s_r = 1.0  # KGEs scale-factors
         t.s_a = 2.0
         t.s_b = 3.0

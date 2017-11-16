@@ -168,9 +168,10 @@ namespace shyft {
             };
             /** \brief calc_type to provide simple start of more than NS critera, first extension is diff of sum 2 */
             enum target_spec_calc_type {
-                NASH_SUTCLIFFE, // obsolete, should be replaced by using KLING_GUPTA
-                KLING_GUPTA, // ref. Gupta09, Journal of Hydrology 377(2009) 80-91
-                ABS_DIFF // abs-difference suitable for periodic water-balance calculations
+                NASH_SUTCLIFFE, //
+                KLING_GUPTA, ///< ref. Gupta09, Journal of Hydrology 377(2009) 80-91
+                ABS_DIFF,///< abs-difference suitable for periodic water-balance calculations, cell-charge uses relative scale max (abs sim).
+                RMSE ///< root mean squared and scaled to average observed value
             };
 
             /** \brief property_type for target specification */
@@ -788,6 +789,8 @@ namespace shyft {
                                 t.s_r,
                                 t.s_a,
                                 t.s_b);
+                        } else if(t.calc_mode == target_spec_calc_type::RMSE) {
+                            partial_goal_function_value = rmse_goal_function(target_accessor, property_sum_accessor);
                         } else {
                             if(t.catchment_property == CELL_CHARGE) {
                                 shyft::time_series::max_abs_average_accessor<pts_t, typename PS::ta_t> abs_scale(property_sum, t.ts.time_axis());

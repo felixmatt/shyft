@@ -2126,6 +2126,38 @@ namespace shyft{
             return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
         }
 
+       /**\brief root mean square effiency coefficient based goal function
+        * <a ref href=https://en.wikipedia.org/wiki/Root-mean-square_deviation">RMSE</a>
+        * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
+        * \note if obs. is a constant, we get 1/0
+        * \note we skip any nans in obs/model
+        * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \param observed_ts contains the observed values for the model
+        * \param model_ts contains the (simulated) model output values
+        * \return RMSE range 0 +oo is best performance > 0 .. +oo is less good performance.
+        */
+        template<class TSA1, class TSA2>
+        double rmse_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
+            if (observed_ts.size() != model_ts.size() || observed_ts.size() == 0)
+                throw runtime_error("rmse needs equal sized ts accessors with elements >1");
+            double sum_of_obs_measured_diff2 = 0;
+            double obs_avg = 0;
+            size_t obs_count = 0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - m;
+                    sum_of_obs_measured_diff2 += diff_i*diff_i;
+                    obs_avg += o;
+                    ++obs_count;
+                }
+            }
+            obs_avg /= double(obs_count);
+            return obs_count?sqrt(sum_of_obs_measured_diff2/obs_count )/obs_avg:shyft::nan;
+        }
+
         /** \brief KLING-GUPTA Journal of Hydrology 377
          *              (2009) 80–91, page 83,
          *                     formula (10), where shorthands are
