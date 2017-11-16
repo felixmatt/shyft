@@ -789,7 +789,12 @@ namespace shyft {
                                 t.s_a,
                                 t.s_b);
                         } else {
-                            partial_goal_function_value = abs_diff_sum_goal_function(target_accessor,property_sum_accessor);
+                            if(t.catchment_property == CELL_CHARGE) {
+                                shyft::time_series::max_abs_average_accessor<pts_t, typename PS::ta_t> abs_scale(property_sum, t.ts.time_axis());
+                                partial_goal_function_value = abs_diff_sum_goal_function_scaled(target_accessor,property_sum_accessor,abs_scale);
+                            } else {
+                                partial_goal_function_value = abs_diff_sum_goal_function(target_accessor,property_sum_accessor);
+                            }
                         }
                         if (isfinite(partial_goal_function_value)) {
                             scale_factor_sum += t.scale_factor;
