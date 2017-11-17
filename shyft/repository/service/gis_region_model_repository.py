@@ -50,6 +50,7 @@ peru_dem: str = r"Peru_DEM_250m"
 
 peru_catchment_type: str = r"peru_catchment"
 peru_catchment_id_name: str = r"SUBCATCH_ID"
+peru_subcatch_id_name: str = r"CATCH_ID"
 
 
 class GisDataFetchError(Exception):
@@ -353,8 +354,12 @@ class CatchmentFetcher(BaseGisDataFetcher):
         elif catchment_type == nordic_catchment_type_ltm:
             service_index = 3
         elif catchment_type == peru_catchment_type:
-            service_index = 5  # SUBCATCH_ID is used, 1 is Yaupi
+            if identifier == 'SUBCATCH_ID':
+                service_index = 5
+            else:
+                service_index = 6  # SUBCATCH_ID is used, 1 is Yaupi
             sub_service = peru_service
+            #identifier = peru_subcatch_id_name
         else:
             raise GisDataFetchError(
                 "Undefined catchment type {}. Use one of 'regulated', 'unregulated' or 'LTM'".format(catchment_type))

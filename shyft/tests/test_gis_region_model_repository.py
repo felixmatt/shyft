@@ -17,7 +17,7 @@ try:
     from shyft.repository.service.gis_region_model_repository import RegionModelConfig
     from shyft.repository.service.gis_region_model_repository import GisRegionModelRepository
     from shyft.repository.service.gis_region_model_repository import get_grid_spec_from_catch_poly
-    from shyft.repository.service.gis_region_model_repository import peru_service, peru_dem, peru_catchment_id_name, peru_catchment_type,  nordic_dem
+    from shyft.repository.service.gis_region_model_repository import peru_service, peru_dem, peru_catchment_id_name, peru_catchment_type, peru_subcatch_id_name, nordic_dem
     from shyft.repository.service.gis_region_model_repository import nordic_service, nordic_catchment_type_regulated, nordic_catchment_type_ltm, nordic_catchment_type_unregulated
 
 
@@ -197,10 +197,10 @@ try:
 
         def test_region_model_peru_yuapi(self):
             global peru_grid_spec
-            catch_ids = [1]
+            catch_ids = [2, 4, 5, 6, 9, 10]
             ptgsk_params = self.std_ptgsk_parameters
             cfg_list = [
-                RegionModelConfig("peru-yuapi-ptgsk", PTGSKModel, ptgsk_params, peru_grid_spec, peru_catchment_type, peru_catchment_id_name, catch_ids)
+                RegionModelConfig("peru-yuapi-ptgsk", PTGSKModel, ptgsk_params, peru_grid_spec, peru_catchment_type, peru_subcatch_id_name, catch_ids)
             ]
             rm_cfg_dict = {x.name: x for x in cfg_list}
             rmr = GisRegionModelRepository(rm_cfg_dict)
