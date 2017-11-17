@@ -276,6 +276,9 @@ public:
 		wait_for_close_fh();
 		std::string ffp = make_full_path(fn);
 		std::unique_ptr<std::FILE, decltype(&std::fclose)> fh{ std::fopen(ffp.c_str(), "rb"), &std::fclose };
+		if(!fh.get()) {
+			throw std::runtime_error(std::string("shyft-read time-series internal: Could not open file ")+ffp );
+		}
 		return read_ts(fh.get(), p);
 	}
 

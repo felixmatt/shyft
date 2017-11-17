@@ -250,6 +250,15 @@ class DtssTestCase(unittest.TestCase):
             r1 = dts.evaluate(tsv, ta.total_period())
             f1 = dts.find(r"shyft://test/\d")  # find all ts with one digit, 0..9
             r2 = dts.evaluate(tsv_krls, ta.total_period())
+            url_x = shyft_store_url(r'does not exists')
+            tsvx = TsVector()
+            tsvx.append(TimeSeries(url_x))
+            try:
+                rx = dts.evaluate(tsvx, ta.total_period())
+                self.assertFalse(True, 'This did not work out')
+            except RuntimeError as rex:
+                self.assertIsNotNone(rex)
+
             dts.close()  # close connection (will use context manager later)
             dtss.clear()  # close server
 

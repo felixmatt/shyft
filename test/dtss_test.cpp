@@ -564,6 +564,7 @@ TEST_CASE("dtss_store_basics") {
             core::utctime tb = cta1.cal->add(t, dt_half, 3);
             core::utctime te = cta1.cal->add(t, dt_half, 2*n - 3);
             auto r2 = db.read(fn, utcperiod{ tb, te });
+
             FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
             FAST_CHECK_EQ(r2.time_axis(), time_axis::generic_dt{ cta1.cal, cta1.cal->add(t, dt, 1), dt, n - 2u });
             FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
@@ -579,6 +580,13 @@ TEST_CASE("dtss_store_basics") {
             FAST_CHECK_EQ(fr.size(), 1 );
 
             db.remove(fn);
+            try {
+                auto rx=db.read(fn+".not.there", utcperiod{});
+                FAST_CHECK_UNARY(rx.size()==3);
+            } catch(const exception&ex) {
+                FAST_CHECK_UNARY(true);
+            }
+
         }
         TEST_SECTION("store_calendar_osl_dt") {
             gts_t o(gta_t(cta2),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
