@@ -1,20 +1,74 @@
-README
-======
 
 |Branch      |Status   |Docs   |
 |------------|---------|---------|
 |master       | [![Build Status](https://travis-ci.org/statkraft/shyft.svg?branch=master)](https://travis-ci.org/statkraft/shyft) | [![Doc Development](https://img.shields.io/badge/docs-latest-blue.svg)](http://shyft.readthedocs.io/en/latest/) |
 
-Shyft is an OpenSource hydrological toolbox developed by [Statkraft](http://www.statkraft.com). It is optimized for highly efficient modeling of hydrologic processes following the paradigm of distributed, lumped parameter models -- though recent developments have introduced more physically based / process-level methods.
+# ABOUT
 
+Shyft is an OpenSource hydrological toolbox developed by [Statkraft](http://www.statkraft.com). It is optimized for highly efficient modeling of hydrologic processes following the paradigm of distributed, lumped parameter models -- though recent developments have introduced more physically based / process-level methods.
 
 
 The code is based on an early [initiative for distributed hydrological simulation](http://www.sintef.no/sintef-energi/xergi/xergi-2004/nr-1---april/betre-tilsigsprognoser-med-meir-informasjon/) , called [ENKI](https://bitbucket.org/enkiopensource/enki) funded by Statkraft and developed at Sintef by Sjur Kolberg with contributions from Kolbjorn Engeland and Oddbjorn Bruland.
 
-IMPORTANT: While Shyft is being developed to support Linux and Windows platforms, it should be noted that the instructions contained in this README are geared toward linux systems. A Wiki for [Shyft](https://github.com/statkraft/shyft/wiki) includes details for how to get prebuilt binaries, a few other build recipes, and how to contribute.
+# DOCUMENTATION
 
-REQUIREMENTS
-============
+Shyft's primary **end-user** documentation is at [Shyft readthedocs](http://shyft.readthedocs.io/en/latest/), where you will find instructions for installing Shyft and getting up and running with the tools it provides.
+
+We also maintain this [README](README.md) file with basic instructions for building Shyft from a **developer** perspective.
+
+*IMPORTANT*: While Shyft is being developed to support Linux and Windows platforms, it should be noted that the instructions contained in this README are geared toward linux systems. Users will generally want to [readthedocs](http://shyft.readthedocs.io/en/latest/) first.
+
+A few recipes are also available on the [Wiki](https://github.com/statkraft/shyft/wiki).
+
+
+# AUTHORS
+
+Shyft is developed by Statkraft, and the two main initial authors to
+the C++ core were Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and
+Ola Skavhaug <ola@xal.no>.
+
+Orchestration and the Python wrappers were originally developed by
+John F. Burkhart <john.burkhart@statkraft.com>
+
+
+# THANKS
+
+
+Contributors and current project participants include:
+ * Sigbjørn Helset <Sigbjorn.Helset@statkraft.com>
+ * Ola Skavhaug <ola@xal.no>
+ * John Burkhart <John.Burkhart@statkraft.com>
+ * Yisak Sultan Abdella <YisakSultan.Abdella@statkraft.com>
+ * Felix Matt <f.n.matt@geo.uio.no>
+ * Francesc Alted <faltet@gmail.com>
+
+
+# COPYING / LICENSE
+
+Shyft is released under LGPL V.3
+See LICENCE
+
+
+## DEVELOPER DOCUMENTATION
+
+The documentation below is maintained for the purposes of Shyft development. First time users and those are interested in learning how to use Shyft for hydrologic simulation are strongly encouraged to see [Shyft at readthedocs](http://shyft.readthedocs.io/en/latest/).
+
+
+
+### CLONING
+
+Shyft is distributed in three separate code repositories. This repository, `shyft` provides the main code base. A second repository (required for tests) is located at [shyft-data](https://github.com/statkraft/shyft-data). A third repository [shyft-doc](https://github.com/statkraft/shyft-doc) is available containing example notebooks and tutorials. The three repositories assume they have been checked out in parallel into a `shyft_workspace` directory:
+
+```bash
+mkdir shyft_workspace && cd shyft_workspace
+export SHYFT_WORKSPACE=`pwd`
+git clone https://github.com/statkraft/shyft.git
+git clone https://github.com/statkraft/shyft-data.git
+git clone https://github.com/statkraft/shyft-doc.git
+```
+
+### REQUIREMENTS
+
 
 For compiling and running Shyft, you will need:
 
@@ -38,20 +92,8 @@ $ cat requirements.txt | xargs conda install
 ```
 
 
-CLONING
-=========
-Shyft is distributed in three separate code repositories. This repository, `shyft` provides the main code base. A second repository (required for tests) is located at [shyft-data](https://github.com/statkraft/shyft-data). A third repository [shyft-doc](https://github.com/statkraft/shyft-doc) is available containing example notebooks and tutorials. The three repositories assume they have been checked out in parallel into a `shyft_workspace` directory:
+### PYTHON SET UP
 
-```bash
-mkdir shyft_workspace && cd shyft_workspace
-export SHYFT_WORKSPACE=`pwd`
-git clone https://github.com/statkraft/shyft.git
-git clone https://github.com/statkraft/shyft-data.git
-git clone https://github.com/statkraft/shyft-doc.git
-```
-
-PYTHON SET UP
-=============
 A general recommendation is to use conda from [Continuum Analytics](http://conda.pydata.org/docs/get-started.html). Below we instruct to create an Anaconda environment. If you are running Shyft, there are several other resources this will provide for plotting and visualization of results -- including jupyter for running the tutorial notebooks. If you prefer a leaner solution, simply use the requirements.txt file included with the repository and a miniconda environment.
 
 Unless you are building from scratch using one of the provided build scripts or would prefer to use an isolated miniconda environment for Shyft, we recommend (and only provide instructions for) setting up a [conda environment](http://conda.pydata.org/docs/using/envs.html#create-an-environment):
@@ -101,8 +143,8 @@ cd $SHYFT_WORKSPACE/shyft
 
 And you should be ready to build, install, and run Shyft!
 
-BUILDING
-========
+### BUILDING
+
 
 NOTE: the build/compile instructions below have been mainly tested on Linux platforms. Shyft can also be compiled (and it is actively maintained) for Windows, but the building instructions are not covered here (yet).
 
@@ -131,8 +173,8 @@ python setup.py build_ext --inplace
 ```
 
 
-QUICK TEST
-==========
+### QUICK TEST
+
 It is recommended to at least run a few of the tests after building. This will ensure your paths and environment variables are set correctly.
 
 The quickest and easiest test to run is:
@@ -152,8 +194,7 @@ export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
 
 To run further tests, see the TESTING section below. 
 
-INSTALLING
-==========
+### INSTALLING
 
 If the tests above run, then you can simply install Shyft using:
 
@@ -167,8 +208,8 @@ Just be aware of the dependency of the LD_LIBRARY_PATH so that the libboost libr
 Now, you should be set to start working with the [shyft-doc](https://github.com/statkraft/shyft-doc) notebooks and learning Shyft!
 
 
-COMPILING MANUALLY VIA CMAKE
-============================
+### COMPILING MANUALLY VIA CMAKE
+
 
 Although (at least on Linux) the `setup.py` method above uses the
 CMake building tool behind the scenes, you can also compile it
@@ -202,8 +243,8 @@ long-term installation it is recommended to persist your
 or using the conda `env_vars` described above).
 
 
-TESTING
-=======
+### TESTING
+
 
 The way to test Shyft is by running:
 
@@ -221,7 +262,7 @@ cd $SHYFT_WORKSPACE/shyft/shyft/tests/api
 nosetests
 ```
 
-## Comprehensive Tests
+### Comprehensive Tests
 
 To conduct further testing and to run direct C++ tests, you need to be sure you have the `shyft-data` repository as a sibling of the `shyft` repository directory.
 
@@ -233,33 +274,3 @@ make test
 ```
 
 
-AUTHORS
-=======
-
-Shyft is developed by Statkraft, and the two main initial authors to
-the C++ core were Sigbjørn Helset <Sigbjorn.Helset@statkraft.com> and
-Ola Skavhaug <ola@xal.no>.
-
-Orchestration and the Python wrappers were originally developed by
-John F. Burkhart <john.burkhart@statkraft.com>
-
-Several of the methods implemented are rewrites of corresponding code in
-[ENKI](https://bitbucket.org/enkiopensource/enki)
-
-THANKS
-======
-
-Contributors and current project participants include:
- * Sigbjørn Helset <Sigbjorn.Helset@statkraft.com>
- * Ola Skavhaug <ola@xal.no>
- * John Burkhart <John.Burkhart@statkraft.com>
- * Yisak Sultan Abdella <YisakSultan.Abdella@statkraft.com>
- * Felix Matt <f.n.matt@geo.uio.no>
- * Francesc Alted <faltet@gmail.com>
-
-
-
-COPYING / LICENSE
-=================
-Shyft is released under LGPL V.3
-See LICENCE

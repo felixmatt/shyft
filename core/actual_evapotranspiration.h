@@ -17,10 +17,7 @@
 /// Adapted from early enki method programmed by Kolbjørn Engeland and Sjur Kolberg
 ///
 #pragma once
-#ifdef SHYFT_NO_PCH
 #include <cmath>
-#endif // SHYFT_NO_PCH
-
 #include "utctime_utilities.h"
 /**
 contains the actual evatransporation parameters and algorithm

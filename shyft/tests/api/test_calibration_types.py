@@ -1,10 +1,12 @@
-﻿from shyft import api
+﻿import math
+import numpy as np
+import unittest
+
+from shyft import api
 from shyft.api import pt_gs_k
 from shyft.api import pt_hs_k
 from shyft.api import pt_ss_k
 from shyft.api import hbv_stack
-import unittest
-import numpy as np
 
 
 class ShyftApi(unittest.TestCase):
@@ -12,7 +14,7 @@ class ShyftApi(unittest.TestCase):
     Verify basic SHyFT api calibration related functions and structures
     """
 
-    def verify_parameter_for_calibration(self, param, expected_size,valid_names):
+    def verify_parameter_for_calibration(self, param, expected_size, valid_names):
         min_p_value = -1e+10
         max_p_value = +1e+10
         self.assertEqual(expected_size, param.size(), "expected parameter size changed")
@@ -26,7 +28,7 @@ class ShyftApi(unittest.TestCase):
             self.assertAlmostEqual(v * 1.01, x, 3, "Expect new value when setting value")
             p_name = param.get_name(i)
             self.assertTrue(len(p_name) > 0, "parameter name should exist")
-            self.assertEqual(valid_names[i],p_name)
+            self.assertEqual(valid_names[i], p_name)
 
     def test_pt_hs_k_param(self):
         pthsk_size = 16
@@ -35,29 +37,30 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(pthsk.size(), pthsk_size)
         pthsk.hs.lw = 0.23
         self.assertAlmostEqual(pthsk.hs.lw, 0.23)
-        snow = api.HbvSnowParameter(tx=0.2)  # ordered .. keyword does work now! TODO: verify if we can have boost provide real kwargs
+        snow = api.HbvSnowParameter(
+            tx=0.2)  # ordered .. keyword does work now! TODO: verify if we can have boost provide real kwargs
         self.assertIsNotNone(snow)
         snow.lw = 0.2
         self.assertAlmostEqual(snow.lw, 0.2)
         valid_names = [
-                    "kirchner.c1",
-                    "kirchner.c2",
-                    "kirchner.c3",
-                    "ae.ae_scale_factor",
-                    "hs.lw",
-                    "hs.tx",
-                    "hs.cx",
-                    "hs.ts",
-                    "hs.cfr",
-                    "gm.dtf",
-                    "p_corr.scale_factor",
-                    "pt.albedo",
-                    "pt.alpha",
-                    "routing.velocity",
-                    "routing.alpha",
-                    "routing.beta"
-				]
-        self.verify_parameter_for_calibration(pthsk, pthsk_size,valid_names)
+            "kirchner.c1",
+            "kirchner.c2",
+            "kirchner.c3",
+            "ae.ae_scale_factor",
+            "hs.lw",
+            "hs.tx",
+            "hs.cx",
+            "hs.ts",
+            "hs.cfr",
+            "gm.dtf",
+            "p_corr.scale_factor",
+            "pt.albedo",
+            "pt.alpha",
+            "routing.velocity",
+            "routing.alpha",
+            "routing.beta"
+        ]
+        self.verify_parameter_for_calibration(pthsk, pthsk_size, valid_names)
 
     def test_hbv_stack_param(self):
         hbv_size = 20
@@ -65,88 +68,88 @@ class ShyftApi(unittest.TestCase):
         self.assertIsNotNone(hbv)
         self.assertEqual(hbv.size(), hbv_size)
         valid_names = [
-        "soil.fc",
-        "soil.beta",
-        "ae.lp",
-        "tank.uz1",
-        "tank.kuz2",
-        "tank.kuz1",
-        "tank.perc",
-        "tank.klz",
-        "hs.lw",
-        "hs.tx",
-        "hs.cx",
-        "hs.ts",
-        "hs.cfr",
-        "p_corr.scale_factor",
-        "pt.albedo",
-        "pt.alpha",
-        "gm.dtf",
-        "routing.velocity",
-        "routing.alpha",
-        "routing.beta"
+            "soil.fc",
+            "soil.beta",
+            "ae.lp",
+            "tank.uz1",
+            "tank.kuz2",
+            "tank.kuz1",
+            "tank.perc",
+            "tank.klz",
+            "hs.lw",
+            "hs.tx",
+            "hs.cx",
+            "hs.ts",
+            "hs.cfr",
+            "p_corr.scale_factor",
+            "pt.albedo",
+            "pt.alpha",
+            "gm.dtf",
+            "routing.velocity",
+            "routing.alpha",
+            "routing.beta"
         ]
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
         ptgsk_size = 28
         valid_names = [
-        "kirchner.c1",
-        "kirchner.c2",
-        "kirchner.c3",
-        "ae.ae_scale_factor",
-        "gs.tx",
-        "gs.wind_scale",
-        "gs.max_water",
-        "gs.wind_const",
-        "gs.fast_albedo_decay_rate",
-        "gs.slow_albedo_decay_rate",
-        "gs.surface_magnitude",
-        "gs.max_albedo",
-        "gs.min_albedo",
-        "gs.snowfall_reset_depth",
-        "gs.snow_cv",
-        "gs.glacier_albedo",
-        "p_corr.scale_factor",
-        "gs.snow_cv_forest_factor",
-        "gs.snow_cv_altitude_factor",
-        "pt.albedo",
-        "pt.alpha",
-        "gs.initial_bare_ground_fraction",
-        "gs.winter_end_day_of_year",
-        "gs.calculate_iso_pot_energy",
-        "gm.dtf",
-        "routing.velocity",
-        "routing.alpha",
-        "routing.beta"
+            "kirchner.c1",
+            "kirchner.c2",
+            "kirchner.c3",
+            "ae.ae_scale_factor",
+            "gs.tx",
+            "gs.wind_scale",
+            "gs.max_water",
+            "gs.wind_const",
+            "gs.fast_albedo_decay_rate",
+            "gs.slow_albedo_decay_rate",
+            "gs.surface_magnitude",
+            "gs.max_albedo",
+            "gs.min_albedo",
+            "gs.snowfall_reset_depth",
+            "gs.snow_cv",
+            "gs.glacier_albedo",
+            "p_corr.scale_factor",
+            "gs.snow_cv_forest_factor",
+            "gs.snow_cv_altitude_factor",
+            "pt.albedo",
+            "pt.alpha",
+            "gs.initial_bare_ground_fraction",
+            "gs.winter_end_day_of_year",
+            "gs.calculate_iso_pot_energy",
+            "gm.dtf",
+            "routing.velocity",
+            "routing.alpha",
+            "routing.beta"
         ]
-        p=pt_gs_k.PTGSKParameter()
-        self.verify_parameter_for_calibration(p, ptgsk_size,valid_names)
-        #special verification of bool parameter
+        p = pt_gs_k.PTGSKParameter()
+        self.verify_parameter_for_calibration(p, ptgsk_size, valid_names)
+        # special verification of bool parameter
         p.gs.calculate_iso_pot_energy = True
         self.assertTrue(p.gs.calculate_iso_pot_energy)
-        self.assertAlmostEqual(p.get(23),1.0,0.00001)
+        self.assertAlmostEqual(p.get(23), 1.0, 0.00001)
         p.gs.calculate_iso_pot_energy = False
         self.assertFalse(p.gs.calculate_iso_pot_energy)
         self.assertAlmostEqual(p.get(23), 0.0, 0.00001)
         pv = api.DoubleVector.from_numpy([p.get(i) for i in range(p.size())])
-        pv[23]=1.0
-        p.set(  pv)
+        pv[23] = 1.0
+        p.set(pv)
         self.assertTrue(p.gs.calculate_iso_pot_energy)
-        pv[23]=0.0;
+        pv[23] = 0.0;
         p.set(pv)
         self.assertFalse(p.gs.calculate_iso_pot_energy)
         # checkout new parameters for routing
-        p.routing.velocity = 1/3600.0
+        p.routing.velocity = 1 / 3600.0
         p.routing.alpha = 1.1
         p.routing.beta = 0.8
-        self.assertAlmostEqual(p.routing.velocity, 1/3600.0)
+        self.assertAlmostEqual(p.routing.velocity, 1 / 3600.0)
         self.assertAlmostEqual(p.routing.alpha, 1.1)
         self.assertAlmostEqual(p.routing.beta, 0.8)
 
     def test_pt_ss_k_param(self):
         ptssk_size = 19
-        valid_names=[
+        valid_names = [
             "kirchner.c1",
             "kirchner.c2",
             "kirchner.c3",
@@ -167,8 +170,7 @@ class ShyftApi(unittest.TestCase):
             "routing.alpha",
             "routing.beta"
         ]
-        self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size,valid_names)
-
+        self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size, valid_names)
 
     def _create_std_ptgsk_param(self):
         ptp = api.PriestleyTaylorParameter(albedo=0.85, alpha=1.23)
@@ -236,12 +238,13 @@ class ShyftApi(unittest.TestCase):
         t.calc_mode = api.NASH_SUTCLIFFE
         t.calc_mode = api.KLING_GUPTA
         t.calc_mode = api.ABS_DIFF
+        t.calc_mode = api.RMSE
         t.s_r = 1.0  # KGEs scale-factors
         t.s_a = 2.0
         t.s_b = 3.0
         self.assertIsNotNone(t.uid)
         t.uid = 'test'
-        self.assertEqual(t.uid,'test')
+        self.assertEqual(t.uid, 'test')
         self.assertAlmostEqual(t.scale_factor, 1.0)
         # create a ts with some points
         cal = api.Calendar()
@@ -267,8 +270,9 @@ class ShyftApi(unittest.TestCase):
         # stuff it into the target spec.
         # also show how to specify snow-calibration
         cids = api.IntVector([0, 2, 3])
-        t2 = api.TargetSpecificationPts(tsa, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,'test_uid')
-        self.assertEqual(t2.uid,'test_uid')
+        t2 = api.TargetSpecificationPts(tsa, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,
+                                        'test_uid')
+        self.assertEqual(t2.uid, 'test_uid')
         t2.catchment_property = api.SNOW_WATER_EQUIVALENT
         self.assertEqual(t2.catchment_property, api.SNOW_WATER_EQUIVALENT)
         t2.catchment_property = api.CELL_CHARGE
@@ -276,16 +280,15 @@ class ShyftApi(unittest.TestCase):
         self.assertIsNotNone(t2.catchment_indexes)
         for i in range(len(cids)):
             self.assertEqual(cids[i], t2.catchment_indexes[i])
-        t.ts = tsa
-        # TODO: Does not work, list of objects are not yet convertible tv = api.TargetSpecificationVector([t, t2])
+        t.ts = api.TimeSeries(tsa)  # target spec is now a regular TimeSeries
         tv = api.TargetSpecificationVector()
-        tv.append(t)
-        tv.append(t2)
+        tv[:] = [t, t2]
         # now verify we got something ok
         self.assertEqual(2, tv.size())
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # average value 0..1 ->0.5
         self.assertAlmostEqual(tv[0].ts.value(2), 2.5)  # average value 0..1 ->0.5
-        self.assertAlmostEqual(tv[0].ts.value(3), 3.0)  # average value 0..1 ->0.5
+        # self.assertAlmostEqual(tv[0].ts.value(3), 3.0)  # original flat out at end, but now:
+        self.assertTrue(math.isnan(tv[0].ts.value(3)))  # strictly linear between points.
         # and that the target vector now have its own copy of ts
         tsa.set(1, 3.0)
         self.assertAlmostEqual(tv[0].ts.value(1), 1.5)  # make sure the ts passed onto target spec, is a copy
@@ -295,33 +298,44 @@ class ShyftApi(unittest.TestCase):
         self.assertEqual(2, tv2.size())
         self.assertAlmostEqual(tv2[0].ts.value(1), 1.5)  # average value 0..1 ->0.5
         self.assertAlmostEqual(tv2[0].ts.value(2), 2.5)  # average value 0..1 ->0.5
-        self.assertAlmostEqual(tv2[0].ts.value(3), 3.0)  # average value 0..1 ->0.5
+        self.assertTrue(math.isnan(tv2[0].ts.value(3)))  # average value 0..1 ->0.5
         tv2[0].scale_factor = 10.0
         self.assertAlmostEqual(tv[0].scale_factor, 1.0)
         self.assertAlmostEqual(tv2[0].scale_factor, 10.0)
+        # test we can create from breakpoint time-series
+        ts_bp = api.TimeSeries(
+            api.TimeAxis(api.UtcTimeVector([0, 25, 20]), 30),
+            fill_value=2.0,
+            point_fx=api.POINT_AVERAGE_VALUE
+        )
+
+        tspec_bp = api.TargetSpecificationPts(
+            ts_bp,
+            cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.CELL_CHARGE,
+            'test_uid'
+        )
+        self.assertIsNotNone(tspec_bp)
+
     def test_create_target_spec_from_std_time_series(self):
         """
         Verify we can create target-spec giving ordinary ts,
         and that passing a non-fixed time-axis raises exception
 
         """
-        cal=api.Calendar()
-        ta=api.TimeAxis(cal.time(2017,1,1),api.deltahours(1), 24)
-        ts=api.TimeSeries(ta,fill_value=3.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        cal = api.Calendar()
+        ta = api.TimeAxis(cal.time(2017, 1, 1), api.deltahours(1), 24)
+        ts = api.TimeSeries(ta, fill_value=3.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
         cids = api.IntVector([0, 2, 3])
-        t0 = api.TargetSpecificationPts(ts, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,'test_uid')
-        self.assertAlmostEqual(t0.ts.value(0),ts.value(0))
+        t0 = api.TargetSpecificationPts(ts, cids, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, api.SNOW_COVERED_AREA,
+                                        'test_uid')
+        self.assertAlmostEqual(t0.ts.value(0), ts.value(0))
         rid = 0
-        t1 = api.TargetSpecificationPts(ts, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0,'test_uid')
-        self.assertAlmostEqual(t1.ts.value(0),ts.value(0))
-        tax = api.TimeAxis(api.UtcTimeVector.from_numpy(ta.time_points[:-1]),ta.total_period().end)
-        tsx = api.TimeSeries(tax,fill_value=2.0,point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-        try:
-            tx = api.TargetSpecificationPts(tsx, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, 'test_uid')
-            self.assertTrue(False,"Expected exception here")
-        except RuntimeError as re:
-            pass
-
+        t1 = api.TargetSpecificationPts(ts, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, 'test_uid')
+        self.assertAlmostEqual(t1.ts.value(0), ts.value(0))
+        tax = api.TimeAxis(api.UtcTimeVector.from_numpy(ta.time_points[:-1]), ta.total_period().end)
+        tsx = api.TimeSeries(tax, fill_value=2.0, point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
+        tx = api.TargetSpecificationPts(tsx, rid, 0.7, api.KLING_GUPTA, 1.0, 1.0, 1.0, 'test_uid')
+        self.assertIsNotNone(tx)
 
     def test_IntVector(self):
         v1 = api.IntVector()  # empy

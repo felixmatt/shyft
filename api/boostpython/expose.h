@@ -24,7 +24,7 @@ namespace expose {
         vector<double> r; r.reserve(shyft::api::geo_cell_data_io::size()*cell_vector->size());//Assume approx 200 chars pr. cell
         for(const auto& cell:*cell_vector)
             shyft::api::geo_cell_data_io::push_to_vector(r,cell.geo);
-        return move(r);
+        return r;
     }
     template <class T>
     static vector<T> create_from_geo_cell_data_vector(const vector<double>& s) {
@@ -36,7 +36,7 @@ namespace expose {
             cell.geo=shyft::api::geo_cell_data_io::from_raw_vector(s.data()+i);
             r.push_back(cell);
         }
-        return move(r);
+        return r;
     }
 
     template<class C>
@@ -334,7 +334,7 @@ namespace expose {
     model_calibrator(const char *optimizer_name) {
 
         typedef typename RegionModel::parameter_t parameter_t;
-        typedef shyft::core::pts_t pts_t;
+        typedef shyft::api::apoint_ts pts_t;
         typedef shyft::core::model_calibration::optimizer<RegionModel, parameter_t, pts_t> Optimizer;
         typedef typename Optimizer::target_specification_t target_specification_t;
 

@@ -8,7 +8,7 @@ using namespace shyft::core;
 using namespace shyfttest;
 using namespace shyfttest::idw;
 namespace ta = shyft::time_axis;
-
+const ts_point_fx stair_case = POINT_AVERAGE_VALUE;
 namespace shyfttest {
     using namespace shyft::core;
     struct mock_cell {
@@ -17,7 +17,7 @@ namespace shyfttest {
         const geo_point& mid_point() const {return location;}
         pts_t ts;
         void initialize(const ta::fixed_dt& ta) {
-            ts=pts_t(ta,0.0);/// initialize and prepare cell before interpolation step, notice that the lambda to idw uses ts.set(ix,value)
+            ts=pts_t(ta,0.0,stair_case);/// initialize and prepare cell before interpolation step, notice that the lambda to idw uses ts.set(ix,value)
         }
     };
 
@@ -62,7 +62,7 @@ TEST_CASE("test_sih_workbench") {
         for(size_t y=0;y<n2_5;++y) { // construct points in a grid, and corresponding ts., summer at sea-level, decreasing to 10.deg at 1000 masl
             arome_2_5km_grid.emplace_back(
                 geo_point(x*2500,y*2500,1000.0*(x+y)/(n2_5+n2_5)),// the arome grid midpoint location
-                ats_t(ta,20.0 - 10.0*(x+y)/(n2_5+n2_5)) // the fake ts-values at this location, just a constant(t)
+                ats_t(ta,20.0 - 10.0*(x+y)/(n2_5+n2_5), stair_case) // the fake ts-values at this location, just a constant(t)
             );
         }
     }
@@ -96,7 +96,7 @@ TEST_CASE("test_sih_workbench") {
     for(size_t x=0;x<n1;++x) // TODO: instead of this simple filler, replace with bias-computation using historical learning algorithm
         for(size_t y=0;y<n1;++y) {
             geo_located_bias_ts gbts;
-            gbts.ts=pts_t(ta,-31.0);// all bias -30.0, so after the end, all result should be less than -10
+            gbts.ts=pts_t(ta,-31.0, stair_case);// all bias -30.0, so after the end, all result should be less than -10
             gbts.location= geo_point(x*1000,y*1000,1000.0*(x+y)/(n1+n1));
             bias_1km_grid.emplace_back(gbts);
         }

@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <memory>
 #include <vector>
 #include <string>
@@ -10,7 +10,6 @@
 #include <ctime>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 namespace shyft {
 	namespace core {
         /** \brief utctime

@@ -15,6 +15,7 @@
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
+					<Add option="-Wl,-rpath=\\$$$ORIGIN/../lib" />
 					<Add directory="../../bin/Debug" />
 				</Linker>
 			</Target>
@@ -28,6 +29,7 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add option="-Wl,-rpath=\\$$$ORIGIN/../lib" />
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
@@ -140,8 +142,6 @@
 			<Add option="-Wall" />
 			<Add option="-std=c++14" />
 			<Add option="-fexceptions" />
-			<Add directory=".." />
-			<Add directory="../../../dlib" />
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
 			<Add directory="$(#numpy.include)" />
@@ -151,6 +151,7 @@
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
+			<Add option="-Wl,-rpath=\\$$$ORIGIN/../../lib" />
 			<Add library="blas" />
 			<Add library="lapack" />
 			<Add library="shyftapi" />

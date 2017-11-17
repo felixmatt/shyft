@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -8,7 +8,6 @@
 #include <stdexcept>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "cell_model.h"
 #include "hbv_stack.h"

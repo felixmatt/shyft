@@ -24,15 +24,34 @@ namespace expose {
         }
         return r;
     }
+
+    template<class T>
+    static std::vector<T> create_from_geo_and_tsv(const std::vector<sc::geo_point>& gpv, const sa::ats_vector& tsv) {
+        if(gpv.size()!=tsv.size())
+            throw std::runtime_error("list of geo-points and time-series must have equal length");
+        std::vector<T> r;r.reserve(tsv.size());
+        for(size_t i=0;i<tsv.size();++i)
+            r.emplace_back(gpv[i],tsv[i]);
+        return r;
+    }
+
     template<class T>
     static void GeoPointSourceX(const char *py_name,const char *py_vector,const char *py_doc) {
         py::class_<T,py::bases<sa::GeoPointSource>>(py_name,py_doc)
-            .def(py::init<py::optional<sc::geo_point,sa::apoint_ts >>(py::args("midpoint","ts")))
+            .def(py::init<const sc::geo_point&,const sa::apoint_ts &>((py::arg("midpoint"),py::arg("ts"))))
             ;
         typedef std::vector<T> TSourceVector;
         py::class_<TSourceVector,py::bases<>,std::shared_ptr<TSourceVector> > (py_vector)
             .def(py::vector_indexing_suite<TSourceVector>())
             .def(py::init<const TSourceVector&>(py::args("src"),"clone src"))
+            .def("from_geo_and_ts_vector",&create_from_geo_and_tsv<T>,(py::arg("geo_points"), py::arg("tsv")),
+                doc_intro("Create from a geo_points and corresponding ts-vectors")
+                doc_parameters()
+                doc_parameter("geo_points","GeoPointVector","the geo-points")
+                doc_parameter("tsv","TsVector","the corresponding time-series located at corresponding geo-point")
+                doc_returns("src_vector","SourceVector","a newly created geo-located vector of specified type")
+            )
+            .staticmethod("from_geo_and_ts_vector")
             ;
 
         py::def("compute_geo_ts_values_at_time", &geo_tsv_values<T>, py::args("geo_ts_vector", "t"),
@@ -52,9 +71,9 @@ namespace expose {
             "for the point sources in SHyFT.\n"
             "Typically it contains a GeoPoint (3d position), plus a time-series\n"
             )
-            .def(py::init<py::optional<sc::geo_point,sa::apoint_ts >>(py::args("midpoint","ts")))
+            .def(py::init<const sc::geo_point&,const sa::apoint_ts&>( (py::arg("midpoint"),py::arg("ts"))  ) )
             .def_readwrite("mid_point_",&sa::GeoPointSource::mid_point_,"reference to internal mid_point")
-            .def("mid_point",&sa::GeoPointSource::mid_point,"returns a copy of mid_point")
+            .def("mid_point",&sa::GeoPointSource::mid_point,(py::arg("self")),"returns a copy of mid_point")
             // does not work  yet:.def_readwrite("ts",&sa::GeoPointSource::ts)
             .add_property("ts",&sa::GeoPointSource::get_ts,&sa::GeoPointSource::set_ts)
 			.def_readwrite("uid",&sa::GeoPointSource::uid,"user specified identifier, string")

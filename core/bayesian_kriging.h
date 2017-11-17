@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <iterator>
@@ -7,7 +7,6 @@
 //#include <limits>
 #include <stdexcept>
 #include <armadillo>
-#endif // SHYFT_NO_PCH
 
 #include "time_series.h"
 

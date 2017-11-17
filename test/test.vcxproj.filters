@@ -111,6 +111,10 @@
       <Filter>time_series</Filter>
     </ClCompile>
     <ClCompile Include="predictor_test.cpp" />
+    <ClCompile Include="time_series_average_test.cpp" />
+    <ClCompile Include="max_abs_average_accessor_test.cpp">
+      <Filter>optimizers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

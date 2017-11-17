@@ -42,7 +42,6 @@
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add directory=".." />
-			<Add directory="../../dlib" />
 			<Add directory="$(#armadillo.include)" />
 			<Add directory="$(#dlib.include)" />
 			<Add directory="$(#boost.include)" />

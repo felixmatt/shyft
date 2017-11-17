@@ -12,13 +12,17 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=dtss_store_basics" />
+				<Option parameters="-nv -tc=max_abs_average_accessor" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
 					<Add directory="../bin/Debug" />
 				</Linker>
+				<ExtraCommands>
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -ts=test_abs_diff_sum_goal_function" />
+					<Mode after="always" />
+				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="../bin/Release/test_shyft" prefix_auto="1" extension_auto="1" />
@@ -32,11 +36,10 @@
 					<Add option="-DARMA_NO_DEBUG" />
 				</Compiler>
 				<Linker>
-					<Add option="-O3" />
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_api_ts" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_abs_diff_sum_goal_function" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -49,9 +52,7 @@
 			<Add option="-DVERBOSE=0" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add option="-DARMA_DONT_PRINT_ERRORS" />
-			<Add directory="../../cxxtest" />
 			<Add directory=".." />
-			<Add directory="../../dlib" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#dlib.include)" />
 			<Add directory="$(#armadillo.include)" />
@@ -59,6 +60,7 @@
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
+			<Add option="-Wl,-rpath=\\$$$ORIGIN/../../shyft/lib" />
 			<Add library="shyftcore" />
 			<Add library="shyftapi" />
 			<Add library="pthread" />
@@ -127,6 +129,9 @@
 		<Unit filename="kriging_test.cpp">
 			<Option virtualFolder="interpolation/" />
 		</Unit>
+		<Unit filename="max_abs_average_accessor_test.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="merge_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
@@ -183,6 +188,9 @@
 			<Option virtualFolder="compiler_etc/" />
 		</Unit>
 		<Unit filename="time_axis_test.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_average_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_test.cpp">

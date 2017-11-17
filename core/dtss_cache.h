@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -11,7 +11,6 @@
 #include <mutex>
 #include <stdexcept>
 
-#endif
 
 #include "utctime_utilities.h"
 #include "time_series.h"
@@ -254,19 +253,21 @@ namespace shyft {
                         *p1 = tsf; f.erase(p1+1, p2);
                         return;
                     }
-                    if (p2->total_period().end == p.end) { // p2 also covered in this edge-case(hmm)
-                        *p1 = tsf; f.erase(p1+1, p2+1);
+                    // parts of p2 must be merged
+                    if ( p2->total_period().start <= p.end) { // overlap, - we merge with p2
+                        *p1 = tsf.merge(*p2); f.erase(p1+1, p2+1);// and consumes p2
+                    } else {
+                        *p1 = tsf;f.erase(p1+1,p2);//p2 is above, so we merge until p2
                     }
-                    else { // parts of p2 must be merged
-                        *p1 = tsf.merge(*p2); f.erase(p1+1, p2+1);
+                } else { // parts of p1 must be merged
+                    if (p2 == end(f)) { // now look at p2
+                        *p1 = tsf.merge(*p1); f.erase(p1+1, p2); // parts of p1 merged, p2 vanishes
+                        return;
                     }
-                }
-                else { // parts of p1 must be merged
-                    if (p2 == end(f) || p2->total_period().end == p.end) { // now look at p2
-                        *p1 = tsf.merge(*p1); f.erase(p1+1, end(f)); // parts of p1 merged, p2 vanishes
-                    }
-                    else { // both p1 and p2 must be merged.
-                        *p1 = tsf.merge(*p1).merge(*p2); f.erase(p1+1, p2+1);
+                    if(p2->total_period().start<=p.end) {
+                        *p1 = tsf.merge(*p1).merge(*p2); f.erase(p1+1, p2+1);// both p1 and p2 merged.
+                    } else {
+                        *p1= tsf.merge(*p1);f.erase(p1+1,p2);// p2 is above p.end, p2 must remain
                     }
                 }
             }

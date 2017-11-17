@@ -23,14 +23,13 @@
 ///  of first DREAM implemented in
 ///  the Enki project by Sjur Kolberg, Sintef
 ///
-#ifdef SHYFT_NO_PCH
+
 #include <vector>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <random>
 
-#endif // SHYFT_NO_PCH
 
 #include "optimizer_utils.h"
 

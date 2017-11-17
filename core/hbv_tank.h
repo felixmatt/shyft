@@ -1,11 +1,10 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "utctime_utilities.h"
 

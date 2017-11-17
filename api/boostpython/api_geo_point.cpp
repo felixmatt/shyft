@@ -27,7 +27,8 @@ namespace expose {
         .def("zscaled_distance",&geo_point::zscaled_distance,args("a,b,zscale"),"sqrt( (a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y) + (a.z - b.z)*(a.z - b.z)*zscale*zscale)").staticmethod("zscaled_distance")
         .def("xy_distance",geo_point::xy_distance,args("a,b"),"returns sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y))").staticmethod("xy_distance")
         .def("difference",geo_point::difference,args("a,b"),"returns GeoPoint(a.x - b.x, a.y - b.y, a.z - b.z)").staticmethod("difference")
-
+        .def(self==self)
+        //.def(self!=self)
         ;
     }
 }

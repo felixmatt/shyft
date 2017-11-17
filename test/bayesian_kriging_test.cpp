@@ -4,10 +4,8 @@
 #include "core/bayesian_kriging.h"
 #include "core/time_series.h"
 #include "core/geo_point.h"
-
-#ifdef SHYFT_NO_PCH
 #include <iomanip>
-#endif // SHYFT_NO_PCH
+
 using namespace std;
 namespace shyfttest {
 

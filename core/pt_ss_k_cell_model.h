@@ -1,16 +1,14 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <memory>
-//#include <utility>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 #include "cell_model.h"
 #include "pt_ss_k.h"

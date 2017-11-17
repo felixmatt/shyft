@@ -149,6 +149,18 @@
     <ClInclude Include="dtss_cache.h">
       <Filter>dtss</Filter>
     </ClInclude>
+    <ClInclude Include="dtss_db.h">
+      <Filter>dtss</Filter>
+    </ClInclude>
+    <ClInclude Include="dtss_msg.h">
+      <Filter>dtss</Filter>
+    </ClInclude>
+    <ClInclude Include="dtss_url.h">
+      <Filter>dtss</Filter>
+    </ClInclude>
+    <ClInclude Include="dtss_client.h">
+      <Filter>dtss</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

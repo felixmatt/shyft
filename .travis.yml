@@ -1,79 +1,72 @@
 sudo: required
 dist: trusty
-
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - liblapack-dev
+    - libpng-dev
+    - g++-7
+    - gcc-7
+    - gfortran
 env:
   global:
-    - SHYFT_DEPENDENCIES_DIR=$HOME/shyft-dependencies
-
-install:
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update -qq
-  - sudo apt-get --assume-yes install liblapack-dev g++-7 gcc-7 gfortran
-  - export CXX="g++-7" CC="gcc-7"
-
-
-cache:
-  directories:
-    - $SHYFT_DEPENDENCIES_DIR
-
-language:
-  - cpp
-
+    - SHYFT_DEPENDENCIES_DIR=${HOME}/build/statkraft/shyft_dependencies
+    - MINICONDA_DIR=${HOME}/build/statkraft/miniconda
 os:
   - linux
-
-#python:
-#  - 3.4
-
+language: cpp
+cache:
+  timeout: 1000
+  directories:
+    - ${SHYFT_DEPENDENCIES_DIR}
+    - ${MINICONDA_DIR}
 before_install:
   - uname -a
   - free -m
   - df -h
   - ulimit -a
   - ulimit -s 32768  # C++ compilers require a lot of memory
-
-  # Install conda (including fix for boost python build that do not recognize the m -letter variant)
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update conda
-  - ln -s $HOME/miniconda/include/python3.6m $HOME/miniconda/include/python3.6
-
-  # Install dependencies (including fix for boost python build that do not recognize the m -letter variant)
-  - conda create -c conda-forge -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely pyproj 
-  - source activate shyft_env
-  - ln -s $HOME/miniconda/envs/shyft_env/include/python3.6m $HOME/miniconda/envs/shyft_env/include/python3.6
-  # the conda library is out-dated, causes missing LIBGCC error on load, easy fix to remove it and use fresh from system
-  - rm -f $HOME/miniconda/envs/shyft_env/lib/libstdc++*
-  - python -V
-
-  # The data repository dependency
-  - git clone --depth=50 --branch=master https://github.com/statkraft/shyft-data.git shyft-data
-  - ln -s `pwd`/shyft-data ../shyft-data  # make it visible to the test suite of shyft
-
-#compiler:
-#  - gcc
-#  - clang
-
+install:
+  - export CXX="g++-7" CC="gcc-7"
+  - bash build_support/build_dependencies.sh
+  - echo done install step, now ls results
+  - ls ${SHYFT_DEPENDENCIES_DIR}
+  - ls ${HOME}/build/statkraft/miniconda
+  - ls ${HOME}/build/statkraft
+  - ls ${HOME}/build
+  - echo ${MINICONDA_DIR}
+  - echo ${SHYFT_DEPENDENCIES_DIR}
+  - ls ${HOME}/build/statkraft/miniconda
 before_script:
   - export CXX="g++-7" CC="gcc-7"
+  - echo path from install steps
+  - echo $PATH
+  - export LD_LIBRARY_PATH=${SHYFT_DEPENDENCIES_DIR}/lib
+  - export PATH=${MINICONDA_DIR}/bin:$PATH
+  - echo $PATH
+  - ls ${MINICONDA_DIR}
+  - ls ${SHYFT_DEPENDENCIES_DIR}
+  - python --version
+  - ${MINICONDA_DIR}/bin/python --version
   - mkdir build
   - cd build
   - cmake ..
-
 # the script also uses a fix using LD_PRELOAD to solve issue related to anaconda distro and libgfortran 4
 script:
   - export CXX="g++-7" CC="gcc-7"
-  - gcc --version
+  - echo path from previous step
+  - echo ${PATH}
+  - export PATH=${MINICONDA_DIR}/bin:$PATH
+  - export LD_LIBRARY_PATH=${SHYFT_DEPENDENCIES_DIR}/lib
   - g++-7 --version
-  - make -j 3 VERBOSE=1   CXX="g++-7" CC="gcc-7" # 3 paralel compiler processes can take up to 5 GB RAM!
-  - export LD_LIBRARY_PATH=$SHYFT_DEPENDENCIES_DIR/local/lib
-  - export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.3.0.0:/usr/lib/x86_64-linux-gnu/libgfortran.so.3 
+  - python --version
+  - make -j 2 VERBOSE=1   CXX="g++-7" CC="gcc-7" # 3 paralel compiler processes can take up to 5 GB RAM!
   - make test
   - make install
+  - source activate shyft_env
   - PYTHONPATH=.. python -c"import shyft; shyft.print_versions()"
-  - nosetests ../shyft/tests --with-coverage --cover-package=shyft
-
+  - nosetests ../shyft/tests --with-coverage --cover-package=shyft.repository --cover-package=shyft.orchestration --cover-package=shyft.api
 notifications:
   email: false

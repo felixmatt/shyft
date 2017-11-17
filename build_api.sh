@@ -7,7 +7,7 @@
 #  dlib
 #  armadillo (including blas/lapack, other options easily availabe)
 # notice that you can override 
-#    py_include/py_lib defaults to (-I/opt/anaconda/include/python3.4m -I/opt/anaconda/lib/python3.4/site-packages/numpy/core/include)/(-L/opt/anaconda/lib)
+#    py_include/py_lib defaults to (-I/usr/include/python3.6m -I/usr/lib/python3.6/site-packages/numpy/core/include)/(-L/usr/lib)
 #    armadillo_defs/armadillo_libs defaults to (-DARMA_DONT_USE_WRAPPER)/(-lblas -llapack)  alternative if you utilize armadillo (/-larmadillo)
 #    boost_include/boost_libs defaults to ()/()
 #    shyft_march  defaults to (-march=native))
@@ -17,39 +17,38 @@
 set -e
 exec 3>&1 4>&2
 
-py_include="${py_include:--I/opt/anaconda/include/python3.4m -I/opt/anaconda/lib/python3.4/site-packages/numpy/core/include}"
-py_lib="${py_lib:--L/opt/anaconda/lib -lpython3.4m}"
+py_include="${py_include:--I../../miniconda/include/python3.6m -I../../miniconda/lib/python3.6/site-packages/numpy/core/include}"
+py_lib="${py_lib:--L../../miniconda/lib -lpython3.6m}"
 
 armadillo_libs="${armadillo_libs:--lblas -llapack}"
 armadillo_defs="${armadillo_defs:--DARMA_DONT_USE_WRAPPER -DARMA_DONT_PRINT_ERRORS -DARMA_NO_DEBUG}"
 
-boost_libs="${boost_libs:--lboost_python3 -lboost_serialization}"
+boost_libs="${boost_libs:--lboost_python3 -lboost_serialization -lboost_filesystem -lboost_system}"
 boost_include="${boost_include:-}"
 
 dlib_lib="${dlib_lib:--ldlib}"
-dlib_include="${dlib_include:--I../../dlib}"
+dlib_include="${dlib_include:--I../../shyft_dependencies/include}"
 
 shyft_march="${shyft_march:--march=native}"
 
-gcc_opt="-shared -L/usr/local/lib64  -s -pthread -fPIC -std=c++1y -Wno-deprecated-declarations -O3 $shyft_march -I.. $dlib_include $armadillo_defs $boost_include $py_include"
+gcc_opt="-shared -L../../shyft_dependencies/lib -L/usr/local/lib64 -L/usr/lib64 -L/usr/lib  -pipe -s -pthread -fPIC -std=c++1y -Wno-deprecated-declarations -O3 $shyft_march -I.. -I../../shyft_dependencies/include $dlib_include $armadillo_defs $boost_include $py_include"
+r1_opt="-Wl,-rpath=\$ORIGIN/../lib"
+r2_opt="-Wl,-rpath=\$ORIGIN/../../lib"
+
 shyft_common_source="../core/utctime_utilities.cpp ../core/sceua_optimizer.cpp ../core/dream_optimizer.cpp ../api/api.cpp ../api/time_series.cpp ../core/core_serialization.cpp ../api/api_serialization.cpp"
-#"../api/boostpython/api.cpp ../api/boostpython/api_actual_evapotranspiration.cpp ../api/boostpython/api_cell_environment.cpp ../api/boostpython/api_gamma_snow.cpp ../api/boostpython/api_geo_cell_data.cpp ../api/boostpython/api_geo_point.cpp ../api/boostpython/api_hbv_snow.cpp ../api/boostpython/api_interpolation.cpp ../api/boostpython/api_kirchner.cpp ../api/boostpython/api_precipitation_correction.cpp ../api/boostpython/api_priestley_taylor.cpp ../api/boostpython/api_region_environment.cpp ../api/boostpython/api_skaugen.cpp ../api/boostpython/api_target_specification.cpp ../api/boostpython/api_time_axis.cpp ../api/boostpython/api_utctime.cpp ../api/boostpython/api_vectors.cpp"
-shyft_api_pch="../api/boostpython/boostpython_pch.h"
-shyft_api_pch_out="../api/boostpython/boostpython_pch.h.gch"
+
 cd shyft 
 shyft_api_source=`ls ../api/boostpython/api*.cpp`
-echo "First building pch file"
-g++ $gcc_opt -c $shyft_api_pch -o $shyft_api_pch_out
 echo "  Compile&Link _api.so started"
-g++ $gcc_opt  -o api/_api.so    $shyft_api_source    $shyft_common_source  $armadillo_libs $boost_libs $py_lib $dlib_lib $boost_libs &
+g++ ${r1_opt} $gcc_opt  -o api/_api.so $shyft_api_source                                 $shyft_common_source $dlib_lib $boost_libs $py_lib $armadillo_libs &
 echo "  Compile&Link _pt_gs_k.so started"
-g++ $gcc_opt  -o api/pt_gs_k/_pt_gs_k.so   ../api/boostpython/pt_gs_k.cpp   $shyft_common_source  $armadillo_libs $boost_libs $py_lib $dlib_lib $boost_libs &
+g++ ${r2_opt} $gcc_opt  -o api/pt_gs_k/_pt_gs_k.so      ../api/boostpython/pt_gs_k.cpp   $shyft_common_source $dlib_lib $boost_libs $py_lib $armadillo_libs &
 echo "  Compile&Link _pt_ss_k.so started"
-g++ $gcc_opt -o api/pt_ss_k/_pt_ss_k.so    ../api/boostpython/pt_ss_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib $dlib_lib $boost_libs &
+g++ ${r2_opt} $gcc_opt -o api/pt_ss_k/_pt_ss_k.so       ../api/boostpython/pt_ss_k.cpp   $shyft_common_source $dlib_lib $boost_libs $py_lib $armadillo_libs &
 echo "  Compile&Link _pt_hs_k.so started"
-g++ $gcc_opt -o api/pt_hs_k/_pt_hs_k.so    ../api/boostpython/pt_hs_k.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib $dlib_lib $boost_libs &
+g++ ${r2_opt} $gcc_opt -o api/pt_hs_k/_pt_hs_k.so       ../api/boostpython/pt_hs_k.cpp   $shyft_common_source $dlib_lib $boost_libs $py_lib $armadillo_libs &
 echo "  Compile&Link _hbv_stack.so started"
-g++ $gcc_opt -o api/hbv_stack/_hbv_stack.so    ../api/boostpython/hbv_stack.cpp    $shyft_common_source  $armadillo_libs $boost_libs $py_lib $dlib_lib $boost_libs &
+g++ ${r2_opt} $gcc_opt -o api/hbv_stack/_hbv_stack.so ../api/boostpython/hbv_stack.cpp   $shyft_common_source $dlib_lib $boost_libs $py_lib $armadillo_libs &
 
 echo -n "Waiting for the background compilations to complete..(could take some minutes)"
 wait

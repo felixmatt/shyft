@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <cstdint>
 #include <cmath>
 #include <string>
@@ -12,8 +12,6 @@
 #include <algorithm>
 #include <sstream>
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
-
 #include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
@@ -190,7 +188,7 @@ namespace shyft{
 
 
         /** \brief accumulate_value provides a projection/interpretation
-        * of the values of a pointsource on to a time-axis as provided.
+        * of the values of a point source on to a time-axis as provided.
         * This includes interpolation and true average, linear between points
         * and nan-handling semantics.
         * In addition the Accessor allows fast sequential access to these values
@@ -207,34 +205,48 @@ namespace shyft{
         * \param last_idx  position of the last time point used on the source, updated after each call.
         * \param tsum      the sum of time under non-nan areas of the curve
         * \param linear    interpret points as linear between, if set to false, use stair-case start of step def
+        * \param strict_linear_between enforces strict linear between points, needs two-points to form a line, no +oo|rhs-nan extensions
         * \return the area under the non-nan areas of the curve, specified by tsum reference-parameter
         */
         template <class S>
-        double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true) {
+        double accumulate_value(const S& source, const utcperiod& p, size_t& last_idx, utctimespan& tsum,bool linear = true,bool strict_linear_between=true) {
             const size_t n = source.size();
-            if (n == 0) // early exit if possible
+			const bool extrapolate_flat = !linear || (linear && !strict_linear_between);
+			if (n == 0) // early exit if possible
                 return shyft::nan;
             size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
+			point l;// Left point
+			bool l_finite = false;
 
             if (i == std::string::npos) { // this might be a case
-                last_idx = 0;// we update the hint to the left-most possible index
-                return shyft::nan; // and is equivalent to no points, or all points after requested period.
-            }
-            point l;// Left point
-            bool l_finite = false;
+				//  source starts after p.start
+				// or
+				//  source has no period that contans p.start
+				//  - that is:
+				i = 0;
+				last_idx = 0;// we update the hint to the left-most possible index
+				if (strict_linear_between) {// investigate if we are after end
+					l = source.get(i++);
+					l_finite = std::isfinite(l.v);
+					if (!p.contains(l.t))
+						return shyft::nan;
+				}
+
+			}
 
             double area = 0.0;  // Integrated area over the non-nan parts of the time-axis
             tsum = 0; // length of non-nan f(t) time-axis
-
             while (true) { //there are two exit criteria: no more points, or we pass the period end.
                 if (!l_finite) {//search for 'point' anchor phase
                     l = source.get(i++);
                     l_finite = std::isfinite(l.v);
                     if (i == n) { // exit condition
                         if (l_finite && l.t < p.end) {//give contribution
-                            utctimespan dt = p.end - l.t;
-                            tsum += dt;
-                            area += dt* l.v; // extrapolate value flat
+                            if (extrapolate_flat) {
+                                utctimespan dt = p.end - std::max(p.start, l.t);
+                                tsum += dt;
+                                area += dt* l.v; // extrapolate value flat
+                            }
                         }
                         break;//done
                     }
@@ -246,22 +258,27 @@ namespace shyft{
                     bool r_finite = std::isfinite(r.v);
                     utcperiod px(std::max(l.t, p.start), std::min(r.t, p.end));
                     utctimespan dt = px.timespan();
-                    tsum += dt;
+
 
                     // now add area contribution for l..r
                     if (linear && r_finite) {
                         double a = (r.v - l.v) / (r.t - l.t);
                         double b = r.v - a*r.t;
-                        //area += dt* 0.5*( a*px.start+b + a*px.end+b);
                         area += dt * (0.5*a*(px.start + px.end) + b);
+                        tsum += dt;
                     } else { // flat contribution from l  max(l.t,p.start) until max time of r.t|p.end
-                        area += l.v*dt;
+                        if (extrapolate_flat) {
+                            area += l.v*dt;
+                            tsum += dt;
+                        }
                     }
                     if (i == n) { // exit condition: final value in sequence, then we need to finish, but
                         if (r_finite && r.t < p.end) {// add area contribution from r and out to the end of p
-                            dt = p.end - r.t;
-                            tsum += dt;
-                            area += dt* r.v; // extrapolate value flat
+                            if (extrapolate_flat) {
+                                dt = p.end - r.t;
+                                tsum += dt;
+                                area += dt* r.v; // extrapolate value flat
+                            }
                         }
                         break;//done
                     }
@@ -270,7 +287,6 @@ namespace shyft{
                     l_finite = r_finite;
                     l = r;
                 }
-
             }
             last_idx = i - 1;
             return tsum ? area : shyft::nan;
@@ -654,7 +670,8 @@ namespace shyft{
             double value(size_t i) const {
                 auto p = ta.period(i);
                 size_t ix = index_of(p.start); // the perfect hint, matches exactly needed ix
-                return average_value(*this, p, ix, ts_point_fx::POINT_INSTANT_VALUE == fx_policy);
+				utctimespan t_sum{ 0 };
+                return accumulate_value(*this, p, ix,t_sum, ts_point_fx::POINT_INSTANT_VALUE == fx_policy, false)/double(t_sum); // allow extending last point in pattern
             }
             // provided functions to the average_value<..> function
             size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
@@ -1961,6 +1978,78 @@ namespace shyft{
             double value(const size_t i) const { return _value; }
         };
 
+        /** Helper template for max_abs_average_accessor that wraps a ts-source,
+         * and returns the max(0,source) or max(0,-source) values
+         * \see max_abs_average_accessor and goal-functions in the optimizer
+         */
+        template <class S>
+        struct source_max_abs {
+            const S& source; ///< underlying source ts , must support usual source stuff, see below
+            bool neg;///< if true, return max(0.0, -source), else max(0.0,source)
+            source_max_abs(const S&s, bool neg):source(s),neg(neg) {}
+
+            point get(size_t i) const {
+                point p= source.get(i);// use std. get function
+                if(std::isfinite(p.v))
+                    p.v=  neg ? std::max(0.0,-p.v):std::max(0.0,p.v); // manipulate the value
+                return p;
+            }
+            // just pass through other methods needed
+            size_t index_of(utctime tx) const { return source.index_of(tx); }
+            size_t size() const { return source.size();}
+        };
+
+        /** \brief max_abs_average_accessor returns the largest absolute average for each interval
+         *
+         *
+         * \see optimizer, and goal-functions
+         */
+        template <class S, class TA>
+        class max_abs_average_accessor {
+          private:
+            static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
+            mutable size_t last_idx=-1;
+            mutable size_t q_idx=-1;// last queried index
+            mutable double q_value=nan;// outcome of
+            const TA& time_axis;
+            source_max_abs<S> mx_abs;
+            source_max_abs<S> mn_abs;
+            const std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
+            bool linear_between_points=false;
+            const utctime t_end;
+          public:
+
+            max_abs_average_accessor(const S& source, const TA& time_axis)
+              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), mx_abs(source,false),mn_abs(source,true),
+                linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE),
+                t_end(source.total_period().end)
+                 { /* Do nothing */ }
+
+            max_abs_average_accessor(const std::shared_ptr<S>& source,const TA& time_axis)// also support shared ptr. access
+              : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),mx_abs(*source,false),mn_abs(*source,true),
+                source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
+                t_end((*source).total_period().end)
+                {}
+
+
+            double value(const size_t i) const {
+                if(i == q_idx)
+                    return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
+                if (time_axis.time(i) >= t_end) { // always nan after t_end
+                    q_idx = i;
+                    q_value = nan;
+                } else {
+                    double pos_val = average_value(mx_abs,time_axis.period(q_idx=i), last_idx,linear_between_points);
+                    double neg_val = average_value(mn_abs,time_axis.period(q_idx=i), last_idx,linear_between_points);
+                    q_value = std::max( pos_val, neg_val);
+                }
+                return q_value;
+            }
+
+            size_t size() const { return time_axis.size(); }
+        };
+
+
         /**specialization of hint-based search for all time-axis that merely can calculate the index from time t
          */
         template<>
@@ -2000,6 +2089,7 @@ namespace shyft{
         * <a ref href=http://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient">NS coeffecient</a>
         * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
         * \note if obs. is a constant, we get 1/0
+        * \note we skip any nans in obs/model
         * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
         * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
         * \param observed_ts contains the observed values for the model
@@ -2012,18 +2102,60 @@ namespace shyft{
                 throw runtime_error("nash_sutcliffe needs equal sized ts accessors with elements >1");
             double sum_of_obs_measured_diff2 = 0;
             double obs_avg = 0;
+            size_t obs_count = 0;
             for (size_t i = 0; i < observed_ts.size(); ++i) {
-                double diff_i = observed_ts.value(i) - model_ts.value(i);
-                sum_of_obs_measured_diff2 += diff_i*diff_i;
-                obs_avg += observed_ts.value(i);
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - m;
+                    sum_of_obs_measured_diff2 += diff_i*diff_i;
+                    obs_avg += observed_ts.value(i);
+                    ++obs_count;
+                }
             }
-            obs_avg /= double(observed_ts.size());
+            obs_avg /= double(obs_count);
             double sum_of_obs_obs_mean_diff2 = 0;
             for (size_t i = 0; i < observed_ts.size(); ++i) {
-                double diff_i = observed_ts.value(i) - obs_avg;
-                sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - obs_avg;
+                    sum_of_obs_obs_mean_diff2 += diff_i*diff_i;
+                }
             }
             return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
+        }
+
+       /**\brief root mean square effiency coefficient based goal function
+        * <a ref href=https://en.wikipedia.org/wiki/Root-mean-square_deviation">RMSE</a>
+        * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
+        * \note if obs. is a constant, we get 1/0
+        * \note we skip any nans in obs/model
+        * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \param observed_ts contains the observed values for the model
+        * \param model_ts contains the (simulated) model output values
+        * \return RMSE range 0 +oo is best performance > 0 .. +oo is less good performance.
+        */
+        template<class TSA1, class TSA2>
+        double rmse_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
+            if (observed_ts.size() != model_ts.size() || observed_ts.size() == 0)
+                throw runtime_error("rmse needs equal sized ts accessors with elements >1");
+            double sum_of_obs_measured_diff2 = 0;
+            double obs_avg = 0;
+            size_t obs_count = 0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - m;
+                    sum_of_obs_measured_diff2 += diff_i*diff_i;
+                    obs_avg += o;
+                    ++obs_count;
+                }
+            }
+            obs_avg /= double(obs_count);
+            return obs_count?sqrt(sum_of_obs_measured_diff2/obs_count )/obs_avg:shyft::nan;
         }
 
         /** \brief KLING-GUPTA Journal of Hydrology 377
@@ -2066,6 +2198,8 @@ namespace shyft{
             double eds2 = (s_r != 0.0 ? std::pow(s_r*(r - 1), 2) : 0.0) + (s_a != 0.0 ? std::pow(s_a*(a - 1), 2) : 0.0) + (s_b != 0.0 ? std::pow(s_b*(b - 1), 2) : 0.0);
             return /*EDs=*/ sqrt( eds2);
         }
+
+        /** compute the goal function for the absolute difference of finite-values */
         template<class TSA1, class TSA2>
         double abs_diff_sum_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
             double abs_diff_sum = 0.0;
@@ -2074,6 +2208,24 @@ namespace shyft{
                 double dv = model_ts.value(i);
                 if (isfinite(tv) && isfinite(dv))
                     abs_diff_sum +=std::fabs(tv-dv);
+            }
+            return abs_diff_sum;
+        }
+
+        /** compute the goal function for the absolute difference of finite-values
+         *  scaled by the maximum positive or negative values over the same interval
+         */
+        template<class TSA1, class TSA2,class TSA3>
+        double abs_diff_sum_goal_function_scaled(const TSA1& observed_ts, const TSA2& model_ts, const TSA3& model_scale_ts) {
+            double abs_diff_sum = 0.0;
+            const double scale_eps= 1e-20;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double tv = observed_ts.value(i);
+                double dv = model_ts.value(i);
+                double sv =model_scale_ts.value(i);
+                if (isfinite(tv) && isfinite(dv) && isfinite(sv) && std::fabs(sv)>scale_eps) {
+                    abs_diff_sum +=std::fabs(tv-dv)/sv;
+                }
             }
             return abs_diff_sum;
         }

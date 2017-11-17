@@ -55,30 +55,37 @@ if (rv)
 endif()
 message("include_numpy: " ${include_numpy})
 
+# Additional libraries
+find_package(LAPACK REQUIRED)
+#find_package(CBLAS REQUIRED)
+#find_package(dlib REQUIRED dblib_shared)
+
 # Include files in core directory
 # ensure to have python last, since it could contain ref to another boost version
 include_directories(
   ${PROJECT_SOURCE_DIR} 
   ${CMAKE_SOURCE_DIR}
-  ${SHYFT_DEPENDENCIES}/dlib
-  ${SHYFT_DEPENDENCIES}/boost
-  ${SHYFT_DEPENDENCIES}/armadillo/include 
+  ${SHYFT_DEPENDENCIES}/include
   ${include_python} 
   ${include_numpy}
 )
 
 # Set the compiler flags (for gcc and clang)
-set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DSHYFT_NO_PCH )
-#set(CMAKE_CXX_FLAGS ${C_FLAGS} CACHE STRING "CXX flags." FORCE)
+set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 )
 
 # Set the common C++ files
-set(CXX_FILES ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp ${CMAKE_SOURCE_DIR}/core/core_serialization.cpp ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp ${CMAKE_SOURCE_DIR}/api/api_serialization.cpp ${CMAKE_SOURCE_DIR}/api/api.cpp ${CMAKE_SOURCE_DIR}/api/time_series.cpp)
+set(CXX_FILES 
+        ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp 
+        ${CMAKE_SOURCE_DIR}/core/core_serialization.cpp 
+        ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp 
+        ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp
+        ${CMAKE_SOURCE_DIR}/api/api_serialization.cpp 
+        ${CMAKE_SOURCE_DIR}/api/api.cpp 
+        ${CMAKE_SOURCE_DIR}/api/time_series.cpp
+)
 
-# Create the API destination directory
-#file(MAKE_DIRECTORY ${SHYFT_DEPENDENCIES}/api)
 
-# Additional libraries
-set(LIBS "-lblas -llapack -L${SHYFT_DEPENDENCIES}/boost/stage/lib -lboost_python3 -lboost_serialization -lboost_filesystem -lboost_system -ldlib")
+set(LIBS "-L${SHYFT_DEPENDENCIES}/lib -lboost_python3 -lboost_serialization -lboost_filesystem -lboost_system -ldlib  ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}")
 
 # Compile extensions api extension
 foreach(python_api_extension  "api" )
@@ -86,7 +93,7 @@ foreach(python_api_extension  "api" )
   add_library(${python_api_extension} SHARED ${CXX_FILES} ${cpps} )
   set_target_properties(${python_api_extension} PROPERTIES OUTPUT_NAME ${python_api_extension})
   # Python extensions do not use the 'lib' prefix
-  set_target_properties(${python_api_extension} PROPERTIES PREFIX "_")
+  set_target_properties(${python_api_extension} PROPERTIES PREFIX "_" INSTALL_RPATH "$ORIGIN/../lib")
   set_property(TARGET ${python_api_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
   target_link_libraries(${python_api_extension} ${LIBS}  )
   install(TARGETS ${python_api_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api)
@@ -98,7 +105,7 @@ foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k" "hbv_stack")
   add_library(${python_extension} SHARED ${CXX_FILES} ${CMAKE_SOURCE_DIR}/api/boostpython/${python_extension}.cpp)
   set_target_properties(${python_extension} PROPERTIES OUTPUT_NAME ${python_extension})
   # Python extensions do not use the 'lib' prefix
-  set_target_properties(${python_extension} PROPERTIES PREFIX "_")
+  set_target_properties(${python_extension} PROPERTIES PREFIX "_" INSTALL_RPATH "$ORIGIN/../../lib")
   set_property(TARGET ${python_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
   target_link_libraries(${python_extension}  ${LIBS} )
   install(TARGETS ${python_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api/${python_extension})

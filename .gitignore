@@ -9,7 +9,11 @@ shyft/tests/api/state_test.yaml
 build/
 dist/
 shyft.egg-info/
-shyft/lib
+shyft/lib/
+Debug/
+x64/
+Release/
+
 coverage.xml
 *.coverage
 *.idea
@@ -25,9 +29,7 @@ coverage.xml
 *.a
 *.so
 *.bmarks
-Debug
-x64
-Release
+
 api_wrap.cpp
 *.suo
 *.sdf
@@ -45,7 +47,6 @@ shyft/api/pt_hs_k.py
 api/python/*_wrap.cxx
 api/python/*_wrap.cpp
 shyft/tests/state_tmp
-workspace.xml
 ValgrindOut.xml
 cachegrind.out.*
 
@@ -54,3 +55,7 @@ cachegrind.out.*
 *.user
 .conda_lock
 shyft/version.py
+
+# PyCharm files for user specific settings
+.idea/workspace.xml
+.idea/tasks.xml

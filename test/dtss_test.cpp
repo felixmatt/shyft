@@ -2,13 +2,14 @@
 
 #include "core/dtss.h"
 #include "core/dtss_cache.h"
+#include "core/dtss_client.h"
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/time_series_merge.h"
 #include "api/time_series.h"
 
-#ifdef SHYFT_NO_PCH
+
 #include <future>
 #include <mutex>
 #include <regex>
@@ -26,7 +27,6 @@
 
 namespace  fs=boost::filesystem;
 #include <armadillo>
-#endif // SHYFT_PCH
 
 using namespace std;
 using namespace shyft;
@@ -214,6 +214,7 @@ TEST_CASE("dtss_mini_frag") {
     using shyft::core::utcperiod;
     using shyft::core::utctime;
     using shyft::dtss::mini_frag;
+    using shyft::time_axis::continuous_merge;
 
     struct tst_frag {
         utcperiod p;
@@ -223,6 +224,8 @@ TEST_CASE("dtss_mini_frag") {
         utcperiod total_period() const {return p;}
         size_t size() const {return size_t(p.timespan());}
         tst_frag merge(const tst_frag&o) const {
+            if(!continuous_merge(p,o.p))
+                throw runtime_error("Wrong merge op attempted");
             return tst_frag{min(o.p.start,p.start),max(o.p.end,p.end)};
         }
     };
@@ -282,6 +285,20 @@ TEST_CASE("dtss_mini_frag") {
     FAST_CHECK_EQ(m.estimate_size(),20);
     FAST_CHECK_EQ(m.get_ix(utcperiod{0,10}),0);
     FAST_CHECK_EQ(m.get_by_ix(0).id,1);// verify we got the marked in place
+
+    m.add(tst_frag{21,23});// two frags
+    m.add(tst_frag{25,27});// three
+    m.add(tst_frag{0,23});// exactly cover second frag
+    FAST_CHECK_EQ(m.count_fragments(),2);
+
+    m.add(tst_frag{1,24});
+    FAST_CHECK_EQ(m.count_fragments(),2);
+
+    m.add(tst_frag{2,27});// parts p1, p2.end
+    FAST_CHECK_EQ(m.count_fragments(),1);
+
+    m.add(tst_frag{-1,27});
+    FAST_CHECK_EQ(m.count_fragments(),1);
 
 }
 
@@ -391,7 +408,7 @@ TEST_CASE("dlib_server_performance") {
     dlog.set_level(dlib::LALL);
     dlib::set_all_logging_output_streams(std::cout);
     dlib::set_all_logging_levels(dlib::LALL);
-    dlog << dlib::LINFO << "Starting dtss test";
+    dlog << dlib::LINFO << "Starting dtss server performance test";
     using namespace shyft::dtss;
     try {
         // Tell the server to begin accepting connections.
@@ -401,8 +418,8 @@ TEST_CASE("dlib_server_performance") {
         auto dt24 = deltahours(24);
         int n = 24 * 365 * 5;// 5years of hourly data
         int n24 = n / 24;
-		int n_ts = 83;
-        shyft::time_axis::fixed_dt ta(t, dt, n);
+        int n_ts = 10;//83;
+        shyft::time_axis::generic_dt ta(t, dt, n);
         api::gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
 		ts_vector_t from_disk; from_disk.reserve(n_ts);
@@ -470,80 +487,129 @@ TEST_CASE("dlib_server_performance") {
                 )
             );
         }
+        dlog << dlib::LINFO << "waiting for test to complete";
+
         for (auto &f : clients) f.get();
         our_server.clear();
         dlog << dlib::LINFO << "done";
-
     } catch (exception& e) {
         cout << e.what() << endl;
+        dlog<<dlib::LERROR<<"exception:"<<e.what();
     }
     dlog << dlib::LINFO << "done";
 }
 TEST_CASE("dtss_store_basics") {
         using namespace shyft::dtss;
         using namespace shyft::api;
-        auto utc=make_shared<calendar>();
-        auto osl=make_shared<calendar>("Europe/Oslo");
+        std::shared_ptr<core::calendar> utc = std::make_shared<core::calendar>();
+        std::shared_ptr<core::calendar> osl = std::make_shared<core::calendar>("Europe/Oslo");
 
-        auto t = utc->time(2016, 1, 1);
-        auto dt = deltahours(1);
-        int n = 24 * 365 * 2;//24*365*5;
+        core::utctime t = utc->time(2016, 1, 1);
+        core::utctimespan dt = core::deltahours(1);
+        core::utctimespan dt_half = core::deltaminutes(30);
+        std::size_t n = 24 * 365 * 2;//24*365*5;
 
 		// construct time-axis that we want to test.
         time_axis::fixed_dt fta(t, dt, n);
         time_axis::calendar_dt cta1(utc,t,dt,n);
         time_axis::calendar_dt cta2(osl,t,dt,n);
+
         vector<utctime> tp;for(std::size_t i=0;i<fta.size();++i)tp.push_back(fta.time(i));
         time_axis::point_dt pta(tp,fta.total_period().end);
+        dlog << dlib::LINFO << "starting store basics";
+
         auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
         ts_db db(tmpdir.string());
-        SUBCASE("store_fixed_dt") {
-            gts_t o(fta,10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-            string fn("measurements/tssf.db");  // verify we can have path-parts
+
+        TEST_SECTION("store_fixed_dt") {
+            gts_t o(gta_t(fta),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            o.set(0, 100.); o.set(o.size()-1, 100.);
+            std::string fn("measurements/tssf.db");  // verify we can have path-parts
             db.save(fn,o);
-            auto r=db.read(fn,utcperiod{});
-            FAST_CHECK_EQ(o.point_interpretation(),r.point_interpretation());
-            FAST_CHECK_EQ(o.time_axis(),r.time_axis());
+
+            // read all
+            auto r1 = db.read(fn, utcperiod{});
+            FAST_CHECK_EQ(o.point_interpretation(), r1.point_interpretation());
+            FAST_CHECK_EQ(o.time_axis(), r1.time_axis());
+
+            // read inner slice
+            core::utctime tb = t + 3u*dt/2u;
+            core::utctime te = t + (2u*n - 3u)*dt/2u;
+            auto r2 = db.read(fn, utcperiod{ tb, te });
+            FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
+            FAST_CHECK_EQ(r2.time_axis(), time_axis::generic_dt(t + dt, dt, n - 2u));
+            FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
+            FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
+
             auto fr = db.find(string("measurements/.*\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(), 1 );
+
             db.remove(fn);
             fr = db.find(string("measurements/.*\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(),0);
         }
 
-        SUBCASE("store_calendar_utc_dt") {
-            gts_t o(cta1,10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-            string fn("tssf.db");
-            db.save(fn,o);
-            auto r=db.read(fn,utcperiod{});
-            FAST_CHECK_EQ(o.point_interpretation(),r.point_interpretation());
-            FAST_CHECK_EQ(o.time_axis(),r.time_axis());
+        TEST_SECTION("store_calendar_utc_dt") {
+            gts_t o(gta_t(cta1), 10.0, time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            o.set(0, 100.); o.set(o.size()-1, 100.);
+            std::string fn("tssf1.db");
+            db.save(fn, o);
+
+            // read all
+            auto r=db.read(fn, utcperiod{ });
+            FAST_CHECK_EQ(o.point_interpretation(), r.point_interpretation());
+            FAST_CHECK_EQ(o.time_axis(), r.time_axis());
+
+            // read inner slice
+            core::utctime tb = cta1.cal->add(t, dt_half, 3);
+            core::utctime te = cta1.cal->add(t, dt_half, 2*n - 3);
+            auto r2 = db.read(fn, utcperiod{ tb, te });
+            FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
+            FAST_CHECK_EQ(r2.time_axis(), time_axis::generic_dt{ cta1.cal, cta1.cal->add(t, dt, 1), dt, n - 2u });
+            FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
+            FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
+
             auto i = db.get_ts_info(fn);
             FAST_CHECK_EQ(i.name,fn);
             FAST_CHECK_EQ(i.data_period,o.total_period());
             FAST_CHECK_EQ(i.point_fx, o.point_interpretation());
             FAST_CHECK_LE( i.modified, utctime_now());
-            auto fr = db.find(string(".ss.\\.db")); // should match our ts.
+
+            auto fr = db.find(string(".ss.1\\.db")); // should match our ts.
             FAST_CHECK_EQ(fr.size(), 1 );
 
             db.remove(fn);
         }
-        SUBCASE("store_calendar_osl_dt") {
-            gts_t o(cta2,10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
-            string fn("tssf.db");
+        TEST_SECTION("store_calendar_osl_dt") {
+            gts_t o(gta_t(cta2),10.0,time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+            string fn("tssf2.db");
             db.save(fn,o);
             auto r=db.read(fn,utcperiod{});
             FAST_CHECK_EQ(o.point_interpretation(),r.point_interpretation());
             FAST_CHECK_EQ(o.time_axis(),r.time_axis());
             db.remove(fn);
         }
-        SUBCASE("store_point_dt") {
-            gts_t o(pta,10.0,time_series::ts_point_fx::POINT_INSTANT_VALUE);
-            string fn("tssf.db");
-            db.save(fn,o);
-            auto r=db.read(fn,utcperiod{});
-            FAST_CHECK_EQ(o.point_interpretation(),r.point_interpretation());
-            FAST_CHECK_EQ(o.time_axis(),r.time_axis());
+        TEST_SECTION("store_point_dt") {
+            gts_t o(gta_t(pta), 10.0, time_series::ts_point_fx::POINT_INSTANT_VALUE);
+            o.set(0, 100.); o.set(o.size()-1, 100.);
+            string fn("tssf3.db");
+            db.save(fn, o);
+
+            // read all
+            auto r = db.read(fn, utcperiod{});
+            FAST_CHECK_EQ(o.point_interpretation(), r.point_interpretation());
+            FAST_CHECK_EQ(o.time_axis(), r.time_axis());
+
+            // read slice
+            core::utctime tb = (pta.time(2) + pta.time(1)) / 2;
+            core::utctime te = (pta.time(pta.size() - 1) + pta.time(pta.size() - 2)) / 2;
+            auto r2 = db.read(fn, utcperiod{ tb, te });
+            FAST_CHECK_EQ(o.point_interpretation(), r2.point_interpretation());
+            time_axis::point_dt exp{ std::vector<core::utctime>( &o.ta.p.t[1], &o.ta.p.t[o.ta.p.t.size()-1] ), o.ta.p.t[o.ta.p.t.size()-1] };
+            FAST_CHECK_EQ(r2.time_axis(), gta_t(exp));
+            FAST_CHECK_EQ(r2.value(0), o.value(1));  // dropped first value of o
+            FAST_CHECK_EQ(r2.value(r2.size() - 1), o.value(o.size() - 2));  // dropped last value of o
+
             auto i = db.get_ts_info(fn);
             FAST_CHECK_EQ(i.name,fn);
             FAST_CHECK_EQ(i.data_period,o.total_period());
@@ -552,12 +618,12 @@ TEST_CASE("dtss_store_basics") {
             db.remove(fn);
         }
 
-        SUBCASE("dtss_db_speed") {
-			int n_ts = 1200;
+        TEST_SECTION("dtss_db_speed") {
+			int n_ts = 120;
 			vector<gts_t> tsv; tsv.reserve(n_ts);
             double fv = 1.0;
             for (int i = 0; i < n_ts; ++i)
-                tsv.emplace_back(fta, fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
+                tsv.emplace_back(gta_t(fta), fv += 1.0,shyft::time_series::ts_point_fx::POINT_AVERAGE_VALUE);
             FAST_CHECK_EQ(n_ts,tsv.size());
 
             auto t0 = timing::now();
@@ -632,7 +698,7 @@ TEST_CASE("dtss_store") { /*
     // make corresponding client that we will use for the test.
     client dtss(host_port);
     SUBCASE("save_find_read") {
-        size_t n_ts=100;
+        size_t n_ts=10;
         time_axis::fixed_dt fta(t, dt, n);
         time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
         const auto stair_case=ts_point_fx::POINT_AVERAGE_VALUE;
@@ -649,7 +715,7 @@ TEST_CASE("dtss_store") { /*
         auto f0 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f0.size(),0);// expect zero to start with
         auto t0=timing::now();
-        dtss.store_ts(tsv,false);
+        dtss.store_ts(tsv, true, false);
         auto t1=timing::now();
         auto f1 = dtss.find(shyft_url(tc,".*"));
         FAST_CHECK_EQ(f1.size(),tsv.size());
@@ -684,10 +750,10 @@ TEST_CASE("dtss_store") { /*
 //        FAST_CHECK_EQ(ec.size(), pc.size());
         FAST_CHECK_EQ(er.size(),ev.size());
         FAST_CHECK_EQ(ec.size(), ev.size());
-        std::cout<<"store mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t0,t1))/1000.0)/1e6<<"\n";
-        std::cout<<"evalr mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t2,t3))/1000.0)/1e6<<"\n";
-        std::cout<<"evalc mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t3,t4))/1000.0)/1e6<<"\n";
-        std::cout<<"bench mpts/s "<<double(n_ts*n)/(double(elapsed_ms(t4,t5))/1000.0)/1e6<<"\t time :"<<double(elapsed_ms(t4,t5))<<"\n";
+        std::cout<<"store mpts/s "<<double(n_ts*n)/(double(elapsed_us(t0,t1))/1000000.0)/1e6<<"\n";
+        std::cout<<"evalr mpts/s "<<double(n_ts*n)/(double(elapsed_us(t2,t3))/1000000.0)/1e6<<"\n";
+        std::cout<<"evalc mpts/s "<<double(n_ts*n)/(double(elapsed_us(t3,t4))/1000000.0)/1e6<<"\n";
+        std::cout<<"bench mpts/s "<<double(n_ts*n)/(double(elapsed_us(t4,t5))/1000000.0)/1e6<<"\t time :"<<double(elapsed_ms(t4,t5))<<"\n";
         auto cs = our_server.get_cache_stats();
         std::cout<<"cache stats(hits,misses,cover_misses,id_count,frag_count,point_count):\n "<<cs.hits<<","<<cs.misses<<","<<cs.coverage_misses<<","<<cs.id_count<<","<<cs.fragment_count<<","<<cs.point_count<<")\n";
     }
@@ -708,8 +774,1250 @@ TEST_CASE("dtss_store") { /*
     fs::remove_all(tmpdir);
 #endif
 
-
 }
+
+TEST_CASE("dtss_store_merge_write") {
+
+    namespace core = shyft::core;
+    namespace dtss = shyft::dtss;
+    namespace ta = shyft::time_axis;
+    namespace ts = shyft::time_series;
+	using shyft::api::gta_t;
+    // setup db
+    auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
+    dtss::ts_db db(tmpdir.string());
+
+    SUBCASE("error_handling") {
+        SUBCASE("extending with different ta") {
+            // data
+            std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+            const core::utctime t0 = core::utctime_now();
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const core::utctimespan dt_d = core::calendar::DAY;
+            const std::size_t n = 1000;
+            // -----
+            ta::fixed_dt f_ta_h{ t0, dt_h, n };
+            ta::calendar_dt c_ta_d{ utc_ptr, t0, dt_d, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(c_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_diff_ta.db");
+
+            // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_diff_ta\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge with different ta type");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_diff_ta\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("extending with different point interpretation") {
+            // data
+            std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+            const core::utctime t0 = core::utctime_now();
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const core::utctimespan dt_d = core::calendar::DAY;
+            const std::size_t n = 1000;
+            // -----
+            ta::fixed_dt f_ta_h{ t0, dt_h, n };
+            ta::fixed_dt f_ta_d{ t0, dt_d, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0., ts::POINT_INSTANT_VALUE };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0., ts::POINT_AVERAGE_VALUE };
+            // -----
+            std::string fn("dtss_save_merge/ext_diff_fx.db");
+
+            // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_diff_fx\\.db"));
+            FAST_REQUIRE_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge with different point interpretation");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_diff_fx\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("fixed_dt old_dt != new_dt") {
+            // data
+            const core::utctime t0 = core::utctime_now();
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const core::utctimespan dt_d = core::calendar::DAY;
+            const std::size_t n = 1000;
+            // -----
+            ta::fixed_dt f_ta_h{ t0, dt_h, n };
+            ta::fixed_dt f_ta_d{ t0, dt_d, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_fixed_diff_dt.db");  // verify we can have path-parts
+
+            // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_fixed_diff_dt\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge unaligned fixed_dt");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_fixed_diff_dt\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("fixed_dt unaligned axes") {
+            // data
+            core::calendar utc{};
+            const core::utctime t0_1 = utc.time(2000, 1, 1, 0, 0);
+            const core::utctime t0_2 = utc.time(2000, 1, 1, 0, 13);  // 13 minutes shifted
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const std::size_t n = 1000;
+            // -----
+            ta::fixed_dt f_ta_h{ t0_1, dt_h, n };
+            ta::fixed_dt f_ta_d{ t0_2, dt_h, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_fixed_unaligned.db");  // verify we can have path-parts
+
+                                                     // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_fixed_unaligned\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge unaligned fixed_dt");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_fixed_unaligned\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("calendar_dt old_dt != new_dt") {
+            // data
+            std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+            const core::utctime t0 = core::utctime_now();
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const core::utctimespan dt_d = core::calendar::DAY;
+            const std::size_t n = 1000;
+            // -----
+            ta::calendar_dt f_ta_h{ utc_ptr, t0, dt_h, n };
+            ta::calendar_dt f_ta_d{ utc_ptr, t0, dt_d, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_cal_diff_dt.db");  // verify we can have path-parts
+
+           // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_cal_diff_dt\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge unaligned calendar_dt");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_cal_diff_dt\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("calendar_dt unaligned axes") {
+            // data
+            std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+            const core::utctime t0_1 = utc_ptr->time(2000, 1, 1, 0, 0);
+            const core::utctime t0_2 = utc_ptr->time(2000, 1, 1, 0, 13);  // 13 minutes shifted
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const std::size_t n = 1000;
+            // -----
+            ta::calendar_dt f_ta_h{ utc_ptr, t0_1, dt_h, n };
+            ta::calendar_dt f_ta_d{ utc_ptr, t0_2, dt_h, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_cal_unaligned.db");  // verify we can have path-parts
+
+            // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_cal_unaligned\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge unaligned calendar_dt");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_cal_unaligned\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+        SUBCASE("calendar_dt different calendars") {
+            // data
+            std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+            std::shared_ptr<core::calendar> osl_ptr = std::make_shared<core::calendar>("Europe/Oslo");
+            const core::utctime t0_1 = utc_ptr->time(2000, 1, 1, 0, 0);
+            const core::utctime t0_2 = osl_ptr->time(2000, 1, 1, 0, 13);  // 13 minutes shifted
+            const core::utctimespan dt_h = core::calendar::HOUR;
+            const std::size_t n = 1000;
+            // -----
+            ta::calendar_dt f_ta_h{ utc_ptr, t0_1, dt_h, n };
+            ta::calendar_dt f_ta_d{ osl_ptr, t0_2, dt_h, n };
+            ts::point_ts<ta::generic_dt> pts_h{ gta_t(f_ta_h), 0. };
+            ts::point_ts<ta::generic_dt> pts_d{ gta_t(f_ta_d), 0. };
+            // -----
+            std::string fn("dtss_save_merge/ext_cal_diff_cal.db");  // verify we can have path-parts
+
+            // save initital data
+            db.save(fn, pts_d, false);
+            auto find_res = db.find(string("dtss_save_merge/ext_cal_diff_cal\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path
+            CHECK_THROWS_AS_MESSAGE(db.save(fn, pts_h, false),
+                std::runtime_error, "dtss_store: cannot merge calendar_dt with different calendars");
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/ext_cal_diff_cal\\.db")); // should match our ts.
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+    }
+    SUBCASE("merging time-series") {
+        std::shared_ptr<core::calendar> utc_ptr = std::make_shared<core::calendar>();
+        std::shared_ptr<core::calendar> osl_ptr = std::make_shared<core::calendar>("Europe/Oslo");
+
+        SUBCASE("fixed_dt") {
+            SUBCASE("exact") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0 = utc_ptr->time(2016, 1, 1);
+                // -----
+                ta::fixed_dt f_ta{ t0, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_exact.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_exact\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_exact.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_exact\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new contained in old") {
+                // data
+                const std::size_t drop = 10u;  // points to drop from start/end of old
+                // -----
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*drop;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n - 2*drop };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_new_in_old.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_new_in_old\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_new_in_old.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(drop - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(drop), 10.);
+                FAST_CHECK_EQ(res.v.at(n - drop - 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n - drop), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_new_in_old\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("old contained in new") {
+                // data
+                const std::size_t extra = 10u;  // points to drop from start/end of old
+                // -----
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - dt*extra;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n + extra };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_old_in_new.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_old_in_new\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_old_in_new.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_old_in_new\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap start of old") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - dt*n/2;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_new_over_start.db");
+
+                FAST_REQUIRE_LT(t0_new, t0_old);
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_new_over_start\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_new_over_start.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n), 1.);
+                FAST_CHECK_EQ(res.v.at(n + n/2 - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_new_over_start\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap end of old") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*n/2;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_new_over_end.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_new_over_end\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_new_over_end.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2 - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2), 10.);
+                FAST_CHECK_EQ(res.v.at(n + n/2 - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_new_over_end\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("consecutive without gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*n;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_consec.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_consec\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_consec.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(n), 10.);
+                FAST_CHECK_EQ(res.v.at(2 * n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_consec\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new after old with gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + 2*n*dt;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_gap_after.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_gap_after\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_gap_after.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.ta.size(), 3*n);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_UNARY(std::isnan(res.v.at(2*n - 1)));
+                FAST_CHECK_EQ(res.v.at(2 * n), 10.);
+                FAST_CHECK_EQ(res.v.at(3 * n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_gap_after\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new before old with gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - 2*n*dt;
+                // -----
+                ta::fixed_dt f_ta_old{ t0_old, dt, n };
+                ta::fixed_dt f_ta_new{ t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/fixed_gap_before.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/fixed_gap_before\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/fixed_gap_before.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+                FAST_CHECK_EQ(res.ta.size(), 3*n);
+                FAST_CHECK_EQ(res.total_period().start, f_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, f_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_UNARY(std::isnan(res.v.at(2*n - 1)));
+                FAST_CHECK_EQ(res.v.at(2 * n), 1.);
+                FAST_CHECK_EQ(res.v.at(3 * n - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/fixed_gap_before\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+        }
+        SUBCASE("calendar_dt") {
+            SUBCASE("exact") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0 = utc_ptr->time(2016, 1, 1);
+                // -----
+                ta::calendar_dt c_ta{ utc_ptr, t0, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_exact.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_exact\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_exact.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_exact\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new contained in old") {
+                // data
+                const std::size_t drop = 10u;  // points to drop from start/end of old
+                // -----
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*drop;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n - 2*drop };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_new_in_old.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_new_in_old\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_new_in_old.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(drop - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(drop), 10.);
+                FAST_CHECK_EQ(res.v.at(n - drop - 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n - drop), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_new_in_old\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("old contained in new") {
+                // data
+                const std::size_t extra = 10u;  // points to drop from start/end of old
+                // -----
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - dt*extra;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n + extra };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_old_in_new.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_old_in_new\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_old_in_new.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_old_in_new\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap start of old") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - dt*n/2;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_new_over_start.db");
+
+                FAST_REQUIRE_LT(t0_new, t0_old);
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_new_over_start\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_new_over_start.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n), 1.);
+                FAST_CHECK_EQ(res.v.at(n + n/2 - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_new_over_start\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap end of old") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*n/2;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_new_over_end.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_new_over_end\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_new_over_end.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2 - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2), 10.);
+                FAST_CHECK_EQ(res.v.at(n + n/2 - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_new_over_end\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("consecutive without gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + dt*n;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_consec.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_consec\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_consec.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(n), 10.);
+                FAST_CHECK_EQ(res.v.at(2 * n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_consec\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new after old with gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old + 2*n*dt;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_gap_after.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_gap_after\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_gap_after.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.ta.size(), 3*n);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_UNARY(std::isnan(res.v.at(2*n - 1)));
+                FAST_CHECK_EQ(res.v.at(2 * n), 10.);
+                FAST_CHECK_EQ(res.v.at(3 * n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_gap_after\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new before old with gap") {
+                // data
+                const core::utctimespan dt = core::calendar::DAY;
+                const std::size_t n = 100;
+                const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+                const core::utctime t0_new = t0_old - 2*n*dt;
+                // -----
+                ta::calendar_dt c_ta_old{ utc_ptr, t0_old, dt, n };
+                ta::calendar_dt c_ta_new{ utc_ptr, t0_new, dt, n };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(c_ta_old), 1. };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(c_ta_new), 10. };
+                // -----
+                std::string fn("dtss_save_merge/calendar_gap_before.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/calendar_gap_before\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/calendar_gap_before.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::CALENDAR);
+                FAST_CHECK_EQ(res.ta.size(), 3*n);
+                FAST_CHECK_EQ(res.total_period().start, c_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, c_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_UNARY(std::isnan(res.v.at(2*n - 1)));
+                FAST_CHECK_EQ(res.v.at(2 * n), 1.);
+                FAST_CHECK_EQ(res.v.at(3 * n - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/calendar_gap_before\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+        }
+        SUBCASE("point_dt") {
+            // data
+            const core::utctimespan dt = core::calendar::DAY;
+            const std::size_t n = 100;
+            const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+            const core::utctimespan offset = core::deltaminutes(25);  // to misalign old and new timepoints
+            // -----
+            std::vector<core::utctime> old_timepoints{};
+            const std::vector<double> old_values(n, 1.);
+            // -----
+            std::vector<core::utctime> new_timepoints{};
+            std::vector<double> new_values(n, 10.);
+            // -----
+            old_timepoints.reserve(n + 1);
+            for ( std::size_t i = 0; i <= n; ++i ) {
+                old_timepoints.emplace_back(t0_old + dt*i);
+            }
+
+            SUBCASE("exact") {
+                // data
+                ta::point_dt p_ta{ old_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_exact.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_exact\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_exact.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_exact\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new contained in old") {
+                // data
+                const std::size_t drop = 10u;  // points to drop from start/end of old
+                const core::utctime t0_new = t0_old + offset + dt*drop;
+                // -----
+                new_timepoints.reserve(n - 2 * drop);
+                for ( std::size_t i = 0; i <= n - 2 * drop; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                new_values.resize(new_timepoints.size() - 1);
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_new_in_old.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_new_in_old\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_new_in_old.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_old.total_period().end);
+                // values
+                //  - NB! (n+1) because the point_dt's are unaligned, so a new point is introduced
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(drop), 1.);  // this is the extra new point
+                FAST_CHECK_EQ(res.v.at(drop + 1), 10.);
+                FAST_CHECK_EQ(res.v.at((n+1) - drop - 1), 10.);
+                FAST_CHECK_EQ(res.v.at((n+1) - drop), 1.);
+                FAST_CHECK_EQ(res.v.at((n+1) - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_new_in_old\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("old contained in new") {
+                // data
+                const std::size_t extra = 10u;  // points to drop from start/end of old
+                const core::utctime t0_new = t0_old + offset - dt*extra;
+                // -----
+                new_timepoints.reserve(n + 2 * extra);
+                for ( std::size_t i = 0; i <= n + 2 * extra; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                new_values.resize(new_timepoints.size() - 1, 10.);
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_old_in_new.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_old_in_new\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_old_in_new.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_old_in_new\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap start of old") {
+                // data
+                const core::utctime t0_new = t0_old + offset - dt*n/2;
+                for ( std::size_t i = 0; i <= n; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_new_over_start.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_new_over_start\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_new_over_start.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n), 1.);
+                FAST_CHECK_EQ(res.v.at(n + n/2 - 1), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_new_over_start\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new overlap end of old") {
+                // data
+                const core::utctime t0_new = t0_old + offset + dt*n/2;
+                for ( std::size_t i = 0; i <= n; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_new_over_end.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_new_over_end\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_new_over_end.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2), 1.);
+                FAST_CHECK_EQ(res.v.at(n/2 + 1), 10.);
+                FAST_CHECK_EQ(res.v.at(n + n/2), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_new_over_end\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("consecutive without gap") {
+                // data
+                const core::utctime t0_new = t0_old + n * dt;
+                for ( std::size_t i = 0; i <= n; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_consec.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_consec\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_consec.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_EQ(res.v.at(n), 10.);
+                FAST_CHECK_EQ(res.v.at(2 * n - 1), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_consec\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new after old with gap") {
+                // data
+                const core::utctime t0_new = t0_old + n * dt + offset;
+                for ( std::size_t i = 0; i <= n; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_gap_after.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_gap_after\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_gap_after.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.ta.size(), 2 * n + 1);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_old.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_new.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 1.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 1.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_EQ(res.v.at(n + 1), 10.);
+                FAST_CHECK_EQ(res.v.at(2 * n), 10.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_gap_after\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+            SUBCASE("new before old with gap") {
+                // data
+                const core::utctime t0_new = t0_old - n * dt - offset;
+                for ( std::size_t i = 0; i <= n; ++i ) {
+                    new_timepoints.emplace_back(t0_new + i * dt);
+                }
+                // -----
+                ta::point_dt p_ta_old{ old_timepoints };
+                ta::point_dt p_ta_new{ new_timepoints };
+                ts::point_ts<ta::generic_dt> pts_old{ gta_t(p_ta_old), old_values };
+                ts::point_ts<ta::generic_dt> pts_new{ gta_t(p_ta_new), new_values };
+                // -----
+                std::string fn("dtss_save_merge/point_gap_before.db");
+
+                // save initital data
+                db.save(fn, pts_old, false);
+                auto find_res = db.find("dtss_save_merge/point_gap_before\\.db");
+                FAST_CHECK_EQ(find_res.size(), 1);
+
+                // add data to the same path
+                db.save(fn, pts_new, false);
+
+                // check merged data
+                ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/point_gap_before.db", core::utcperiod{ });
+                // time-axis
+                FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::POINT);
+                FAST_CHECK_EQ(res.ta.size(), 2 * n + 1);
+                FAST_CHECK_EQ(res.total_period().start, p_ta_new.total_period().start);
+                FAST_CHECK_EQ(res.total_period().end, p_ta_old.total_period().end);
+                // values
+                FAST_CHECK_EQ(res.v.at(0), 10.);
+                FAST_CHECK_EQ(res.v.at(n - 1), 10.);
+                FAST_CHECK_UNARY(std::isnan(res.v.at(n)));
+                FAST_CHECK_EQ(res.v.at(n + 1), 1.);
+                FAST_CHECK_EQ(res.v.at(2 * n), 1.);
+
+                // cleanup
+                db.remove(fn);
+                find_res = db.find(string("dtss_save_merge/point_gap_before\\.db"));
+                FAST_CHECK_EQ(find_res.size(), 0);
+            }
+        }
+        SUBCASE("force overwrite") {
+            // data
+            const std::size_t drop = 10u;  // points to drop from start/end of old
+            // -----
+            const core::utctimespan dt = core::calendar::DAY;
+            const std::size_t n = 100;
+            const core::utctime t0_old = utc_ptr->time(2016, 1, 1);
+            const core::utctime t0_new = t0_old + dt*drop;
+            // -----
+            ta::fixed_dt f_ta_old{ t0_old, dt, n };
+            ta::fixed_dt f_ta_new{ t0_new, dt, n - 2*drop };
+            ts::point_ts<ta::generic_dt> pts_old{ gta_t(f_ta_old), 1. };
+            ts::point_ts<ta::generic_dt> pts_new{ gta_t(f_ta_new), 10. };
+            // -----
+            std::string fn("dtss_save_merge/force_overwrite.db");
+
+            // save initital data
+            db.save(fn, pts_old, false);
+            auto find_res = db.find("dtss_save_merge/force_overwrite\\.db");
+            FAST_CHECK_EQ(find_res.size(), 1);
+
+            // add data to the same path with overwrite
+            db.save(fn, pts_new, true);
+
+            // check merged data
+            ts::point_ts<ta::generic_dt> res = db.read("dtss_save_merge/force_overwrite.db", core::utcperiod{ });
+            // time-axis
+            FAST_CHECK_EQ(res.ta.gt, time_axis::generic_dt::FIXED);
+            FAST_CHECK_EQ(res.total_period().start, f_ta_new.total_period().start);
+            FAST_CHECK_EQ(res.total_period().end, f_ta_new.total_period().end);
+            // values
+            FAST_CHECK_EQ(res.v.at(0), 10.);
+            FAST_CHECK_EQ(res.v.at(n - 2 * drop - 1), 10.);
+
+            // cleanup
+            db.remove(fn);
+            find_res = db.find(string("dtss_save_merge/force_overwrite\\.db"));
+            FAST_CHECK_EQ(find_res.size(), 0);
+        }
+    }
+}
+
 TEST_CASE("dtss_baseline") {
     using namespace shyft::dtss;
     using namespace shyft::api;
@@ -721,7 +2029,7 @@ TEST_CASE("dtss_baseline") {
     const int n = 24 * 365 * 5/3;//24*365*5;
 
     vector<point_ts<time_axis::fixed_dt>> ftsv;
-    const size_t n_ts=100*83;
+    const size_t n_ts=10*83;
     arma::mat a_mat(n,n_ts);
     time_axis::fixed_dt fta(t, dt, n);
     //time_axis::generic_dt gta{t,dt*24,size_t(n/24)};
@@ -793,7 +2101,7 @@ TEST_CASE("dtss_ltm") {
     const int n = 24 * 365 * 5/3;//24*365*5;
 
     const size_t n_scn=83;
-    const size_t n_obj =10;
+    const size_t n_obj =2;
     const size_t n_ts=n_obj*2*n_scn;
 
     vector<point_ts<time_axis::fixed_dt>> ftsv;

@@ -5,6 +5,7 @@ import unittest
 from contextlib import closing
 
 import numpy as np
+from time import clock as time_now
 from numpy.testing import assert_array_almost_equal
 
 from shyft.api import Calendar
@@ -301,7 +302,7 @@ class DtssTestCase(unittest.TestCase):
 
             dts = DtsClient(host_port)
             cs0 = dtss.cache_stats
-            dts.store_ts(store_tsv, cache_on_write)
+            dts.store_ts(store_tsv, overwrite_on_write=True, cache_on_write=cache_on_write)
             r1 = dts.evaluate(tsv, ta.total_period())
             cs1 = dtss.cache_stats
             dtss.flush_cache_all()  # force the cache empty
@@ -372,3 +373,4 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(cs6.id_count, 1)
             self.assertEqual(cs6.point_count, 1*n)
             self.assertEqual(cs6.fragment_count,  1)
+

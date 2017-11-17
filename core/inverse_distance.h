@@ -1,5 +1,5 @@
 #pragma once
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <iterator>
@@ -7,11 +7,9 @@
 #include <cmath>
 #include <thread>
 #include <future>
-//#include <limits>
 #include <stdexcept>
 #include <armadillo>
 
-#endif // SHYFT_NO_PCH
 
 #ifdef WIN32
 #pragma warning(disable:4503)

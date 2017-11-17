@@ -91,6 +91,18 @@
 		<Unit filename="dtss_cache.h">
 			<Option virtualFolder="dtss/" />
 		</Unit>
+		<Unit filename="dtss_client.h">
+			<Option virtualFolder="dtss/" />
+		</Unit>
+		<Unit filename="dtss_db.h">
+			<Option virtualFolder="dtss/" />
+		</Unit>
+		<Unit filename="dtss_msg.h">
+			<Option virtualFolder="dtss/" />
+		</Unit>
+		<Unit filename="dtss_url.h">
+			<Option virtualFolder="dtss/" />
+		</Unit>
 		<Unit filename="experimental.cpp">
 			<Option virtualFolder="experimental/" />
 		</Unit>

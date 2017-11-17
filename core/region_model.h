@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef SHYFT_NO_PCH
+
 #include <string>
 #include <vector>
 #include <map>
@@ -16,7 +16,6 @@
 #include <mutex>
 
 #include "core_pch.h"
-#endif // SHYFT_NO_PCH
 
 
 #include "bayesian_kriging.h"
