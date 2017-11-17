@@ -60,7 +60,7 @@ namespace expose {
         }
         static TargetSpecificationPts* acreate_cids(
                const shyft::api::apoint_ts& ats,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
                double s_r = 1.0,
@@ -69,12 +69,12 @@ namespace expose {
                model_calibration::target_property_type catchment_property_ = model_calibration::DISCHARGE,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
+            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis(),ats.values(),ats.point_interpretation()),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
 
         static TargetSpecificationPts* create_cids2(
                const core_ts_t& ts,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
         {
@@ -83,7 +83,7 @@ namespace expose {
 
         static TargetSpecificationPts* acreate_cids2(
                const shyft::api::apoint_ts& ats,
-               vector<int> cids,
+               const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
         {
@@ -112,7 +112,7 @@ namespace expose {
                double s_b = 1.0,
                std::string uid = "")
         {
-            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis().f,ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
+            return  new model_calibration::target_specification<target_ts_t>(target_ts_t(ats.time_axis(),ats.values(),ats.point_interpretation()),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
 
 
@@ -124,6 +124,7 @@ namespace expose {
             .value("NASH_SUTCLIFFE",model_calibration::NASH_SUTCLIFFE)
             .value("KLING_GUPTA",model_calibration::KLING_GUPTA)
             .value("ABS_DIFF",model_calibration::ABS_DIFF)
+            .value("RMSE",model_calibration::RMSE)
             .export_values()
             ;
         enum_<model_calibration::target_property_type>("CatchmentPropertyType")
@@ -167,7 +168,7 @@ namespace expose {
                 doc_parameter("ts","TsFixed","time-series containing the target time-series")
                 doc_parameter("cids","IntVector","A list of catchment id's(cids) that together adds up into same as the target-ts")
                 doc_parameter("scale_factor","float","the weight of this target-specification")
-                doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs method")
+                doc_parameter("calc_mode","TargetSpecCalcType","specifies how to calculate the goal function, NS, KG, Abs,RMSE method")
                 doc_parameter("s_r","float","KG scalefactor for correlation")
                 doc_parameter("s_a","float","KG scalefactor for alpha(variance)")
                 doc_parameter("s_b","float","KG scalefactor for beta(bias)")
@@ -251,7 +252,7 @@ namespace expose {
              )
 
 			.def_readwrite("scale_factor", &TargetSpecificationPts::scale_factor, "the scale factor to be used when considering multiple target_specifications")
-            .def_readwrite("calc_mode",&TargetSpecificationPts::calc_mode,"*NASH_SUTCLIFFE, KLING_GUPTA")
+            .def_readwrite("calc_mode",&TargetSpecificationPts::calc_mode,"*NASH_SUTCLIFFE, KLING_GUPTA,ABS_DIFF,RMSE")
             .def_readwrite("catchment_property",&TargetSpecificationPts::catchment_property,"*DISCHARGE,SNOW_COVERED_AREA, SNOW_WATER_EQUIVALENT")
             .def_readwrite("s_r",&TargetSpecificationPts::s_r,"KG-scalefactor for correlation")
             .def_readwrite("s_a",&TargetSpecificationPts::s_a,"KG-scalefactor for alpha (variance)")

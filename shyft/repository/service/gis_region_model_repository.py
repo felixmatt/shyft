@@ -17,6 +17,9 @@ from ..interfaces import BoundingRegion
 from shyft import shyftdata_dir
 import pickle
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # to suppress authentication warning when using https variant
+
 #
 # Statkraft default server and service constants
 # these constants is used for forming the url-request
@@ -24,8 +27,14 @@ import pickle
 # note: We rely on str as immutable type when using as default-arguments to the methods
 #
 
-primary_server: str = r"oslwvagi002p"
-secondary_server: str = r"oslwvagi001q"
+# https variant
+#primary_server: str = r"oslwvagi002p"
+#secondary_server: str = r"oslwvagi001q"
+#port_num: str = "6080"
+# https variant
+primary_server: str  = r"gisserver.statkraft.com"
+secondary_server: str  = r"pregisserver.statkraft.com"
+port_num: str = "6443"
 
 # nordic service and catchment_type mappings (todo:should be cfg.classes or at least enums)
 nordic_service: str = "SHyFT"
@@ -41,6 +50,7 @@ peru_dem: str = r"Peru_DEM_250m"
 
 peru_catchment_type: str = r"peru_catchment"
 peru_catchment_id_name: str = r"SUBCATCH_ID"
+peru_subcatch_id_name: str = r"CATCH_ID"
 
 
 class GisDataFetchError(Exception):
@@ -149,14 +159,15 @@ class BaseGisDataFetcher(object):
     """
 
     def __init__(self, epsg_id, geometry=None, server_name=primary_server, server_name_preprod=secondary_server,
-                 server_port="6080", service_index=None, sub_service=nordic_service):
+                 server_port=port_num, service_index=None, sub_service=nordic_service):
         self.server_name = server_name
         self.server_name_preprod = server_name_preprod
         self.server_port = server_port
         self.service_index = service_index
         self.geometry = geometry
         self.epsg_id = epsg_id
-        self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/" + sub_service + "/MapServer/{}/query"
+        #self.url_template = "http://{}:{}/arcgis/rest/services/SHyFT/" + sub_service + "/MapServer/{}/query"  # http variant
+        self.url_template = "https://{}:{}/arcgis/rest/services/SHyFT/" + sub_service + "/MapServer/{}/query"  # https variant
         set_no_proxy(self.server_name)
         self.query = dict(text="",
                           objectIds="",
@@ -194,6 +205,7 @@ class BaseGisDataFetcher(object):
         return url
 
     def _get_response(self, url_, msg, **kwargs):
+        kwargs.update({'verify': False})  # to go around authentication error when using https -> ssl.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:749)
         response = requests.get(url_, **kwargs)
         if response.status_code != 200:
             raise GisDataFetchError('Could not fetch {} from gis server {}'.format(msg, self.server_name))
@@ -265,7 +277,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
         ------
         shapely multipolygon that is within the geometry boundingbox 
         """
-
+        print('Fetching {} polygon data...'.format(name))
         if not name or name not in self.en_field_names:
             raise RuntimeError("Invalid or missing land_type_name 'name' not given")
 
@@ -291,7 +303,7 @@ class LandTypeFetcher(BaseGisDataFetcher):
             else:
                 error_count += 1
         if error_count > 0:
-            print("gis polygon error count is", error_count)
+            print("{} polygon error count is".format(name), error_count)
         return cascaded_union(polygons)
 
 
@@ -307,6 +319,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
         self.query["outFields"] = "OBJECTID"
 
     def fetch(self, **kwargs):
+        print('Fetching reservoir polygon data...')
         q = self.get_query(kwargs.pop("geometry", None))
         # response = requests.get(self.url, params=q)
         # if response.status_code != 200:
@@ -325,7 +338,7 @@ class ReservoirFetcher(BaseGisDataFetcher):
 
 
 class CatchmentFetcher(BaseGisDataFetcher):
-    def __init__(self, catchment_type: str, identifier: str, epsg_id: int,
+    def __init__(self, catchment_type: str, identifier: str, epsg_id: int, server_port: str ='6443',
                  server_name: str = primary_server, server_name_preprod: str = secondary_server):
         sub_service = nordic_service
         if catchment_type == nordic_catchment_type_regulated:
@@ -341,13 +354,17 @@ class CatchmentFetcher(BaseGisDataFetcher):
         elif catchment_type == nordic_catchment_type_ltm:
             service_index = 3
         elif catchment_type == peru_catchment_type:
-            service_index = 5  # SUBCATCH_ID is used, 1 is Yaupi
+            if identifier == 'SUBCATCH_ID':
+                service_index = 5
+            else:
+                service_index = 6  # SUBCATCH_ID is used, 1 is Yaupi
             sub_service = peru_service
+            #identifier = peru_subcatch_id_name
         else:
             raise GisDataFetchError(
                 "Undefined catchment type {}. Use one of 'regulated', 'unregulated' or 'LTM'".format(catchment_type))
         super(CatchmentFetcher, self).__init__(geometry=None,
-                                               server_name=server_name,
+                                               server_name=server_name, server_port=server_port,
                                                server_name_preprod=server_name_preprod,
                                                service_index=service_index,
                                                epsg_id=epsg_id, sub_service=sub_service)
@@ -365,6 +382,7 @@ class CatchmentFetcher(BaseGisDataFetcher):
         return q
 
     def fetch(self, **kwargs):
+        print('Fetching catchment polygon data...')
         q = self.build_query(**kwargs)
         # response = requests.get(self.url, params=q)
         # if response.status_code != 200:
@@ -373,6 +391,7 @@ class CatchmentFetcher(BaseGisDataFetcher):
         data = self.get_response("Catchment index", params=q)
         # from IPython.core.debugger import Tracer; Tracer()()
         polygons = {}
+        error_count = 0
         for feature in data['features']:
             c_id = feature['attributes'][self.identifier]
             shell = feature["geometry"]["rings"][0]
@@ -382,6 +401,10 @@ class CatchmentFetcher(BaseGisDataFetcher):
                 if c_id not in polygons:
                     polygons[c_id] = []
                 polygons[c_id].append(polygon)
+            else:
+                error_count += 1
+        if error_count > 0:
+            print("Catchment polygon error count is", error_count)
         return {key: cascaded_union(polygons[key]) for key in polygons if polygons[key]}
 
 
@@ -484,13 +507,29 @@ class CellDataFetcher(object):
         # Gather cells on a per catchment basis, and compute the area fraction for each landtype
         print("Done with catchment cell loop, calc fractions")
         cell_data = {}
+        #frac_error_count = {'lake': 0, 'forest': 0, 'reservoir': 0, 'glacier': 0}
         for catchment_id in catchments.keys():
             cell_data[catchment_id] = []
             for cell, elevation in catchment_cells[catchment_id]:
                 data = {"cell": cell, "elevation": elevation}
                 for land_type_name, land_type_shape in iter(catchment_land_types[catchment_id].items()):
-                    data[land_type_name] = cell.intersection(land_type_shape).area/cell.area
+                    if not land_type_shape.is_valid:
+                        # Passed a distance of 0, buffer() can be used to “clean” self-touching or self-crossing polygons such as the classic “bowtie”.
+                        # http://toblerity.org/shapely/manual.html
+                        land_type_shape = land_type_shape.buffer(0)
+                    data[land_type_name] = cell.intersection(land_type_shape).area / cell.area
+                    # to debug problems with invalid polygons
+                    # print(land_type_name)
+                    # try:
+                    #     print('cell area', cell.area, '{} area'.format(land_type_name), land_type_shape.area)
+                    #     print('is_landtype_shape_valid:', land_type_shape.is_valid)
+                    #     data[land_type_name] = cell.intersection(land_type_shape.buffer(0)).area/cell.area
+                    # except Exception as e:
+                    #     print(str(e))
+                    #     print('cell area', cell.area, '{} area'.format(land_type_name), land_type_shape.area)
+                    #     frac_error_count[land_type_name] += 1
                 cell_data[catchment_id].append(data)
+        #print(frac_error_count)
         self.cell_data = cell_data
         self.catchment_land_types = catchment_land_types
         self.elevation_raster = elevations
@@ -508,9 +547,10 @@ class DTMFetcher:
         self.grid_specification: GridSpecification = grid_specification
         self.server_name: str = server_name  # PROD
         self.server_name_preprod: str = server_name_preprod  # PREPROD
-        self.server_port: str = "6080"
+        self.server_port: str = port_num
         self.dem: str = dem
-        self.url_template: str = "http://{}:{}/arcgis/rest/services/SHyFT/{}/ImageServer/exportImage"  # PROD
+        #self.url_template: str = "http://{}:{}/arcgis/rest/services/SHyFT/{}/ImageServer/exportImage"  # PROD
+        self.url_template = "https://{}:{}/arcgis/rest/services/SHyFT/{}/ImageServer/exportImage"  # https variant
         set_no_proxy(self.server_name)
         self.query = dict(
             bboxSR=self.grid_specification.epsg(),
@@ -536,7 +576,7 @@ class DTMFetcher:
     def _fetch(self, url_=None):
         if url_ is None:
             url_ = self.url
-        response = requests.get(url_, params=self.query, stream=True)
+        response = requests.get(url_, params=self.query, stream=True, verify=False)
         if response.status_code != 200:
             raise GisDataFetchError("Could not fetch DTM data from gis server.")
         img = response.raw.read()
@@ -553,6 +593,7 @@ class DTMFetcher:
         return np.array(data, dtype=np.float64)
 
     def fetch(self):
+        print('Fetching DEM data...')
         try:
             data = self._fetch()
         except Exception as e:
@@ -786,8 +827,8 @@ class GisRegionModelRepository(RegionModelRepository):
             return None
 
     @classmethod
-    def update_cache(cls, catchment_regulated_type: str, service_id_field_name: str, grid_specification: GridSpecification, id_list: List[int]):
-        cell_info = cls.get_cell_data_from_gis(catchment_regulated_type, service_id_field_name, grid_specification, id_list)
+    def update_cache(cls, catchment_regulated_type: str, service_id_field_name: str, grid_specification: GridSpecification, id_list: List[int], calc_forest_frac: bool = False):
+        cell_info = cls.get_cell_data_from_gis(catchment_regulated_type, service_id_field_name, grid_specification, id_list, calc_forest_frac=calc_forest_frac)
         cls.cell_data_cache.save_cell_data(service_id_field_name, grid_specification, cell_info)
 
     @classmethod

@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=test_average_value_linear_between_points" />
+				<Option parameters="-nv -tc=max_abs_average_accessor" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -ts=time_series" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -ts=test_abs_diff_sum_goal_function" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -ts=time_series" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_abs_diff_sum_goal_function" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -128,6 +128,9 @@
 		</Unit>
 		<Unit filename="kriging_test.cpp">
 			<Option virtualFolder="interpolation/" />
+		</Unit>
+		<Unit filename="max_abs_average_accessor_test.cpp">
+			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="merge_test.cpp">
 			<Option virtualFolder="time_series/" />

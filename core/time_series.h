@@ -220,9 +220,9 @@ namespace shyft{
 
             if (i == std::string::npos) { // this might be a case
 				//  source starts after p.start
-				// or 
+				// or
 				//  source has no period that contans p.start
-				//  - that is: 
+				//  - that is:
 				i = 0;
 				last_idx = 0;// we update the hint to the left-most possible index
 				if (strict_linear_between) {// investigate if we are after end
@@ -1978,6 +1978,78 @@ namespace shyft{
             double value(const size_t i) const { return _value; }
         };
 
+        /** Helper template for max_abs_average_accessor that wraps a ts-source,
+         * and returns the max(0,source) or max(0,-source) values
+         * \see max_abs_average_accessor and goal-functions in the optimizer
+         */
+        template <class S>
+        struct source_max_abs {
+            const S& source; ///< underlying source ts , must support usual source stuff, see below
+            bool neg;///< if true, return max(0.0, -source), else max(0.0,source)
+            source_max_abs(const S&s, bool neg):source(s),neg(neg) {}
+
+            point get(size_t i) const {
+                point p= source.get(i);// use std. get function
+                if(std::isfinite(p.v))
+                    p.v=  neg ? std::max(0.0,-p.v):std::max(0.0,p.v); // manipulate the value
+                return p;
+            }
+            // just pass through other methods needed
+            size_t index_of(utctime tx) const { return source.index_of(tx); }
+            size_t size() const { return source.size();}
+        };
+
+        /** \brief max_abs_average_accessor returns the largest absolute average for each interval
+         *
+         *
+         * \see optimizer, and goal-functions
+         */
+        template <class S, class TA>
+        class max_abs_average_accessor {
+          private:
+            static const size_t npos = -1;  // msc doesn't allow this std::basic_string::npos;
+            mutable size_t last_idx=-1;
+            mutable size_t q_idx=-1;// last queried index
+            mutable double q_value=nan;// outcome of
+            const TA& time_axis;
+            source_max_abs<S> mx_abs;
+            source_max_abs<S> mn_abs;
+            const std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
+            bool linear_between_points=false;
+            const utctime t_end;
+          public:
+
+            max_abs_average_accessor(const S& source, const TA& time_axis)
+              : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), mx_abs(source,false),mn_abs(source,true),
+                linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE),
+                t_end(source.total_period().end)
+                 { /* Do nothing */ }
+
+            max_abs_average_accessor(const std::shared_ptr<S>& source,const TA& time_axis)// also support shared ptr. access
+              : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),mx_abs(*source,false),mn_abs(*source,true),
+                source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
+                t_end((*source).total_period().end)
+                {}
+
+
+            double value(const size_t i) const {
+                if(i == q_idx)
+                    return q_value;// 1.level cache, asking for same value n-times, have cost of 1.
+                if (time_axis.time(i) >= t_end) { // always nan after t_end
+                    q_idx = i;
+                    q_value = nan;
+                } else {
+                    double pos_val = average_value(mx_abs,time_axis.period(q_idx=i), last_idx,linear_between_points);
+                    double neg_val = average_value(mn_abs,time_axis.period(q_idx=i), last_idx,linear_between_points);
+                    q_value = std::max( pos_val, neg_val);
+                }
+                return q_value;
+            }
+
+            size_t size() const { return time_axis.size(); }
+        };
+
+
         /**specialization of hint-based search for all time-axis that merely can calculate the index from time t
          */
         template<>
@@ -2054,6 +2126,38 @@ namespace shyft{
             return sum_of_obs_measured_diff2 / sum_of_obs_obs_mean_diff2;
         }
 
+       /**\brief root mean square effiency coefficient based goal function
+        * <a ref href=https://en.wikipedia.org/wiki/Root-mean-square_deviation">RMSE</a>
+        * \note throws runtime exception if supplied arguments differs in .size() or .size()==0
+        * \note if obs. is a constant, we get 1/0
+        * \note we skip any nans in obs/model
+        * \tparam TSA1 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \tparam TSA2 a ts accessor for the observed ts ( support .size() and double .value(i))
+        * \param observed_ts contains the observed values for the model
+        * \param model_ts contains the (simulated) model output values
+        * \return RMSE range 0 +oo is best performance > 0 .. +oo is less good performance.
+        */
+        template<class TSA1, class TSA2>
+        double rmse_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
+            if (observed_ts.size() != model_ts.size() || observed_ts.size() == 0)
+                throw runtime_error("rmse needs equal sized ts accessors with elements >1");
+            double sum_of_obs_measured_diff2 = 0;
+            double obs_avg = 0;
+            size_t obs_count = 0;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double o = observed_ts.value(i);
+                double m = model_ts.value(i);
+                if (isfinite(o) && isfinite(m)) {
+                    double diff_i = o - m;
+                    sum_of_obs_measured_diff2 += diff_i*diff_i;
+                    obs_avg += o;
+                    ++obs_count;
+                }
+            }
+            obs_avg /= double(obs_count);
+            return obs_count?sqrt(sum_of_obs_measured_diff2/obs_count )/obs_avg:shyft::nan;
+        }
+
         /** \brief KLING-GUPTA Journal of Hydrology 377
          *              (2009) 80–91, page 83,
          *                     formula (10), where shorthands are
@@ -2094,6 +2198,8 @@ namespace shyft{
             double eds2 = (s_r != 0.0 ? std::pow(s_r*(r - 1), 2) : 0.0) + (s_a != 0.0 ? std::pow(s_a*(a - 1), 2) : 0.0) + (s_b != 0.0 ? std::pow(s_b*(b - 1), 2) : 0.0);
             return /*EDs=*/ sqrt( eds2);
         }
+
+        /** compute the goal function for the absolute difference of finite-values */
         template<class TSA1, class TSA2>
         double abs_diff_sum_goal_function(const TSA1& observed_ts, const TSA2& model_ts) {
             double abs_diff_sum = 0.0;
@@ -2102,6 +2208,24 @@ namespace shyft{
                 double dv = model_ts.value(i);
                 if (isfinite(tv) && isfinite(dv))
                     abs_diff_sum +=std::fabs(tv-dv);
+            }
+            return abs_diff_sum;
+        }
+
+        /** compute the goal function for the absolute difference of finite-values
+         *  scaled by the maximum positive or negative values over the same interval
+         */
+        template<class TSA1, class TSA2,class TSA3>
+        double abs_diff_sum_goal_function_scaled(const TSA1& observed_ts, const TSA2& model_ts, const TSA3& model_scale_ts) {
+            double abs_diff_sum = 0.0;
+            const double scale_eps= 1e-20;
+            for (size_t i = 0; i < observed_ts.size(); ++i) {
+                double tv = observed_ts.value(i);
+                double dv = model_ts.value(i);
+                double sv =model_scale_ts.value(i);
+                if (isfinite(tv) && isfinite(dv) && isfinite(sv) && std::fabs(sv)>scale_eps) {
+                    abs_diff_sum +=std::fabs(tv-dv)/sv;
+                }
             }
             return abs_diff_sum;
         }

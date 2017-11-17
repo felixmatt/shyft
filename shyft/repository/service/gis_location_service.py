@@ -5,6 +5,7 @@ from .gis_region_model_repository import BaseGisDataFetcher, primary_server, sec
 from .ssa_geo_ts_repository import GeoLocationRepository
 from .gis_region_model_repository import nordic_service, peru_service
 
+
 class StationDataError(Exception):
     pass
 
@@ -19,8 +20,8 @@ class GisLocationService(GeoLocationRepository):
     def __init__(self, server_name=primary_server, server_name_preprod=secondary_server, server_port=port_num, service_index=5,
                  sub_service=nordic_service, out_fields=[], return_all_fields=False):
         super(GeoLocationRepository, self).__init__()
-        self.server_name="oslwvagi002p"
-        self.server_name_preprod="oslwvagi001q"
+        self.server_name=server_name
+        self.server_name_preprod=server_name_preprod
         if server_name is not None:
             self.server_name = server_name
         if server_name_preprod is not None:
@@ -40,6 +41,7 @@ class GisLocationService(GeoLocationRepository):
             self.out_fields = ', '.join(out_fields_list)
 
     def _get_response(self, url, **kwargs):
+        kwargs.update({'verify': False})  # to go around authentication error when using https -> ssl.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:749)
         response = requests.get(url, **kwargs)
         if response.status_code != 200:
             raise StationDataError("Could not get data from GIS service!")

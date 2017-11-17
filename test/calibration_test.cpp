@@ -5,6 +5,10 @@
 #include "core/pt_gs_k_cell_model.h"
 #include "core/model_calibration.h"
 
+namespace shyft {
+namespace time_series {
+}}
+
 
 using namespace shyft::core;
 using namespace shyft::time_series;
@@ -448,7 +452,7 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 		double a = M_PI*100.0*i / n;
 		double ov = 10.0 + 5 * sin(a);
             obs.set(i,ov);
-        
+
 		sim.set(i, i<n/2?ov:0.0);//9.5 + 4 * sin(a + 0.02)
 	}
 	double nsg_perfect = nash_sutcliffe_goal_function(obs, obs);
@@ -458,7 +462,7 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 
 	// manually testing with two values, and hardcoded formula
 	ta::fixed_dt ta1(start, dt, 3);
-	pts_t o1(ta1, 1.0); 
+	pts_t o1(ta1, 1.0);
     o1.set(1, 10.0);
     o1.set(2, shyft::nan);
 	pts_t s1(ta1, 2.0);
@@ -467,13 +471,13 @@ TEST_CASE("test_nash_sutcliffe_goal_function") {
 	TS_ASSERT_DELTA(nsg1,
 		(((2.0 - 1.0)*(2.0 - 1.0)) + ((2.0 - 10.0)*(2.0 - 10.0))) /
 		((1.0 - 5.5)*(1.0 - 5.5) + (10.0 - 5.5)*(10.0 - 5.5)), 0.00001);
-    
+
 
 
 }
 TEST_CASE("test_kling_gupta_goal_function") {
     	calendar utc;
-	utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
+	utctime start = utc.time(2000, 1, 1, 0, 0, 0);
 	utctimespan dt = deltahours(1);
 	size_t n = 1000;
 	ta::fixed_dt ta(start, dt, n);
@@ -507,19 +511,41 @@ TEST_CASE("test_kling_gupta_goal_function") {
 }
 TEST_CASE("test_abs_diff_sum_goal_function") {
     calendar utc;
-    utctime start = utc.time(YMDhms(2000, 1, 1, 0, 0, 0));
+    utctime start = utc.time(2000, 1, 1, 0, 0, 0);
     utctimespan dt = deltahours(1);
     ta::fixed_dt ta1(start, dt, 3);
-    pts_t o1(ta1, 1.0); o1.set(1, 10.0);
-    pts_t s1(ta1, 2.0); s1.set(2, 7.0);
+    pts_t o1(ta1, 1.0,POINT_AVERAGE_VALUE); o1.set(1, 10.0);
+    pts_t s1(ta1, 2.0,POINT_AVERAGE_VALUE); s1.set(2, 7.0);
+    max_abs_average_accessor<decltype(s1),decltype(ta1)> abs_scale{s1,ta1};
     double ads1 = abs_diff_sum_goal_function(o1, s1);
-
-    TS_ASSERT_DELTA(fabs(1.0-2.0)+fabs(10.0-2.0)+fabs(1.0-7.0), ads1, 0.0001);
+    double ads1_scaled = abs_diff_sum_goal_function_scaled(o1, s1,abs_scale);
+    TS_ASSERT_DELTA(5.3571428,ads1_scaled,0.0001);
+    TS_ASSERT_DELTA(15, ads1, 0.0001);
     SUBCASE("with-nan") {
         o1.set(1, shyft::nan);
         double ads2 = abs_diff_sum_goal_function(o1, s1);
         TS_ASSERT_DELTA(fabs(1.0 - 2.0) + fabs(0) + fabs(1.0 - 7.0), ads2, 0.0001);
     }
 }
+TEST_CASE("rmse_goal_function") {
+    using shyft::time_series::rmse_goal_function;
+    calendar utc;
+    utctime start = utc.time(2000, 1, 1, 0, 0, 0);
+    utctimespan dt = deltahours(1);
+    ta::fixed_dt ta1(start, dt, 3);
+    pts_t o1(ta1, 1.0,POINT_AVERAGE_VALUE); o1.set(1, 10.0);
+    pts_t s1(ta1, 2.0,POINT_AVERAGE_VALUE); s1.set(2, 7.0);
+    max_abs_average_accessor<decltype(s1),decltype(ta1)> abs_scale{s1,ta1};
+    double ads1 = rmse_goal_function(o1, s1);
+    FAST_CHECK_EQ(ads1,doctest::Approx(1.4505745987941));
+    /*("with-nan") */ {
+        o1.set(1, shyft::nan);//4.30116263352131
+        double ads2 = rmse_goal_function(o1, s1);
+
+        FAST_CHECK_EQ(ads2,doctest::Approx(4.30116263352131));
+    }
+
+}
+
 
 }
