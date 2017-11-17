@@ -63,7 +63,7 @@ namespace shyft {
             glacier_melt_parameter_t gm;
             routing_parameter_t routing;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 28; }
+            size_t size() const { return 29; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -97,6 +97,7 @@ namespace shyft {
                 routing.velocity = p[i++];
                 routing.alpha = p[i++];
                 routing.beta  = p[i++];
+                gs.n_winter_days= p[i++];
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -130,6 +131,7 @@ namespace shyft {
                     case 25:return routing.velocity;
                     case 26:return routing.alpha;
                     case 27:return routing.beta;
+                    case 28:return double(gs.n_winter_days);
 
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
@@ -167,7 +169,8 @@ namespace shyft {
                     "gm.dtf",
                     "routing.velocity",
                     "routing.alpha",
-                    "routing.beta"
+                    "routing.beta",
+                    "gs.n_winter_days"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");

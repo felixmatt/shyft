@@ -14,21 +14,30 @@ class ShyftApi(unittest.TestCase):
     Verify basic SHyFT api calibration related functions and structures
     """
 
-    def verify_parameter_for_calibration(self, param, expected_size, valid_names):
+    def verify_parameter_for_calibration(self, param, expected_size, valid_names, test_dict=None):
         min_p_value = -1e+10
         max_p_value = +1e+10
+        test_dict = test_dict or dict()
         self.assertEqual(expected_size, param.size(), "expected parameter size changed")
         pv = api.DoubleVector([param.get(i) for i in range(param.size())])
         for i in range(param.size()):
             v = param.get(i)
             self.assertTrue(v > min_p_value and v < max_p_value)
-            pv[i] = v * 1.01
-            param.set(pv)  # set the complete vector, only used during C++ calibration, but we verify it here
-            x = param.get(i)
-            self.assertAlmostEqual(v * 1.01, x, 3, "Expect new value when setting value")
+            if i not in test_dict:
+                pv[i] = v * 1.01
+                param.set(pv)  # set the complete vector, only used during C++ calibration, but we verify it here
+                x = param.get(i)
+                self.assertAlmostEqual(v * 1.01, x, 3, "Expect new value when setting value")
+            else:
+
+                pv[i] = test_dict[i]
+                param.set(pv)
+                x = param.get(i)
+                self.assertAlmostEqual(x, test_dict[i], 1, "Expect new value when setting value")
             p_name = param.get_name(i)
             self.assertTrue(len(p_name) > 0, "parameter name should exist")
             self.assertEqual(valid_names[i], p_name)
+
 
     def test_pt_hs_k_param(self):
         pthsk_size = 16
@@ -92,7 +101,7 @@ class ShyftApi(unittest.TestCase):
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 28
+        ptgsk_size = 29
         valid_names = [
             "kirchner.c1",
             "kirchner.c2",
@@ -121,10 +130,12 @@ class ShyftApi(unittest.TestCase):
             "gm.dtf",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gs.n_winter_days"
         ]
         p = pt_gs_k.PTGSKParameter()
-        self.verify_parameter_for_calibration(p, ptgsk_size, valid_names)
+        special_values = {22: 130, 28: 221}
+        self.verify_parameter_for_calibration(p, ptgsk_size, valid_names,special_values)
         # special verification of bool parameter
         p.gs.calculate_iso_pot_energy = True
         self.assertTrue(p.gs.calculate_iso_pot_energy)
@@ -136,7 +147,7 @@ class ShyftApi(unittest.TestCase):
         pv[23] = 1.0
         p.set(pv)
         self.assertTrue(p.gs.calculate_iso_pot_energy)
-        pv[23] = 0.0;
+        pv[23] = 0.0
         p.set(pv)
         self.assertFalse(p.gs.calculate_iso_pot_energy)
         # checkout new parameters for routing
@@ -146,6 +157,12 @@ class ShyftApi(unittest.TestCase):
         self.assertAlmostEqual(p.routing.velocity, 1 / 3600.0)
         self.assertAlmostEqual(p.routing.alpha, 1.1)
         self.assertAlmostEqual(p.routing.beta, 0.8)
+        utc = api.Calendar()
+        self.assertTrue(p.gs.is_snow_season(utc.time(2017, 1, 1)))
+        self.assertFalse(p.gs.is_snow_season(utc.time(2017, 8, 1)))
+        p.gs.n_winter_days = 100
+        self.assertFalse(p.gs.is_snow_season(utc.time(2017, 11, 31)))
+        self.assertTrue(p.gs.is_snow_season(utc.time(2017, 2, 1)))
 
     def test_pt_ss_k_param(self):
         ptssk_size = 19

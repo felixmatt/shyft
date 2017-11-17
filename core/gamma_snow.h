@@ -43,7 +43,7 @@ namespace shyft {
 
             struct parameter {
                 calendar cal;
-                size_t winter_end_day_of_year = 100;
+                size_t winter_end_day_of_year = 100;///< approx 10th april
                 double initial_bare_ground_fraction = 0.04;
                 double snow_cv = 0.4;
                 double tx = -0.5;
@@ -60,14 +60,15 @@ namespace shyft {
                 bool calculate_iso_pot_energy = false;
                 double snow_cv_forest_factor=0.0;///< [ratio] the effective snow_cv gets an additional value of geo.forest_fraction()*snow_cv_forest_factor
                 double snow_cv_altitude_factor=0.0;///< [1/m] the effective snow_cv gets an additional value of altitude[m]* snow_cv_altitude_factor
+                size_t n_winter_days=221;///< # winter is from [winter_end_day_of_year - n_winter_days, winter_end_day_of_year], default yyyy.09.01 yyyy+1.04.10
                 parameter(size_t winter_end_day_of_year = 100,double initial_bare_ground_fraction = 0.04,double snow_cv = 0.4,double tx = -0.5,
                           double wind_scale = 2.0,double wind_const = 1.0,double max_water = 0.1,double surface_magnitude = 30.0,double max_albedo = 0.9,
                           double min_albedo = 0.6,double fast_albedo_decay_rate = 5.0,double slow_albedo_decay_rate = 5.0,double snowfall_reset_depth = 5.0,
                           double glacier_albedo = 0.4, // TODO: Remove from GammaSnow and put into glacier method parameter?
                           bool calculate_iso_pot_energy = false,
                           double snow_cv_forest_factor=0.0,
-                          double snow_cv_altitude_factor=0.0
-
+                          double snow_cv_altitude_factor=0.0,
+                          size_t n_winter_days=221
                           ):winter_end_day_of_year(winter_end_day_of_year),initial_bare_ground_fraction(initial_bare_ground_fraction),snow_cv(snow_cv),tx(tx),
                           wind_scale(wind_scale),wind_const(wind_const),max_water(max_water),surface_magnitude(surface_magnitude),max_albedo(max_albedo),
                           min_albedo(min_albedo),fast_albedo_decay_rate(fast_albedo_decay_rate),slow_albedo_decay_rate (slow_albedo_decay_rate),
@@ -75,7 +76,8 @@ namespace shyft {
                           glacier_albedo(glacier_albedo) , // TODO: Remove from GammaSnow and put into glacier method parameter?
                           calculate_iso_pot_energy(calculate_iso_pot_energy),
                           snow_cv_forest_factor(snow_cv_forest_factor),
-                          snow_cv_altitude_factor(snow_cv_altitude_factor)
+                          snow_cv_altitude_factor(snow_cv_altitude_factor),
+                          n_winter_days(n_winter_days)
                           {}
                 /** \returns the effective snow cv, taking the forest_fraction and altitude into the equations using corresponding factors */
                 double effective_snow_cv(double forest_fraction,double altitude) const {
@@ -83,7 +85,9 @@ namespace shyft {
                 }
                 /** \returns true if specified t is within the snow season, e.g. sept.. winder_end_day_of_year */
                 bool is_snow_season(utctime t) const {
-                    return cal.month(t) >= 9 || cal.day_of_year(t) < winter_end_day_of_year;
+                    utctime t_w_end = cal.trim(t,calendar::YEAR) + deltahours(winter_end_day_of_year*24);
+                    utcperiod snow_period{t_w_end - deltahours(n_winter_days*24),t_w_end};
+                    return snow_period.contains(t);
                 }
                 /** \returns true if specified interval t day of year is wind_end_day_of_year */
                 bool is_start_melt_season(utctime t, utctimespan dt) const {

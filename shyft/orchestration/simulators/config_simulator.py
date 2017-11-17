@@ -133,7 +133,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
                 t.scale_factor = ts_info['weight']
                 t.calc_mode = self.obj_funcs[ts_info['obj_func']['name']]
                 [setattr(t, nm, ts_info['obj_func']['scaling_factors'][k]) for nm, k in zip(['s_r','s_a','s_b'], ['s_corr','s_var','s_bias'])]
-                t.ts = tst.to_average(ts_info['start_datetime'], ts_info['run_time_step'], ts_info['number_of_steps'], tsp[ts_info['uid']])
+                t.ts = api.TimeSeries(tst.to_average(ts_info['start_datetime'], ts_info['run_time_step'], ts_info['number_of_steps'], tsp[ts_info['uid']]))
                 tv.append(t)
         return tv
 

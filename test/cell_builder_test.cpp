@@ -433,8 +433,8 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
             lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
             upper.emplace_back(calibrate_parameter[i] ? 1.2*v : v);
 		} else {
-		    lower.emplace_back(calibrate_parameter[i] ? 70 : v);
-		    upper.emplace_back(calibrate_parameter[i] ? 120 : v);;
+		    lower.emplace_back(calibrate_parameter[i] ? 100 : v);
+		    upper.emplace_back(calibrate_parameter[i] ? 250 : v);;
 		}
 	}
 	// Perturb parameter set
