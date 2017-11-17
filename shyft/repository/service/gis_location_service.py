@@ -1,7 +1,7 @@
 ﻿from __future__ import absolute_import
 import requests
 import unicodedata
-from .gis_region_model_repository import BaseGisDataFetcher
+from .gis_region_model_repository import BaseGisDataFetcher, primary_server, secondary_server, port_num
 from .ssa_geo_ts_repository import GeoLocationRepository
 from .gis_region_model_repository import nordic_service, peru_service
 
@@ -16,7 +16,7 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name=None, server_name_preprod = None, server_port="6080", service_index=5,
+    def __init__(self, server_name=primary_server, server_name_preprod=secondary_server, server_port=port_num, service_index=5,
                  sub_service=nordic_service, out_fields=[], return_all_fields=False):
         super(GeoLocationRepository, self).__init__()
         self.server_name="oslwvagi002p"
