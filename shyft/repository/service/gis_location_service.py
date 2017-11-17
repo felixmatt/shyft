@@ -51,13 +51,11 @@ class GisLocationService(GeoLocationRepository):
 
     def build_query(self, base_fetcher, station_ids, epsg_id):
         q = base_fetcher.get_query()
+        id_field = "STATION_ID" if self.sub_service == peru_service else "GIS_ID"
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
-            if self.sub_service == peru_service:
-                q["where"] = "STATION_ID IN ({})".format(", ".join([str(i) for i in station_ids]))
-            else:
-                q["where"] = "GIS_ID IN ({})".format(", ".join([str(i) for i in station_ids]))
+            q["where"] = "{} IN ({})".format(id_field, ", ".join([str(i) for i in station_ids]))
         # q["outFields"] = "MOH, GIS_ID, EIER, ST_NAVN"
         q["outFields"] = self.out_fields
         q["outSR"] = epsg_id
