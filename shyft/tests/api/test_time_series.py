@@ -1039,6 +1039,31 @@ class TimeSeries(unittest.TestCase):
         target = api.TargetSpecificationPts(ts, api.IntVector([0]), 1.0, api.ABS_DIFF, 1.0, 1.0, 1.0, api.CELL_CHARGE, 'water_balance')
         self.assertIsNotNone(target)
 
+    def test_min_max_check_linear_fill(self):
+        ta = api.TimeAxis(0, 1, 5)
+        ts_src = api.TimeSeries(ta, values=api.DoubleVector([1.0, -1.0, 2.0, float('nan'), 4.0]), point_fx=api.POINT_AVERAGE_VALUE)
+        ts_qac = ts_src.min_max_check_linear_fill(v_max=10.0, v_min=-10.0, dt_max=300)
+        self.assertAlmostEqual(ts_qac.value(3), 3.0)
+        ts_qac = ts_src.min_max_check_linear_fill(v_max=10.0, v_min=0.0, dt_max=300)
+        self.assertAlmostEqual(ts_qac.value(1), 1.5)  # -1 out, replaced with linear between
+        self.assertAlmostEqual(ts_qac.value(3), 3.0)
+        ts_qac = ts_src.min_max_check_linear_fill(v_max=10.0, v_min=0.0, dt_max=0)
+        self.assertTrue(not math.isfinite(ts_qac.value(3)))  # should give nan, not allowed to fill in
+        self.assertTrue(not math.isfinite(ts_qac.value(1)))  # should give nan, not allowed to fill in
+
+    def test_min_max_check_ts_fill(self):
+        ta = api.TimeAxis(0, 1, 5)
+        ts_src = api.TimeSeries(ta, values=api.DoubleVector([1.0, -1.0, 2.0, float('nan'), 4.0]), point_fx=api.POINT_AVERAGE_VALUE)
+        cts = api.TimeSeries(ta, values=api.DoubleVector([1.0, 1.8, 2.0, 2.0, 4.0]), point_fx=api.POINT_AVERAGE_VALUE)
+        ts_qac = ts_src.min_max_check_ts_fill(v_max=10.0, v_min=-10.0, dt_max=300, cts=cts)
+        self.assertAlmostEqual(ts_qac.value(3), 2.0)
+        ts_qac = ts_src.min_max_check_ts_fill(v_max=10.0, v_min=0.0, dt_max=300, cts=cts)
+        self.assertAlmostEqual(ts_qac.value(1), 1.8)  # -1 out, replaced with linear between
+        self.assertAlmostEqual(ts_qac.value(3), 2.0)
+        # ref dtss test for serialization testing
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

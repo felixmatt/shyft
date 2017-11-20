@@ -165,6 +165,7 @@
     </ClCompile>
     <ClCompile Include="skaugen_test.cpp" />
     <ClCompile Include="time_series_average_test.cpp" />
+    <ClCompile Include="time_series_fixup_test.cpp" />
     <ClCompile Include="time_series_test.cpp" />
     <ClCompile Include="time_axis_test.cpp" />
     <ClCompile Include="utctime_utilities_test.cpp" />

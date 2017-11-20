@@ -638,6 +638,14 @@ namespace shyft{
             return apoint_ts(std::make_shared<shyft::api::abs_ts>(ts));
         }
 
+        apoint_ts apoint_ts::min_max_check_linear_fill(double min_x,double max_x,utctimespan max_dt) const {
+            return apoint_ts(make_shared<qac_ts>(*this,qac_parameter{max_dt,min_x,max_x}));
+        }
+
+        apoint_ts apoint_ts::min_max_check_ts_fill(double min_x,double max_x,utctimespan max_dt,const apoint_ts& cts) const {
+            return apoint_ts(make_shared<qac_ts>(*this,qac_parameter{max_dt,min_x,max_x},cts));
+        }
+
 		double nash_sutcliffe(const apoint_ts& observation_ts, const apoint_ts& model_ts, const gta_t &ta) {
 			average_accessor<apoint_ts, gta_t> o(observation_ts, ta);
 			average_accessor<apoint_ts, gta_t> m(model_ts, ta);
@@ -946,6 +954,76 @@ namespace shyft{
             }
             return value_at(time_axis().time(i));
         }
+
+        double qac_ts::value(size_t i) const {
+
+            double x=ts->value(i);
+            if(p.is_ok_quality(x))
+                return x;
+            // try to fill in replacement value
+            auto t=ts->time(i);
+            if(cts) // use a correction value ts if available
+                return cts->value_at(t); // we do not check this value, assume ok!
+
+            // try linear interpolation between previous--next *valid* value
+            const size_t n =ts->size();
+            if(i==0 || i+1>=n || p.max_timespan == 0)
+                return shyft::nan; // lack possible previous.. next value-> nan
+            size_t j=i;
+            while(j--) { // find previous *valid* point
+                utctime t0=ts->time(j);
+                if( t-t0 > p.max_timespan)
+                    return shyft::nan;// exceed configured max timespan,->nan
+                double x0=ts->value(j);//
+                if(p.is_ok_quality(x0)) { // got a previous point
+                    // here we are at a point where t0,x0 is valid ,(or at the beginning)
+                    for(size_t k=i+1;k<n;++k) { // then find next ok point
+                        utctime t1=ts->time(k);
+                        if(t1-t0 > p.max_timespan)
+                            return shyft::nan;// exceed configured max time span ->nan
+                        double x1= ts->value(k);//
+                        if(p.is_ok_quality(x1)) { // got a next  point
+                            double a= (x1-x0)/(t1-t0);
+                            double b= x0 - a*t0;// x= a*t + b -> b= x- a*t
+                            double xt= a*t + b;
+                            return xt;
+                        }
+                    }
+                }
+            }
+            return shyft::nan; // if we reach here, we failed to find substitute
+        }
+
+        double qac_ts::value_at(utctime t) const {
+            size_t i = index_of(t);
+            if(i == string::npos)
+                return shyft::nan;
+            double x0 = value(i);
+            if(ts->point_interpretation()== ts_point_fx::POINT_AVERAGE_VALUE)
+                return x0;
+            // linear interpolation between points
+            utctime t0 = time(i);
+            if(t0==t) // value at endpoint is exactly the point-value
+                return x0;
+            if(i+1>=size())
+                return shyft::nan;// no next point, ->nan
+            double x1= value(i+1);
+            if(!isfinite(x1))
+                return shyft::nan;//  next point is nan ->nan
+            utctime t1= ts->time(i+1);
+            double a= (x1 - x0)/(t1 - t0);
+            double b= x0 - a*t0;
+            return a*t + b; // otherwise linear interpolation
+        }
+
+        vector<double> qac_ts::values() const {
+            const size_t n{size()};
+            vector<double> r;r.reserve(n);
+            for(size_t i=0;i<n;++i)
+                r.emplace_back(value(i));
+            return r;
+        }
+
     }
 }
 

@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=max_abs_average_accessor" />
+				<Option parameters="-nv -tc=qac_ts" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -ts=test_abs_diff_sum_goal_function" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -tc=qac_parameter" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -39,7 +39,7 @@
 					<Add directory="../bin/Release" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=test_abs_diff_sum_goal_function" />
+					<Add after="cd ../bin/Release &amp;&amp; ./test_shyft -nv  -tc=qac_ts" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -191,6 +191,9 @@
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_average_test.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_fixup_test.cpp">
 			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="time_series_test.cpp">

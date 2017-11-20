@@ -106,14 +106,23 @@
     <ClCompile Include="time_series_test.cpp">
       <Filter>time_series</Filter>
     </ClCompile>
-    <ClCompile Include="qm_test.cpp" />
     <ClCompile Include="merge_test.cpp">
       <Filter>time_series</Filter>
     </ClCompile>
-    <ClCompile Include="predictor_test.cpp" />
-    <ClCompile Include="time_series_average_test.cpp" />
     <ClCompile Include="max_abs_average_accessor_test.cpp">
       <Filter>optimizers</Filter>
+    </ClCompile>
+    <ClCompile Include="predictor_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
+    <ClCompile Include="qm_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
+    <ClCompile Include="time_series_average_test.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
+    <ClCompile Include="time_series_fixup_test.cpp">
+      <Filter>time_series</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

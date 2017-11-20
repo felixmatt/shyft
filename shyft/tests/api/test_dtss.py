@@ -229,6 +229,13 @@ class DtssTestCase(unittest.TestCase):
             tsv_krls = TsVector()
             krls_ts = TimeSeries(shyft_store_url("9")).krls_interpolation(dt=d, gamma=1e-3, tolerance=0.001, size=ta.size())
             tsv_krls.append(krls_ts)
+            # min_max_check_ts_fill also needs a serial check
+            # create a  trivial-case
+            ts9= TimeSeries(shyft_store_url("9"))
+            ts_qac = ts9.min_max_check_linear_fill(v_min=-10.0*n_ts, v_max=10.0*n_ts)
+            tsv_krls.append(ts_qac)
+            tsv_krls.append(ts9)
+
 
             # then start the server
             dtss = DtsServer()
@@ -270,6 +277,7 @@ class DtssTestCase(unittest.TestCase):
 
             self.assertEqual(len(f1), 10)
             self.assertEqual(len(r2), len(tsv_krls))
+            assert_array_almost_equal(r2[1].values.to_numpy(), r2[2].values.to_numpy(),decimal=4)
             self.assertEqual(1000000,std_max_items)
             self.assertEqual(3000,tst_max_items)
 
