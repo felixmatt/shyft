@@ -42,7 +42,7 @@ namespace shyft {
                 pts_t avg_discharge;  ///< Kirchner Discharge given in [m^3/s] for the timestep
                 pts_t charge_m3s; ///< = precip + glacier - act_evap - avg_discharge [m^3/s] for the timestep
                 pts_t snow_total_stored_water;  ///< aka sca*(swe + lwc) in [mm]
-                pts_t snow_outflow;  ///< gamma snow output [m^3/s] for the timestep
+                pts_t snow_outflow;  ///< skaugen snow output [m^3/s] for the timestep
                 pts_t glacier_melt;///< [m3/s] for the timestep
                 pts_t ae_output;  ///< actual evap mm/h
                 pts_t pe_output;  ///< actual evap mm/h

@@ -81,7 +81,7 @@ namespace shyft {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge, destination_area)); // wants m3/s, q_avg is given in mm/h, so compute the totals in  mm/s
                     charge_m3s.set(idx, response.charge_m3s);
                     snow_sca.set(idx, response.gs.sca);
-                    snow_outflow.set(idx, response.gs.outflow); //TODO: current mm/h.. but  want m3/s, but we get mm/h from snow output
+                    snow_outflow.set(idx, mmh_to_m3s(response.gs.outflow,destination_area)); // mm/h @cell-area ->  m3/st
                     glacier_melt.set(idx, response.gm_melt_m3s);
                     snow_swe.set(idx, response.gs.storage);
                     ae_output.set(idx, response.ae.ae);

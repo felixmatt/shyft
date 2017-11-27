@@ -78,7 +78,7 @@ namespace shyft {
 				*/
 				void collect(size_t idx, const response_t& response) {
 					pe_output.set(idx, response.pt.pot_evapotranspiration);
-					snow_outflow.set(idx, response.snow.outflow);//mm ?? //TODO: current mm/h. Want m3/s, but we get mm/h from snow output
+					snow_outflow.set(idx, mmh_to_m3s(response.snow.outflow,destination_area));
                     glacier_melt.set(idx, response.gm_melt_m3s);
                     snow_sca.set(idx, response.snow.snow_state.sca);
 					snow_swe.set(idx, response.snow.snow_state.swe);

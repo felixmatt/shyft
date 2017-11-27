@@ -213,6 +213,7 @@ TEST_CASE("test_mass_balance") {
         pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
     }
     TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
+	TS_ASSERT_DELTA(rc.snow_outflow.value(0)*dt * 1000 / cell_area, prec.value(0), 0.0000001);//verify snow out is m3/s
     SUBCASE("direct_response_on_bare_lake_only") {
         // verify that when it rains, verify that only (1-snow.sca)*(lake+rsv).fraction * precip_mm *cell_area goes directly to response.
         // case 1: no snow-covered area, close to zero in kirchner q, expect all rain directly
