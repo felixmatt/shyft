@@ -290,7 +290,8 @@ namespace shyft {
 				hbv_soil::calculator<typename P::soil_parameter_t> soil(parameter.soil);
 				hbv_tank::calculator<typename P::tank_parameter_t> tank(parameter.tank);
 				R response;
-                const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir();
+                const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() ;
+                const double total_reservoir_fraction = geo_cell_data.land_type_fractions_info().reservoir();
                 const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
                 const double land_fraction = 1 - glacier_fraction;
                 const double cell_area_m2 = geo_cell_data.area();
@@ -319,11 +320,11 @@ namespace shyft {
 
 					tank.step(state.tank, response.tank, period.start, period.end, response.soil.outflow);
 
-					double bare_lake_fraction = total_lake_fraction*(1.0 - state.snow.sca);// only direct response on bare (no snow-cover) lakes
+					double direct_response_fraction = total_reservoir_fraction + total_lake_fraction*(1.0 - state.snow.sca);// only direct response on bare (no snow-cover) lakes
                     response.total_discharge =
-                          std::max(0.0, prec - response.ae.ae)*bare_lake_fraction // when it rains, remove ae. from direct response
+                          std::max(0.0, prec - response.ae.ae)*direct_response_fraction // when it rains, remove ae. from direct response
                         + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) // the glacier also direct
-                        + response.tank.outflow * (land_fraction - bare_lake_fraction);// in summer, only dry land response, during winter, let precip/snow go through tank
+                        + response.tank.outflow * (land_fraction - direct_response_fraction);// in summer, only dry land response, during winter, let precip/snow go through tank
                     response.charge_m3s =
                         + shyft::mmh_to_m3s(prec, cell_area_m2)
                         - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)

@@ -229,7 +229,7 @@ TEST_CASE("test_mass_balance") {
         temp.v[0]=-10.0;//it's cold
         pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
         TS_ASSERT_DELTA(rc.snow_sca.value(0),0.96,0.01);// almost entirely covered by snow, so we should have 0.04 of rain direct response
-        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,0.04*prec.value(0),0.02);
+        FAST_CHECK_EQ((rc.avg_discharge.value(0)*dt*1000.0/cell_area),doctest::Approx((ltf.reservoir())*prec.value(0)).epsilon(0.05));
         temp.v[0]=10.0;// heat is on, melt snow, .9 should end up in kirchner it's cold
         //state.gs.sdc_melt_mean=10.0;
         state.gs.acc_melt=5.0;//simulate early autumn, melt out everything
