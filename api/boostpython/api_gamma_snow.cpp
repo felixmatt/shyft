@@ -7,12 +7,14 @@ namespace expose {
     using namespace shyft::core::gamma_snow;
     using namespace boost::python;
     using namespace std;
+    namespace py=boost::python;
     void gamma_snow() {
         class_<parameter>("GammaSnowParameter")
             .def(init<int,optional<double,double,double,double,double,double,double,double,double,double,double,double,double>>(
               args("winter_end_day_of_year","initial_bare_ground_fraction","snow_cv","tx","wind_scale","wind_const","max_water","surface_magnitude","max_albedo","min_albedo","fast_albedo_decay_rate","slow_albedo_decay_rate","snowfall_reset_depth","glacier_albedo"),"specifying most of the parameters"))
              //Note: due to max arity of 15, the init function does not provide all the params, TODO: consider kwargs etc. instead
             .def_readwrite("winter_end_day_of_year", &parameter::winter_end_day_of_year,"Last day of accumulation season,default= 100")
+            .def_readwrite("n_winter_days",&parameter::n_winter_days,"number of winter-days, default 221")
             .def_readwrite("initial_bare_ground_fraction", &parameter::initial_bare_ground_fraction,"Bare ground fraction at melt onset,default= 0.04")
             .def_readwrite("snow_cv" ,&parameter:: snow_cv,"Spatial coefficient variation of fresh snowfall, default= 0.4")
             .def_readwrite("tx", &parameter::tx,"default= -0.5 [degC]")
@@ -29,9 +31,9 @@ namespace expose {
             .def_readwrite("calculate_iso_pot_energy", &parameter::calculate_iso_pot_energy,"Whether or not to calculate the potential energy flux,default=false")
             .def_readwrite("snow_cv_forest_factor", &parameter::snow_cv_forest_factor,"default=0.0, [ratio]\n\tthe effective snow_cv gets an additional value of geo.forest_fraction()*snow_cv_forest_factor")
             .def_readwrite("snow_cv_altitude_factor", &parameter::snow_cv_altitude_factor,"default=0.0, [1/m]\n\t the effective snow_cv gets an additional value of altitude[m]* snow_cv_altitude_factor")
-            .def("effective_snow_cv",&parameter::effective_snow_cv,args("forest_fraction","altitude"),"returns the effective snow cv, taking the forest_fraction and altitude into the equations using corresponding factors")
-            .def("is_snow_season",&parameter::is_snow_season,args("t"),"returns true if specified t is within the snow season, e.g. sept.. winder_end_day_of_year")
-            .def("is_start_melt_season",&parameter::is_start_melt_season,args("t"),"true if specified interval t day of year is wind_end_day_of_year")
+            .def("effective_snow_cv",&parameter::effective_snow_cv,(py::arg("self"),py::arg("forest_fraction"),py::arg("altitude")),"returns the effective snow cv, taking the forest_fraction and altitude into the equations using corresponding factors")
+            .def("is_snow_season",&parameter::is_snow_season,(py::arg("self"),py::args("t")),"returns true if specified t is within the snow season, e.g. sept.. winder_end_day_of_year")
+            .def("is_start_melt_season",&parameter::is_start_melt_season,(py::arg("self"),py::arg("t")),"true if specified interval t day of year is wind_end_day_of_year")
             ;
         class_<state>("GammaSnowState", "The state description of the GammaSnow routine")
           .def(init<optional<double,double,double,double,double,double,double,double>>(args("albedo","lwc","surface_heat","alpha","sdc_melt_mean","acc_melt","iso_pot_energy","temp_swe"),"the description here ?"))

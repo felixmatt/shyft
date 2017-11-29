@@ -43,7 +43,7 @@ namespace shyft {
                 // these are the one that we collects from the response, to better understand the model::
                 pts_t avg_discharge; ///< Kirchner Discharge given in [m^3/s] for the timestep
                 pts_t charge_m3s; ///< = precip + glacier - act_evap - avg_discharge [m^3/s] for the timestep
-                pts_t snow_outflow;///<  snow output [mm/h] for the timestep TODO: want to have m3 s-1
+                pts_t snow_outflow;///<  snow output [m3/s] for the timestep 
                 pts_t snow_sca;
                 pts_t snow_swe;
                 pts_t glacier_melt;///< galcier melt output [m3/s] for the timestep
@@ -82,7 +82,7 @@ namespace shyft {
                 void collect(size_t idx, const response_t& response) {
                     avg_discharge.set(idx, mmh_to_m3s(response.total_discharge,destination_area)); // wants m3/s, q_avg is given in mm/h, so compute the totals in  mm/s
                     charge_m3s.set(idx, response.charge_m3s);
-                    snow_outflow.set(idx, response.snow.outflow);//mm/h ?? //TODO: current mm/h. Want m3/s, but we get mm/h from snow output
+                    snow_outflow.set(idx, mmh_to_m3s(response.snow.outflow,destination_area));
                     snow_sca.set(idx,response.snow.snow_state.sca);
                     snow_swe.set(idx,response.snow.snow_state.swe);
                     glacier_melt.set(idx, response.gm_melt_m3s);

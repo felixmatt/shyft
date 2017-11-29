@@ -242,7 +242,9 @@ public:
 	 *                          Defaults to true.
 	 */
 	void save(const std::string& fn, const gts_t& ts, bool overwrite = true, bool win_thread_close = true) const {
-		std::string ffp = make_full_path(fn, true);
+        wait_for_close_fh();
+
+        std::string ffp = make_full_path(fn, true);
 
 		std::unique_ptr<std::FILE, close_write_handle> fh;  // zero-initializes deleter
 		fh.get_deleter().win_thread_close = win_thread_close;
@@ -251,18 +253,19 @@ public:
 
 		bool do_merge = false;
 		if (!overwrite && save_path_exists(fn)) {
-			fh.reset(std::fopen(ffp.c_str(), "r+b"));
+            fh.reset(std::fopen(ffp.c_str(), "r+b"));
 			old_header = read_header(fh.get());
 			if (ts.total_period().contains(old_header.data_period)) {
 				// old data is completly contained in the new => start the file anew
 				//  - reopen, as there is no simple way to truncate an open file...
 				//std::fseek(fh.get(), 0, SEEK_SET);
-				fh.reset(std::fopen(ffp.c_str(), "wb"));
+                wait_for_close_fh();
+                fh.reset(std::fopen(ffp.c_str(), "wb"));
 			} else {
 				do_merge = true;
 			}
 		} else {
-			fh.reset(std::fopen(ffp.c_str(), "wb"));
+            fh.reset(std::fopen(ffp.c_str(), "wb"));
 		}
 		if (!do_merge) {
 			write_ts(fh.get(), ts);
@@ -276,6 +279,9 @@ public:
 		wait_for_close_fh();
 		std::string ffp = make_full_path(fn);
 		std::unique_ptr<std::FILE, decltype(&std::fclose)> fh{ std::fopen(ffp.c_str(), "rb"), &std::fclose };
+		if(!fh.get()) {
+			throw std::runtime_error(std::string("shyft-read time-series internal: Could not open file ")+ffp );
+		}
 		return read_ts(fh.get(), p);
 	}
 

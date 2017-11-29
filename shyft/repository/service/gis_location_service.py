@@ -3,6 +3,7 @@ import requests
 import unicodedata
 from .gis_region_model_repository import BaseGisDataFetcher, primary_server, secondary_server, port_num
 from .ssa_geo_ts_repository import GeoLocationRepository
+from .gis_region_model_repository import nordic_service, peru_service
 
 
 class StationDataError(Exception):
@@ -16,7 +17,8 @@ class GisLocationService(GeoLocationRepository):
 
     """
 
-    def __init__(self, server_name=primary_server, server_name_preprod=secondary_server, server_port=port_num, service_index=5, out_fields=[]):
+    def __init__(self, server_name=primary_server, server_name_preprod=secondary_server, server_port=port_num, service_index=5,
+                 sub_service=nordic_service, out_fields=[], return_all_fields=False):
         super(GeoLocationRepository, self).__init__()
         self.server_name=server_name
         self.server_name_preprod=server_name_preprod
@@ -25,10 +27,18 @@ class GisLocationService(GeoLocationRepository):
         if server_name_preprod is not None:
             self.server_name_preprod = server_name_preprod
         self.server_port=server_port
+        self.sub_service=sub_service
         self.service_index=service_index
-        self.out_fields = "MOH, GIS_ID, EIER, ST_NAVN"
-        if len(out_fields)>0:
-            self.out_fields = ', '.join([self.out_fields,', '.join(out_fields)])
+
+        if return_all_fields:
+            self.out_fields = '*'
+        else:
+            if self.sub_service == peru_service:
+                out_fields_list = ["STATION_ID", "NAME", "ELEVATION"]
+            else:
+                out_fields_list = ["MOH", "GIS_ID", "EIER", "ST_NAVN"]
+            out_fields_list.extend(out_fields)
+            self.out_fields = ', '.join(out_fields_list)
 
     def _get_response(self, url, **kwargs):
         kwargs.update({'verify': False})  # to go around authentication error when using https -> ssl.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:749)
@@ -43,10 +53,11 @@ class GisLocationService(GeoLocationRepository):
 
     def build_query(self, base_fetcher, station_ids, epsg_id):
         q = base_fetcher.get_query()
+        id_field = "STATION_ID" if self.sub_service == peru_service else "GIS_ID"
         if station_ids is None:
             q["where"] = "1 = 1"
         else:
-            q["where"] = "GIS_ID IN ({})".format(", ".join([str(i) for i in station_ids]))
+            q["where"] = "{} IN ({})".format(id_field, ", ".join([str(i) for i in station_ids]))
         # q["outFields"] = "MOH, GIS_ID, EIER, ST_NAVN"
         q["outFields"] = self.out_fields
         q["outSR"] = epsg_id
@@ -66,7 +77,8 @@ class GisLocationService(GeoLocationRepository):
         """
         base_fetcher= BaseGisDataFetcher(epsg_id=epsg_id,geometry=geometry, server_name=self.server_name,
                                          server_name_preprod=self.server_name_preprod,
-                                         server_port=self.server_port, service_index=self.service_index)
+                                         server_port=self.server_port, service_index=self.service_index,
+                                         sub_service=self.sub_service)
         q = self.build_query(base_fetcher,location_id_list,epsg_id)
         # response = requests.get(base_fetcher.url, params=q)
         locations = {}
@@ -79,17 +91,23 @@ class GisLocationService(GeoLocationRepository):
             print('Switching from PROD server {} to PREPROD server {}'.format(self.server_name, self.server_name_preprod))
             data = self._get_response(base_fetcher.url.replace(base_fetcher.server_name, base_fetcher.server_name_preprod), params=q)
         # if response.status_code == 200:
+
+        id_field = "STATION_ID" if self.sub_service == peru_service else "GIS_ID"
+        name_field = "NAME" if self.sub_service == peru_service else "ST_NAVN"
+        elevation_field = "ELEVATION" if self.sub_service == peru_service else "MOH"
+
         for feature in data['features']:
-            index = feature["attributes"]["GIS_ID"]
+            index = feature["attributes"][id_field]
             x = feature["geometry"]["x"]
             y = feature["geometry"]["y"]
-            z = feature["attributes"]["MOH"]
-            name = unicodedata.normalize('NFKC', feature["attributes"]["ST_NAVN"])
+            z = feature["attributes"][elevation_field]
+            name = unicodedata.normalize('NFKC', feature["attributes"][name_field])
             name = str(str(name).encode("ascii", errors="replace"))
 
             locations[index] = (x,y,z)
             station_info[index] = {k: v for k,v in feature["attributes"].items() if k not in ["EIER", "ST_NAVN"]}
-            station_info[index].update({"owner": feature["attributes"]["EIER"],"name": name})
+            if self.sub_service != peru_service:
+                station_info[index].update({"owner": feature["attributes"]["EIER"],"name": name})
         # else:
         #     raise StationDataError("Could not get data from GIS service!")
         return locations,station_info

@@ -348,6 +348,8 @@ class ECConcatDataRepository(interfaces.GeoTsRepository):
         no_temp = False
         if "temperature" not in input_source_types: no_temp = True
         if "relative_humidity" in input_source_types:
+            if not isinstance(input_source_types, list):
+                input_source_types = list(input_source_types)  # We change input list, so take a copy
             input_source_types.remove("relative_humidity")
             input_source_types.extend(["surface_air_pressure", "dew_point_temperature_2m"])
             if no_temp: input_source_types.extend(["temperature"])

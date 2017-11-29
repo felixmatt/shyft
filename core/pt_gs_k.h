@@ -63,7 +63,7 @@ namespace shyft {
             glacier_melt_parameter_t gm;
             routing_parameter_t routing;
             ///<calibration support, needs vector interface to params, size is the total count
-            size_t size() const { return 28; }
+            size_t size() const { return 29; }
             ///<calibration support, need to set values from ordered vector
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -97,6 +97,7 @@ namespace shyft {
                 routing.velocity = p[i++];
                 routing.alpha = p[i++];
                 routing.beta  = p[i++];
+                gs.n_winter_days= p[i++];
             }
 
             ///< calibration support, get the value of i'th parameter
@@ -130,6 +131,7 @@ namespace shyft {
                     case 25:return routing.velocity;
                     case 26:return routing.alpha;
                     case 27:return routing.beta;
+                    case 28:return double(gs.n_winter_days);
 
                 default:
                     throw runtime_error("PTGSK Parameter Accessor:.get(i) Out of range.");
@@ -167,7 +169,8 @@ namespace shyft {
                     "gm.dtf",
                     "routing.velocity",
                     "routing.alpha",
-                    "routing.beta"
+                    "routing.beta",
+                    "gs.n_winter_days"
                 };
                 if (i >= size())
                     throw runtime_error("PTGSK Parameter Accessor:.get_name(i) Out of range.");
@@ -306,7 +309,8 @@ namespace shyft {
             // Get the initial states
             R response;
             const double forest_fraction=geo_cell_data.land_type_fractions_info().forest();
-            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() + geo_cell_data.land_type_fractions_info().reservoir(); // both give direct response for now
+            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() ;
+            const double total_reservoir_fraction = geo_cell_data.land_type_fractions_info().reservoir();
             const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
             const double kirchner_fraction = 1 - glacier_fraction;
             const double cell_area_m2 = geo_cell_data.area();
@@ -332,11 +336,11 @@ namespace shyft {
                                   period.timespan());
                 kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.gs.outflow, response.ae.ae); // all units mm/h over 'same' area
 
-                double bare_lake_fraction = total_lake_fraction*(1.0 - response.gs.sca);// only direct response on bare (no snow-cover) lakes
+                double direct_response_fraction = total_reservoir_fraction + total_lake_fraction*(1.0 - response.gs.sca);// only direct response on bare (no snow-cover) lakes
                 response.total_discharge =
-                      std::max(0.0,prec - response.ae.ae)*bare_lake_fraction // when it rains, remove ae. from direct response
+                      std::max(0.0,prec - response.ae.ae)*direct_response_fraction // when it rains, remove ae. from direct response
                     + shyft::m3s_to_mmh(response.gm_melt_m3s,cell_area_m2)
-                    + response.kirchner.q_avg*(kirchner_fraction-bare_lake_fraction);//let kirchner respond to all except glacier and direct lake
+                    + response.kirchner.q_avg*(kirchner_fraction-direct_response_fraction);//let kirchner respond to all except glacier and direct lake
                 response.charge_m3s =
                     + shyft::mmh_to_m3s(prec, cell_area_m2)
                     - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)

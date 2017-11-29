@@ -32,44 +32,31 @@ class BayesianKriging(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _create_geo_ts_grid(self, nx, ny, dx, fx):
-        """Create a geo_ts_grid of TemperatureSources,
-           We just create a terrain model starting at 0 and increasing to max_elevation at max x and y.
-           parameters
-           ----------
-           nx : int
-            number of grid-cells in x direction
-           ny : int
-            number of grid-cells in y direction
-           dx : float
-             distance in meters for one of the sides in the grid
-           fx : lambda z : 1.0
-             a function that takes elevation z as input and generates a np.array len(self.ta) of float64 as time-series
-           returns
-           -------
-           a TemperatureSourceVector() filled with geo-ts representing the grid.
-
-        """
-        arome_grid = api.TemperatureSourceVector()
+    def _create_geo_ts_grid(self, nx: int, ny: int, dx: int, fx, arome_grid, source_construct):
         for i in range(nx):
             for j in range(ny):
                 z = self.max_elevation * (i + j) / (nx + ny)
                 ts = api.TimeSeries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-                geo_ts = api.TemperatureSource(api.GeoPoint(i * dx, j * dx, z), ts)
+                geo_ts = source_construct(api.GeoPoint(i * dx, j * dx, z), ts)
                 arome_grid.append(geo_ts)
         return arome_grid
 
-    def _create_geo_precipitation_grid(self, nx, ny, dx, fx):
-        arome_grid = api.PrecipitationSourceVector()
-        for i in range(nx):
-            for j in range(ny):
-                z = self.max_elevation * (i + j) / (nx + ny)
-                ts = api.TimeSeries(ta=self.ta, values=fx(z), point_fx=api.point_interpretation_policy.POINT_AVERAGE_VALUE)
-                geo_ts = api.PrecipitationSource(api.GeoPoint(i * dx, j * dx, z), ts)
-                arome_grid.append(geo_ts)
-        return arome_grid
+    def _create_geo_temperature_grid(self, nx: int, ny: int, dx: int, fx)->api.TemperatureSourceVector:
+        return self._create_geo_ts_grid(nx,ny,dx,fx, api.TemperatureSourceVector(), api.TemperatureSource)
 
-    def _create_geo_point_grid(self, nx, ny, dx):
+    def _create_geo_precipitation_grid(self, nx: int, ny: int, dx: int, fx)->api.PrecipitationSourceVector:
+        return self._create_geo_ts_grid(nx,ny,dx,fx, api.PrecipitationSourceVector(), api.PrecipitationSource)
+
+    def _create_geo_wind_speed_grid(self, nx: int, ny: int, dx: int, fx)->api.WindSpeedSourceVector:
+        return self._create_geo_ts_grid(nx,ny,dx,fx, api.WindSpeedSourceVector(), api.WindSpeedSource)
+
+    def _create_geo_radiation_grid(self, nx: int, ny: int, dx: int, fx)->api.RadiationSourceVector:
+        return self._create_geo_ts_grid(nx,ny,dx,fx, api.RadiationSourceVector(), api.RadiationSource)
+
+    def _create_geo_rel_hum_grid(self, nx: int, ny: int, dx: int, fx)->api.RelHumSourceVector:
+        return self._create_geo_ts_grid(nx,ny,dx,fx, api.RelHumSourceVector(), api.RelHumSource)
+
+    def _create_geo_point_grid(self, nx: int, ny: int , dx: int)->api.GeoPointVector:
         gpv = api.GeoPointVector()
         for i in range(nx):
             for j in range(ny):
@@ -86,7 +73,7 @@ class BayesianKriging(unittest.TestCase):
         # arrange the test with a btk_parameter, a source grid and a destination grid
         btk_parameter = api.BTKParameter(temperature_gradient=-0.6, temperature_gradient_sd=0.25, sill=25.0, nugget=0.5, range=20000.0, zscale=20.0)
         fx = lambda z: api.DoubleVector.from_numpy((20.0 - 0.6 * z / 100) + 3.0 * np.sin(np.arange(start=0, stop=self.n, step=1) * 2 * np.pi / 24.0 - np.pi / 2.0))
-        arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
+        arome_grid = self._create_geo_temperature_grid(self.nx, self.ny, self.dx_arome, fx)
         destination_grid = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
         ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         # act, - run the bayesian_kriging_temperature algoritm.
@@ -210,7 +197,7 @@ class BayesianKriging(unittest.TestCase):
         self.assertEqual(idw_p.max_distance, 200000)
         self.assertEqual(idw_p.max_members, 20)
         fx = lambda z : [15 for x in range(self.n)]
-        arome_grid = self._create_geo_ts_grid(self.nx, self.ny, self.dx_arome, fx)
+        arome_grid = self._create_geo_temperature_grid(self.nx, self.ny, self.dx_arome, fx)
         dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
         ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
         dest_grid = api.idw_temperature(arome_grid, dest_grid_points, ta, idw_p)
@@ -232,6 +219,57 @@ class BayesianKriging(unittest.TestCase):
         dest_grid = api.idw_precipitation(arome_grid, dest_grid_points, ta, idw_p)
         self.assertIsNotNone(dest_grid)
         self.assertEqual(len(dest_grid), self.mnx * self.mny)
+
+    def test_idw_wind_speed_transform_from_set_to_grid(self):
+        """
+        Test IDW interpolation transforms wind_speed time-series according to time-axis and range.
+
+        """
+        idw_p = api.IDWParameter()
+        self.assertEqual(idw_p.max_distance, 200000)
+        self.assertEqual(idw_p.max_members, 10)
+        fx = lambda z : [15 for x in range(self.n)]
+        arome_grid = self._create_geo_wind_speed_grid(self.nx, self.ny, self.dx_arome, fx)
+        dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
+        dest_grid = api.idw_wind_speed(arome_grid, dest_grid_points, ta, idw_p)
+        self.assertIsNotNone(dest_grid)
+        self.assertEqual(len(dest_grid), self.mnx * self.mny)
+
+    def test_idw_radiation_transform_from_set_to_grid(self):
+        """
+        Test IDW interpolation transforms wind_speed time-series according to time-axis and range.
+
+        """
+        idw_p = api.IDWParameter()
+        self.assertEqual(idw_p.max_distance, 200000)
+        self.assertEqual(idw_p.max_members, 10)
+        fx = lambda z : [15 for x in range(self.n)]
+        arome_grid = self._create_geo_radiation_grid(self.nx, self.ny, self.dx_arome, fx)
+        dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
+        radiation_slope_factors = api.DoubleVector()
+        radiation_slope_factors[:] = [ 0.9 for i in range(len(dest_grid_points))]
+        dest_grid = api.idw_radiation(arome_grid, dest_grid_points, ta, idw_p, radiation_slope_factors)
+        self.assertIsNotNone(dest_grid)
+        self.assertEqual(len(dest_grid), self.mnx * self.mny)
+
+    def test_idw_rel_hum_from_set_to_grid(self):
+        """
+        Test IDW interpolation transforms wind_speed time-series according to time-axis and range.
+
+        """
+        idw_p = api.IDWParameter()
+        self.assertEqual(idw_p.max_distance, 200000)
+        self.assertEqual(idw_p.max_members, 10)
+        fx = lambda z : [15 for x in range(self.n)]
+        arome_grid = self._create_geo_rel_hum_grid(self.nx, self.ny, self.dx_arome, fx)
+        dest_grid_points = self._create_geo_point_grid(self.mnx, self.mny, self.dx_model)
+        ta = api.TimeAxisFixedDeltaT(self.t, self.d * 3, int(self.n / 3))
+        dest_grid = api.idw_relative_humidity(arome_grid, dest_grid_points, ta, idw_p)
+        self.assertIsNotNone(dest_grid)
+        self.assertEqual(len(dest_grid), self.mnx * self.mny)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -261,6 +261,9 @@ namespace shyft {
             apoint_ts krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
             prediction::krls_rbf_predictor get_krls_predictor(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
 
+            apoint_ts min_max_check_linear_fill(double min_x,double max_x,utctimespan max_dt) const;
+            apoint_ts min_max_check_ts_fill(double min_x,double max_x,utctimespan max_dt,const apoint_ts& cts) const;
+
             //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
             //   we would like these to be working (exception if it's not possible,i.e. an expression)
             point get(size_t i) const {return point(time(i),value(i));}
@@ -993,6 +996,97 @@ namespace shyft {
             x_serialize_decl();
 
         };
+        /** \brief quality and correction parameters
+         *
+         *  Controls how we consider the quality of the time-series,
+         *  and in what condition to give up to put in a correction value.
+         *
+         */
+        struct qac_parameter {
+            utctimespan max_timespan{max_utctime};///< max time span to fix
+            double min_x{shyft::nan};    ///< x < min_x                 -> nan
+            double max_x{shyft::nan};    ///< x > max_x                 -> nan
+            qac_parameter()=default;
+
+            /** check agains min-max is set */
+            bool is_ok_quality(const double& x) const noexcept {
+                if(!isfinite(x))
+                    return false;
+                if(isfinite(min_x) && x < min_x)
+                    return false;
+                if(isfinite(max_x) && x > max_x)
+                    return false;
+                return true;
+            }
+
+            x_serialize_decl();
+        };
+
+        /** \brief The average_ts is used for providing ts average values over a time-axis
+         *
+         * Given a source ts, apply qac criteria, and replace nan's with
+         * correction values as specified by the parameters, or the
+         * intervals as provided by the specified time-axis.
+         *
+         * true average for each period in the time-axis is defined as:
+         *
+         *   integral of f(t) dt from t0 to t1 / (t1-t0)
+         *
+         * using the f(t) interpretation of the supplied ts (linear or stair case).
+         *
+         * The \ref ts_point_fx is always POINT_AVERAGE_VALUE for the result ts.
+         *
+         * \note if a nan-value intervals are excluded from the integral and time-computations.
+         *       E.g. let's say half the interval is nan, then the true average is computed for
+         *       the other half of the interval.
+         *
+         */
+        struct qac_ts:ipoint_ts {
+            shared_ptr<ipoint_ts> ts;///< the source ts
+            shared_ptr<ipoint_ts> cts;///< optional ts with replacement values
+            qac_parameter p;///< the parameters that control how the qac is done
+
+            // useful constructors
+
+            qac_ts(const apoint_ts& ats):ts(ats.ts) {}
+            qac_ts(apoint_ts&& ats):ts(move(ats.ts)) {}
+            //qac_ts(const shared_ptr<ipoint_ts> &ts ):ts(ts){}
+
+            qac_ts(const apoint_ts& ats, const qac_parameter& qp,const apoint_ts& cts):ts(ats.ts),cts(cts.ts),p(qp) {}
+            qac_ts(const apoint_ts& ats, const qac_parameter& qp):ts(ats.ts),p(qp) {}
+            //qac_ts(const shared_ptr<ipoint_ts>& ats, const qac_parameter& qp,const shared_ptr<ipoint_ts>& cts):ts(ats),cts(cts),p(qp) {}
+
+            // std copy ct and assign
+            qac_ts()=default;
+
+            // implement ipoint_ts contract, these methods just forward to source ts
+            virtual ts_point_fx point_interpretation() const {return ts->point_interpretation();}
+            virtual void set_point_interpretation(ts_point_fx pfx) {ts->set_point_interpretation(pfx);}
+            virtual const gta_t& time_axis() const {return ts->time_axis();}
+            virtual utcperiod total_period() const {return ts->time_axis().total_period();}
+            virtual size_t index_of(utctime t) const {return ts->index_of(t);}
+            virtual size_t size() const {return ts->size();}
+            virtual utctime time(size_t i) const {return ts->time(i);};
+
+            // methods that needs special implementation according to qac rules
+            virtual double value(size_t i) const ;
+            virtual double value_at(utctime t) const ;
+            virtual vector<double> values() const;
+
+            // methods for binding and symbolic ts
+            virtual bool needs_bind() const {
+                return ts->needs_bind() || (cts && cts->needs_bind());
+            }
+            virtual void do_bind() {
+                ts->do_bind();
+                if(cts)
+                    cts->do_bind();
+            }
+
+            x_serialize_decl();
+
+        };
+
 
         /** The iop_t represent the basic 'binary' operation,
          *   a stateless function that takes two doubles and returns the binary operation.
@@ -1441,3 +1535,5 @@ x_serialize_export_key(shyft::api::krls_interpolation_ts);
 x_serialize_export_key(shyft::api::apoint_ts);
 x_serialize_export_key(shyft::api::ats_vector);
 x_serialize_export_key(shyft::api::abs_ts);
+x_serialize_export_key(shyft::api::qac_ts);
+x_serialize_export_key(shyft::api::qac_parameter);

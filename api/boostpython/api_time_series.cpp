@@ -352,7 +352,7 @@ namespace expose {
             ;
 
         typedef vector<TsBindInfo> TsBindInfoVector;
-        class_<TsBindInfoVector>("TsBindInfoVector", 
+        class_<TsBindInfoVector>("TsBindInfoVector",
 			doc_intro("A vector of TsBindInfo")
 			doc_intro("see also TsBindInfo"),
 			init<>(py::arg("self"))
@@ -397,29 +397,29 @@ namespace expose {
 			    init<>( (py::arg("self")), doc_intro("constructs and empty time-series"))
             )
 
-			.def(init<const time_axis::generic_dt&, double, time_series::ts_point_fx >( 
-				(py::arg("self"),py::arg("ta"), py::arg("fill_value"), py::arg("point_fx")), 
+			.def(init<const time_axis::generic_dt&, double, time_series::ts_point_fx >(
+				(py::arg("self"),py::arg("ta"), py::arg("fill_value"), py::arg("point_fx")),
 				doc_intro("construct a time-series with time-axis ta, specified fill-value, and point interpretation policy point_fx")
 				)
 			)
-			.def(init<const time_axis::generic_dt&, const std::vector<double>&, time_series::ts_point_fx >( 
-				(py::arg("self"),py::arg("ta"), py::arg("values"), py::arg("point_fx")), 
+			.def(init<const time_axis::generic_dt&, const std::vector<double>&, time_series::ts_point_fx >(
+				(py::arg("self"),py::arg("ta"), py::arg("values"), py::arg("point_fx")),
 				doc_intro("construct a timeseries time-axis ta, corresponding values and point interpretation policy point_fx")
 				)
 			)
 
 			.def(init<const time_axis::fixed_dt&, double, time_series::ts_point_fx >(
-				(py::arg("self"),py::arg("ta"),py::arg("fill_value"),py::arg("point_fx")), 
+				(py::arg("self"),py::arg("ta"),py::arg("fill_value"),py::arg("point_fx")),
 				doc_intro("construct a timeseries with fixed-delta-t time-axis ta, specified fill-value, and point interpretation policy point_fx")
 				)
 			)
 			.def(init<const time_axis::fixed_dt&, const std::vector<double>&, time_series::ts_point_fx >(
-				(py::arg("self"),py::arg("ta"),py::arg("values"), py::arg("point_fx")), 
+				(py::arg("self"),py::arg("ta"),py::arg("values"), py::arg("point_fx")),
 				doc_intro("construct a timeseries timeaxis ta with corresponding values, and point interpretation policy point_fx")
 				)
 			)
 			.def(init<const time_axis::point_dt&, double, time_series::ts_point_fx>(
-				(py::arg("self"),py::arg("ta"),py::arg("fill_value"), py::arg("point_fx")), 
+				(py::arg("self"),py::arg("ta"),py::arg("fill_value"), py::arg("point_fx")),
 				doc_intro("construct a time-series with a point-type time-axis ta, specified fill-value, and point-interpretation point_fx")
 				)
 			)
@@ -439,7 +439,7 @@ namespace expose {
 				)
 			)
 			.def(init<const vector<double>&, utctimespan, const time_axis::generic_dt&>(
-				(py::arg("self"),py::arg("pattern"), py::arg("dt"), py::arg("ta")), 
+				(py::arg("self"),py::arg("pattern"), py::arg("dt"), py::arg("ta")),
 				doc_intro("construct a repeated pattern time-series given a equally spaced dt pattern and a time-axis ta")
 				doc_parameters()
 				doc_parameter("pattern","DoubleVector","a list of numbers giving the pattern")
@@ -722,6 +722,26 @@ namespace expose {
             .def("min",min_ts_f,(py::arg("self"),py::arg("ts_other")),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,(py::arg("self"),py::arg("number")),"create a new ts that contains the max of self and number for each time-step")
             .def("max",max_ts_f,(py::arg("self"),py::arg("ts_other")),"create a new ts that contains the max of self and ts_other")
+            .def("min_max_check_linear_fill",&shyft::api::apoint_ts::min_max_check_linear_fill,
+                 (py::arg("self"),py::arg("v_min"),py::arg("v_max"),py::arg("dt_max")=shyft::core::max_utctime),
+                 doc_intro("Create a min-max range checked ts with linear-fill-values if value is NaN or outside range")
+                 doc_parameters()
+                 doc_parameter("v_min","float","minimum range, values < v_min are considered NaN. v_min==NaN means no lower limit")
+                 doc_parameter("v_max","float","maximum range, values > v_max are considered NaN. v_max==NaN means no upper limit")
+                 doc_parameter("dt_max","int","maximum time-range in seconds allowed for interpolating values, default= max_utctime")
+                 doc_returns("min_max_check_linear_fill","TimeSeries","Evaluated on demand time-series with NaN, out of range values filled in")
+            )
+            .def("min_max_check_ts_fill",&shyft::api::apoint_ts::min_max_check_ts_fill,
+                 (py::arg("self"),py::arg("v_min"),py::arg("v_max"),py::arg("dt_max"),py::arg("cts")),
+                 doc_intro("Create a min-max range checked ts with cts-filled-in-values if value is NaN or outside range")
+                 doc_parameters()
+                 doc_parameter("v_min","float","minimum range, values < v_min are considered NaN. v_min==NaN means no lower limit")
+                 doc_parameter("v_max","float","maximum range, values > v_max are considered NaN. v_max==NaN means no upper limit")
+                 doc_parameter("dt_max","int","maximum time-range in seconds allowed for interpolating values")
+                 doc_parameter("cts","TimeSeries","time-series that keeps the values to be filled in at points that are NaN or outside min-max-limits")
+                 doc_returns("min_max_check_ts_fill","TimeSeries","Evaluated on demand time-series with NaN, out of range values filled in")
+            )
+
             //.def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
             //.def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
 			.def("partition_by",&shyft::api::apoint_ts::partition_by,

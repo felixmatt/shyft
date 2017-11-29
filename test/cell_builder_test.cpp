@@ -426,11 +426,16 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     auto orig_parameter= *global_parameter;
 	vector<bool> calibrate_parameter(n_params, false);
     // 25 is routing velocity
-	for (auto i : vector<int>{ 0,4,14,16,25 }) calibrate_parameter[i] = true;
+	for (auto i : vector<int>{ 0,4,14,16,22}) calibrate_parameter[i] = true;
 	for (size_t i = 0; i < n_params; ++i) {
 		double v = pa.get(i);
-		lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
-		upper.emplace_back(calibrate_parameter[i] ? 1.2*v : v);
+		if (i!=22) {
+            lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
+            upper.emplace_back(calibrate_parameter[i] ? 1.2*v : v);
+		} else {
+		    lower.emplace_back(calibrate_parameter[i] ? 100 : v);
+		    upper.emplace_back(calibrate_parameter[i] ? 250 : v);;
+		}
 	}
 	// Perturb parameter set
 	std::vector<double> x(n_params);

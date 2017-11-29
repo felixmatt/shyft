@@ -21,6 +21,15 @@ namespace expose {
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
 	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
 
+    typedef std::vector<sa::RadiationSource> geo_radiation_vector;
+    typedef std::shared_ptr<geo_radiation_vector> geo_radiation_vector_;
+
+    typedef std::vector<sa::RelHumSource> geo_rel_hum_vector;
+    typedef std::shared_ptr<geo_rel_hum_vector> geo_rel_hum_vector_;
+
+    typedef std::vector<sa::WindSpeedSource> geo_wind_speed_vector;
+    typedef std::shared_ptr<geo_wind_speed_vector> geo_wind_speed_vector_;
+
 	template <typename VectorT>
 	static std::shared_ptr<VectorT> make_dest_geo_ts(const geo_point_vector& points, sta::fixed_dt time_axis) {
 		auto dst = std::make_shared<VectorT>();
@@ -235,6 +244,61 @@ namespace expose {
 		return dst;
 	}
 
+    /** fake cell to support slope-factor pr. cell*/
+    struct radiation_cell {
+        size_t cell_ix;
+        double cell_slope_factor;
+        geo_radiation_vector_ dst;
+        sc::geo_point mid_point() const { return (*dst)[cell_ix].mid_point();}
+        void set(size_t ix, double value) {(*dst)[cell_ix].ts.set(ix, value);}
+        double slope_factor() const { return cell_slope_factor; }
+    };
+    static geo_radiation_vector_ idw_radiation(geo_radiation_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::parameter idw_p, const std::vector<double>& radiation_slope_factors) {
+        typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+        typedef sc::idw_compliant_geo_point_ts<sa::RadiationSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
+        typedef idw::radiation_model<idw_gts_t, radiation_cell, idw::parameter, sc::geo_point> idw_radiation_model_t;
+
+        validate_parameters(src, dst_points, ta);
+        if (dst_points.size()!=radiation_slope_factors.size())
+            throw std::runtime_error("slope-factors needs to have same length as destination points");
+        auto dst = make_dest_geo_ts<geo_radiation_vector>(dst_points, ta);
+        std::vector<radiation_cell> rdst; rdst.reserve(dst->size());
+        for (size_t i = 0; i<dst->size(); ++i)
+            rdst.emplace_back(radiation_cell{ i, radiation_slope_factors[i], dst });
+
+        idw::run_interpolation<idw_radiation_model_t, idw_gts_t>(ta, *src, idw_p, rdst,
+                                                                     [](auto& d, size_t ix, double value) { d.set(ix, value); });
+
+        return dst;
+    }
+
+
+    static geo_wind_speed_vector_ idw_wind_speed(geo_wind_speed_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::parameter idw_p) {
+        typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+        typedef sc::idw_compliant_geo_point_ts<sa::WindSpeedSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
+        typedef idw::wind_speed_model<idw_gts_t, sa::WindSpeedSource, idw::parameter, sc::geo_point> idw_wind_speed_model_t;
+
+        validate_parameters(src, dst_points, ta);
+        auto dst = make_dest_geo_ts<geo_wind_speed_vector>(dst_points, ta);
+        idw::run_interpolation<idw_wind_speed_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
+                                                                 [](auto& d, size_t ix, double value) { d.ts.set(ix, value); });
+
+        return dst;
+    }
+
+    static geo_rel_hum_vector_ idw_rel_hum(geo_rel_hum_vector_ src, const geo_point_vector& dst_points, shyft::time_axis::fixed_dt ta, idw::parameter idw_p) {
+        typedef shyft::time_series::average_accessor<sa::apoint_ts, sc::timeaxis_t> avg_tsa_t;
+        typedef sc::idw_compliant_geo_point_ts<sa::RelHumSource, avg_tsa_t, sc::timeaxis_t> idw_gts_t;
+        typedef idw::rel_hum_model<idw_gts_t, sa::RelHumSource, idw::parameter, sc::geo_point> idw_rel_hum_model_t;
+
+        validate_parameters(src, dst_points, ta);
+        auto dst = make_dest_geo_ts<geo_rel_hum_vector>(dst_points, ta);
+        idw::run_interpolation<idw_rel_hum_model_t, idw_gts_t>(ta, *src, idw_p, *dst,
+                                                                  [](auto& d, size_t ix, double value) { d.ts.set(ix, value); });
+
+        return dst;
+    }
+
     static void idw_interpolation() {
         typedef shyft::core::inverse_distance::parameter IDWParameter;
 
@@ -288,6 +352,7 @@ namespace expose {
 			"-------\n"
 			"PrecipitationSourceVector, -with filled in precipitations according to their position, the idw_parameters and time_axis\n"
 		);
+
         typedef shyft::core::inverse_distance::temperature_parameter IDWTemperatureParameter;
         class_<IDWTemperatureParameter,bases<IDWParameter>> ("IDWTemperatureParameter",
                 "For temperature inverse distance, also provide default temperature gradient to be used\n"
@@ -310,6 +375,61 @@ namespace expose {
             .def(init<double,optional<int,double>>(args("scale_factor", "max_members","max_distance"),"create IDW from supplied parameters"))
             .def_readwrite("scale_factor",&IDWPrecipitationParameter::scale_factor," ref. formula for adjusted_precipitation,  default=1.02")
         ;
+        //-- remaining exposure
+        def("idw_radiation", idw_radiation,
+            "Runs inverse distance interpolation to project radiation sources out to the destination geo-timeseries\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "src : RadiationSourceVector\n"
+            "\t input a geo-located list of precipitation time-series with filled in values (some might be nan etc.)\n\n"
+            "dst : GeoPointVector\n"
+            "\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
+            "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+            "\tthey are transformed and interpolated into the destination-timeaxis\n"
+            "idw_para : IDWParameter\n"
+            "\t the parameters to be used during interpolation\n\n"
+            "slope_factors: DoubleVector\n"
+            "\t the slope-factor corresponding to geopoints, typical 0.9 \n"
+            "Returns\n"
+            "-------\n"
+            "RadiationSourceVector, -with filled in radiation according to their position, the idw_parameters and time_axis\n"
+        );
+        def("idw_relative_humidity", idw_rel_hum,
+            "Runs inverse distance interpolation to project relative humidity sources out to the destination geo-timeseries\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "src : RelHumSourceVector\n"
+            "\t input a geo-located list of precipitation time-series with filled in values (some might be nan etc.)\n\n"
+            "dst : GeoPointVector\n"
+            "\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
+            "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+            "\tthey are transformed and interpolated into the destination-timeaxis\n"
+            "idw_para : IDWParameter\n"
+            "\t the parameters to be used during interpolation\n\n"
+            "Returns\n"
+            "-------\n"
+            "RelHumSourceVector, -with filled in relative humidity according to their position, the idw_parameters and time_axis\n"
+        );
+        def("idw_wind_speed", idw_wind_speed,
+            "Runs inverse distance interpolation to project precipitation sources out to the destination geo-timeseries\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "src : RelHumSourceVector\n"
+            "\t input a geo-located list of wind speed time-series with filled in values (some might be nan etc.)\n\n"
+            "dst : GeoPointVector\n"
+            "\tthe GeoPoints,(x,y,z) locations to interpolate into\n"
+            "time_axis : Timeaxis, - the destination time-axis, recall that the inputs can be any-time-axis, \n"
+            "\tthey are transformed and interpolated into the destination-timeaxis\n"
+            "idw_para : IDWParameter\n"
+            "\t the parameters to be used during interpolation\n\n"
+            "Returns\n"
+            "-------\n"
+            "WindSpeedSourceVector, -with filled in wind speed according to their position, the idw_parameters and time_axis\n"
+        );
+
     }
 
 	static void interpolation_parameter() {
