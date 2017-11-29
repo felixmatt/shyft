@@ -98,7 +98,7 @@ TEST_CASE("time_axis_merge_generic_dt") {
     FAST_CHECK_EQ(merge(generic_dt{ fixed_dt{ t0,dt,4 } }, generic_dt{ fixed_dt{ t4,dt,4 } }), generic_dt{ fixed_dt{ t0,dt,8 } });
     test_if_equal(merge(generic_dt{ point_dt{ { 0,1,2 },3 } }, generic_dt{ point_dt{ { 3,4,5 },6 } }), generic_dt{ point_dt{ { 0,1,2,3,4,5 },6 } });// a-b perfect
     FAST_CHECK_EQ(merge(generic_dt{ calendar_dt{ c,t0,dt,4 } }, generic_dt{ calendar_dt{ c,t4,dt,4 } }), generic_dt{ calendar_dt{ c,t0,dt,8 } });
-    CHECK_THROWS( merge(generic_dt{ calendar_dt{ c,t0,dt,4 } }, generic_dt{ fixed_dt{t4,dt,4 } }));// not mergable
+    test_if_equal(merge(generic_dt{ calendar_dt{ c,t0,dt,4 } }, generic_dt{ fixed_dt{t4,dt,1 } }),generic_dt{point_dt{{0,dt,dt*2,dt*3,dt*4},dt*5}} );
 }
 
 TEST_CASE("test_all") {

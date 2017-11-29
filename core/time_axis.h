@@ -251,6 +251,10 @@ namespace shyft {
                 if(t.size()==0 || t.back()>=t_end )
                     throw runtime_error("time_axis::point_dt() illegal initialization parameters");
             }
+            point_dt(vector<utctime>&& tx, utctime t_end) : t(move(tx)), t_end(t_end) {
+                if (t.size()==0 || t.back()>=t_end)
+                    throw runtime_error("time_axis::point_dt() illegal initialization parameters");
+            }
             explicit point_dt(const vector<utctime>& all_points):t(all_points){
                 if(t.size()<2)
                     throw runtime_error("time_axis::point_dt() needs at least two time-points");
@@ -1438,12 +1442,16 @@ namespace shyft {
 
         /** return true if generic time-axis a and b can be merged into one time-axis */
 		inline bool can_merge(const generic_dt& a, const generic_dt& b) {
-			switch (a.gt) {
-			case generic_dt::FIXED: return can_merge(a.f, b.f);
-			case generic_dt::CALENDAR: return can_merge(a.c, b.c);
-			case generic_dt::POINT: return can_merge(a.p, b.p);
-			}
-			throw runtime_error("unsupported time-axis in can_merge");
+            if (a.gt==b.gt) {
+                switch (a.gt) {
+                case generic_dt::FIXED: return can_merge(a.f, b.f);
+                case generic_dt::CALENDAR: return can_merge(a.c, b.c);
+                case generic_dt::POINT: return can_merge(a.p, b.p);
+                }
+                throw runtime_error("unsupported time-axis in can_merge");
+            } else {
+                return continuous_merge(a.total_period(), b.total_period());
+            }
 		}
 
 		/**computes the merge-info for two time-axis
@@ -1515,13 +1523,43 @@ namespace shyft {
 			return point_dt{ merge(a.t,b.t,m),m.t_end };
 		}
 
+        /** convert any time-axis to it's point_dt equivalent */
+        template<class TA>
+        inline point_dt convert_to_point_dt(const TA &a) {
+            if (a.size()==0) return point_dt{};
+            vector<utctime> t; t.reserve(a.size());
+            for (size_t i = 0; i<a.size(); ++i)
+                t.push_back(a.time(i));
+            return point_dt{ std::move(t),a.total_period().end };
+        }
+
+        /** merge generic_dt algorithm */
 		inline generic_dt merge(const generic_dt& a, const generic_dt& b, const merge_info& m) {
-			switch (a.gt) {
-			case generic_dt::FIXED:return generic_dt(merge(a.f, b.f, compute_merge_info(a.f, b.f)));
-			case generic_dt::CALENDAR:return generic_dt(merge(a.c, b.c, compute_merge_info(a.c, b.c)));
-			case generic_dt::POINT:return generic_dt(merge(a.c, b.c, compute_merge_info(a.c, b.c)));
-			}
-			throw runtime_error("merge(generic_dt..): unsupported time-axis type");
+            if (a.gt == b.gt) {// if same representation, pass to the specific & fast routines
+                switch (a.gt) {
+                case generic_dt::FIXED:return generic_dt(merge(a.f, b.f, m));
+                case generic_dt::CALENDAR:return generic_dt(merge(a.c, b.c, m));
+                case generic_dt::POINT:return generic_dt(merge(a.p, b.p, m));
+                }
+                throw runtime_error("merge(generic_dt..): unsupported time-axis type");
+            } else {
+                // promote to point_dt and merge those
+                const point_dt *pa = nullptr;
+                const point_dt *pb = nullptr;
+                point_dt xa;
+                point_dt xb;
+                if (a.gt!=generic_dt::POINT) {
+                    xa=convert_to_point_dt(a);
+                    pa = &xa;
+                } else
+                    pa = &a.p;
+                if (b.gt!=generic_dt::POINT) {
+                    xb = convert_to_point_dt(b);
+                    pb = &xb;
+                } else
+                    pb = &b.p;
+                return generic_dt(merge(*pa, *pb, m));
+            }
 		}
 
 		/** simple template that merges two equally typed time-series
