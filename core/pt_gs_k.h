@@ -330,6 +330,7 @@ namespace shyft {
                 gs.step(state.gs, response.gs, period.start, period.timespan(), parameter.gs,
                         temp, rad, prec, wind_speed_accessor.value(i), rel_hum,forest_fraction,altitude);
                 response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf, temp, geo_cell_data.area()*response.gs.sca, glacier_area_m2);
+                //                                     bare glacier     x  glacier fraction -> bare glacier fraction(direct response)
                 response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; //mm/s -> mm/h
                 response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration,
                                   parameter.ae.ae_scale_factor, std::max(response.gs.sca,glacier_fraction), // a evap only on non-snow/non-glac area
@@ -339,7 +340,7 @@ namespace shyft {
                 double direct_response_fraction = total_reservoir_fraction + total_lake_fraction*(1.0 - response.gs.sca);// only direct response on bare (no snow-cover) lakes
                 response.total_discharge =
                       std::max(0.0,prec - response.ae.ae)*direct_response_fraction // when it rains, remove ae. from direct response
-                    + shyft::m3s_to_mmh(response.gm_melt_m3s,cell_area_m2)
+                    + shyft::m3s_to_mmh(response.gm_melt_m3s,cell_area_m2) + glacier_fraction*response.gs.outflow // glacier melt + direct reponse
                     + response.kirchner.q_avg*(kirchner_fraction-direct_response_fraction);//let kirchner respond to all except glacier and direct lake
                 response.charge_m3s =
                     + shyft::mmh_to_m3s(prec, cell_area_m2)

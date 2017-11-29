@@ -323,7 +323,7 @@ namespace shyft {
 					double direct_response_fraction = total_reservoir_fraction + total_lake_fraction*(1.0 - state.snow.sca);// only direct response on bare (no snow-cover) lakes
                     response.total_discharge =
                           std::max(0.0, prec - response.ae.ae)*direct_response_fraction // when it rains, remove ae. from direct response
-                        + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) // the glacier also direct
+                        + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) + glacier_fraction*response.snow.outflow // glacier melt + direct reponse
                         + response.tank.outflow * (land_fraction - direct_response_fraction);// in summer, only dry land response, during winter, let precip/snow go through tank
                     response.charge_m3s =
                         + shyft::mmh_to_m3s(prec, cell_area_m2)
