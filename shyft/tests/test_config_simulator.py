@@ -34,7 +34,7 @@ class ConfigSimulationTestCase(unittest.TestCase):
 
         # Regression tests on discharge values
         self.assertAlmostEqual(discharge.values[0],  0.0957723, 3)
-        self.assertAlmostEqual(discharge.values[3], 3.988, 3)  #
+        self.assertAlmostEqual(discharge.values[3], 4.001477, 3)  #
         # x self.assertAlmostEqual(discharge.values[6400], 58.8385, 3) # was 58.9381,3 before glacier&fractions adjustments
         # x self.assertAlmostEqual(discharge.values[3578],5.5069,3)
         # glacier_melt, not much, but enough to test
