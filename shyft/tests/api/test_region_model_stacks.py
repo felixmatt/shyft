@@ -281,7 +281,7 @@ class RegionModel(unittest.TestCase):
         river_upstream_inflow_m3s = model.river_upstream_inflow_m3s(
             1)  # should be 0.0 in this case, since we do not have a routing network
         self.assertIsNotNone(river_out_m3s)
-        self.assertAlmostEqual(river_out_m3s.value(8), 30.9962, 0)
+        self.assertAlmostEqual(river_out_m3s.value(8), 31.57297, 0)
         self.assertIsNotNone(river_local_m3s)
         self.assertIsNotNone(river_upstream_inflow_m3s)
         model.connect_catchment_to_river(0, 0)

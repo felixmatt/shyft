@@ -40,7 +40,7 @@ class ShyftApi(unittest.TestCase):
 
 
     def test_pt_hs_k_param(self):
-        pthsk_size = 16
+        pthsk_size = 17
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
         self.assertEqual(pthsk.size(), pthsk_size)
@@ -67,12 +67,13 @@ class ShyftApi(unittest.TestCase):
             "pt.alpha",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(pthsk, pthsk_size, valid_names)
 
     def test_hbv_stack_param(self):
-        hbv_size = 20
+        hbv_size = 21
         hbv = hbv_stack.HbvParameter()
         self.assertIsNotNone(hbv)
         self.assertEqual(hbv.size(), hbv_size)
@@ -96,12 +97,13 @@ class ShyftApi(unittest.TestCase):
             "gm.dtf",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 29
+        ptgsk_size = 30
         valid_names = [
             "kirchner.c1",
             "kirchner.c2",
@@ -131,7 +133,8 @@ class ShyftApi(unittest.TestCase):
             "routing.velocity",
             "routing.alpha",
             "routing.beta",
-            "gs.n_winter_days"
+            "gs.n_winter_days",
+            "gm.direct_response"
         ]
         p = pt_gs_k.PTGSKParameter()
         special_values = {22: 130, 28: 221}
@@ -165,7 +168,7 @@ class ShyftApi(unittest.TestCase):
         self.assertTrue(p.gs.is_snow_season(utc.time(2017, 2, 1)))
 
     def test_pt_ss_k_param(self):
-        ptssk_size = 19
+        ptssk_size = 20
         valid_names = [
             "kirchner.c1",
             "kirchner.c2",
@@ -185,7 +188,8 @@ class ShyftApi(unittest.TestCase):
             "gm.dtf",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size, valid_names)
 

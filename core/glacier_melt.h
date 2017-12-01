@@ -25,7 +25,8 @@ namespace shyft {
 
 		    struct parameter {
                 double dtf = 6.0;///<degree timestep factor [mm/day/deg.C]; lit. values for Norway: 5.5 - 6.4 in Hock, R. (2003), J. Hydrol., 282, 104-115.
-                explicit parameter(double dtf=6.0):dtf(dtf) {}
+                double  direct_response=0.0;///< fraction to route directly, (1-direct_response) goes into  into kirchner or similar
+                explicit parameter(double dtf = 6.0, double direct_response = 0.0) :dtf(dtf), direct_response(direct_response) {}
             };
 
             /** Glacier Melt model

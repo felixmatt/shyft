@@ -72,7 +72,7 @@ try:
         def test_catchment_fetcher_peru(self):
             global peru_grid_spec
             cf = CatchmentFetcher(peru_catchment_type, peru_catchment_id_name, peru_grid_spec.epsg_id)
-            id_list = [1]  # this is yuapi
+            id_list = [2, 4, 5, 6, 9, 10]  # this is yuapi
             r = cf.fetch(id_list=id_list)
             self.assertIsNotNone(r)
             self.assertIsNotNone(r[id_list[0]])

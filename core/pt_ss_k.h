@@ -50,7 +50,7 @@ namespace shyft {
 			parameter& operator=(const parameter &c)=default;
 			parameter& operator=(parameter&&c)=default;
             ///< Calibration support, size is the total number of calibration parameters
-            size_t size() const { return 19; }
+            size_t size() const { return 20; }
 
             void set(const vector<double>& p) {
                 if (p.size() != size())
@@ -75,6 +75,7 @@ namespace shyft {
                 routing.velocity = p[i++];
                 routing.alpha = p[i++];
                 routing.beta  = p[i++];
+                gm.direct_response = p[i++];
             }
             //
             ///< calibration support, get the value of i'th parameter
@@ -99,6 +100,7 @@ namespace shyft {
                     case 16:return routing.velocity;
                     case 17:return routing.alpha;
                     case 18:return routing.beta;
+                    case 19:return gm.direct_response;
 
                 default:
                     throw runtime_error("pt_ss_k parameter accessor:.get(i) Out of range.");
@@ -127,7 +129,8 @@ namespace shyft {
                     "gm.dtf",
                     "routing.velocity",
                     "routing.alpha",
-                    "routing.beta"
+                    "routing.beta",
+                    "gm.direct_response"
 				};
                 if (i >= size())
                     throw runtime_error("pt_ss_k parameter accessor:.get_name(i) Out of range.");
@@ -196,12 +199,14 @@ namespace shyft {
             auto wind_speed_accessor = ws_accessor_t(wind_speed, time_axis);
 
             R response;
-            const double total_lake_fraction = geo_cell_data.land_type_fractions_info().lake() ;
-            const double total_reservoir_fraction = geo_cell_data.land_type_fractions_info().reservoir();
             const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
-            const double kirchner_fraction = 1 - glacier_fraction;
+            const double gm_direct = parameter.gm.direct_response; //glacier melt directly out of cell
+            const double gm_routed = 1-gm_direct; // glacier melt routed through kirchner
+            const double direct_response_fraction = glacier_fraction*gm_direct + geo_cell_data.land_type_fractions_info().reservoir();// only direct response on reservoirs
+            const double kirchner_fraction = 1 - direct_response_fraction;
             const double cell_area_m2 = geo_cell_data.area();
             const double glacier_area_m2 = geo_cell_data.area()*glacier_fraction;
+
             // Initialize the method stack
             precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
             priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
@@ -225,13 +230,13 @@ namespace shyft {
                 response.ae.ae = actual_evapotranspiration::calculate_step(state.kirchner.q, response.pt.pot_evapotranspiration,
                     parameter.ae.ae_scale_factor, std::max(state.snow.sca, glacier_fraction),  // a evap only on non-snow/non-glac area
                     period.timespan());
-                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow, response.ae.ae); //all units mm/h over 'same' area
+                double gm_mmh= shyft::m3s_to_mmh(response.gm_melt_m3s, cell_area_m2);
+                kirchner.step(period.start, period.end, state.kirchner.q, response.kirchner.q_avg, response.snow.outflow + gm_routed*gm_mmh, response.ae.ae); //all units mm/h over 'same' area
 
-                double direct_response_fraction = total_reservoir_fraction + total_lake_fraction*(1.0 - state.snow.sca);// only direct response on bare (no snow-cover) lakes
                 response.total_discharge =
                       std::max(0.0, prec - response.ae.ae)*direct_response_fraction // when it rains, remove ae. from direct response
-                    + m3s_to_mmh(response.gm_melt_m3s, cell_area_m2) + glacier_fraction*response.snow.outflow // glacier melt + direct reponse
-                    + response.kirchner.q_avg * (kirchner_fraction-direct_response_fraction);
+                    + gm_direct*gm_mmh  // glacier melt direct response
+                    + response.kirchner.q_avg*kirchner_fraction;
                 response.charge_m3s =
                     + shyft::mmh_to_m3s(prec, cell_area_m2)
                     - shyft::mmh_to_m3s(response.ae.ae, cell_area_m2)

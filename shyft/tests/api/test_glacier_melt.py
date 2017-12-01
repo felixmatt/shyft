@@ -21,6 +21,12 @@ class GlacierMelt(unittest.TestCase):
     def test_glacier_melt_parameter(self):
         p = GlacierMeltParameter(5.0)
         self.assertAlmostEqual(p.dtf, 5.0)
+        self.assertAlmostEqual(p.direct_response, 0.0)
+        p = GlacierMeltParameter(5.0, 1.0)
+        self.assertAlmostEqual(p.dtf, 5.0)
+        self.assertAlmostEqual(p.direct_response, 1.0)
+        p.direct_response = 0.5
+        self.assertAlmostEqual(p.direct_response, 0.5)
 
     def test_glacier_melt_step_function(self):
         dtf = 6.0
