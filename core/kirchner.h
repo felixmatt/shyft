@@ -130,6 +130,10 @@ namespace shyft {
                     const double eps=1e-6;
                     return std::fabs(q-x.q)<eps;
                 }
+                void adjust_q(double scale_factor ) {
+					q*=scale_factor;
+				}
+
                 x_serialize_decl();
             };
 

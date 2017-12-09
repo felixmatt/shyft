@@ -176,6 +176,10 @@ namespace shyft {
 				snow_state_t snow;
 				soil_state_t soil;
 				tank_state_t tank;
+				void adjust_q(double scale_factor) {
+					soil.adjust_q(scale_factor);
+					tank.adjust_q(scale_factor);
+				}
 				bool operator==(const state& x) const { return snow == x.snow && tank == x.tank && soil == x.soil; }
                 x_serialize_decl();
             };

@@ -1,6 +1,7 @@
 #include "test_pch.h"
 #include "core/experimental.h"
 #include "core/model_calibration.h"
+#include "core/model_state_tuning.h"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -272,8 +273,21 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     auto avg_precip_ip_o_set_value2 = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_o_set2, ta_one_step).value(0);
     FAST_CHECK_LT(std::abs(avg_precip_ip_set_value - avg_precip_ip_set_value2), 0.0001);
     FAST_CHECK_GT(avg_precip_ip_o_set_value2, 0.05);
-    //cout << "full:avg precip for selected    catchments is:" << avg_precip_ip_set_value2 << endl;
-    //cout << "full:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value2 << endl;
+    cout <<"3.  b.ii verify tune_flow to observed values"<<endl;
+    rm.get_states(rm.initial_state);
+    double q_wanted=70.0;
+    ec::adjust_state_model<region_model_t> adj_rm(rm,all_catchment_ids);
+    double q_0 = adj_rm.discharge(1.0);
+    double q_adjusted = adj_rm.tune_flow(q_wanted);
+    TS_ASSERT_DELTA(q_adjusted,q_wanted,0.1);
+    if(verbose) {cout<<"Result for using all cells: q_0= "<< q_0<<", q_wanted="<<q_wanted<<", q_adjusted="<<q_adjusted<<endl;}
+    adj_rm.cids=catchment_ids; // juse a few
+    double q_wanted_2=34.21;
+    double q_adjusted_2 = adj_rm.tune_flow(q_wanted_2);
+    TS_ASSERT_DELTA(q_adjusted_2,q_wanted_2,0.1);
+    if(verbose) {cout<<"Results for using 2 cells:  "<< ", q_wanted="<<q_wanted_2<<", q_adjusted_2="<<q_adjusted_2<<endl;}
+
+    rm.revert_to_initial_state();// revert to state prior to state-adjustments.
     cout << "3. c Verify best_effort interpolation";
     auto re_temperature = *(re.temperature);
     for(auto& gts:*(re.temperature)) {

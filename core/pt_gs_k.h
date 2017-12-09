@@ -197,6 +197,12 @@ namespace shyft {
             gs_state_t gs;
             kirchner_state_t kirchner;
             bool operator==(const state& x) const {return gs==x.gs && kirchner==x.kirchner;}
+
+            /**adjust kirchner q with the  specified scale-factor
+            * to support the process of tuning output of a step
+            * to a specified observed/wanted average
+            */
+            void adjust_q(double scale_factor) {kirchner.adjust_q(scale_factor);}
             x_serialize_decl();
         };
 

@@ -27,6 +27,7 @@
 #include "pt_hs_k.h"
 #include "geo_cell_data.h"
 #include "routing.h"
+#include "model_state_tuning.h"
 
 /**
  * This file now contains mostly things to provide the PTxxK model,or
@@ -575,6 +576,40 @@ namespace shyft {
                 run_routing(start_step,n_steps);
             }
 
+			/**\brief state adjustment to achieve wanted/observed flow
+			 *
+			 * This function provides an easy and consistent way to adjust the
+			 * state of the cells(kirchner, or hbv-tank-levels) so that the average output
+			 * from next time-step matches the wanted flow.
+			 *
+			 * This is quite complex, since the amount of adjustment needed is dependent of the
+			 * cell-state, temperature/precipitation in time-step, glacier-melt, length of the timestep,
+			 * and calibration factors sensitivity.
+			 *
+			 * The approach here is to use dlib::find_min_single_variable to solve
+			 * the problem, instead of trying to reverse compute the needed state.
+			 *
+			 * This has several benefits, it deals with the full stack and state, and it can be made
+			 * method stack independent.
+			 *
+			 * \note that the model should be prepared for run prior to calling this function
+			 *       and that there should be an initial state that gives the starting point
+			 *       for the adjustment.
+			 *       Also note that when returning, the active state reflects the
+			 *       achieved flow returned, and that initial state is not modified.
+			 *
+			 * \param wanted_flow_m3s the average flow first time-step we want to achieve
+			 * \param cids catchments, represented by catchment-ids that should be adjusted
+			 * \return obtained flow in m3/s units. This can deviate from wanted flow due to model and state constraints
+			 */
+			double adjust_state_to_target_flow(double wanted_flow_m3s,const std::vector<int>& cids) {
+			    auto old_catchment_filter=catchment_filter;
+                adjust_state_model<region_model> a(*this,cids);
+                double q_adj=a.tune_flow(wanted_flow_m3s);
+                catchment_filter=old_catchment_filter;
+				return q_adj;
+			}
+
             /** \brief set the region parameter, apply it to all cells
              *        that do not have catchment specific parameters.
              * \note that if there already exist a region parameter
@@ -749,6 +784,26 @@ namespace shyft {
                     throw runtime_error("Initial state not yet established or set");
                 set_states(initial_state);
             }
+
+            /** \brief adjust the content of ground storage by scale-factor
+            *
+            * Adjust the content of the ground storage, e.g. state.kirchner.q, or
+            * hbv state.(tank|soil).(uz,lz|sm), by the specified scale factor.
+            * The this function plays key role for adjusting the state to
+            * achieve a specified/wanted average discharge flow output for the
+            * model at the first time-step.
+            *
+            * \param q_scale the scale factor to apply to current storage state
+            * \param cids if empty, all cells are in scope, otherwise only cells that have specified catchment ids.
+            */
+            void adjust_q(double q_scale,vector<int>&cids ) {
+                for(auto& cell:*cells) {
+                    if(cids.size()==0 || (find(begin(cids),end(cids),cell.geo.catchment_id())!=end(cids) )) {
+                        cell.state.adjust_q(q_scale);
+                    }
+                }
+            }
+
             /** \brief enable state collection for specified or all cells
              * \note that this only works if the underlying cell is configured to
              *       do state collection. THis is typically not the  case for

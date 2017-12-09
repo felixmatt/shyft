@@ -149,6 +149,13 @@ namespace shyft {
              : snow(snow), kirchner(kirchner) { /* Do nothing */ }
             //xx state(const state& state) : snow(state.snow), kirchner(state.kirchner) {}
             bool operator==(const state& x) const {return kirchner==x.kirchner && snow==x.snow;}
+
+            /**adjust kirchner q with the  specified scale-factor
+            * to support the process of tuning output of a step
+            * to a specified observed/wanted average
+            */
+            void adjust_q(double scale_factor) {kirchner.adjust_q(scale_factor);}
+
             x_serialize_decl();
         };
 

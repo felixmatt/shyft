@@ -5,6 +5,7 @@
 
 namespace expose {
     using namespace boost::python;
+    namespace py=boost::python;
     using namespace std;
 
     template <class StateIo,class state>
@@ -99,6 +100,15 @@ namespace expose {
         .def("set_state_collection",&T::set_state_collection,args("on_or_off"),"collecting the state during run could be very useful to understand models")
         .def("set_snow_sca_swe_collection",&T::set_snow_sca_swe_collection,"collecting the snow sca and swe on for calibration scenario")
         .def("mid_point",&T::mid_point,"returns geo.mid_point()",return_internal_reference<>())
+        .def("run",&T::run,(py::arg("self"),py::arg("time_axis"),py::arg("start_step"),py::arg("n_steps")),
+             doc_intro("run the cell (given it's initialized)")
+             doc_intro("before run, the caller must ensure the cell is ready to run, is initialized")
+             doc_intro("after the run, the cell state, as well as resource collector/state-collector is updated")
+             doc_parameters()
+             doc_parameter("time_axis","TimeAxisFixedDeltaT","time-axis to run, should match the run-time-axis used for env_ts")
+             doc_parameter("start_step","int","first interval, ref. time-axis to start run")
+             doc_parameter("n_steps","int","number of time-steps to run")
+             )
       ;
       char cv[200];sprintf(cv,"%sVector",cell_name);
       class_<vector<T>,bases<>,shared_ptr<vector<T>> > (cv,"vector of cells")
@@ -290,6 +300,46 @@ namespace expose {
                     "param cachment_id to enable snow calibration for, -1 means turn on/off for all\n"
                     "param on_or_off true|or false.\n"
                     "note if the underlying cell do not support snow sca|swe collection, this \n"
+        )
+        .def("adjust_q",&M::adjust_q,(py::arg("self"),py::arg("q_scale"),py::arg("cids")),
+            doc_intro("adjust the current state content q of ground storage by scale-factor")
+            doc_intro("")
+            doc_intro("Adjust the content of the ground storage, e.g. state.kirchner.q, or")
+            doc_intro("hbv state.(tank|soil).(uz,lz|sm), by the specified scale factor.")
+            doc_intro("The this function plays key role for adjusting the state to")
+            doc_intro("achieve a specified/wanted average discharge flow output for the")
+            doc_intro("model at the first time-step.")
+            doc_parameters()
+            doc_parameter("q_scale","float","the scale factor to apply to current storage state")
+            doc_parameter("cids","IntVector","if empty, all cells are in scope, otherwise only cells that have specified catchment ids.")
+        )
+        .def("adjust_state_to_target_flow",&M::adjust_state_to_target_flow,(py::arg("self"),py::arg("wanted_flow_m3s"),py::arg("cids")),
+             doc_intro("state adjustment to achieve wanted/observed flow")
+			 doc_intro("")
+			 doc_intro("This function provides an easy and consistent way to adjust the")
+			 doc_intro("state of the cells(kirchner, or hbv-tank-levels) so that the average output")
+			 doc_intro("from next time-step matches the wanted flow.")
+			 doc_intro("")
+			 doc_intro("This is quite complex, since the amount of adjustment needed is dependent of the")
+			 doc_intro("cell-state, temperature/precipitation in time-step, glacier-melt, length of the time-step,")
+			 doc_intro("and calibration factors sensitivity.")
+			 doc_intro("")
+			 doc_intro("The approach here is to use dlib::find_min_single_variable to solve")
+			 doc_intro("the problem, instead of trying to reverse compute the needed state.")
+			 doc_intro("")
+			 doc_intro("This has several benefits, it deals with the full stack and state, and it can be made")
+			 doc_intro("method stack independent.")
+			 doc_intro("")
+			 doc_intro("Notice that the model should be prepared for run prior to calling this function")
+			 doc_intro("and that there should be an initial state that gives the starting point")
+			 doc_intro("for the adjustment.")
+			 doc_intro("Also note that when returning, the active state reflects the")
+			 doc_intro("achieved flow returned, and that initial state is not modified.")
+			 doc_intro("")
+             doc_parameters()
+			 doc_parameter("wanted_flow_m3s","float","the average flow first time-step we want to achieve")
+			 doc_parameter("cids","IntVector"," catchments, represented by catchment-ids that should be adjusted")
+			 doc_returns("obtained flow in m3/s units.","float","note: this can deviate from wanted flow due to model and state constraints")
         )
         .def("get_cells",&M::get_cells,"cells as shared_ptr<vector<cell_t>>")
         .def("size",&M::size,"return number of cells")

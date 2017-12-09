@@ -25,6 +25,10 @@ namespace shyft {
 			struct state {
 				explicit state(double sm = 0.0) :sm(sm) {}
 				double sm=50.0; // mm
+				void adjust_q(double scale_factor ) {
+					sm*=scale_factor;
+				}
+
 				bool operator==(const state&x) const {
 					const double eps = 1e-6;
 					return fabs(sm - x.sm)<eps;

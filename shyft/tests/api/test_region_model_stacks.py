@@ -286,6 +286,21 @@ class RegionModel(unittest.TestCase):
         self.assertIsNotNone(river_upstream_inflow_m3s)
         model.connect_catchment_to_river(0, 0)
         self.assertFalse(model.has_routing())
+        #
+        # Test the state-adjustments interfaces
+        #
+
+        q_0 = model.cells[0].state.kirchner.q
+        model.adjust_q(2.0, cids)
+        q_1 = model.cells[0].state.kirchner.q
+        self.assertAlmostEqual(q_0*2.0, q_1)
+        model.revert_to_initial_state()
+        model.run_cells()
+        q_avg = model.statistics.discharge_value(cids, 0)
+        x = 0.7
+        q_x= model.adjust_state_to_target_flow(x*q_avg, cids)  #This is how to adjust state to observed average flow for cids
+        self.assertAlmostEqual(q_x, q_avg*x, 3)
+        pass
 
     def test_optimization_model(self):
         num_cells = 20
