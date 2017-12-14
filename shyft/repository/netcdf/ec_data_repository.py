@@ -461,7 +461,7 @@ class EcDataRepository(interfaces.GeoTsRepository):
             return p[1:]
 
         def prec_acc_conv(p, t):
-            f = api.deltahours(1) / (t[1:] - t[:-1])  # conversion from mm/delta_t to mm/1hour
+            f = 1000. * api.deltahours(1) / (t[1:] - t[:-1])  # conversion from m/delta_t to mm/1hour
             return np.clip((p[1:,:,:] - p[:-1,:,:])*f[:,np.newaxis,np.newaxis], 0.0, 1000.0)
 
         def rad_conv(r,t):
