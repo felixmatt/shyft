@@ -26,7 +26,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
     """
                      
     #def __init__(self, params, region_config):
-    def __init__(self, epsg, stations_met, selection_criteria=None):
+    def __init__(self, epsg, stations_met, selection_criteria=None)->None:
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
