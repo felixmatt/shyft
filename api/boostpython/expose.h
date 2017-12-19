@@ -148,11 +148,11 @@ namespace expose {
         auto run_interpolation_f= &M::run_interpolation;
 		auto interpolate_f = &M::interpolate;
         class_<M>(model_name,m_doc,no_init)
-	     .def(init<const M&>(args("other_model"),"create a copy of the model"))
-         .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >(args("cells","region_param"),"creates a model from cells and region model parameters") )
-         .def(init< const vector<shyft::core::geo_cell_data>&, const typename M::parameter_t& >(args("geo_data_vector", "region_param"), "creates a model from geo_data vector and region model parameters"))
-         .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >(args("cells","region_param","catchment_parameters"),"creates a model from cells and region model parameters, and specified catchment parameters") )
-         .def_readonly("time_axis",&M::time_axis,"the time_axis as set from run_interpolation, determines the time-axis for run")
+	     .def(init<const M&>(py::arg("other_model"),"create a copy of the model"))
+         .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t& >( (py::arg("cells"), py::arg("region_param")), "creates a model from cells and region model parameters") )
+         .def(init< const vector<shyft::core::geo_cell_data>&, const typename M::parameter_t& >( (py::arg("geo_data_vector"), py::arg("region_param")), "creates a model from geo_data vector and region model parameters"))
+         .def(init< shared_ptr< vector<typename M::cell_t> >&, const typename M::parameter_t&, const map<int,typename M::parameter_t>& >( (py::arg("cells"), py::arg("region_param"), py::arg("catchment_parameters")),"creates a model from cells and region model parameters, and specified catchment parameters") )
+         .def_readonly("time_axis",&M::time_axis,"the time_axis (type TimeAxisFixedDeltaT) as set from run_interpolation, determines the time-axis for run")
 		 .def_readwrite("interpolation_parameter",&M::ip_parameter,"the most recently used interpolation parameter as passed to run_interpolation or interpolate routine")
          .def_readwrite("initial_state",&M::initial_state,"empty or the the initial state as established on the first invokation of .set_states() or .run_cells()")
          .def_readwrite("ncore",&M::ncore,
@@ -165,11 +165,11 @@ namespace expose {
                         "See also RiverNetwork class for how to build a working river network\n"
                         "Then use the connect_catchment_to_river(cid,rid) method\n"
                         "to route cell discharge into the river-network\n")
-         .def("has_routing",&M::has_routing,"true if some cells routes to river-network")
-         .def("river_output_flow_m3s",&M::river_output_flow_m3s,args("rid"),"returns the routed output flow of the specified river id (rid))")
-         .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s,args("rid"),"returns the routed upstream inflow to the specified river id (rid))")
-         .def("river_local_inflow_m3s",&M::river_local_inflow_m3s,args("rid"),"returns the routed local inflow from connected cells to the specified river id (rid))")
-         .def("connect_catchment_to_river",&M::connect_catchment_to_river,args("cid","rid"),
+         .def("has_routing",&M::has_routing,(py::arg("self")),"true if some cells routes to river-network")
+         .def("river_output_flow_m3s",&M::river_output_flow_m3s,(py::arg("self"),py::arg("rid")),"returns the routed output flow of the specified river id (rid))")
+         .def("river_upstream_inflow_m3s",&M::river_upstream_inflow_m3s, (py::arg("self"), py::arg("rid")),"returns the routed upstream inflow to the specified river id (rid))")
+         .def("river_local_inflow_m3s",&M::river_local_inflow_m3s, (py::arg("self"), py::arg("rid")),"returns the routed local inflow from connected cells to the specified river id (rid))")
+		 .def("connect_catchment_to_river",&M::connect_catchment_to_river, (py::arg("self"), py::arg("cid"),py::arg("rid")),
          "Connect routing of all the cells in the specified catchment id to the specified river id\n"
          ""
          "Parameters\n"
@@ -179,12 +179,12 @@ namespace expose {
          " rid: int\n"
          "\t river identifier, can be set to 0 to indicate disconnect from routing"
          )
-         .def("number_of_catchments",&M::number_of_catchments,"compute and return number of catchments using info in cells.geo.catchment_id()")
-		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,
+         .def("number_of_catchments",&M::number_of_catchments, (py::arg("self")),"compute and return number of catchments using info in cells.geo.catchment_id()")
+		 .def("extract_geo_cell_data",&M::extract_geo_cell_data,(py::arg("self")),
              "extracts the geo_cell_data and return it as GeoCellDataVector that can\n"
              "be passed into a the constructor of a new region-model (clone-operation)\n"
          )
-         .def("initialize_cell_environment",&M::initialize_cell_environment,boost::python::arg("time_axis"),
+         .def("initialize_cell_environment",&M::initialize_cell_environment,(py::arg("self"),py::arg("time_axis")),
                 doc_intro("Initializes the cell enviroment (cell.env.ts* )")
                 doc_intro("")
                 doc_intro("The method initializes the cell environment, that keeps temperature, precipitation etc")
@@ -198,10 +198,10 @@ namespace expose {
                 doc_intro(" Also note that the region-model.time_axis is set to the supplied time-axis.")
                 doc_intro("")
                 doc_parameters()
-                doc_parameter("time_axis","TimeAxis","specifies the time-axis for the region-model, and thus the cells")
+                doc_parameter("time_axis","TimeAxisFixedDeltaT","specifies the time-axis for the region-model, and thus the cells")
                 doc_returns("nothing","","")
 		 )
-		 .def("interpolate", interpolate_f, (boost::python::arg("interpolation_parameter"),boost::python::arg("env"),boost::python::arg("best_effort")=true),
+		 .def("interpolate", interpolate_f, (py::arg("self"),py::arg("interpolation_parameter"),py::arg("env"),py::arg("best_effort")=true),
                 doc_intro("do interpolation interpolates region_environment temp,precip,rad.. point sources")
                 doc_intro("to a value representative for the cell.mid_point().")
                 doc_intro("")
@@ -216,7 +216,7 @@ namespace expose {
                 doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
                 doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
 		 )
-         .def("run_cells",&M::run_cells,(boost::python::arg("use_ncore")=0,boost::python::arg("start_step")=0,boost::python::arg("n_steps")=0),
+         .def("run_cells",&M::run_cells,(py::arg("self"),py::arg("use_ncore")=0,py::arg("start_step")=0,py::arg("n_steps")=0),
                 doc_intro("run_cells calculations over specified time_axis,optionally with thread_cell_count, start_step and n_steps")
                 doc_intro("require that initialize(time_axis) or run_interpolation is done first")
                 doc_intro("If start_step and n_steps are specified, only the specified part of the time-axis is covered.")
@@ -226,7 +226,7 @@ namespace expose {
                 doc_parameter("start_step","int","start_step in the time-axis to start at, default=0, meaning start at the beginning")
                 doc_parameter("n_steps","int","number of steps to run in a partial run, default=0 indicating the complete time-axis is covered")
          )
-         .def("run_interpolation",run_interpolation_f,(boost::python::arg("interpolation_parameter"),boost::python::arg("time_axis"),boost::python::arg("env"),boost::python::arg("best_effort")=true),
+         .def("run_interpolation",run_interpolation_f,(py::arg("self"),py::arg("interpolation_parameter"),py::arg("time_axis"),py::arg("env"),py::arg("best_effort")=true),
                 doc_intro("run_interpolation interpolates region_environment temp,precip,rad.. point sources")
                 doc_intro("to a value representative for the cell.mid_point().")
                 doc_intro("")
@@ -235,73 +235,75 @@ namespace expose {
                 doc_intro("    self.interpolate(interpolation_parameter,env)")
                 doc_parameters()
                 doc_parameter("interpolation_parameter","InterpolationParameter","contains wanted parameters for the interpolation")
-                doc_parameter("time_axis","TimeAxis","should be equal to the time-axis the region_model is prepared running for")
+                doc_parameter("time_axis","TimeAxisFixedDeltaT","should be equal to the time-axis the region_model is prepared running for")
                 doc_parameter("env","RegionEnvironment","contains the ref: region_environment type")
                 doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
                 doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
             )
-         .def("set_region_parameter",&M::set_region_parameter,args("p"),
+
+         .def("set_region_parameter",&M::set_region_parameter,(py::arg("self"),py::arg("p")),
                     "set the region parameter, apply it to all cells \n"
                     "that do *not* have catchment specific parameters.\n")
-         .def("get_region_parameter",&M::get_region_parameter,"provide access to current region parameter-set",return_internal_reference<>())
-         .def("set_catchment_parameter",&M::set_catchment_parameter,args("catchment_id","p"),
+         .def("get_region_parameter",&M::get_region_parameter,(py::arg("self")),"provide access to current region parameter-set",return_internal_reference<>())
+         .def("set_catchment_parameter",&M::set_catchment_parameter,(py::arg("self"),py::arg("catchment_id"),py::arg("p")),
                     "creates/modifies a pr catchment override parameter\n"
                     "param catchment_id the 0 based catchment_id that correlates to the cells catchment_id\n"
                     "param a reference to the parameter that will be kept for those cells\n"
          )
-         .def("remove_catchment_parameter",&M::remove_catchment_parameter,args("catchment_id"),"remove a catchment specific parameter override, if it exists.")
-         .def("has_catchment_parameter",&M::has_catchment_parameter,args("catchment_id"),"returns true if there exist a specific parameter override for the specified 0-based catchment_id")
-         .def("get_catchment_parameter",&M::get_catchment_parameter,args("catchment_id"),
+         .def("remove_catchment_parameter",&M::remove_catchment_parameter,(py::arg("self"),py::arg("catchment_id")),"remove a catchment specific parameter override, if it exists.")
+         .def("has_catchment_parameter",&M::has_catchment_parameter, (py::arg("self"), py::arg("catchment_id")),"returns true if there exist a specific parameter override for the specified 0-based catchment_id")
+
+			 .def("get_catchment_parameter",&M::get_catchment_parameter, (py::arg("self"), py::arg("catchment_id")),
                     "return the parameter valid for specified catchment_id, or global parameter if not found.\n"
                     "note Be aware that if you change the returned parameter, it will affect the related cells.\n"
                     "param catchment_id 0 based catchment id as placed on each cell\n"
                     "returns reference to the real parameter structure for the catchment_id if exists,\n"
                     "otherwise the global parameters\n"
          ,return_internal_reference<>())
-         .def("set_catchment_calculation_filter",&M::set_catchment_calculation_filter,args("catchment_id_list"),
+		.def("set_catchment_calculation_filter",&M::set_catchment_calculation_filter,(py::arg("self"),py::arg("catchment_id_list")),
                     "set/reset the catchment based calculation filter. This affects what get simulate/calculated during\n"
                     "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
                     "\n"
                     "param catchment_id_list is a catchment id vector\n"
          )
-         .def("set_calculation_filter", &M::set_catchment_calculation_filter, args("catchment_id_list","river_id_list"),
+		 .def("set_calculation_filter", &M::set_calculation_filter, (py::arg("self"), py::arg("catchment_id_list"), py::arg("river_id_list")),
                  "set/reset the catchment *and* river based calculation filter. This affects what get simulate/calculated during\n"
                  "the run command. Pass an empty list to reset/clear the filter (i.e. no filter).\n"
                  "\n"
                  "param catchment_id_list is a catchment id vector\n"
                 "param river_id_list is a river id vector\n"
          )
-         .def("is_calculated",&M::is_calculated,args("catchment_id"),"true if catchment id is calculated during runs, ref set_catchment_calculation_filter")
-         .def("get_states",&M::get_states,args("end_states"),
+         .def("is_calculated",&M::is_calculated,(py::arg("self"),py::arg("catchment_id")),"true if catchment id is calculated during runs, ref set_catchment_calculation_filter")
+         .def("get_states",&M::get_states,(py::arg("self"),py::arg("end_states")),
                     "collects current state from all the cells\n"
                     "note that catchment filter can influence which states are calculated/updated.\n"
                     "param end_states a reference to the vector<state_t> that are filled with cell state, in order of appearance.\n"
         )
 
-        .def("set_states",&M::set_states,args("states"),
+        .def("set_states",&M::set_states,(py::arg("self"), py::arg("states")),
                     "set current state for all the cells in the model.\n"
                     "states is a vector<state_t> of all states, must match size/order of cells.\n"
                     "note throws runtime-error if states.size is different from cells.size\n"
         )
-        .def("revert_to_initial_state",&M::revert_to_initial_state,
+        .def("revert_to_initial_state",&M::revert_to_initial_state,(py::arg("self")),
              "Given that the cell initial_states are established, these are \n"
              "copied back into the cells\n"
              "Note that the cell initial_states vector is established at the first call to \n"
              ".set_states() or run_cells()\n"
              )
-        .def("set_state_collection",&M::set_state_collection,args("catchment_id","on_or_off"),
+        .def("set_state_collection",&M::set_state_collection,(py::arg("self"), py::arg("catchment_id"),py::arg("on_or_off")),
                     "enable state collection for specified or all cells\n"
                     "note that this only works if the underlying cell is configured to\n"
                     "do state collection. This is typically not the  case for\n"
                     "cell-types that are used during calibration/optimization\n"
         )
-        .def("set_snow_sca_swe_collection",&M::set_snow_sca_swe_collection,args("catchment_id","on_or_off"),
+        .def("set_snow_sca_swe_collection",&M::set_snow_sca_swe_collection,(py::arg("self"), py::arg("catchment_id"),py::arg("on_or_off")),
                     "enable/disable collection of snow sca|sca for calibration purposes\n"
                     "param cachment_id to enable snow calibration for, -1 means turn on/off for all\n"
                     "param on_or_off true|or false.\n"
                     "note if the underlying cell do not support snow sca|swe collection, this \n"
         )
-        .def("adjust_q",&M::adjust_q,(py::arg("self"),py::arg("q_scale"),py::arg("cids")),
+		.def("adjust_q",&M::adjust_q,(py::arg("self"),py::arg("q_scale"),py::arg("cids")),
             doc_intro("adjust the current state content q of ground storage by scale-factor")
             doc_intro("")
             doc_intro("Adjust the content of the ground storage, e.g. state.kirchner.q, or")
@@ -313,7 +315,8 @@ namespace expose {
             doc_parameter("q_scale","float","the scale factor to apply to current storage state")
             doc_parameter("cids","IntVector","if empty, all cells are in scope, otherwise only cells that have specified catchment ids.")
         )
-        .def("adjust_state_to_target_flow",&M::adjust_state_to_target_flow,(py::arg("self"),py::arg("wanted_flow_m3s"),py::arg("cids")),
+
+        .def("adjust_state_to_target_flow",&M::adjust_state_to_target_flow,(py::arg("self"),py::arg("wanted_flow_m3s"),py::arg("cids"),py::arg("start_step")=0),
              doc_intro("state adjustment to achieve wanted/observed flow")
 			 doc_intro("")
 			 doc_intro("This function provides an easy and consistent way to adjust the")
@@ -331,19 +334,23 @@ namespace expose {
 			 doc_intro("method stack independent.")
 			 doc_intro("")
 			 doc_intro("Notice that the model should be prepared for run prior to calling this function")
-			 doc_intro("and that there should be an initial state that gives the starting point")
+			 doc_intro("and that there should be a current model state that gives the starting point")
 			 doc_intro("for the adjustment.")
 			 doc_intro("Also note that when returning, the active state reflects the")
-			 doc_intro("achieved flow returned, and that initial state is not modified.")
+			 doc_intro("achieved flow returned, and that the current state  for the cells")
+			 doc_intro ("belonging to the catchment-ids is modified as needed to provide this average-flow.")
+			 doc_intro("The state when returning is set to the start of the i'th period specified")
+			 doc_intro("to reach the desired flow.")
 			 doc_intro("")
              doc_parameters()
 			 doc_parameter("wanted_flow_m3s","float","the average flow first time-step we want to achieve")
 			 doc_parameter("cids","IntVector"," catchments, represented by catchment-ids that should be adjusted")
 			 doc_returns("obtained flow in m3/s units.","float","note: this can deviate from wanted flow due to model and state constraints")
         )
-        .def("get_cells",&M::get_cells,"cells as shared_ptr<vector<cell_t>>")
-        .def("size",&M::size,"return number of cells")
+        .def("get_cells",&M::get_cells, (py::arg("self")),"cells as shared_ptr<vector<cell_t>>")
+        .def("size",&M::size,(py::arg("self")),"return number of cells")
         .add_property("cells",&M::get_cells,"cells of the model")
+
          ;
     }
 
@@ -430,14 +437,14 @@ namespace expose {
                     "param p_max maximum values for the parameters to be  optimized\n"
                   )
         )
-        .def(init<RegionModel&>(boost::python::args("model"),
+        .def(init<RegionModel&>(py::args("model"),
             "Construct a parameter Optimizer for the supplied model\n"
             "Use method .set_target_specification(...) to provide the target specification,\n"
             "then invoke opt_param= o.optimize(p_starting_point..)\n"
             "to get back the optimized parameters for the supplied model and target-specification\n"
             )
         )
-        .def("set_target_specification",&Optimizer::set_target_specification,boost::python::args("target_specification","parameter_lower_bound","parameter_upper_bound"),
+        .def("set_target_specification",&Optimizer::set_target_specification,py::args("target_specification","parameter_lower_bound","parameter_upper_bound"),
             "Set the target specification, parameter lower and upper bound to be used during \n"
             "subsequent call to the .optimize() methods.\n"
             "Only parameters with lower_bound != upper_bound will be subject to optimization\n"

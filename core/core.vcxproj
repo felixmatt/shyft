@@ -139,6 +139,7 @@
     <ClInclude Include="bayesian_kriging.h" />
     <ClInclude Include="kriging.h" />
     <ClInclude Include="kirchner.h" />
+    <ClInclude Include="model_state_tuning.h" />
     <ClInclude Include="optimizer_utils.h" />
     <ClInclude Include="precipitation_correction.h" />
     <ClInclude Include="predictions.h" />

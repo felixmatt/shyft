@@ -593,18 +593,19 @@ namespace shyft {
 			 * method stack independent.
 			 *
 			 * \note that the model should be prepared for run prior to calling this function
-			 *       and that there should be an initial state that gives the starting point
+			 *       and that there should be current state that gives the starting point
 			 *       for the adjustment.
 			 *       Also note that when returning, the active state reflects the
-			 *       achieved flow returned, and that initial state is not modified.
+			 *       achieved flow returned, and that current state is modified for cids at scope
 			 *
 			 * \param wanted_flow_m3s the average flow first time-step we want to achieve
 			 * \param cids catchments, represented by catchment-ids that should be adjusted
+			 * \param start_step, specifies the time_axis start-step/period to use during adjustment
 			 * \return obtained flow in m3/s units. This can deviate from wanted flow due to model and state constraints
 			 */
-			double adjust_state_to_target_flow(double wanted_flow_m3s,const std::vector<int>& cids) {
+			double adjust_state_to_target_flow(double wanted_flow_m3s,const std::vector<int>& cids,size_t start_step=0) {
 			    auto old_catchment_filter=catchment_filter;
-                adjust_state_model<region_model> a(*this,cids);
+                adjust_state_model<region_model> a(*this,cids, start_step);
                 double q_adj=a.tune_flow(wanted_flow_m3s);
                 catchment_filter=old_catchment_filter;
 				return q_adj;

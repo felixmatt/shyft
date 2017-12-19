@@ -161,6 +161,9 @@
     <ClInclude Include="dtss_client.h">
       <Filter>dtss</Filter>
     </ClInclude>
+    <ClInclude Include="model_state_tuning.h">
+      <Filter>optimizers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

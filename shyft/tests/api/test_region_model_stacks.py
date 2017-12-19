@@ -298,7 +298,7 @@ class RegionModel(unittest.TestCase):
         model.run_cells()
         q_avg = model.statistics.discharge_value(cids, 0)
         x = 0.7
-        q_x= model.adjust_state_to_target_flow(x*q_avg, cids)  #This is how to adjust state to observed average flow for cids
+        q_x= model.adjust_state_to_target_flow(x*q_avg, cids, 10)  # This is how to adjust state to observed average flow for cids for tstep 10
         self.assertAlmostEqual(q_x, q_avg*x, 3)
         pass
 

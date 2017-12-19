@@ -276,7 +276,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     cout <<"3.  b.ii verify tune_flow to observed values"<<endl;
     rm.get_states(rm.initial_state);
     double q_wanted=70.0;
-    ec::adjust_state_model<region_model_t> adj_rm(rm,all_catchment_ids);
+    ec::adjust_state_model<region_model_t> adj_rm(rm,all_catchment_ids,0);
     double q_0 = adj_rm.discharge(1.0);
     double q_adjusted = adj_rm.tune_flow(q_wanted);
     TS_ASSERT_DELTA(q_adjusted,q_wanted,0.1);

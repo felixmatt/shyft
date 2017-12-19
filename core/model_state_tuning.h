@@ -27,13 +27,17 @@ namespace core {
 template <class RM>
 struct adjust_state_model {
     RM &rm;///< Just a reference to the model, no copy semantics
+	typedef  std::vector<typename RM::state_t>state_vector_t;
     std::vector<int> cids;///< selected catchments, empty means all.
+	size_t i0{ 0u };
     adjust_state_model()=delete;
-
+	state_vector_t  s0;///< the snap-shot of current state when starting the model
+	void revert_to_state_0() { rm.set_states(s0); }
     /**Construct a wrapper around the RM so that we can use multiple tune to flow*/
-    adjust_state_model( RM&rm,const std::vector<int> &cids
-    ) :rm(rm), cids(cids) {
-        rm.set_catchment_calculation_filter(cids);
+    adjust_state_model( RM&rm,const std::vector<int> &cids,size_t i0=0
+		) :rm(rm), cids(cids),i0(i0) {
+        rm.set_catchment_calculation_filter(cids);// only calc for cells we are working on.
+		rm.get_states(s0);// important: get the state 0 snap-shot from the model as it is now
     }
 
     /** calculate the model response discharge, given a specified scale-factor
@@ -42,13 +46,13 @@ struct adjust_state_model {
      * \return discharge in m3/s for the first time-step, using the selected catchment-filters.
      */
     double discharge(double q_scale) {
-		rm.revert_to_initial_state();
+		revert_to_state_0();
 		rm.adjust_q(q_scale,cids);
-		rm.run_cells(0,0,1);// run one step
+		rm.run_cells(0,i0,1);// run one step
 		double q_avg= cell_statistics::sum_catchment_feature_value(
                 *rm.get_cells(),cids,
                 [](const typename RM::cell_t&c) {return c.rc.avg_discharge; },
-                0
+                i0
         );
         return q_avg;
     }
@@ -83,7 +87,7 @@ struct adjust_state_model {
                     max_iter            // or we reach max-iterations
         );
         double q_result =discharge(scale); // get back the resulting discharge after optimize
-        rm.revert_to_initial_state();       // get back initial state
+		revert_to_state_0();       // get back initial state
         rm.adjust_q(scale,cids);            // adjust it to the factor
         return q_result;
     }
