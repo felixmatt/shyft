@@ -24,9 +24,9 @@ class CFDataRepository(interfaces.GeoTsRepository):
     Repository for geo located timeseries stored in netCDF files.
 
     """
-                     
+
     #def __init__(self, params, region_config):
-    def __init__(self, epsg, stations_met, selection_criteria=None):
+    def __init__(self, epsg=None, stations_met=None, selection_criteria=None):
         """
         Construct the netCDF4 dataset reader for data from Arome NWP model,
         and initialize data retrieval.
@@ -35,7 +35,8 @@ class CFDataRepository(interfaces.GeoTsRepository):
         #epsg = self._rconf.domain()["EPSG"]
         #filename = params["stations_met"]
         #self.selection_criteria = params["selection_criteria"]
-
+        if not epsg:
+            epsg = 32633 #default, Norway
         filename = path.expandvars(stations_met)
         self.selection_criteria = selection_criteria
 
@@ -44,7 +45,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
             filename = path.join(shyftdata_dir, filename)
         if not path.isfile(filename):
             raise CFDataRepositoryError("No such file '{}'".format(filename))
-            
+
         self._filename = filename
         self.allow_subset = True # allow_subset
         self.elevation_file = None
@@ -175,7 +176,7 @@ class CFDataRepository(interfaces.GeoTsRepository):
 
             #time_series[key] = np.array([[construct(data[fslice + [i, j]])
             #                              for j in range(J)] for i in range(I)])
-            time_series[key] = np.array([construct(data[:,j]) for j in range(J)])                                
+            time_series[key] = np.array([construct(data[:,j]) for j in range(J)])
         return time_series
 
     def _limit(self, x, y, data_cs, target_cs, ts_id):
