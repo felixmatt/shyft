@@ -15,7 +15,7 @@ namespace shyft {
 
         bool from_raw_string(const char* str, pt_ss_k_state_t& s) const {
             if (str && *str) {
-                if (sscanf(str, "ptssk:%lf %lf %lf %lf %lf %lf %ld %lf",
+                if (sscanf(str, "ptssk:%lf %lf %lf %lf %lf %lf %zd %lf",
                     &s.snow.nu, &s.snow.alpha, &s.snow.sca,&s.snow.swe,
                     &s.snow.free_water, &s.snow.residual, &s.snow.num_units,
 					&s.kirchner.q) == 8)
@@ -26,7 +26,7 @@ namespace shyft {
 
         std::string to_string(const pt_ss_k_state_t& s) const {
             char r[500];
-            sprintf(r, "ptssk:%f %f %f %f %f %f %ld %f\n",
+            sprintf(r, "ptssk:%f %f %f %f %f %f %zd %f\n",
 				s.snow.nu, s.snow.alpha, s.snow.sca,s.snow.swe,
 				s.snow.free_water, s.snow.residual, s.snow.num_units,
 				s.kirchner.q);

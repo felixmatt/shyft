@@ -13,10 +13,22 @@
     <ClCompile Include="utctime_utilities.cpp">
       <Filter>time</Filter>
     </ClCompile>
-    <ClCompile Include="core_pch.cpp">
-      <Filter>compiler_etc</Filter>
-    </ClCompile>
     <ClCompile Include="core_serialization.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="dtss.cpp">
+      <Filter>dtss</Filter>
+    </ClCompile>
+    <ClCompile Include="dtss_client.cpp">
+      <Filter>dtss</Filter>
+    </ClCompile>
+    <ClCompile Include="time_series_dd.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
+    <ClCompile Include="time_series_serialization.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="expression_serialization.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
   </ItemGroup>
@@ -93,12 +105,6 @@
     <ClInclude Include="skaugen.h">
       <Filter>methods</Filter>
     </ClInclude>
-    <ClInclude Include="core_pch.h">
-      <Filter>compiler_etc</Filter>
-    </ClInclude>
-    <ClInclude Include="compiler_compatiblity.h">
-      <Filter>compiler_etc</Filter>
-    </ClInclude>
     <ClInclude Include="geo_cell_data.h">
       <Filter>geo</Filter>
     </ClInclude>
@@ -163,6 +169,18 @@
     </ClInclude>
     <ClInclude Include="model_state_tuning.h">
       <Filter>optimizers</Filter>
+    </ClInclude>
+    <ClInclude Include="core_archive.h">
+      <Filter>serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="core_serialization.h">
+      <Filter>serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="time_series_dd.h">
+      <Filter>time_series</Filter>
+    </ClInclude>
+    <ClInclude Include="expression_serialization.h">
+      <Filter>serialization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,6 @@
 #pragma once
 #include <cmath>
-#include "core_pch.h"
+#include "core_serialization.h"
 namespace shyft {
     namespace core {
 

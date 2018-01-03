@@ -7,7 +7,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "priestley_taylor.h"
 #include "hbv_snow.h"

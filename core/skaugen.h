@@ -26,7 +26,7 @@
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/tools/minima.hpp>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "utctime_utilities.h"
 #include "time_series.h"
@@ -113,9 +113,9 @@ namespace shyft {
                 double swe;
                 double free_water;
                 double residual;
-                unsigned long num_units;
+                size_t num_units;
                 state(double nu=4.077, double alpha=40.77, double sca=0.0,
-                      double swe=0.0, double free_water=0.0, double residual=0.0, unsigned long num_units=0)
+                      double swe=0.0, double free_water=0.0, double residual=0.0, size_t num_units=0)
                  : nu(nu), alpha(alpha), sca(sca), swe(swe), free_water(free_water),
                    residual(residual), num_units(num_units) {}
                 bool operator==(const state &x) const {

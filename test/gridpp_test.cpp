@@ -2,7 +2,7 @@
 #include "mocks.h"
 #include "core/region_model.h"
 #include "api/api.h" // looking for GeoPointSource, and TemperatureSource(realistic case)
-#include "api/time_series.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
+#include "core/time_series_dd.h" // looking for apoint_ts, the api exposed ts-type(realistic case)
 
 using namespace shyft::core;
 using namespace shyfttest;
@@ -39,7 +39,7 @@ TEST_CASE("test_sih_workbench") {
     using namespace std;
     namespace idw = shyft::core::inverse_distance;
 
-    using ats_t = shyft::api::apoint_ts; // potential break-point time-series, irregular intervals
+    using ats_t = shyft::time_series::dd::apoint_ts; // potential break-point time-series, irregular intervals
     using temperature_source = shyft::api::TemperatureSource;
     typedef shyft::time_series::average_accessor<ats_t, ta::fixed_dt> atsa_t;// accessor to ensure bp. ts is projected to fixed interval ta
     typedef idw_compliant_geo_point_ts< temperature_source, atsa_t, ta::fixed_dt> idw_compliant_gts_t;// gts =geo located ts , and idw_compliant to!

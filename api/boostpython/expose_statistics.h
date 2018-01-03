@@ -2,7 +2,7 @@
 
 namespace expose {
     namespace statistics {
-        typedef shyft::api::apoint_ts rts_;
+        typedef shyft::time_series::dd::apoint_ts rts_;
         typedef std::vector<double> vd_;
         typedef const std::vector<int>& cids_;
         typedef size_t ix_;

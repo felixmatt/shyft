@@ -3,7 +3,7 @@
 
 
 #include "api/api.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 #ifdef WIN32
 #if _MSC_VER < 1800
@@ -14,6 +14,8 @@ const double NAN = *(double*)nanx;
 
 using namespace shyft::core;
 using namespace shyfttest::idw;
+using shyft::time_series::dd::gta_t;
+
 TEST_SUITE("inverse_distance") {
 TEST_CASE("test_temperature_model") {
 	//
@@ -397,7 +399,7 @@ TEST_CASE("test_performance") {
     const int n_sources = s_nx * s_ny;
     double s_dxy = 3 * 1000; // arome typical 3 km.
     ta::fixed_dt ta(Tstart, dt, n);
-    api::gta_t gta(ta);
+    gta_t gta(ta);
     api::a_region_environment re;
     std::vector<double> v(n, 0.0);
     for (int i = 0;i < s_nx;++i) {

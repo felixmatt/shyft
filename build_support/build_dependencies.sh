@@ -2,9 +2,9 @@
 export WORKSPACE=$(readlink --canonicalize --no-newline `dirname ${0}`/../..)
 # to align the cmake support:
 export SHYFT_DEPENDENCIES_DIR=${WORKSPACE}/shyft_dependencies
-armadillo_name=armadillo-8.200.2
-dlib_name=dlib-19.7
-boost_ver=1_65_1
+armadillo_name=armadillo-8.300.2
+dlib_name=dlib-19.8
+boost_ver=1_66_0
 cmake_common="-DCMAKE_INSTALL_MESSAGE=NEVER"
 echo ---------------
 echo Update/build shyft-dependencies

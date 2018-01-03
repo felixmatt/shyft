@@ -1,4 +1,3 @@
-#include "core_pch.h"
 #include "utctime_utilities.h"
 #include <ostream>
 #include <cstring>

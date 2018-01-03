@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "utctime_utilities.h"
 namespace shyft {

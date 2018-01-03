@@ -59,10 +59,10 @@ message("SHYFT_DEPENDENCIES directory: " ${SHYFT_DEPENDENCIES})
 message("You can override the above via the $SHYFT_DEPENDENCIES_DIR environment variable.")
 
 # The flags for compile the beast
-set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/lib" CACHE STRING "CXX flags." FORCE)
+set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++14 -fPIC -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/lib" CACHE STRING "CXX flags." FORCE)
 
-# add defines that need to be consistent across sub-projects
-add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG ")
+# add defines that need to be consistent across sub-projects, notice that we need MINIMIZE_SIZE to ensure g++ vs. ms c++ compat
+add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG -DBOOST_VARIANT_MINIMIZE_SIZE ")
 
 # The directories to be included
 include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/include)

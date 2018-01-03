@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
-#include "core/core_pch.h"
+#include "core/core_serialization.h"
 
 #include "core/geo_cell_data.h"
 #include "core/cell_model.h"
@@ -29,12 +29,12 @@ namespace shyft {
         *
         */
         struct cell_state_id {
-            int cid;///< the catchment id, if entirely different model, this might change
-            int x;///< the cell mid-point x (west-east), truncated to integer [meter]
-            int y;///< the cell mid-point y (south-north), truncated to integer [meter]
-            int area;///< the area in m[m2], - if different cell geometries, this changes
+            int64_t cid;///< the catchment id, if entirely different model, this might change
+            int64_t x;///< the cell mid-point x (west-east), truncated to integer [meter]
+            int64_t y;///< the cell mid-point y (south-north), truncated to integer [meter]
+            int64_t area;///< the area in m[m2], - if different cell geometries, this changes
             cell_state_id() = default; // python exposure
-            cell_state_id(int cid, int x, int y, int area) :cid(cid), x(x), y(y), area(area) {}
+            cell_state_id(int64_t cid, int64_t x, int64_t y, int64_t area) :cid(cid), x(x), y(y), area(area) {}
             bool operator==(const cell_state_id & o) const {
                 return cid == o.cid && x == o.x && y == o.y && area == o.area;
             }

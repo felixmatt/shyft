@@ -8,8 +8,6 @@
 #include <limits>
 #include <stdexcept>
 
-#include "core_pch.h"
-
 #include "cell_model.h"
 #include "pt_hs_k.h"
 
@@ -43,7 +41,7 @@ namespace shyft {
                 // these are the one that we collects from the response, to better understand the model::
                 pts_t avg_discharge; ///< Kirchner Discharge given in [m^3/s] for the timestep
                 pts_t charge_m3s; ///< = precip + glacier - act_evap - avg_discharge [m^3/s] for the timestep
-                pts_t snow_outflow;///<  snow output [m3/s] for the timestep 
+                pts_t snow_outflow;///<  snow output [m3/s] for the timestep
                 pts_t snow_sca;
                 pts_t snow_swe;
                 pts_t glacier_melt;///< galcier melt output [m3/s] for the timestep

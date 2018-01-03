@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "cell_model.h"
 #include "hbv_stack.h"

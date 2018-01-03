@@ -3,8 +3,8 @@
 #include "core/model_calibration.h"
 #include "core/model_state_tuning.h"
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+#include "core/core_archive.h"
+
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -173,6 +173,9 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	const char *test_path = "neanidelv";
 	using namespace shyft::experimental;
 	using namespace shyft::experimental::repository;
+	using shyft::core::core_oarchive;
+	using shyft::core::core_iarchive;
+	using shyft::core::core_nvp;
 	// define a cell type
 	typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
 	// and a region model for that cell-type
@@ -181,11 +184,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
     auto global_parameter = make_shared<cell_t::parameter_t>();
-#ifdef _WIN32
-    const char *cell_path = "neanidelv/geo_cell_data.v2.win.bin";
-#else
-    const char *cell_path = "neanidelv/geo_cell_data.v2.bin";
-#endif
+    const char *cell_path = "neanidelv/geo_cell_data.v3.bin";
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
@@ -197,15 +196,15 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         gcd.reserve(cells->size());
         for (const auto&c : *cells) gcd.push_back(c.geo);
         std::ofstream geo_cell_xml_file(geo_xml_fname,ios::binary);
-        boost::archive::binary_oarchive oa(geo_cell_xml_file);
-        oa << BOOST_SERIALIZATION_NVP(gcd);
+        core_oarchive oa(geo_cell_xml_file,core_arch_flags);
+        oa << core_nvp("gcd",gcd);
     }
 
     {
         std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
         std::ifstream geo_cell_xml_file(geo_xml_fname,ios::binary);
-        boost::archive::binary_iarchive ia(geo_cell_xml_file);
-        ia >> BOOST_SERIALIZATION_NVP(gcd);
+        core_iarchive ia(geo_cell_xml_file,core_arch_flags);
+        ia >> core_nvp("gcd",gcd);
         cells->reserve(gcd.size());
         cell_t::state_t s0;
         s0.kirchner.q = 100.0;

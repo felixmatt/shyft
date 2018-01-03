@@ -44,12 +44,14 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-std=c++1y" />
+			<Add option="-std=c++14" />
 			<Add option="-fexceptions -fPIC -pthread -Winvalid-pch" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#armadillo.include)" />
 			<Add directory="$(#dlib.include)" />
+			<Add directory=".." />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
@@ -63,20 +65,13 @@
 			<Option virtualFolder="interpolation/" />
 		</Unit>
 		<Unit filename="cell_model.h" />
-		<Unit filename="compiler_compatiblity.h">
-			<Option virtualFolder="compiler_etc/" />
-		</Unit>
-		<Unit filename="core_pch.cpp">
-			<Option compile="0" />
-			<Option link="0" />
-			<Option virtualFolder="compiler_etc/" />
-		</Unit>
-		<Unit filename="core_pch.h">
-			<Option compile="1" />
-			<Option weight="0" />
-			<Option virtualFolder="compiler_etc/" />
+		<Unit filename="core_archive.h">
+			<Option virtualFolder="serialization/" />
 		</Unit>
 		<Unit filename="core_serialization.cpp">
+			<Option virtualFolder="serialization/" />
+		</Unit>
+		<Unit filename="core_serialization.h">
 			<Option virtualFolder="serialization/" />
 		</Unit>
 		<Unit filename="dream_optimizer.cpp">
@@ -85,10 +80,16 @@
 		<Unit filename="dream_optimizer.h">
 			<Option virtualFolder="optimizers/" />
 		</Unit>
+		<Unit filename="dtss.cpp">
+			<Option virtualFolder="dtss/" />
+		</Unit>
 		<Unit filename="dtss.h">
 			<Option virtualFolder="dtss/" />
 		</Unit>
 		<Unit filename="dtss_cache.h">
+			<Option virtualFolder="dtss/" />
+		</Unit>
+		<Unit filename="dtss_client.cpp">
 			<Option virtualFolder="dtss/" />
 		</Unit>
 		<Unit filename="dtss_client.h">
@@ -108,6 +109,12 @@
 		</Unit>
 		<Unit filename="experimental.h">
 			<Option virtualFolder="experimental/" />
+		</Unit>
+		<Unit filename="expression_serialization.cpp">
+			<Option virtualFolder="serialization/" />
+		</Unit>
+		<Unit filename="expression_serialization.h">
+			<Option virtualFolder="serialization/" />
 		</Unit>
 		<Unit filename="gamma_snow.h">
 			<Option virtualFolder="methods/" />
@@ -199,6 +206,12 @@
 		<Unit filename="time_series.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
+		<Unit filename="time_series_dd.cpp">
+			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_dd.h">
+			<Option virtualFolder="time_series/" />
+		</Unit>
 		<Unit filename="time_series_info.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
@@ -207,6 +220,9 @@
 		</Unit>
 		<Unit filename="time_series_qm.h">
 			<Option virtualFolder="time_series/" />
+		</Unit>
+		<Unit filename="time_series_serialization.cpp">
+			<Option virtualFolder="serialization/" />
 		</Unit>
 		<Unit filename="time_series_statistics.h">
 			<Option virtualFolder="time_series/" />

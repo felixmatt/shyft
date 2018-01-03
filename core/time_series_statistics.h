@@ -9,7 +9,6 @@
 #include <utility>
 
 
-#include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "time_axis.h"
 #include "time_series.h"

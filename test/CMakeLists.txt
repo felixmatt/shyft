@@ -1,10 +1,16 @@
 # CMake configuration for tests
 
 # Sources
-file(GLOB cpps *.cpp)
-list(REMOVE_ITEM cpps "test_pch.cpp")
-file(GLOB headers *.h)
-set(sources ${cpps} ${headers})
+#file(GLOB cpps *.cpp)
+#list(REMOVE_ITEM cpps "test_pch.cpp")
+#file(GLOB headers *.h)
+set(sources actual_evapotranspiration_test.cpp api_test.cpp calibration_test.cpp cell_builder_test.cpp dtss_test.cpp
+    gamma_snow_test.cpp glacier_melt_test.cpp gridpp_test.cpp hbv_actual_evapotranspiration_test.cpp hbv_snow_test.cpp hbv_soil_test.cpp
+    hbv_stack_test.cpp hbv_tank_test.cpp inverse_distance_test.cpp kalman_test.cpp kirchner_test.cpp kriging_test.cpp max_abs_average_accessor_test.cpp
+    merge_test.cpp mocks.cpp predictor_test.cpp priestley_taylor_test.cpp pt_gs_k_test.cpp pt_hs_k_test.cpp pt_ss_k_test.cpp qm_test.cpp
+    region_model_test.cpp routing_test.cpp runner.cpp sceua_test.cpp serialization_test.cpp skaugen_test.cpp time_axis_test.cpp 
+    time_series_average_test.cpp time_series_fixup_test.cpp time_series_test.cpp utctime_utilities_test.cpp
+)
 set(target "test_shyft")
 
 # Flags

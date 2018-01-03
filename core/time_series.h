@@ -11,8 +11,8 @@
 #include <type_traits>
 #include <algorithm>
 #include <sstream>
-#include "core_pch.h"
-#include "compiler_compatiblity.h"
+#include "core_serialization.h"
+
 #include "utctime_utilities.h"
 #include "time_axis.h"
 #include "glacier_melt.h" // to get the glacier melt function
@@ -607,6 +607,18 @@ namespace shyft{
                     return profile[i];
                 return nan;
             }
+            /** equal within abs_e default 1e-10 */
+            bool equal(const profile_description&o,double abs_e=1e-10) const {
+                if( t0!=o.t0 || dt!=o.dt || profile.size() != o.profile.size())
+                    return false;
+                for(size_t i=0;i<profile.size();++i) {
+                    if( !std::isfinite(profile[i]) && !std::isfinite(o.profile[i]) )
+                        continue;
+                    if( fabs(profile[i]-o.profile[i])>abs_e)
+                        return false;
+                }
+                return true;
+            }
             x_serialize_decl();
         };
 
@@ -677,6 +689,11 @@ namespace shyft{
             size_t size() const { return profile.size() * (1 + ta.total_period().timespan() / profile.duration()); }
             point get(size_t i) const { return point(profile.t0 + i*profile.dt, profile(i % profile.size())); }
             size_t index_of(utctime t) const { return map_index(t) + profile.size()*section_index(t); }
+            bool equal(const profile_accessor& o,double abs_e=1e-10) const {
+                if(ta != o.ta || fx_policy != o.fx_policy)
+                    return false;
+                return profile.equal(o.profile,abs_e);
+            }
             x_serialize_decl();
 
         };
@@ -717,6 +734,8 @@ namespace shyft{
                     v.emplace_back(value(i));
                 return v;
             }
+            
+            bool operator==(const periodic_ts &o) const { return fx_policy==o.fx_policy && ta==o.ta && pa.equal(o.pa,1e-30);}
             x_serialize_decl();
         };
 
@@ -877,7 +896,7 @@ namespace shyft{
         *  the first value, value(0)
         * \sa convolve_w_ts
         */
-        enum convolve_policy {
+        enum convolve_policy:int8_t {
             USE_FIRST, ///< ts.value(0) is used for all values before value(0): 'mass preserving'
             USE_ZERO, ///< fill in zero for all values before value(0):shape preserving
             USE_NAN ///< nan filled in for the first length of the filter

@@ -391,7 +391,7 @@ namespace expose {
     model_calibrator(const char *optimizer_name) {
 
         typedef typename RegionModel::parameter_t parameter_t;
-        typedef shyft::api::apoint_ts pts_t;
+        typedef shyft::time_series::dd::apoint_ts pts_t;
         typedef shyft::core::model_calibration::optimizer<RegionModel, parameter_t, pts_t> Optimizer;
         typedef typename Optimizer::target_specification_t target_specification_t;
 

@@ -14,7 +14,6 @@
 #include <future>
 #include <mutex>
 #include <boost/math/distributions/gamma.hpp>
-// no serialize here: #include "core_pch.h"
 
 #include "geo_cell_data.h"
 #include "time_axis.h"

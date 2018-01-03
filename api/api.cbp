@@ -38,9 +38,10 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-std=c++1y" />
+			<Add option="-std=c++14" />
 			<Add option="-fexceptions -fPIC -pthread" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
 			<Add directory=".." />
 			<Add directory="$(#armadillo.include)" />
 			<Add directory="$(#dlib.include)" />
@@ -69,8 +70,6 @@
 		<Unit filename="pt_gs_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
-		<Unit filename="time_series.cpp" />
-		<Unit filename="time_series.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

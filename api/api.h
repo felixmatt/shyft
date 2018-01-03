@@ -33,13 +33,14 @@
 #include "core/pt_ss_k_cell_model.h"
 #include "core/hbv_stack_cell_model.h"
 
-#include "time_series.h"
+#include "core/time_series_dd.h"
 
 namespace shyft {
   using namespace shyft::core;
   using namespace std;
+  
   namespace api {
-
+  using shyft::time_series::dd::apoint_ts;
 
     /** \brief TsFactor provides time-series creation function using supplied primitives like vector of double, start, delta-t, n etc.
      */

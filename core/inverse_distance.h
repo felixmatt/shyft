@@ -14,7 +14,6 @@
 #ifdef WIN32
 #pragma warning(disable:4503)
 #endif // WIN32
-#include "compiler_compatiblity.h"
 #include "utctime_utilities.h"
 #include "geo_point.h"
 /**

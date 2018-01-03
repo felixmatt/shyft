@@ -15,9 +15,6 @@
 #include <future>
 #include <mutex>
 
-#include "core_pch.h"
-
-
 #include "bayesian_kriging.h"
 #include "inverse_distance.h"
 #include "kirchner.h"

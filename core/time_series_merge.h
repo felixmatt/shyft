@@ -3,7 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-//assume core_pch.h is included, so no vector etc.
 #include "utctime_utilities.h"
 
 

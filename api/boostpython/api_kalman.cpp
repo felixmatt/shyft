@@ -14,7 +14,7 @@ namespace expose {
 	typedef std::shared_ptr<geo_temperature_vector> geo_temperature_vector_;
 	typedef std::vector<sa::PrecipitationSource> geo_precipitation_vector;
 	typedef std::shared_ptr<geo_precipitation_vector> geo_precipitation_vector_;
-    typedef sa::ats_vector apoint_ts_vector; // this type is already exposed in api, so we can use it directly
+    typedef shyft::time_series::dd::ats_vector apoint_ts_vector; // this type is already exposed in api, so we can use it directly
 
 
 	static void kalman_parameter() {
@@ -105,9 +105,9 @@ namespace expose {
 	static void update_with_forecast_geo_ts_and_obs(
 		shyft::core::kalman::bias_predictor& bp,
 		geo_temperature_vector_ fc,
-		const shyft::api::apoint_ts& obs,
+		const shyft::time_series::dd::apoint_ts& obs,
 		const shyft::time_axis::generic_dt &ta) {
-		std::vector<shyft::api::apoint_ts> fc_ts_set;
+		std::vector<shyft::time_series::dd::apoint_ts> fc_ts_set;
 		for (auto& geo_ts : *fc)
 			fc_ts_set.push_back(geo_ts.ts);
 		bp.update_with_forecast(fc_ts_set, obs, ta);
@@ -115,18 +115,18 @@ namespace expose {
 	static void update_with_forecast_ts_and_obs(
 			shyft::core::kalman::bias_predictor& bp,
 		const apoint_ts_vector& fc_ts_set,
-		const shyft::api::apoint_ts& obs,
+		const shyft::time_series::dd::apoint_ts& obs,
 		const shyft::time_axis::generic_dt &ta) {
         bp.update_with_forecast(fc_ts_set, obs, ta);
 	}
-    static shyft::api::apoint_ts compute_running_bias(
+    static shyft::time_series::dd::apoint_ts compute_running_bias(
         shyft::core::kalman::bias_predictor& bp,
-        const shyft::api::apoint_ts& fc_ts,
-        const shyft::api::apoint_ts& obs,
+        const shyft::time_series::dd::apoint_ts& fc_ts,
+        const shyft::time_series::dd::apoint_ts& obs,
         const shyft::time_axis::generic_dt &ta) {
         if (ta.gt != ta.FIXED)
             throw std::runtime_error("The supplied time-axis must be of type FIXED for the compute_running_bias function");
-        return bp.compute_running_bias<shyft::api::apoint_ts>(fc_ts, obs, ta.f);
+        return bp.compute_running_bias<shyft::time_series::dd::apoint_ts>(fc_ts, obs, ta.f);
     }
 
 	static void kalman_bias_predictor() {

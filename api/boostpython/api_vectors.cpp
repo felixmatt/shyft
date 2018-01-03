@@ -8,7 +8,7 @@
 #include "core/utctime_utilities.h"
 #include "core/geo_point.h"
 #include "core/geo_cell_data.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "api/api.h"
 
 namespace expose {
@@ -19,14 +19,16 @@ namespace expose {
     namespace sc=shyft::core;
     namespace ts=shyft::time_series;
     namespace py=boost::python;
+	using shyft::time_series::dd::ats_vector;
+	using shyft::time_series::dd::gta_t;
 
     static void* np_import() {
         import_array();
         return nullptr;
     }
 
-    sa::ats_vector create_tsv_from_np(const sa::gta_t& ta, const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
-        sa::ats_vector r;
+    ats_vector create_tsv_from_np(const gta_t& ta, const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
+        ats_vector r;
         size_t n_ts = a.shape()[0];
         size_t n_pts = a.shape()[1];
         if(ta.size() != n_pts)
@@ -41,7 +43,7 @@ namespace expose {
     }
 
     template <class S>
-    vector<S> create_from_geo_tsv_from_np(const sa::gta_t& ta,const vector<sc::geo_point>&gpv ,const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
+    vector<S> create_from_geo_tsv_from_np(const gta_t& ta,const vector<sc::geo_point>&gpv ,const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
         vector<S> r;
         size_t n_ts = a.shape()[0];
         size_t n_pts = a.shape()[1];

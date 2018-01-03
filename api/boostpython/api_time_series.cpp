@@ -5,24 +5,27 @@
 #include "core/time_series.h"
 #include "core/predictions.h"
 #include "api/api.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 namespace expose {
     using namespace shyft;
     using namespace shyft::core;
     using namespace boost::python;
     using namespace std;
-
+	using shyft::time_series::dd::ats_vector;
+	using shyft::time_series::dd::quantile_map_forecast;
+	using shyft::time_series::dd::rts_t;
+	using namespace shyft::time_series::dd;
     namespace py = boost::python;
 
-    shyft::api::ats_vector quantile_map_forecast_5(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start ) {
-        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start);
+    ats_vector quantile_map_forecast_5(vector<ats_vector> const & forecast_set, vector<double> const& set_weights, ats_vector const& historical_data, shyft::time_series::dd::gta_t const&time_axis, utctime interpolation_start ) {
+        return quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start);
     }
-    shyft::api::ats_vector quantile_map_forecast_6(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end) {
-        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end);
+    ats_vector quantile_map_forecast_6(vector<ats_vector> const & forecast_set, vector<double> const& set_weights, ats_vector const& historical_data, shyft::time_series::dd::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end) {
+        return quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end);
     }
-    shyft::api::ats_vector quantile_map_forecast_7(vector<shyft::api::ats_vector> const & forecast_set, vector<double> const& set_weights, shyft::api::ats_vector const& historical_data, shyft::api::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end, bool interpolated_quantiles) {
-        return shyft::api::quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end, interpolated_quantiles);
+    ats_vector quantile_map_forecast_7(vector<ats_vector> const & forecast_set, vector<double> const& set_weights, ats_vector const& historical_data, shyft::time_series::dd::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end, bool interpolated_quantiles) {
+        return quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end, interpolated_quantiles);
     }
 
 
@@ -191,26 +194,26 @@ namespace expose {
             .def(self*double())
             .def(double()*self)
             .def(self*self)
-            .def(shyft::api::apoint_ts()*self)
-            .def(self*shyft::api::apoint_ts())
+            .def(apoint_ts()*self)
+            .def(self*apoint_ts())
 
             .def(self/double())
             .def(double()/self)
             .def(self/self)
-            .def(shyft::api::apoint_ts()/self)
-            .def(self/shyft::api::apoint_ts())
+            .def(apoint_ts()/self)
+            .def(self/apoint_ts())
 
             .def(self+double())
             .def(double()+self)
             .def(self+self)
-            .def(shyft::api::apoint_ts()+self)
-            .def(self+shyft::api::apoint_ts())
+            .def(apoint_ts()+self)
+            .def(self+apoint_ts())
 
             .def(self-double())
             .def(double()-self)
             .def(self-self)
-            .def(shyft::api::apoint_ts()-self)
-            .def(self-shyft::api::apoint_ts())
+            .def(apoint_ts()-self)
+            .def(self-apoint_ts())
             ;
             // expose min-max functions:
             typedef ats_vector(*f_atsv_double)(ats_vector const &, double b);
@@ -329,7 +332,7 @@ namespace expose {
     static void expose_apoint_ts() {
         using namespace shyft::api;
 
-        typedef shyft::api::apoint_ts pts_t;
+        typedef apoint_ts pts_t;
         typedef pts_t (pts_t::*self_dbl_t)(double) const;
         typedef pts_t (pts_t::*self_ts_t)(const pts_t &)const;
 
@@ -337,7 +340,7 @@ namespace expose {
         self_ts_t  min_ts_f =&pts_t::min;
         self_dbl_t max_double_f=&pts_t::max;
         self_ts_t  max_ts_f =&pts_t::max;
-        typedef shyft::api::ts_bind_info TsBindInfo;
+        typedef ts_bind_info TsBindInfo;
         class_<TsBindInfo>("TsBindInfo",
             doc_intro("TsBindInfo gives information about the time-series and it's binding")
 			doc_intro("represented by encoded string reference")
@@ -347,8 +350,8 @@ namespace expose {
 			doc_intro("see also Timeseries.find_ts_bind_info() and Timeseries.bind()"),
 			init<>(py::arg("self"))
             )
-            .def_readwrite("id", &shyft::api::ts_bind_info::reference, "a unique id/url that identifies a time-series in a ts-database/file-store/service")
-            .def_readwrite("ts", &shyft::api::ts_bind_info::ts,"the ts, provides .bind(another_ts) to set the concrete values")
+            .def_readwrite("id", &ts_bind_info::reference, "a unique id/url that identifies a time-series in a ts-database/file-store/service")
+            .def_readwrite("ts", &ts_bind_info::ts,"the ts, provides .bind(another_ts) to set the concrete values")
             ;
 
         typedef vector<TsBindInfo> TsBindInfoVector;
@@ -360,7 +363,7 @@ namespace expose {
             .def(vector_indexing_suite<TsBindInfoVector>())
             ;
 
-		class_<shyft::api::apoint_ts>("TimeSeries",
+		class_<apoint_ts>("TimeSeries",
                 doc_intro("A time-series providing mathematical and statistical operations and functionality.")
                 doc_intro("")
                 doc_intro("A time-series can be an expression, or a concrete point time-series.")
@@ -428,12 +431,12 @@ namespace expose {
 				doc_intro("construct a time-series with a point-type time-axis ta, corresponding values, and point-interpretation point_fx")
 				)
 			)
-            .def(init<const shyft::api::rts_t &>(
+            .def(init<const rts_t &>(
 				(py::arg("self"),py::arg("core_result_ts")),
 				doc_intro("construct a time-series from a shyft core time-series, to ease working with core-time-series in user-interface/scripting")
 				)
 			)
-			.def(init<const shyft::api::apoint_ts&>(
+			.def(init<const apoint_ts&>(
 				(py::arg("self"),py::arg("clone")),
 				doc_intro("creates a shallow copy of the clone time-series")
 				)
@@ -483,8 +486,8 @@ namespace expose {
 			//--
 			// expose time_axis sih: would like to use property, but no return value policy, so we use get_ + fixup in init.py
 
-			.def("get_time_axis", &shyft::api::apoint_ts::time_axis,(py::arg("self")), "returns the time-axis", return_internal_reference<>())
-			.add_property("values", &shyft::api::apoint_ts::values,"return the values (possibly calculated on the fly)")
+			.def("get_time_axis", &apoint_ts::time_axis,(py::arg("self")), "returns the time-axis", return_internal_reference<>())
+			.add_property("values", &apoint_ts::values,"return the values (possibly calculated on the fly)")
 			// operators
 			.def(self * self)
 			.def(double() * self)
@@ -504,11 +507,11 @@ namespace expose {
 
 			.def(-self)
             .def(operator!(self))
-            .def("abs", &shyft::api::apoint_ts::abs,(py::arg("self")),
+            .def("abs", &apoint_ts::abs,(py::arg("self")),
                 doc_intro("create a new ts, abs(self")
                 doc_returns("ts", "TimeSeries", "a new time-series expression, that will provide the abs-values of self.values")
             )
-			.def("average", &shyft::api::apoint_ts::average, (py::arg("self"),py::arg("ta")),
+			.def("average", &apoint_ts::average, (py::arg("self"),py::arg("ta")),
                 doc_intro("create a new ts that is the true average of self")
                 doc_intro("over the specified time-axis ta.")
                 doc_parameters()
@@ -517,7 +520,7 @@ namespace expose {
                 doc_notes()
                 doc_note("the self point interpretation policy is used when calculating the true average")
 			)
-            .def("integral", &shyft::api::apoint_ts::integral,( py::arg("self"),py::arg("ta")),
+            .def("integral", &apoint_ts::integral,( py::arg("self"),py::arg("ta")),
                 doc_intro("create a new ts that is the true integral of self")
                 doc_intro("over the specified time-axis ta.")
                 doc_intro(" defined as integral of the non-nan part of each time-axis interval")
@@ -527,7 +530,7 @@ namespace expose {
                 doc_notes()
                 doc_note("the self point interpretation policy is used when calculating the true average")
             )
-            .def("accumulate", &shyft::api::apoint_ts::accumulate, (py::arg("self"),py::arg("ta")),
+            .def("accumulate", &apoint_ts::accumulate, (py::arg("self"),py::arg("ta")),
                 doc_intro("create a new ts where each i'th value is the ")
                 doc_intro("    integral f(t) *dt, from t0..ti,")
                 doc_intro("given the specified time-axis ta")
@@ -537,13 +540,13 @@ namespace expose {
                 doc_notes()
                 doc_note("the self point interpretation policy is used when calculating the accumulated values")
             )
-			.def("time_shift", &shyft::api::apoint_ts::time_shift,(py::arg("self"),py::arg("delta_t")),
+			.def("time_shift", &apoint_ts::time_shift,(py::arg("self"),py::arg("delta_t")),
 				doc_intro("create a new ts that is a the time-shift'ed  version of self")
 				doc_parameters()
                 doc_parameter("delta_t","int","number of seconds to time-shift, positive values moves forward")
 				doc_returns("ts","TimeSeries",	"a new time-series, that appears as time-shifted version of self")
 			)
-            .def("convolve_w", &shyft::api::apoint_ts::convolve_w, (py::arg("self"),py::arg("weights"), py::arg("policy")),
+            .def("convolve_w", &apoint_ts::convolve_w, (py::arg("self"),py::arg("weights"), py::arg("policy")),
                 doc_intro("create a new ts that is the convolved ts with the given weights list")
                 doc_parameters()
                 doc_parameter("weights","DoubleVector","the weights profile, use DoubleVector.from_numpy(...) to create these.\n"
@@ -553,7 +556,7 @@ namespace expose {
                 doc_returns("ts","TimeSeries","a new time-series that is evaluated on request to the convolution of self")
                 doc_see_also("ConvolvePolicy")
             )
-            .def("krls_interpolation", &shyft::api::apoint_ts::krls_interpolation,
+            .def("krls_interpolation", &apoint_ts::krls_interpolation,
                 ( py::arg("self"), py::arg("dt"), py::arg("gamma") = 1.E-3, py::arg("tolerance") = 0.01, py::arg("size") = 1000000u ),
                 doc_intro("Compute a new TS that is a krls interpolation of self.")
                 doc_intro("")
@@ -610,7 +613,7 @@ namespace expose {
                 doc_returns("krls_ts", "TimeSeries", "A new time series being the KRLS interpolation of self.")
                 doc_see_also("TimeSeries.get_krls_predictor, KrlsRbfPredictor")
             )
-            .def("get_krls_predictor", &shyft::api::apoint_ts::get_krls_predictor,
+            .def("get_krls_predictor", &apoint_ts::get_krls_predictor,
                 ( py::arg("self"), py::arg("dt"), py::arg("gamma") = 1.E-3, py::arg("tolerance") = 0.01, py::arg("size") = 1000000u ),
                 doc_intro("Get a KRLS predictor trained on this time-series.")
                 doc_intro("")
@@ -669,7 +672,7 @@ namespace expose {
                 doc_returns("krls_predictor", "KrlsRbfPredictor", "A KRLS predictor pre-trained once on self.")
                 doc_see_also("TimeSeries.krls_interpolation, KrlsRbfPredictor")
             )
-			.def("rating_curve", &shyft::api::apoint_ts::rating_curve,(py::arg("self"), py::arg("rc_param")),
+			.def("rating_curve", &apoint_ts::rating_curve,(py::arg("self"), py::arg("rc_param")),
 				doc_intro("Create a new TimeSeries that is computed using a RatingCurveParameter instance.")
 				doc_intro("")
                 doc_intro("Examples\n--------\n")
@@ -708,7 +711,7 @@ namespace expose {
 				doc_parameter("rc_param", "RatingCurveParameter", "RatingCurveParameter instance.")
 				doc_returns("rcts", "TimeSeries", "A new TimeSeries computed using self and rc_param.")
 			)
-            .def("extend", &shyft::api::apoint_ts::extend, (py::arg("self"), py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
+            .def("extend", &apoint_ts::extend, (py::arg("self"), py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
                 doc_intro("create a new time-series that is self extended with ts")
                 doc_parameters()
                 doc_parameter("ts", "TimeSeries", "time-series to extend self with, only values after both the start of self, and split_at is used")
@@ -722,7 +725,7 @@ namespace expose {
             .def("min",min_ts_f,(py::arg("self"),py::arg("ts_other")),"create a new ts that contains the min of self and ts_other")
             .def("max",max_double_f,(py::arg("self"),py::arg("number")),"create a new ts that contains the max of self and number for each time-step")
             .def("max",max_ts_f,(py::arg("self"),py::arg("ts_other")),"create a new ts that contains the max of self and ts_other")
-            .def("min_max_check_linear_fill",&shyft::api::apoint_ts::min_max_check_linear_fill,
+            .def("min_max_check_linear_fill",&apoint_ts::min_max_check_linear_fill,
                  (py::arg("self"),py::arg("v_min"),py::arg("v_max"),py::arg("dt_max")=shyft::core::max_utctime),
                  doc_intro("Create a min-max range checked ts with linear-fill-values if value is NaN or outside range")
                  doc_parameters()
@@ -731,7 +734,7 @@ namespace expose {
                  doc_parameter("dt_max","int","maximum time-range in seconds allowed for interpolating values, default= max_utctime")
                  doc_returns("min_max_check_linear_fill","TimeSeries","Evaluated on demand time-series with NaN, out of range values filled in")
             )
-            .def("min_max_check_ts_fill",&shyft::api::apoint_ts::min_max_check_ts_fill,
+            .def("min_max_check_ts_fill",&apoint_ts::min_max_check_ts_fill,
                  (py::arg("self"),py::arg("v_min"),py::arg("v_max"),py::arg("dt_max"),py::arg("cts")),
                  doc_intro("Create a min-max range checked ts with cts-filled-in-values if value is NaN or outside range")
                  doc_parameters()
@@ -744,7 +747,7 @@ namespace expose {
 
             //.def("max",max_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("max")
             //.def("min",min_stat_ts_ts_f,args("ts_a","ts_b"),"create a new ts that is the max(ts_a,ts_b)").staticmethod("min")
-			.def("partition_by",&shyft::api::apoint_ts::partition_by,
+			.def("partition_by",&apoint_ts::partition_by,
                 (py::arg("self"),py::arg("calendar"), py::arg("t"), py::arg("partition_interval"), py::arg("n_partitions"), py::arg("common_t0")),
 				doc_intro("from a time-series, construct a TsVector of n time-series partitions.")
 				doc_intro("The partitions are simply specified by calendar, delta_t(could be symbolic, like YEAR : MONTH:DAY) and n.")
@@ -766,7 +769,7 @@ namespace expose {
 				doc_returns("ts-partitions","TsVector","with length n_partitions, each ts is time-shifted to common_t0 expressions")
                 doc_see_also("time_shift,average,TsVector")
 				)
-            .def("bind",&shyft::api::apoint_ts::bind,(py::arg("self"),py::arg("bts")),
+            .def("bind",&apoint_ts::bind,(py::arg("self"),py::arg("bts")),
                 doc_intro("given that this ts,self, is a bind-able ts (aref_ts)")
                 doc_intro("and that bts is a concrete point TimeSeries, or something that can be evaluated to one,")
                 doc_intro("use it as representation")
@@ -777,7 +780,7 @@ namespace expose {
                 doc_note("raises runtime_error if any of preconditions is not true")
                 doc_see_also("find_ts_bind_info,TimeSeries('a-ref-string')")
             )
-            .def("bind_done",&shyft::api::apoint_ts::do_bind,(py::arg("self")),
+            .def("bind_done",&apoint_ts::do_bind,(py::arg("self")),
                  doc_intro("after bind operations on unbound time-series of an expression is done, call bind_done()")
                  doc_intro("to prepare the expression for use")
                  doc_notes()
@@ -785,13 +788,13 @@ namespace expose {
                  doc_note("this function is needed *after* the symbolic ts's are bound")
                  doc_see_also(".bind(), .find_ts_bind_info(), needs_bind()")
             )
-            .def("needs_bind",&shyft::api::apoint_ts::needs_bind,(py::arg("self")),
+            .def("needs_bind",&apoint_ts::needs_bind,(py::arg("self")),
                  doc_intro("returns true if there are any unbound time-series in the expression")
                  doc_intro("this time-series represent")
                  doc_see_also(".find_ts_bind_info(),bind() and bind_done()")
 
             )
-            .def("find_ts_bind_info",&shyft::api::apoint_ts::find_ts_bind_info,(py::arg("self")),
+            .def("find_ts_bind_info",&apoint_ts::find_ts_bind_info,(py::arg("self")),
                 doc_intro("recursive search through the expression that this ts represents,")
                 doc_intro("and return a list of TsBindInfo that can be used to")
                 doc_intro("inspect and possibly 'bind' to ts-values \ref bind.")
@@ -799,47 +802,47 @@ namespace expose {
                 doc_see_also("bind() method")
 
             )
-            .def("serialize",&shyft::api::apoint_ts::serialize_to_bytes,(py::arg("self")),
+            .def("serialize",&apoint_ts::serialize_to_bytes,(py::arg("self")),
                 "convert ts (expression) into a binary blob\n"
             )
-            .def("deserialize",&shyft::api::apoint_ts::deserialize_from_bytes,py::args("blob"),
+            .def("deserialize",&apoint_ts::deserialize_from_bytes,py::args("blob"),
                "convert a blob, as returned by .serialize() into a Timeseries"
             ).staticmethod("deserialize")
         ;
-        typedef shyft::api::apoint_ts (*avg_func_t)(const shyft::api::apoint_ts&,const shyft::time_axis::generic_dt&);
-        typedef shyft::api::apoint_ts(*int_func_t)(const shyft::api::apoint_ts&, const shyft::time_axis::generic_dt&);
-        avg_func_t avg=shyft::api::average;
-        int_func_t intfnc = shyft::api::integral;
-		avg_func_t acc = shyft::api::accumulate;
+        typedef apoint_ts (*avg_func_t)(const apoint_ts&,const shyft::time_axis::generic_dt&);
+        typedef apoint_ts(*int_func_t)(const apoint_ts&, const shyft::time_axis::generic_dt&);
+        avg_func_t avg=average;
+        int_func_t intfnc = integral;
+		avg_func_t acc = accumulate;
         def("average",avg,args("ts","time_axis"),"creates a true average time-series of ts for intervals as specified by time_axis");
         def("integral", intfnc, args("ts", "time_axis"), "creates a true integral time-series of ts for intervals as specified by time_axis");
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
-        //def("max",shyft::api::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
+        //def("max",time_series::dd::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
 
-        typedef shyft::api::apoint_ts (*ts_op_ts_t)(const shyft::api::apoint_ts&a, const shyft::api::apoint_ts&b);
-        typedef shyft::api::apoint_ts (*double_op_ts_t)(double, const shyft::api::apoint_ts&b);
-        typedef shyft::api::apoint_ts (*ts_op_double_t)(const shyft::api::apoint_ts&a, double);
+        typedef apoint_ts (*ts_op_ts_t)(const apoint_ts&a, const apoint_ts&b);
+        typedef apoint_ts (*double_op_ts_t)(double, const apoint_ts&b);
+        typedef apoint_ts (*ts_op_double_t)(const apoint_ts&a, double);
 
-        ts_op_ts_t max_ts_ts         = shyft::api::max;
-        double_op_ts_t max_double_ts = shyft::api::max;
-        ts_op_double_t max_ts_double = shyft::api::max;
+        ts_op_ts_t max_ts_ts         = time_series::dd::max;
+        double_op_ts_t max_double_ts = time_series::dd::max;
+        ts_op_double_t max_ts_double = time_series::dd::max;
         def("max",max_ts_ts    ,args("ts_a","ts_b"),"returns a new ts as max(ts_a,ts_b)");
         def("max",max_double_ts,args("a"   ,"ts_b"),"returns a new ts as max(a,ts_b)");
         def("max",max_ts_double,args("ts_a","b"   ),"returns a new ts as max(ts_a,b)");
 
-        ts_op_ts_t min_ts_ts         = shyft::api::min;
-        double_op_ts_t min_double_ts = shyft::api::min;
-        ts_op_double_t min_ts_double = shyft::api::min;
+        ts_op_ts_t min_ts_ts         = time_series::dd::min;
+        double_op_ts_t min_double_ts = time_series::dd::min;
+        ts_op_double_t min_ts_double = time_series::dd::min;
         def("min",min_ts_ts    ,args("ts_a","ts_b"),"returns a new ts as min(ts_a,ts_b)");
         def("min",min_double_ts,args("a"   ,"ts_b"),"returns a new ts as min(a,ts_b)");
         def("min",min_ts_double,args("ts_a","b"   ),"returns a new ts as min(ts_a,b)");
 
-        def("time_shift", shyft::api::time_shift,args("timeseries","delta_t"),
+        def("time_shift", time_series::dd::time_shift,args("timeseries","delta_t"),
             "returns a delta_t time-shifted time-series\n"
             " the values are the same as the original,\n"
             " but the time_axis equals the original + delta_t\n");
 
-        def("create_glacier_melt_ts_m3s", shyft::api::create_glacier_melt_ts_m3s, args("temperature", "sca_m2", "glacier_area_m2", "dtf"),
+        def("create_glacier_melt_ts_m3s", create_glacier_melt_ts_m3s, args("temperature", "sca_m2", "glacier_area_m2", "dtf"),
             doc_intro("create a ts that provide the glacier-melt algorithm based on the inputs")
             doc_parameters()
             doc_parameter("temperature", "TimeSeries", "a temperature time-series, unit [deg.Celcius]")
@@ -955,7 +958,7 @@ namespace expose {
 
 		// overloads for rating_curve_function::flow
 		double (shyft::core::rating_curve_parameters::*rcp_flow_val)(utctime, double) const = &shyft::core::rating_curve_parameters::flow;
-		std::vector<double> (shyft::core::rating_curve_parameters::*rcp_flow_ts)(const shyft::api::apoint_ts & ) const = &shyft::core::rating_curve_parameters::flow<shyft::api::apoint_ts>;
+		std::vector<double> (shyft::core::rating_curve_parameters::*rcp_flow_ts)(const apoint_ts & ) const = &shyft::core::rating_curve_parameters::flow<apoint_ts>;
 		// overloads for rating_curve_function::add_segment
 		void (shyft::core::rating_curve_parameters::*rcp_add_obj)(utctime, const rating_curve_function & ) = &shyft::core::rating_curve_parameters::add_curve;
 
@@ -1006,7 +1009,7 @@ namespace expose {
 			doc_parameter("s_a","float","the kling gupta scale a factor(weight the relative average of the goal function)")
 			doc_parameter("s_b","float","the kling gupta scale b factor(weight the relative standard deviation of the goal function)")
             doc_returns("KGEs","float","The  KGEs= 1-EDs that have a maximum at 1.0");
-		def("kling_gupta", shyft::api::kling_gupta, args("observation_ts", "model_ts", "time_axis", "s_r", "s_a", "s_b"),
+		def("kling_gupta", kling_gupta, args("observation_ts", "model_ts", "time_axis", "s_r", "s_a", "s_b"),
 			kg_doc
 		);
 
@@ -1020,7 +1023,7 @@ namespace expose {
 			doc_parameter("time_axis","TimeAxis","the time-axis that is used for the computation")
 			doc_returns("ns","float","The  n.s performance, that have a maximum at 1.0");
 
-		def("nash_sutcliffe", shyft::api::nash_sutcliffe, args("observation_ts", "model_ts", "time_axis"),
+		def("nash_sutcliffe", nash_sutcliffe, args("observation_ts", "model_ts", "time_axis"),
 			ns_doc
 		);
 
@@ -1035,7 +1038,7 @@ namespace expose {
             doc_parameter("t0","utctime","specifies the start-time of the pattern")
             doc_parameter("ta","TimeAxis","the time-axis for which the pattern is repeated\n\te.g. your pattern might be 8 3h values,and you could supply\n\ta time-axis 'ta' at hourly resolution")
 			;
-		def("create_periodic_pattern_ts", shyft::api::create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
+		def("create_periodic_pattern_ts", create_periodic_pattern_ts, args("pattern","dt","t0","ta"), docstr);
 
 	}
 
@@ -1128,7 +1131,7 @@ namespace expose {
                     doc_parameter("size", "int (optional)", "The size of the \"memory\" of the predictor. The default value is\n"
                         "    usually enough. Defaults to `1000000`." )
                 ) )
-			.def("train", &krls_rbf_predictor::train<shyft::api::apoint_ts>,
+			.def("train", &krls_rbf_predictor::train<apoint_ts>,
 				    ( py::arg("self"),
 					  py::arg("ts"),
                       py::arg("offset") = 0u, py::arg("count") = std::numeric_limits<std::size_t>::max(), py::arg("stride") = 1u,
@@ -1144,7 +1147,7 @@ namespace expose {
                         "    If the mse after a training session is less than this skip training further. Defaults to `1E-9`." )
                     doc_returns("mse", "float (optional)", "Mean squared error of the predictor relative to the time-series trained on.")
                 )
-			.def("predict", &krls_rbf_predictor::predict<shyft::api::apoint_ts,shyft::api::gta_t>,
+			.def("predict", &krls_rbf_predictor::predict<apoint_ts,shyft::time_series::dd::gta_t>,
                     (py::arg("self"), py::arg("ta")),
 				    doc_intro("Predict a time-series for for time-axis.")
                     doc_notes()
@@ -1157,7 +1160,7 @@ namespace expose {
                     doc_returns("ts", "TimeSeries", "Predicted time-series.")
                     doc_see_also("KrlsRbfPredictor.mse_ts, KrlsRbfPredictor.predictor_mse")
 			    )
-            .def("mse_ts", &krls_rbf_predictor::mse_ts<shyft::api::apoint_ts, shyft::api::apoint_ts>,
+            .def("mse_ts", &krls_rbf_predictor::mse_ts<apoint_ts, apoint_ts>,
                     ( py::arg("self"), py::arg("ts"), py::arg("points") = 0u ),
                     doc_intro("Compute a mean-squared error time-series of the predictor relative to the supplied ts.")
                     doc_parameters()
@@ -1167,7 +1170,7 @@ namespace expose {
                     doc_returns("mse_ts", "TimeSeries", "Time-series with mean-squared error values.")
                     doc_see_also("KrlsRbfPredictor.predictor_mse, KrlsRbfPredictor.predict")
                 )
-			.def("predictor_mse", &krls_rbf_predictor::predictor_mse<shyft::api::apoint_ts>,
+			.def("predictor_mse", &krls_rbf_predictor::predictor_mse<apoint_ts>,
                     ( py::arg("self"),
 					  py::arg("ts"),
                       py::arg("offset") = 0u, py::arg("count") = std::numeric_limits<std::size_t>::max(), py::arg("stride") = 1u ),
@@ -1198,28 +1201,28 @@ namespace expose {
             .value("MAX_EXTREME",time_series::statistics_property::MAX_EXTREME)
             ;
 
-        enum_<time_series::api::extend_ts_fill_policy>(
+        enum_<time_series::dd::extend_ts_fill_policy>(
             "extend_fill_policy",
             "Ref TimeSeries.extend function, this policy determines how to represent values in a gap\n"
             "EPF_NAN : use nan values in the gap\n"
             "EPF_LAST: use the last value before the gap\n"
             "EPF_FILL: use a supplied value in the gap\n"
             )
-            .value("FILL_NAN",   time_series::api::extend_ts_fill_policy::EPF_NAN)
-            .value("USE_LAST",   time_series::api::extend_ts_fill_policy::EPF_LAST)
-            .value("FILL_VALUE", time_series::api::extend_ts_fill_policy::EPF_FILL)
+            .value("FILL_NAN",   time_series::dd::extend_ts_fill_policy::EPF_NAN)
+            .value("USE_LAST",   time_series::dd::extend_ts_fill_policy::EPF_LAST)
+            .value("FILL_VALUE", time_series::dd::extend_ts_fill_policy::EPF_FILL)
             .export_values()
             ;
-        enum_<time_series::api::extend_ts_split_policy>(
+        enum_<time_series::dd::extend_ts_split_policy>(
             "extend_split_policy",
             "Ref TimeSeries.extend function, this policy determines where to split/shift from one ts to the other\n"
             "EPS_LHS_LAST : use nan values in the gap\n"
             "EPS_RHS_FIRST: use the last value before the gap\n"
             "EPS_VALUE    : use a supplied value in the gap\n"
             )
-            .value("LHS_LAST",  time_series::api::extend_ts_split_policy::EPS_LHS_LAST)
-            .value("RHS_FIRST", time_series::api::extend_ts_split_policy::EPS_RHS_FIRST)
-            .value("AT_VALUE",  time_series::api::extend_ts_split_policy::EPS_VALUE)
+            .value("LHS_LAST",  time_series::dd::extend_ts_split_policy::EPS_LHS_LAST)
+            .value("RHS_FIRST", time_series::dd::extend_ts_split_policy::EPS_RHS_FIRST)
+            .value("AT_VALUE",  time_series::dd::extend_ts_split_policy::EPS_VALUE)
             .export_values()
             ;
 

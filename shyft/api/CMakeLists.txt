@@ -71,19 +71,7 @@ include_directories(
 )
 
 # Set the compiler flags (for gcc and clang)
-set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++1y -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 )
-
-# Set the common C++ files
-set(CXX_FILES 
-        ${CMAKE_SOURCE_DIR}/core/utctime_utilities.cpp 
-        ${CMAKE_SOURCE_DIR}/core/core_serialization.cpp 
-        ${CMAKE_SOURCE_DIR}/core/sceua_optimizer.cpp 
-        ${CMAKE_SOURCE_DIR}/core/dream_optimizer.cpp
-        ${CMAKE_SOURCE_DIR}/api/api_serialization.cpp 
-        ${CMAKE_SOURCE_DIR}/api/api.cpp 
-        ${CMAKE_SOURCE_DIR}/api/time_series.cpp
-)
-
+set(C_FLAGS -O3 -shared -L${lib_python} -pthread -s -fPIC -std=c++14 -DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 )
 
 set(LIBS "-L${SHYFT_DEPENDENCIES}/lib -lboost_python3 -lboost_serialization -lboost_filesystem -lboost_system -ldlib  ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}")
 
@@ -95,7 +83,7 @@ foreach(python_api_extension  "api" )
   # Python extensions do not use the 'lib' prefix
   set_target_properties(${python_api_extension} PROPERTIES PREFIX "_" INSTALL_RPATH "$ORIGIN/../lib")
   set_property(TARGET ${python_api_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
-  target_link_libraries(${python_api_extension} ${LIBS}  )
+  target_link_libraries(${python_api_extension} shyftcore shyftapi ${LIBS}  )
   install(TARGETS ${python_api_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api)
 
 endforeach(python_api_extension)
@@ -107,7 +95,7 @@ foreach(python_extension  "pt_gs_k" "pt_ss_k" "pt_hs_k" "hbv_stack")
   # Python extensions do not use the 'lib' prefix
   set_target_properties(${python_extension} PROPERTIES PREFIX "_" INSTALL_RPATH "$ORIGIN/../../lib")
   set_property(TARGET ${python_extension} APPEND PROPERTY COMPILE_DEFINITIONS SHYFT_EXTENSION)
-  target_link_libraries(${python_extension}  ${LIBS} )
+  target_link_libraries(${python_extension} shyftcore shyftapi  ${LIBS} )
   install(TARGETS ${python_extension} DESTINATION ${CMAKE_SOURCE_DIR}/shyft/api/${python_extension})
 
 endforeach(python_extension)
