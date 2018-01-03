@@ -5,6 +5,7 @@ export SHYFT_DEPENDENCIES_DIR=${WORKSPACE}/shyft_dependencies
 armadillo_name=armadillo-8.300.2
 dlib_name=dlib-19.8
 boost_ver=1_66_0
+pybind11_ver=v2.2.1
 cmake_common="-DCMAKE_INSTALL_MESSAGE=NEVER"
 echo ---------------
 echo Update/build shyft-dependencies
@@ -93,13 +94,12 @@ fi;
 echo  Done boost_${boost_ver}
 
 cd ${SHYFT_DEPENDENCIES_DIR}
-if [ -d pybind11 ]; then
-    pushd pybind11
-    git pull > /dev/null
-    popd
-else
+if [ ! -d pybind11 ]; then
     git clone https://github.com/pybind/pybind11.git
 fi;
+pushd pybind11
+git checkout ${pybind11_ver} > /dev/null
+popd
 echo Done pybind11
 
 cd ${WORKSPACE}
