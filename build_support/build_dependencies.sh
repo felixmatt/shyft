@@ -92,14 +92,14 @@ if [ ! -d boost_${boost_ver} ]; then
 fi;
 echo  Done boost_${boost_ver}
 
-cd ${WORKSPACE}
+cd ${SHYFT_DEPENDENCIES_DIR}
 if [ -d pybind11 ]; then
     pushd pybind11
     git pull > /dev/null
     popd
 else
     git clone https://github.com/pybind/pybind11.git
-fi
+fi;
 echo Done pybind11
 
 cd ${WORKSPACE}
