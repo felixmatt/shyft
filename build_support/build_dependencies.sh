@@ -93,6 +93,16 @@ fi;
 echo  Done boost_${boost_ver}
 
 cd ${WORKSPACE}
+if [ -d pybind11 ]; then
+    pushd pybind11
+    git pull > /dev/null
+    popd
+else
+    git clone https://github.com/pybind/pybind11.git
+fi
+echo Done pybind11
+
+cd ${WORKSPACE}
 if [ -d shyft-data ]; then 
     pushd shyft-data
     git pull >/dev/null
