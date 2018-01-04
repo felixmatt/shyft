@@ -22,7 +22,7 @@ from shyft.api import UtcPeriod
 from shyft.api import deltahours
 from shyft.api import point_interpretation_policy as point_fx
 from shyft.api import utctime_now
-
+from shyft.api import ts_stringify
 
 def shyft_store_url(name: str) -> str:
     return "shyft://test/{}".format(name)  # shyft:// maps to internal, test= container-name
@@ -129,7 +129,7 @@ class DtssTestCase(unittest.TestCase):
 
         dummy_ts = TimeSeries('dummy://a')
         tsv.append(dummy_ts.integral(ta))
-
+        self.assertGreater(len(ts_stringify(tsv[0])), 10)  # just ensure ts_stringify work on expr.
         # then start the server
         dtss = DtsServer()
         port_no = find_free_port()

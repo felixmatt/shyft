@@ -27,7 +27,70 @@ namespace expose {
     ats_vector quantile_map_forecast_7(vector<ats_vector> const & forecast_set, vector<double> const& set_weights, ats_vector const& historical_data, shyft::time_series::dd::gta_t const&time_axis, utctime interpolation_start, utctime interpolation_end, bool interpolated_quantiles) {
         return quantile_map_forecast(forecast_set, set_weights, historical_data, time_axis, interpolation_start, interpolation_end, interpolated_quantiles);
     }
+	static string nice_str(const gta_t & ta) {
+		char s[100]; s[0] = 0;
+		switch (ta.gt) {
+		case gta_t::generic_type::FIXED:sprintf(s, "TaF[%s,%lld,%zd]", calendar().to_string(ta.f.t).c_str(), ta.f.dt, ta.f.n); break;
+		case gta_t::generic_dt::CALENDAR:sprintf(s, "TaC[%s,%s,%lld,%zd]", ta.c.cal->tz_info->name().c_str(), ta.c.cal->to_string(ta.c.t).c_str(), ta.c.dt, ta.c.n); break;
+		case gta_t::generic_dt::POINT:sprintf(s, "TaP[%s,%zd]", ta.p.total_period().to_string().c_str(), ta.p.size()); break;
+		}
+		return s;
+	}
 
+	static string nice_str(const string& lhs,iop_t op,const string &rhs) {
+		switch (op) {
+		case iop_t::OP_ADD:return "("+ lhs + "+ " + rhs +")";
+		case iop_t::OP_SUB:return "(" + lhs + "- " + rhs + ")";
+		case iop_t::OP_DIV:return "(" + lhs + "/" + rhs + ")";
+		case iop_t::OP_MUL:return "(" + lhs + "*" + rhs + ")";
+		case iop_t::OP_MAX:return "max("+lhs+", "+rhs+")";
+		case iop_t::OP_MIN:return "min(" + lhs + ", " + rhs + ")";
+		case iop_t::OP_NONE:break;// just fall to exception
+		}
+		return "unsupported_op(" + lhs + "," + rhs + ")";
+	}
+	static string nice_str(const apoint_ts&ats);
+	static string nice_str(double x) { return to_string(x); }
+	static string nice_str(const shared_ptr<gpoint_ts>& g) {return "Ts{" + nice_str(g->rep.ta) + "v[..]}";}
+	static string nice_str(const shared_ptr<aref_ts>&r ) {return r->id + "(" +nice_str(r->rep)+ ")";}
+	static string nice_str(const shared_ptr<abin_op_ts> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
+	static string nice_str(const shared_ptr<abin_op_ts_scalar> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
+	static string nice_str(const shared_ptr<abin_op_scalar_ts> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
+	static string nice_str(const shared_ptr<abs_ts> &b) { return "abs(" +nice_str(apoint_ts(b->ts)) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::average_ts>&b) { return "average(" + nice_str(apoint_ts(b->ts)) + "," + nice_str(b->ta) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::integral_ts>&b) { return "integral(" + nice_str(apoint_ts(b->ts)) + "," + nice_str(b->ta) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::accumulate_ts>&b) { return "accumulate(" + nice_str(apoint_ts(b->ts)) + "," + nice_str(b->ta) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::time_shift_ts>&b) { return "time_shift(" + nice_str(apoint_ts(b->ts)) + "," + to_string(b->dt) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::periodic_ts>&b) { return "periodic_ts("+nice_str(b->ts.ta) + ")"; }
+	static string nice_str(const shared_ptr<time_series::dd::convolve_w_ts>&b) { return "convolve_w_ts(" + nice_str(b->ts_impl.ts) + ",..)"; }
+	static string nice_str(const shared_ptr<time_series::dd::extend_ts>&b) { return "extend_ts(" + nice_str(b->lhs)+","+nice_str(b->rhs)+",..)"; }
+	static string nice_str(const shared_ptr<time_series::dd::rating_curve_ts>&b) { return "rating_curve_ts(" + nice_str(b->ts.level_ts) + ",..)"; }
+	static string nice_str(const shared_ptr<time_series::dd::krls_interpolation_ts>&b) { return "krls(" + nice_str(b->ts) + ",..)"; }
+	static string nice_str(const shared_ptr<time_series::dd::qac_ts>&b) { return "qac_ts(" + nice_str(apoint_ts(b->ts)) + ", "+nice_str(apoint_ts(b->cts))+"..)"; }
+
+
+	static string nice_str(const apoint_ts&ats) {
+		if (!ats.ts)
+			return "null";
+		if (const auto& g = dynamic_pointer_cast<gpoint_ts>(ats.ts))return nice_str(g);
+		if (const auto& r = dynamic_pointer_cast<aref_ts>(ats.ts)) return nice_str(r);
+		if (const auto& b = dynamic_pointer_cast<abin_op_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<abin_op_ts_scalar>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<abin_op_scalar_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<abs_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::average_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::integral_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::accumulate_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::time_shift_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::periodic_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::convolve_w_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::extend_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::rating_curve_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::krls_interpolation_ts>(ats.ts)) return nice_str(b);
+		if (const auto& b = dynamic_pointer_cast<time_series::dd::qac_ts>(ats.ts)) return nice_str(b);
+
+		return "not_yet_stringified_ts";
+	}
 
     static void expose_ats_vector() {
         using namespace shyft::api;
@@ -819,7 +882,11 @@ namespace expose {
         def("integral", intfnc, args("ts", "time_axis"), "creates a true integral time-series of ts for intervals as specified by time_axis");
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",time_series::dd::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
-
+		typedef string(*apoint_ts_str_t)(const apoint_ts&);
+		apoint_ts_str_t stringify = nice_str;
+		def("ts_stringify",stringify , (py::arg("ts")),
+			doc_intro("Given a TimeSeries, return a string showing the details/expression") 
+		);
         typedef apoint_ts (*ts_op_ts_t)(const apoint_ts&a, const apoint_ts&b);
         typedef apoint_ts (*double_op_ts_t)(double, const apoint_ts&b);
         typedef apoint_ts (*ts_op_double_t)(const apoint_ts&a, double);
