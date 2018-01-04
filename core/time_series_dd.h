@@ -1392,7 +1392,10 @@ namespace shyft {
             void reserve(size_t x) {ats_vec::reserve(x);}
             apoint_ts& operator()(size_t i) {return *(begin()+i);}
             apoint_ts const & operator()(size_t i) const {return *(begin()+i);}
-
+            /** support operator! bool  to let an empty tsv  evaluate to */
+            bool operator !() const { // can't expose it as op, due to math promotion
+                return !(size() > 0);
+            }
             vector<double> values_at_time(utctime t) const {
                 std::vector<double> r;r.reserve(size());
                 for (auto const &ts : *this ) r.push_back(ts(t));

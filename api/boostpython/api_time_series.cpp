@@ -214,6 +214,7 @@ namespace expose {
             .def(self-self)
             .def(apoint_ts()-self)
             .def(self-apoint_ts())
+            .def(operator!(self))
             ;
             // expose min-max functions:
             typedef ats_vector(*f_atsv_double)(ats_vector const &, double b);

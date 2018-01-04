@@ -730,6 +730,12 @@ namespace shyft{
 		ats_vector operator+(ats_vector const &a, double b) { ats_vector r; r.reserve(a.size()); for (auto const&ts : a) r.push_back(ts + b); return r; }
 		ats_vector operator+(double a, ats_vector const &b) { return b + a; }
 		ats_vector operator+(ats_vector const &a, ats_vector const& b) {
+            // additional rule nice for reduce(add.. )
+            // if one of tsv is 0, result is a tsv.
+            if (a.size()==0 && b.size()!=0)
+                return b;
+            if (a.size()!=0 && b.size()==0)
+                return a;
 			if (a.size() != b.size()) throw runtime_error(string("ts-vector add require same sizes: lhs.size=") + std::to_string(a.size()) + string(",rhs.size=") + std::to_string(b.size()));
 			ats_vector r; r.reserve(a.size()); for (size_t i = 0; i < a.size(); ++i) r.push_back(a[i] + b[i]);
 			return r;
@@ -743,6 +749,13 @@ namespace shyft{
 		ats_vector operator-(ats_vector const &a, double b) { ats_vector r; r.reserve(a.size()); for (auto const&ts : a) r.push_back(ts - b); return r; }
 		ats_vector operator-(double a, ats_vector const &b) { ats_vector r; r.reserve(b.size()); for (auto const&ts : b) r.push_back(a - ts); return r; }
 		ats_vector operator-(ats_vector const &a, ats_vector const& b) {
+            if (a.size()==0 && b.size()!=0) {
+                ats_vector r; r.reserve(b.size()); for (size_t i = 0; i < b.size(); ++i) r.push_back( - b[i]);
+                return r;
+            }
+            if (a.size()!=0 && b.size()==0)
+                return a;
+
 			if (a.size() != b.size()) throw runtime_error(string("ts-vector sub require same sizes: lhs.size=") + std::to_string(a.size()) + string(",rhs.size=") + std::to_string(b.size()));
 			ats_vector r; r.reserve(a.size()); for (size_t i = 0; i < a.size(); ++i) r.push_back(a[i] - b[i]);
 			return r;
