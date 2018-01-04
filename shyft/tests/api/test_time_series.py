@@ -595,6 +595,14 @@ class TimeSeries(unittest.TestCase):
         self.assertIsNotNone(bind_expr_ts)
         self.assertAlmostEqual(bind_expr_ts.value(0), 3.0*a.value(0))  # just to check, its for real
 
+    def test_ts_stringify(self):
+        a=api.TimeSeries('a')
+        b=api.TimeSeries('b')
+        c= a+b
+        s_a= api.ts_stringify(a)
+        s_a= api.ts_stringify(c)
+        self.assertIsNotNone(s_a)
+
     def test_a_time_series_vector(self):
         c = api.Calendar()
         t0 = api.utctime_now()

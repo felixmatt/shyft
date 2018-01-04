@@ -51,8 +51,8 @@ namespace expose {
 	}
 	static string nice_str(const apoint_ts&ats);
 	static string nice_str(double x) { return to_string(x); }
-	static string nice_str(const shared_ptr<gpoint_ts>& g) {return "Ts{" + nice_str(g->rep.ta) + "v[..]}";}
-	static string nice_str(const shared_ptr<aref_ts>&r ) {return r->id + "(" +nice_str(r->rep)+ ")";}
+	static string nice_str(const shared_ptr<gpoint_ts>& g) {return g? "Ts{" + nice_str(g->rep.ta) + "v[..]}":string("null");}
+	static string nice_str(const shared_ptr<aref_ts>&r ) {return r->id + (r->rep?"(" +nice_str(r->rep)+ ")":string(""));}
 	static string nice_str(const shared_ptr<abin_op_ts> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
 	static string nice_str(const shared_ptr<abin_op_ts_scalar> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
 	static string nice_str(const shared_ptr<abin_op_scalar_ts> &b) { return nice_str(nice_str(b->lhs), b->op, nice_str(b->rhs)); }
@@ -91,7 +91,7 @@ namespace expose {
 
 		return "not_yet_stringified_ts";
 	}
-
+    static string ts_stringify(const apoint_ts&ats) { return nice_str(ats); }
     static void expose_ats_vector() {
         using namespace shyft::api;
         typedef ats_vector(ats_vector::*m_double)(double)const;
@@ -882,9 +882,7 @@ namespace expose {
         def("integral", intfnc, args("ts", "time_axis"), "creates a true integral time-series of ts for intervals as specified by time_axis");
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",time_series::dd::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
-		typedef string(*apoint_ts_str_t)(const apoint_ts&);
-		apoint_ts_str_t stringify = nice_str;
-		def("ts_stringify",stringify , (py::arg("ts")),
+		def("ts_stringify",ts_stringify , (py::arg("ts")),
 			doc_intro("Given a TimeSeries, return a string showing the details/expression") 
 		);
         typedef apoint_ts (*ts_op_ts_t)(const apoint_ts&a, const apoint_ts&b);
