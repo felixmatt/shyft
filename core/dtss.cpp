@@ -7,7 +7,7 @@ namespace shyft {
 namespace dtss {
 
 using std::vector;
-using std::map;
+using std::unordered_map;
 using std::string;
 using std::runtime_error;
 using std::size_t;
@@ -88,7 +88,7 @@ ts_vector_t server::do_read(const id_vector_t& ts_ids,utcperiod p,bool use_ts_ca
     if(ts_ids.size()==0) return ts_vector_t{};
     bool cache_read_results=update_ts_cache || cache_all_reads;
     // 0. filter out ts we can get from cache, given we are allowed to use cache
-    map<string,apoint_ts> cc;
+    unordered_map<string,apoint_ts> cc;
     if(use_ts_cached_read)
         cc = ts_cache.get(ts_ids,p);
     ts_vector_t r(ts_ids.size());
@@ -137,7 +137,7 @@ ts_vector_t server::do_read(const id_vector_t& ts_ids,utcperiod p,bool use_ts_ca
 
 void
 server::do_bind_ts(utcperiod bind_period, ts_vector_t& atsv,bool use_ts_cached_read,bool update_ts_cache)  {
-    map<string, vector<ts_bind_info>> ts_bind_map;
+    unordered_map<string, vector<ts_bind_info>> ts_bind_map;
     vector<string> ts_id_list;
     // step 1: bind not yet bound time-series ( ts with only symbol, needs to be resolved using bind_cb)
     for (auto& ats : atsv) {

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <memory>
 #include <utility>
@@ -87,7 +88,7 @@ struct server : dlib::server_iostream {
     find_call_back_t find_ts_cb; ///< called for all non shyft:// find operations
     store_call_back_t store_ts_cb;///< called for all non shyft:// store operations
     // shyft-internal implementation
-    std::map<std::string, ts_db> container;///< mapping of internal shyft <container> -> ts_db
+    std::unordered_map<std::string, ts_db> container;///< mapping of internal shyft <container> -> ts_db
     ts_cache_t ts_cache{1000000};// default 1 mill ts in cache
     bool cache_all_reads{false};
     // constructors

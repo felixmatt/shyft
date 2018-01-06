@@ -354,11 +354,11 @@ namespace shyft {
                 l.fragment_count += r.fragment_count;
                 return l;
             }
-            
+
             x_serialize_decl();
         };
-        
-        
+
+
         /** \brief a dtss cache for id-based ts-fragments
          *
          * Provides thread-safe:
@@ -463,9 +463,9 @@ namespace shyft {
              * \param p specifies the period requirement
              * \return a map<string,ts_t> with the time-series from cache that matches the criteria
              */
-            map<string, ts_t> get(const vector<string>& ids, const utcperiod& p) {
+            unordered_map<string, ts_t> get(const vector<string>& ids, const utcperiod& p) {
                 lock_guard<mutex> guard(mx);
-                map<string, ts_t> r;
+                unordered_map<string, ts_t> r;
                 for (const auto&id:ids) {
                     ts_t x;
                     if (internal_try_get(id, p, x)) {
