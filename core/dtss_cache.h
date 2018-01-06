@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <list>
 #include <algorithm>
 #include <memory>
@@ -23,6 +24,7 @@ namespace shyft {
         using std::size_t;
         using std::vector;
         using std::map;
+        using std::unordered_map;
         using std::pair;
         using std::list;
         using std::make_shared;
@@ -381,7 +383,7 @@ namespace shyft {
         template<class ts_frag, class ts_t>
         struct cache {
             using value_type = mini_frag<ts_frag>;
-            using internal_cache = lru_cache<string, value_type, map>;
+            using internal_cache = lru_cache<string, value_type, unordered_map>;
         private:
             mutable mutex mx; ///< mutex to protect access to c and cs
             internal_cache c;///< internal cache implementation
