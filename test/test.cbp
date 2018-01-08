@@ -50,9 +50,10 @@
 			<Add option="-fexceptions -Winvalid-pch -pthread" />
 			<Add option="-D__UNIT_TEST__" />
 			<Add option="-DVERBOSE=0" />
+			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
 			<Add option="-DARMA_DONT_PRINT_ERRORS" />
-			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
+			<Add option="-DARMA_NO_DEBUG" />
 			<Add directory=".." />
 			<Add directory="$(#boost.include)" />
 			<Add directory="$(#dlib.include)" />

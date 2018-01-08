@@ -143,6 +143,9 @@
 			<Add option="-std=c++14" />
 			<Add option="-fexceptions -fPIC" />
 			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
+			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DARMA_DONT_PRINT_ERRORS" />
+			<Add option="-DARMA_NO_DEBUG" />
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
 			<Add directory="$(#numpy.include)" />
