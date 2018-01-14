@@ -922,6 +922,12 @@ namespace shyft {
 					[](const cell& c) { return c.rc.soil_outflow; }, ith_timestep);
 		}
 	};
+    
+    /** helper class for pot_ratio method of ae cell_response */
+    struct pot_ratio_single_value_ts {
+        double v;
+        double value(size_t) const {return v;};
+    };
     template <typename cell>
     struct actual_evapotranspiration_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
@@ -942,7 +948,55 @@ namespace shyft {
 				average_catchment_feature_value(*cells, catchment_indexes,
 					[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
-	};
+		
+		/**  pot_ratio is needed to study the dry-level of kirchner and pot/act evapo ratio.
+         *  
+         *  pot_ratio(t) = (1.0 - std::exp(-water_level*3.0/ scale_factor))  [ratio]
+         * 
+         * where 
+         *   water_level = kirchner.state.q(t) [mm/h]
+         *   scale_factor = cell.parameter.ae.scale_factor
+         */
+		apoint_ts pot_ratio(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { 
+                    vector<double>  v; v.reserve(c.sc.kirchner_discharge.size());
+                    auto scale_factor = c.parameter->ae.ae_scale_factor;
+                    auto area_m2 = c.geo.area();
+                    for(size_t i=0;i<c.sc.kirchner_discharge.size();++i) {
+                        v.emplace_back( 
+                            shyft::core::actual_evapotranspiration::calc_pot_ratio(m3s_to_mmh(c.sc.kirchner_discharge.value(i),area_m2),scale_factor)
+                        );
+                    }
+                    return shyft::core::pts_t(c.sc.kirchner_discharge.time_axis(),move(v),c.sc.kirchner_discharge.point_interpretation()); 
+                })
+            );
+        }
+		vector<double> pot_ratio(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[ith_timestep](const cell& c) { 
+                    auto scale_factor = c.parameter->ae.ae_scale_factor;
+                    auto area_m2 = c.geo.area();
+                    auto water_level = m3s_to_mmh(c.sc.kirchner_discharge.value(ith_timestep),area_m2);
+                    double pot_ratio_value=shyft::core::actual_evapotranspiration::calc_pot_ratio(water_level,scale_factor);
+                    return pot_ratio_single_value_ts{pot_ratio_value}; 
+                }, ith_timestep);
+		}
+		double pot_ratio_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[ith_timestep](const cell& c) { 
+                        auto scale_factor = c.parameter->ae.ae_scale_factor;
+                        auto area_m2 = c.geo.area();
+                        auto water_level = m3s_to_mmh(c.sc.kirchner_discharge.value(ith_timestep),area_m2);
+                        double pot_ratio_value=shyft::core::actual_evapotranspiration::calc_pot_ratio(water_level,scale_factor);
+                        return pot_ratio_single_value_ts{pot_ratio_value}; 
+                    }, ith_timestep);
+		}
+        
+    };
 
 	template <typename cell>
 	struct hbv_actual_evapotranspiration_cell_response_statistics {

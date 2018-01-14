@@ -16,7 +16,7 @@
 #
 
 
-cmake_minimum_required(VERSION 3.2.0)
+cmake_minimum_required(VERSION 3.4.0)
 
 project(shyft)
 
@@ -26,11 +26,11 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION SHYFT_VERSION_STRING)
 message("Configuring for Shyft version: " ${SHYFT_VERSION_STRING})
 
 #if ccache, use it, but require cmake 3.4.0..
-#find_program(CCACHE_FOUND ccache)
-#if(CCACHE_FOUND)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-#endif(CCACHE_FOUND)
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
 
 # options
 option(BUILD_TESTING "Build test programs for SHYFT C++ core library" ON)

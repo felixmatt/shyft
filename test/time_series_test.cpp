@@ -558,7 +558,7 @@ TEST_SUITE("time_series") {
         TS_ASSERT_EQUALS(ps6.index_of_count,1u);
         TS_ASSERT_DELTA((7)/1.0,v,0.00001);
         ps.index_of_count=0;
-        average_accessor<shyfttest::test_timeseries,time_axis::fixed_dt> avg_a(ps,tx);
+        average_accessor<shyfttest::test_timeseries,time_axis::fixed_dt> avg_a(ps,tx,extension_policy::USE_DEFAULT);
         TS_ASSERT_DELTA(avg_a.value(0),(1*0.5+2*0.5)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
         TS_ASSERT_DELTA(avg_a.value(1),(2*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
         TS_ASSERT_DELTA(avg_a.value(2),(3*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
@@ -666,7 +666,7 @@ TEST_SUITE("time_series") {
         time_axis::fixed_dt ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size()+2); // two more steps
         time_series::point_ts<time_axis::fixed_dt> ts(ts_ta,v,ts_point_fx::POINT_AVERAGE_VALUE);
         SUBCASE("average") {
-            time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+            time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta,extension_policy::USE_DEFAULT);
             time_series::average_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
             time_series::average_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
             CHECK(a_default.value(ta.size()-1)==doctest::Approx(2.5));
@@ -674,7 +674,7 @@ TEST_SUITE("time_series") {
             CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
         }
         SUBCASE("accumulate") {
-            time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+            time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta,extension_policy::USE_DEFAULT);
             time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
             time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
             CHECK(a_default.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5+2.5)));

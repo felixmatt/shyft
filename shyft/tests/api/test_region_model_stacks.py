@@ -213,6 +213,13 @@ class RegionModel(unittest.TestCase):
         sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
         sum_charge = model.statistics.charge(cids)
         sum_charge_value=model.statistics.charge_value(cids, 0)
+        ae_output = model.actual_evaptranspiration_response.output(cids)
+        ae_pot_ratio = model.actual_evaptranspiration_response.pot_ratio(cids)
+        self.assertIsNotNone(ae_output)
+        self.assertAlmostEqual(ae_output.values.to_numpy().max(),0.189214067680088)
+        self.assertIsNotNone(ae_pot_ratio)
+        self.assertAlmostEqual(ae_pot_ratio.values.to_numpy().min(),0.9999330003895371)
+        self.assertAlmostEqual(ae_pot_ratio.values.to_numpy().max(), 1.0)
         opt_model.run_cells()  # starting out with the same state, same interpolated values, and region-parameters, we should get same results
         sum_discharge_opt_value= opt_model.statistics.discharge_value(cids, 0)
         self.assertAlmostEqual(sum_discharge_opt_value,sum_discharge_value,3)  # verify the opt_model clone gives same value

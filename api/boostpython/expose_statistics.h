@@ -75,11 +75,16 @@ namespace expose {
 
             rts_ (rc_stat::*output_ts)(cids_) const = &rc_stat::output;
             vd_  (rc_stat::*output_vd)(cids_,ix_) const =&rc_stat::output;
+            rts_ (rc_stat::*pot_ratio_ts)(cids_) const = &rc_stat::pot_ratio;
+            vd_  (rc_stat::*pot_ratio_vd)(cids_,ix_) const =&rc_stat::pot_ratio;
             class_<rc_stat>(response_name,"ActualEvapotranspiration response statistics",no_init)
                 .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct ActualEvapotranspiration cell response statistics object"))
                 .def("output",output_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
                 .def("output",output_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
 				.def("output_value", &rc_stat::output_value, args("catchment_indexes", "i"), "returns for cells matching catchments_ids at the i'th timestep")
+                .def("pot_ratio",pot_ratio_ts,args("catchment_indexes"), "returns the avg ratio (1-exp(-water_level*3/scale_factor)) for catcment_ids")
+                .def("pot_ratio",pot_ratio_vd,args("catchment_indexes","i"),"returns the ratio the ratio (1-exp(-water_level*3/scale_factor)) for cells matching catchments_ids at the i'th timestep")
+				.def("pot_ratio_value", &rc_stat::pot_ratio_value, args("catchment_indexes", "i"), "returns the ratio avg (1-exp(-water_level*3/scale_factor)) value for cells matching catchments_ids at the i'th timestep")
 				;
         }
 		template <class cell>

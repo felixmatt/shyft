@@ -5,16 +5,10 @@
 #include "api/api.h"
 #include "core/time_series_dd.h"
 
-#ifdef WIN32
-#if _MSC_VER < 1800
-const unsigned long nanx[2] = { 0xffffffff, 0x7fffffff };
-const double NAN = *(double*)nanx;
-#endif
-#endif
-
 using namespace shyft::core;
 using namespace shyfttest::idw;
 using shyft::time_series::dd::gta_t;
+
 
 TEST_SUITE("inverse_distance") {
 TEST_CASE("test_temperature_model") {
@@ -234,7 +228,7 @@ TEST_CASE("test_using_finite_sources_only") {
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, n_sources);
 
-	s[2].set_value(NAN);
+	s[2].set_value(shyft::nan);
 	//
 	// Act
 	//
@@ -347,7 +341,7 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	vector<Source> s(Source::GenerateTestSources(ta, n_sources, 0.5*nx * 1000, 0.5*ny * 1000, 0.25*0.5*(nx + ny) * 1000));// n sources, radius 50km, starting at 100,100 km center
 	vector<MCell> d(MCell::GenerateTestGrid(nx, ny)); // 200x200 km
 	Parameter p(2.75 * 0.5 * (nx + ny) * 1000, n_sources);
-	s[2].set_value_at_t(Tstart + dt, NAN);
+	s[2].set_value_at_t(Tstart + dt, shyft::nan);
 
 	// at second, and last.. , timestep, only s[0] and s[1] are valid,
 	// so diff. calc. applies to second step,
@@ -375,6 +369,30 @@ TEST_CASE("test_handling_different_sources_pr_timesteps") {
 	double expected_v = (v1 + v2) / (w1 + w2);
 	TS_ASSERT_EQUALS(count_if(begin(d), end(d), [expected_v](const MCell&d) { return fabs(d.v - expected_v) < 1e-7; }), nx*ny);
 }
+TEST_CASE("interpolation_ts_nan_outside_defined_period") {
+    using namespace shyft;
+    utctime Tstart = calendar().time(2000, 1, 1);
+    utctimespan dt = 3600L;
+    size_t n=4;
+    ta::fixed_dt ta(Tstart, dt, n);
+    api::a_region_environment re;
+    re.temperature->emplace_back(geo_point(0.0,1000.0,100.0), api::apoint_ts(gta_t(Tstart,dt,n),10.0, POINT_AVERAGE_VALUE));
+    re.temperature->emplace_back(geo_point(1000.0,0.0,100.0), api::apoint_ts(gta_t(Tstart+dt,dt,n-2),20.0, POINT_AVERAGE_VALUE));
+    vector<MCell> d{MCell::GenerateTestGrid(1,1)};
+    Parameter p(1000 * 2, 4); // for practical purposes, 8 neighbours or less.
+    using temperature_tsa_t=shyft::time_series::average_accessor<api::apoint_ts, timeaxis_t>;
+    using idw_compliant_temperature_gts_t=idw_compliant_geo_point_ts<api::TemperatureSource, temperature_tsa_t, timeaxis_t>;
+    using idw_temperature_model_t=idw::temperature_model  <idw_compliant_temperature_gts_t, MCell, Parameter, geo_point, idw::temperature_gradient_scale_computer>;
+
+    vector<double> cell_values(n,shyft::nan);
+    run_interpolation<idw_temperature_model_t, idw_compliant_temperature_gts_t>( ta, *re.temperature, p, d,
+        [&cell_values](MCell& d, size_t ix, double v) {cell_values[ix]=v; }, 1);
+    CHECK(cell_values[0]== doctest::Approx(10.0));  // at beginning just one 10degC contribute
+    for(size_t i=1;i<n-1;++i)
+        CHECK(cell_values[i] == doctest::Approx(15.0)); // both contribute
+    CHECK(cell_values[n-1]== doctest::Approx(10.0));// at last, only one 10degC contribute
+}
+
 TEST_CASE("test_performance") {
     using namespace shyft;
     //

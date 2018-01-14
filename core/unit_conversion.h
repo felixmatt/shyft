@@ -1,7 +1,7 @@
 #pragma once
 namespace shyft {
 
-    const double mmh_to_m3s_scale_factor = 1 / (3600.0*1000.0);
+    constexpr double mmh_to_m3s_scale_factor = 1 / (3600.0*1000.0);
 
     /** \brief convert [mm/h] over an area_m^2 to [m^3/s] units */
     inline double mmh_to_m3s(double mm_pr_hour, double area_m2) {

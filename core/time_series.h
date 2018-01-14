@@ -14,6 +14,7 @@
 #include "core_serialization.h"
 
 #include "utctime_utilities.h"
+#include "time_series_common.h"
 #include "time_axis.h"
 #include "glacier_melt.h" // to get the glacier melt function
 #include "unit_conversion.h"
@@ -23,33 +24,20 @@
 #endif
 
 namespace shyft{
-    const double nan = std::numeric_limits<double>::quiet_NaN();
 
-    /** The time_series namespace contains all needed concepts related
-    * to representing and handling time-series concepts efficiently.
-    *
-    * concepts:
-    *  -#: point, -a time,value pair,utctime,double representing points on a time-series, f(t).
-    *  -#: timeaxis, -(TA)the fundation for the timeline, represented by the timeaxis class, a non-overlapping set of periods ordered ascending.
-    *  -#: point_ts,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
-    *  -#: accessor, -(A) average_accessor and direct_accessor, provides transformation from f(t) to some provide time-axis
-    */
     namespace time_series {
+        /** The time_series namespace contains all needed concepts related
+        * to representing and handling time-series concepts efficiently.
+        *
+        * concepts:
+        *  -#: point, -a time,value pair,utctime,double representing points on a time-series, f(t).
+        *  -#: timeaxis, -(TA)the fundation for the timeline, represented by the timeaxis class, a non-overlapping set of periods ordered ascending.
+        *  -#: point_ts,(S) - provide a source of points, that can be interpreted by an accessor as a f(t)
+        *  -#: accessor, -(A) average_accessor and direct_accessor, provides transformation from f(t) to some provide time-axis
+        */
 
         using namespace shyft::core;
         using namespace std;
-        const double EPS=1e-12; ///< used some places for comparison to equality, \ref point
-
-        /** \brief simply a point identified by utctime t and value v */
-        struct point {
-            utctime t;
-            double v;
-            point(utctime t=0, double v=0.0) : t(t), v(v) { /* Do nothing */}
-        };
-
-        /** \brief point a and b are considered equal if same time t and value-diff less than EPS
-        */
-        inline bool operator==(const point &a,const point &b)  {return (a.t==b.t) && std::fabs(a.v-b.v)< EPS;}
 
         /** \brief Enumerates how points are mapped to f(t)
          *
@@ -213,7 +201,7 @@ namespace shyft{
             const size_t n = source.size();
 			const bool extrapolate_flat = !linear || (linear && !strict_linear_between);
 			if (n == 0) // early exit if possible
-                return shyft::nan;
+                return nan;
             size_t i = hint_based_search(source, p, last_idx);  // use last_idx as hint, allowing sequential periodic average to execute at high speed(no binary searches)
 			point l;// Left point
 			bool l_finite = false;
@@ -229,7 +217,7 @@ namespace shyft{
 					l = source.get(i++);
 					l_finite = std::isfinite(l.v);
 					if (!p.contains(l.t))
-						return shyft::nan;
+						return nan;
 				}
 
 			}
@@ -289,7 +277,7 @@ namespace shyft{
                 }
             }
             last_idx = i - 1;
-            return tsum ? area : shyft::nan;
+            return tsum ? area : nan;
         }
 
        /** \brief average_value provides a projection/interpretation
@@ -315,7 +303,7 @@ namespace shyft{
         inline double average_value(const S& source, const utcperiod& p, size_t& last_idx,bool linear=true) {
             utctimespan tsum = 0;
             double area = accumulate_value(source, p, last_idx, tsum, linear);// just forward the call to the accumulate function
-            return tsum>0?area/tsum:shyft::nan;
+            return tsum>0?area/tsum:nan;
         }
 
 
@@ -734,7 +722,7 @@ namespace shyft{
                     v.emplace_back(value(i));
                 return v;
             }
-            
+
             bool operator==(const periodic_ts &o) const { return fx_policy==o.fx_policy && ta==o.ta && pa.equal(o.pa,1e-30);}
             x_serialize_decl();
         };
@@ -969,7 +957,7 @@ namespace shyft{
                     w[j] * ts.value(i - j)
                     :
                     (policy == convolve_policy::USE_FIRST ? w[j] * ts.value(0) :
-                    (policy == convolve_policy::USE_ZERO ? 0.0 : shyft::nan)); // or nan ? policy based ?
+                    (policy == convolve_policy::USE_ZERO ? 0.0 : nan)); // or nan ? policy based ?
                 return  v;
             }
             double operator()(utctime t) const {
@@ -1029,7 +1017,7 @@ namespace shyft{
 
             //--
             double value(size_t i) const {
-                if (tsv.size() == 0 || i == std::string::npos) return shyft::nan;
+                if (tsv.size() == 0 || i == std::string::npos) return nan;
                 double v = tsv[0].value(i);
                 for (size_t j = 1;j < tsv.size();++j) v += tsv[j].value(i);
                 return  v;
@@ -1489,7 +1477,7 @@ namespace shyft{
 					[](curve_vt lhs, utctime rhs) -> bool { return lhs.first < rhs; }
 				);
 				if ( it == curves.cbegin() && it->first > t ) {
-					return shyft::nan;
+					return nan;
 				} else if ( it == curves.cend() || it->first > t ) {
 					// last curve valid indefinitly
 					it--;
@@ -1501,7 +1489,7 @@ namespace shyft{
 			std::vector<double> flow(const TA & ta) const {
 				auto it = curves.cbegin();
 				if ( it == curves.cend() || it->first >= ta.total_period().end ) {  // no curves...
-					return std::vector<double>(ta.size(), shyft::nan);
+					return std::vector<double>(ta.size(), nan);
 				}
 				std::vector<double> flow;
 				flow.reserve(ta.size());
@@ -1511,7 +1499,7 @@ namespace shyft{
 				if ( it->first > ta.time(0u) ) {
 					i = ta.index_of(it->first);
 					for ( std::size_t j = 0u; j < i; ++j ) {
-						flow.emplace_back(shyft::nan);
+						flow.emplace_back(nan);
 					}
 				} else {
 					i = 0u;
@@ -1843,12 +1831,12 @@ namespace shyft{
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
             bool linear_between_points=false;
-            extension_policy ext_policy = extension_policy::USE_DEFAULT;
+            extension_policy ext_policy = extension_policy::USE_NAN;
           public:
-            average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
+            average_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_NAN)
               : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source),
                 linear_between_points(source.point_interpretation() == POINT_INSTANT_VALUE), ext_policy(policy){ /* Do nothing */ }
-            average_accessor(const std::shared_ptr<S>& source,const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            average_accessor(const std::shared_ptr<S>& source,const TA& time_axis, extension_policy policy=extension_policy::USE_NAN)// also support shared ptr. access
               : last_idx(0),q_idx(npos),q_value(0.0),time_axis(time_axis),source(*source),
                 source_ref(source),linear_between_points(source->point_interpretation() == POINT_INSTANT_VALUE),
                 ext_policy(policy) {}
@@ -1890,12 +1878,12 @@ namespace shyft{
             const TA& time_axis;
             const S& source;
             std::shared_ptr<S> source_ref;// to keep ref.counting if ct with a shared-ptr. source will have a const ref to *ref
-            extension_policy ext_policy = extension_policy::USE_DEFAULT;
+            extension_policy ext_policy = extension_policy::USE_NAN;
           public:
-            accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)
+            accumulate_accessor(const S& source, const TA& time_axis, extension_policy policy=extension_policy::USE_NAN)
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(source), ext_policy(policy) { /* Do nothing */
             }
-            accumulate_accessor(const std::shared_ptr<S>& source, const TA& time_axis, extension_policy policy=extension_policy::USE_DEFAULT)// also support shared ptr. access
+            accumulate_accessor(const std::shared_ptr<S>& source, const TA& time_axis, extension_policy policy=extension_policy::USE_NAN)// also support shared ptr. access
                 : last_idx(0), q_idx(npos), q_value(0.0), time_axis(time_axis), source(*source), source_ref(source) {
             }
 
@@ -2174,7 +2162,7 @@ namespace shyft{
                 }
             }
             obs_avg /= double(obs_count);
-            return obs_count?sqrt(sum_of_obs_measured_diff2/obs_count )/obs_avg:shyft::nan;
+            return obs_count?sqrt(sum_of_obs_measured_diff2/obs_count )/obs_avg:nan;
         }
 
         /** \brief KLING-GUPTA Journal of Hydrology 377
