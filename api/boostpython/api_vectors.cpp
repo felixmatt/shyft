@@ -106,10 +106,10 @@ namespace expose {
     static GeoPointVector create_from_x_y_z_vectors(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double> z) {
         if(!(x.size()==y.size() && y.size()==z.size()))
             throw std::runtime_error("x,y,z vectors need to have same number of elements");
-        GeoPointVector r(x.size());
+        GeoPointVector r;r.reserve(x.size());
         for(size_t i=0;i<x.size();++i)
             r.emplace_back(x[i],y[i],z[i]);
-        return std::move(r);
+        return r;
     }
 
     static void expose_geo_point_vector() {
