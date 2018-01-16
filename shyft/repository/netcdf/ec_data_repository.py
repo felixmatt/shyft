@@ -203,7 +203,8 @@ class EcDataRepository(interfaces.GeoTsRepository):
         """
 
         #filename = self._filename
-        filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
+        # filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
+        filename = self._get_files(t_c, "(\d{8})([T_])(\d{2})(.*.nc)")
         with Dataset(filename) as dataset:
             if utc_period is None:
                 time = dataset.variables.get("time", None)
@@ -234,7 +235,8 @@ class EcDataRepository(interfaces.GeoTsRepository):
             located timeseries.
         """
         # filename = self._filename
-        filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
+        # filename = self._get_files(t_c, "_(\d{8})([T_])(\d{2})(Z)?.nc$")
+        filename = self._get_files(t_c, "(\d{8})([T_])(\d{2})(.*.nc)")
         with Dataset(filename) as dataset:
             if utc_period is None:
                 time = dataset.variables.get("time", None)
