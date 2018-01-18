@@ -181,6 +181,11 @@ namespace shyft {
                 scoped_gil_release gil;
                 impl.store_ts(tsv, overwrite_on_write, cache_on_write);
             }
+            void merge_store_ts(const ts_vector_t&tsv, bool cache_on_write) {
+                scoped_gil_release gil;
+                impl.merge_store_ts(tsv, cache_on_write);
+            }
+
             void cache_flush() {
                 scoped_gil_release gil;
                 return impl.cache_flush();
@@ -530,6 +535,25 @@ namespace expose {
                 doc_parameter("overwrite_on_write", "bool",
                     "When False the backend updates existing data matching the time-series to be saved instead of overwriting.\n"
                     "    Defaults to True.")
+                doc_parameter("cache_on_write", "bool", "if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
+                doc_returns("None","","")
+                doc_see_also("TsVector")
+            )
+            .def("merge_store_ts_points", &DtsClient::merge_store_ts,
+                (   py::arg("self"),
+                    py::arg("tsv"),
+                    py::arg("cache_on_write") = false
+                ),
+                doc_intro("Merge the ts-points supplied in the tsv into the existing time-series on the server side.")
+                doc_intro("The effect of each ts is similar to as if:")
+                doc_intro("  1. read ts.total_period() from ts point store ")
+                doc_intro("  2. run the TimeSeries.merge_points(ts) on the read-ts")
+                doc_intro("  3. write the resulting merge-result back to the ts-store")
+				doc_intro("This function is suitable for typical data-collection tasks")
+                doc_intro("where the points collected is from an external source, appears as batches,")
+                doc_intro("that should just be added to the existing point-set")
+                doc_parameters()
+                doc_parameter("tsv","TsVector","ts-vector with time-series, url-reference and values to be stored at dtss server")
                 doc_parameter("cache_on_write", "bool", "if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
                 doc_returns("None","","")
                 doc_see_also("TsVector")

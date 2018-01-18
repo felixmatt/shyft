@@ -154,6 +154,7 @@ struct server : dlib::server_iostream {
 
     void do_store_ts(const ts_vector_t & tsv, bool overwrite_on_write, bool cache_on_write);
 
+    void do_merge_store_ts(const ts_vector_t & tsv, bool cache_on_write);
     /** \brief Read the time-series from providers for specified period
     *
     * \param ts_ids identifiers, url form, where shyft://.. is specially filtered

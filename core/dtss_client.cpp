@@ -269,6 +269,33 @@ client::store_ts(const ts_vector_t &tsv, bool overwrite_on_write, bool cache_on_
     throw std::runtime_error(std::string("Got unexpected response:") + std::to_string((int)response_type));
 }
 
+void
+client::merge_store_ts(const ts_vector_t &tsv,bool cache_on_write) {
+    if (tsv.size() == 0)
+        return; //trivial and considered valid case
+                // verify that each member of tsv is a gpoint_ts
+    for (auto const &ats : tsv) {
+        auto rts = dynamic_cast<aref_ts*>(ats.ts.get());
+        if (!rts) throw std::runtime_error(std::string("attempt to store a null ts"));
+        if (rts->needs_bind()) throw std::runtime_error(std::string("attempt to store unbound ts:") + rts->id);
+    }
+    scoped_connect ac(*this);
+    dlib::iosockstream& io = *(srv_con[0].io);
+    msg::write_type(message_type::MERGE_STORE_TS, io);
+    {
+        core_oarchive oa(io,core_arch_flags);
+        oa << tsv << cache_on_write;
+    }
+    auto response_type = msg::read_type(io);
+    if (response_type == message_type::SERVER_EXCEPTION) {
+        auto re = msg::read_exception(io);
+        throw re;
+    } else if (response_type == message_type::MERGE_STORE_TS) {
+        return;
+    }
+    throw std::runtime_error(std::string("Got unexpected response:") + std::to_string((int)response_type));
+}
+
 ts_info_vector_t
 client::find(const std::string& search_expression) {
     scoped_connect ac(*this);

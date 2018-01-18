@@ -3,7 +3,7 @@
 #include "time_series_dd.h"
 #include "time_series_merge.h"
 #include "time_series_qm.h"
-
+#include "time_series_point_merge.h"
 
 namespace shyft{
     namespace time_series {
@@ -489,6 +489,30 @@ namespace shyft{
 			predictor.train(*this);
 			return predictor;
 		}
+		apoint_ts apoint_ts::merge_points(const apoint_ts& o) {
+            if(!o.ts)
+                return *this;
+            if(!ts) { // we are empty, create a new point ts
+                auto a=make_shared<gpoint_ts>();
+                ts_point_merge(a->rep,o);
+                ts=a;
+            } else {// we have existing ts, verify type:
+                if(auto a=dynamic_pointer_cast<gpoint_ts>(ts)) {
+                    ts_point_merge(a->rep,o);// merge
+                } else if(auto a=dynamic_pointer_cast<aref_ts>(ts)) {
+                    if(a->rep) { // its already bound
+                        ts_point_merge(a->rep->rep,o);
+                    } else {
+                        auto r=make_shared<gpoint_ts>();
+                        ts_point_merge(r->rep,o);
+                        a->rep=r;
+                    }
+                } else {
+                    throw runtime_error("self.merge_points_from:self ts must be a concrete point ts");
+                }
+            }
+            return *this;
+        }
 
 		template<class TSV>
 		static bool all_same_generic_time_axis_type(const TSV&tsv) {

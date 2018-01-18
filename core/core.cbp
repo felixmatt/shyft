@@ -220,6 +220,7 @@
 		<Unit filename="time_series_merge.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>
+		<Unit filename="time_series_point_merge.h" />
 		<Unit filename="time_series_qm.h">
 			<Option virtualFolder="time_series/" />
 		</Unit>

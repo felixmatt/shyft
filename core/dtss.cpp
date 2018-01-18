@@ -1,8 +1,8 @@
+#include <boost/functional/hash.hpp>
 #include "dtss.h"
 #include "core_serialization.h"
 #include "expression_serialization.h"
 #include "core_archive.h"
-
 namespace shyft {
 namespace dtss {
 
@@ -18,6 +18,17 @@ using shyft::time_series::dd::ts_bind_info;
 using shyft::time_series::dd::deflate_ts_vector;
 using shyft::time_series::dd::expression_decompressor;
 using shyft::time_series::dd::compressed_ts_expression;
+
+struct utcperiod_hasher {
+    size_t operator()(const utcperiod&k) const {
+        using boost::hash_value;
+        using boost::hash_combine;
+        size_t seed=0;
+        hash_combine(seed,hash_value(k.start));
+        hash_combine(seed,hash_value(k.end));
+        return seed;
+    }
+};
 
 std::string shyft_prefix{ "shyft://" };
 
@@ -83,6 +94,50 @@ void server::do_store_ts(const ts_vector_t & tsv, bool overwrite_on_write, bool 
     }
 }
 
+void server::do_merge_store_ts(const ts_vector_t& tsv,bool cache_on_write) {
+    if(tsv.size()==0) return;
+    //
+    // 0. check&prepare the read time-series in tsv for the specified period of each ts
+    // (we optimize a little bit grouping on common period, and reading in batches with equal periods)
+    //
+    id_vector_t ts_ids;ts_ids.reserve(tsv.size());
+    unordered_map<utcperiod,id_vector_t,utcperiod_hasher> read_map;
+    unordered_map<string,apoint_ts> id_map;
+    for(size_t i=0;i<tsv.size();++i) {
+        auto rts = dynamic_pointer_cast<aref_ts>(tsv[i].ts);
+        if(!rts) throw runtime_error("dtss store merge: require ts with url-references");
+        // sanity check
+        if(id_map.find(rts->id)!= end(id_map))
+            throw runtime_error("dtss store merge requires distinct set of ids, first duplicate found:"+rts->id);
+        id_map[rts->id]=apoint_ts(rts->rep);
+        // then just build up map[period] = list of time-series to read
+        auto rp=rts->rep->total_period();
+        if(read_map.find(rp) != end(read_map)) {
+            read_map[rp].push_back(rts->id);
+        } else {
+            read_map[rp]=id_vector_t{rts->id};
+        }
+    }
+    //
+    // .1 do the read-merge for each common period, append to final minimal write list
+    //
+    ts_vector_t tsv_store;tsv_store.reserve(tsv.size());
+    for(auto rr=read_map.begin();rr!=read_map.end();++rr) {
+        auto read_ts= do_read(rr->second,rr->first,cache_on_write,cache_on_write);
+        // read_ts is in the order of the ts-id-list rr->second
+        for(size_t i=0;i<read_ts.size();++i) {
+            auto ts_id =rr->second[i];
+            read_ts[i].merge_points(id_map[ts_id]);
+            tsv_store.push_back(apoint_ts(ts_id,read_ts[i]));
+        }
+    }
+    
+    // 
+    // (2) finally write the merged result back to whatever store is there
+    //
+    do_store_ts(tsv_store,false,cache_on_write);
+    
+}
 
 ts_vector_t server::do_read(const id_vector_t& ts_ids,utcperiod p,bool use_ts_cached_read,bool update_ts_cache) {
     if(ts_ids.size()==0) return ts_vector_t{};
@@ -258,6 +313,14 @@ void server::on_connect(
                 ia >> rtsv >> overwrite_on_write >> cache_on_write;
                 do_store_ts(rtsv, overwrite_on_write, cache_on_write);
                 msg::write_type(message_type::STORE_TS, out);
+            } break;
+            case message_type::MERGE_STORE_TS: {
+                ts_vector_t rtsv;
+                bool cache_on_write{ false };
+                core_iarchive ia(in,core_arch_flags);
+                ia >> rtsv >> cache_on_write;
+                do_merge_store_ts(rtsv, cache_on_write);
+                msg::write_type(message_type::MERGE_STORE_TS, out);
             } break;
             case message_type::CACHE_FLUSH: {
                 flush_cache();

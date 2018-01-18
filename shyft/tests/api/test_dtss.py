@@ -12,6 +12,7 @@ from shyft.api import Calendar
 from shyft.api import DtsClient
 from shyft.api import DtsServer
 from shyft.api import IntVector
+from shyft.api import UtcTimeVector
 from shyft.api import StringVector
 from shyft.api import TimeAxis
 from shyft.api import TimeSeries
@@ -401,4 +402,55 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(cs6.id_count, 1)
             self.assertEqual(cs6.point_count, 1*n)
             self.assertEqual(cs6.fragment_count,  1)
+
+    def test_merge_store_ts_points(self):
+        """
+        This test verifies the shyft internal time-series store,
+        that the merge_store_points function do the required
+        semantics.
+        """
+        with tempfile.TemporaryDirectory() as c_dir:
+            # setup data to be calculated
+            utc = Calendar()
+            d = deltahours(1)
+            t = utc.time(2016, 1, 1)
+            ta = TimeAxis(UtcTimeVector.from_numpy(np.array([t,t+d,t+3*d],dtype=np.int64)),t+4*d)
+
+            n_ts = 10
+            store_tsv = TsVector()  # something we store at server side
+
+            for i in range(n_ts):
+                ts_id=shyft_store_url("{0}".format(i))
+                store_tsv.append(TimeSeries(ts_id, TimeSeries(ta,fill_value=float(i),point_fx=point_fx.POINT_AVERAGE_VALUE)))
+            # then start the server
+            dtss = DtsServer()
+            port_no = find_free_port()
+            host_port = 'localhost:{0}'.format(port_no)
+            dtss.set_auto_cache(True)
+            dtss.set_listening_port(port_no)
+            dtss.set_container("test", c_dir)  # notice we set container 'test' to point to c_dir directory
+            dtss.start_async()  # the internal shyft time-series will be stored to that container
+            dts = DtsClient(host_port)
+
+            dts.store_ts(store_tsv)  # 1. store the initial time-series, they are required for the merge_store_points function
+
+            tb=TimeAxis(UtcTimeVector.from_numpy(np.array([t-d, t + 3*d, t+4*d],dtype=np.int64)), t + 5*d)  # make some points, one before, one in the middle and after
+            mpv=TsVector()  # merge point vector
+            for i in range(n_ts):
+                ts_id=shyft_store_url("{0}".format(i))
+                mpv.append(TimeSeries(ts_id, TimeSeries(tb,fill_value=-1-float(i),point_fx=point_fx.POINT_AVERAGE_VALUE)))
+
+            dts.merge_store_ts_points(mpv)
+
+            rts = TsVector()
+            rts[:] = [TimeSeries(shyft_store_url(f"{i}")) for i in range(n_ts)]
+
+            r = dts.evaluate(rts, tb.total_period())
+            dts.close()  # close connection (will use context manager later)
+            dtss.clear()  # close server
+
+            for i in range(len(r)):
+                self.assertEqual(r[i].time_axis.size(),5)
+                assert_array_almost_equal(r[i].values.to_numpy(),np.array([-i-1,i,i,-i-1,-i-1],dtype=np.float64))
+
 

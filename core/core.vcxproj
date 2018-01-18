@@ -161,6 +161,7 @@
     <ClInclude Include="time_series_dd.h" />
     <ClInclude Include="time_series_info.h" />
     <ClInclude Include="time_series_merge.h" />
+    <ClInclude Include="time_series_point_merge.h" />
     <ClInclude Include="time_series_qm.h" />
     <ClInclude Include="time_series_statistics.h" />
     <ClInclude Include="unit_conversion.h" />

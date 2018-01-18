@@ -267,6 +267,7 @@ namespace shyft {
             apoint_ts min_max_check_linear_fill(double min_x,double max_x,utctimespan max_dt) const;
             apoint_ts min_max_check_ts_fill(double min_x,double max_x,utctimespan max_dt,const apoint_ts& cts) const;
 
+            apoint_ts merge_points(const apoint_ts& o);
             //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
             //   we would like these to be working (exception if it's not possible,i.e. an expression)
             point get(size_t i) const {return point(time(i),value(i));}

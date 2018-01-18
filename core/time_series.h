@@ -377,6 +377,7 @@ namespace shyft{
             /**\brief i'th value of the value,
              */
             double value(size_t i) const  { return v[i]; }
+            const vector<double> values() const {return v;};
             // BW compatiblity ?
             size_t size() const { return ta.size();}
             size_t index_of(utctime t) const {return ta.index_of(t);}

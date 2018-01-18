@@ -84,6 +84,8 @@ struct client {
 	vector<apoint_ts> evaluate(ts_vector_t const& tsv, utcperiod p,bool use_ts_cached_read,bool update_ts_cache) ;
 
 	void store_ts(const ts_vector_t &tsv, bool overwrite_on_write, bool cache_on_write) ;
+    
+    void merge_store_ts(const ts_vector_t &tsv, bool cache_on_write) ;
 
 	ts_info_vector_t find(const string& search_expression) ;
 
