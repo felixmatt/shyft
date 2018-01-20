@@ -1,10 +1,18 @@
 #pragma once
 #include <vector>
+#include <string>
 #include <dlib/optimization.h>
 #include "cell_model.h"
 
-namespace shyft {
-namespace core {
+namespace shyft {namespace core {
+using std::string;
+/**The result of region_model state-adjustemt */
+struct q_adjust_result {
+    double q_0{0.0}; ///< m3/s  for the timestep before adjustemnt
+    double q_r{0.0}; ///< m3/s for the timestep after adjustemnt
+    string diagnostics;///< empty if ok, otherwise diagnostics
+    q_adjust_result()=default;
+};
 
 /** The adjust_state_model is an algorithm that takes
  * a region-model and optional list of catchments
@@ -56,6 +64,7 @@ struct adjust_state_model {
         );
         return q_avg;
     }
+    
     /** \brief Adjust state to tune the flow of region-model and selected catchments to a target value.
      *
      * Adjust region-model state, using initial state as starting point,
@@ -70,11 +79,13 @@ struct adjust_state_model {
      * \param scale_range (default 3.0) ratio based scaling is bounded between scale_0/scale_range .. scale_0*scale_range
      * \param scale_eps (default 0.001) terminate iteration when the scale-factor search-region is less than scale_0*scale_eps
      * \param max_iter  (default 300) terminate search for minimum if iterations exceeds this number
-     * \return tuned flow in m3/s achieved
+     * \return q_0,q_r, diagnostics , basically tuned flow in m3/s achieved
      */
-    double tune_flow(double q_wanted, double scale_range=3.0,double scale_eps=1e-3,size_t max_iter=300) {
-        double q_0= discharge(1.0);// starting out with scale=1.0, establish q_0
-        double scale= q_wanted/q_0;// approximate guess for scale storage factor to start with
+    q_adjust_result tune_flow(double q_wanted, double scale_range=3.0,double scale_eps=1e-3,size_t max_iter=300) {
+        q_adjust_result r;
+        r.q_0= discharge(1.0);// starting out with scale=1.0, establish q_0
+        double scale= q_wanted/r.q_0;// approximate guess for scale storage factor to start with
+        try {
         dlib::find_min_single_variable(
                     [this,q_wanted](double x)->double{
                         double q_diff= this->discharge(x) - q_wanted;
@@ -86,13 +97,15 @@ struct adjust_state_model {
                     scale*scale_eps,    // iteration stop when scale region is less than scale_eps
                     max_iter            // or we reach max-iterations
         );
-        double q_result =discharge(scale); // get back the resulting discharge after optimize
+        } catch( const exception &e) {
+            r.diagnostics = string("failed to find solution within ")+to_string(max_iter)+string(", exception was:")+ e.what();
+        }
+        r.q_r =discharge(scale); // get back the resulting discharge after optimize
 		revert_to_state_0();       // get back initial state
         rm.adjust_q(scale,cids);            // adjust it to the factor
-        return q_result;
+        return r;
     }
 
 };
 
-}
-}
+}}

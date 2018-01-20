@@ -316,7 +316,9 @@ namespace expose {
             doc_parameter("cids","IntVector","if empty, all cells are in scope, otherwise only cells that have specified catchment ids.")
         )
 
-        .def("adjust_state_to_target_flow",&M::adjust_state_to_target_flow,(py::arg("self"),py::arg("wanted_flow_m3s"),py::arg("cids"),py::arg("start_step")=0),
+        .def("adjust_state_to_target_flow",&M::adjust_state_to_target_flow,(py::arg("self"),py::arg("wanted_flow_m3s"),py::arg("cids"),py::arg("start_step")=0,
+            py::arg("scale_range")=3.0,py::arg("scale_eps")=1.0e-3,py::arg("max_iter")=300
+        ),
              doc_intro("state adjustment to achieve wanted/observed flow")
 			 doc_intro("")
 			 doc_intro("This function provides an easy and consistent way to adjust the")
@@ -345,7 +347,11 @@ namespace expose {
              doc_parameters()
 			 doc_parameter("wanted_flow_m3s","float","the average flow first time-step we want to achieve")
 			 doc_parameter("cids","IntVector"," catchments, represented by catchment-ids that should be adjusted")
-			 doc_returns("obtained flow in m3/s units.","float","note: this can deviate from wanted flow due to model and state constraints")
+             doc_parameter("start_step","int","what time-step number in the time-axis to use, default 0")
+             doc_parameter("scale_range","float","optimizer boundaries is s_0/scale_range .. s_0*scale_range, s_0=wanted_flow_m3s/q_0 , default =3.0")
+             doc_parameter("scale_eps","float","optimizer eps, stop criteria (ref. dlib), eps=s_0*scale_eps , default =1-e3")
+             doc_parameter("max_iter","int","optimizer max evaluations before giving up to find optimal solution")
+			 doc_returns("obtained flow in m3/s units.","FlowAdjustResult","note: this can deviate from wanted flow due to model and state constraints")
         )
         .def("get_cells",&M::get_cells, (py::arg("self")),"cells as shared_ptr<vector<cell_t>>")
         .def("size",&M::size,(py::arg("self")),"return number of cells")

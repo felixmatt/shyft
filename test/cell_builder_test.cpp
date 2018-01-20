@@ -277,12 +277,15 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     double q_wanted=70.0;
     ec::adjust_state_model<region_model_t> adj_rm(rm,all_catchment_ids,0);
     double q_0 = adj_rm.discharge(1.0);
-    double q_adjusted = adj_rm.tune_flow(q_wanted);
+    auto tune_result = adj_rm.tune_flow(q_wanted);
+    double q_adjusted = tune_result.q_r;
+    TS_ASSERT_DELTA(tune_result.q_0,q_0,0.001);// ensure it can report q_0
+    TS_ASSERT_EQUALS(tune_result.diagnostics.size(),0);
     TS_ASSERT_DELTA(q_adjusted,q_wanted,0.1);
     if(verbose) {cout<<"Result for using all cells: q_0= "<< q_0<<", q_wanted="<<q_wanted<<", q_adjusted="<<q_adjusted<<endl;}
     adj_rm.cids=catchment_ids; // juse a few
     double q_wanted_2=34.21;
-    double q_adjusted_2 = adj_rm.tune_flow(q_wanted_2);
+    double q_adjusted_2 = adj_rm.tune_flow(q_wanted_2).q_r;
     TS_ASSERT_DELTA(q_adjusted_2,q_wanted_2,0.1);
     if(verbose) {cout<<"Results for using 2 cells:  "<< ", q_wanted="<<q_wanted_2<<", q_adjusted_2="<<q_adjusted_2<<endl;}
 

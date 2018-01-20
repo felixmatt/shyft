@@ -291,5 +291,19 @@ namespace expose {
         py_api::iterable_converter()
             .from_python< std::vector<TargetSpecificationPts> >()
         ;
+        
+        class_<q_adjust_result>("FlowAdjustResult",
+            doc_intro("The result type of region-model .adjust_state_to_target_flow(..) method")
+            )
+            .def_readwrite("q_0",&q_adjust_result::q_0,
+                doc_intro("The flow m3/s from selected catchments before tuning")
+            )
+            .def_readwrite("q_r",&q_adjust_result::q_r,
+                doc_intro("The obtaioned flow m3/s after tuning")
+            )
+            .def_readwrite("diagnostics",&q_adjust_result::diagnostics,
+                doc_intro("If tuning failed, the diagnostics of failure, zero length/empty if success")
+            )
+        ;
     }
 }
