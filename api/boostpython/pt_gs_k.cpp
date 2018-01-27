@@ -8,7 +8,6 @@
 #include "core/kirchner.h"
 #include "core/pt_gs_k.h"
 #include "api/api.h"
-#include "api/pt_gs_k.h"
 #include "core/pt_gs_k_cell_model.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
@@ -22,8 +21,13 @@ static char const* version() {
 namespace expose {
     namespace pt_gs_k {
         using namespace boost::python;
+        namespace py = boost::python;
         using namespace shyft::core;
         using namespace shyft::core::pt_gs_k;
+        using std::string;
+        using std::vector;
+
+        typedef vector<state> PTGSKStateVector;
 
         static void
         parameter_state_response() {
@@ -58,7 +62,7 @@ namespace expose {
                 .def_readwrite("kirchner",&state::kirchner,"kirchner state")
                 ;
 
-            typedef std::vector<state> PTGSKStateVector;
+            
             class_<PTGSKStateVector,bases<>,std::shared_ptr<PTGSKStateVector> >("PTGSKStateVector")
                 .def(vector_indexing_suite<PTGSKStateVector>())
                 ;
@@ -142,11 +146,6 @@ namespace expose {
             def_clone_to_similar_model<PTGSKOptModel,PTGSKModel>("create_full_model_clone");
         }
 
-        static void
-        state_io() {
-            expose::state_io<shyft::api::pt_gs_k_state_io,shyft::core::pt_gs_k::state>("PTGSKStateIo");
-        }
-
 
         static void
         model_calibrator() {
@@ -162,7 +161,6 @@ BOOST_PYTHON_MODULE(_pt_gs_k)
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_gs_k model";
     boost::python::def("version", version);
 	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
-    expose::pt_gs_k::state_io();
     expose::pt_gs_k::parameter_state_response();
     expose::pt_gs_k::cells();
     expose::pt_gs_k::models();

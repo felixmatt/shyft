@@ -133,7 +133,13 @@
 		<Unit filename="hbv_actual_evapotranspiration.h">
 			<Option virtualFolder="methods/" />
 		</Unit>
+		<Unit filename="hbv_physical_snow.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
 		<Unit filename="hbv_snow.h">
+			<Option virtualFolder="methods/" />
+		</Unit>
+		<Unit filename="hbv_snow_common.h">
 			<Option virtualFolder="methods/" />
 		</Unit>
 		<Unit filename="hbv_soil.h">
@@ -177,6 +183,12 @@
 			<Option virtualFolder="method_stacks/" />
 		</Unit>
 		<Unit filename="pt_gs_k_cell_model.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_hps_k.h">
+			<Option virtualFolder="method_stacks/" />
+		</Unit>
+		<Unit filename="pt_hps_k_cell_model.h">
 			<Option virtualFolder="method_stacks/" />
 		</Unit>
 		<Unit filename="pt_hs_k.h">

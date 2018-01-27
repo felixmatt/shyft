@@ -125,6 +125,7 @@
     <ClInclude Include="experimental.h" />
     <ClInclude Include="expression_serialization.h" />
     <ClInclude Include="hbv_actual_evapotranspiration.h" />
+    <ClInclude Include="hbv_physical_snow.h" />
     <ClInclude Include="hbv_soil.h" />
     <ClInclude Include="hbv_stack.h" />
     <ClInclude Include="hbv_stack_cell_model.h" />
@@ -148,6 +149,8 @@
     <ClInclude Include="pt_gs_k.h" />
     <ClInclude Include="cell_model.h" />
     <ClInclude Include="pt_gs_k_cell_model.h" />
+    <ClInclude Include="pt_hps_k.h" />
+    <ClInclude Include="pt_hps_k_cell_model.h" />
     <ClInclude Include="pt_hs_k.h" />
     <ClInclude Include="pt_hs_k_cell_model.h" />
     <ClInclude Include="pt_ss_k.h" />

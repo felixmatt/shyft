@@ -137,6 +137,7 @@
     <ClCompile Include="glacier_melt_test.cpp" />
     <ClCompile Include="gridpp_test.cpp" />
     <ClCompile Include="hbv_actual_evapotranspiration_test.cpp" />
+    <ClCompile Include="hbv_physical_snow_test.cpp" />
     <ClCompile Include="hbv_soil_test.cpp" />
     <ClCompile Include="hbv_stack_test.cpp" />
     <ClCompile Include="hbv_tank_test.cpp" />
@@ -144,6 +145,7 @@
     <ClCompile Include="max_abs_average_accessor_test.cpp" />
     <ClCompile Include="merge_test.cpp" />
     <ClCompile Include="predictor_test.cpp" />
+    <ClCompile Include="pt_hps_k_test.cpp" />
     <ClCompile Include="pt_ss_k_test.cpp" />
     <ClCompile Include="qm_test.cpp" />
     <ClCompile Include="routing_test.cpp" />

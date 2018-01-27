@@ -8,6 +8,7 @@ from shyft.api import pt_gs_k
 from shyft.api import pt_ss_k
 from shyft.api import pt_hs_k
 from shyft.api import hbv_stack
+from shyft.api import pt_hps_k
 
 
 class RegionModel(unittest.TestCase):
@@ -27,32 +28,6 @@ class RegionModel(unittest.TestCase):
 
         return model_t(gcds, region_parameter)
 
-    @staticmethod
-    def build_mock_state_dict(**kwargs):
-        pt = {}
-        gs = {"albedo": 0.4,
-              "lwc": 0.1,
-              "surface_heat": 30000,
-              "alpha": 1.26,
-              "sdc_melt_mean": 1.0,
-              "acc_melt": 0.0,
-              "iso_pot_energy": 0.0,
-              "temp_swe": 0.0}
-        kirchner = {"q": 0.25}
-        pt.update({(k, v) for k, v in kwargs.items() if k in pt})
-        gs.update({(k, v) for k, v in kwargs.items() if k in gs})
-        kirchner.update({(k, v) for k, v in kwargs.items() if k in kirchner})
-        state = pt_gs_k.PTGSKState()
-        state.gs.albedo = gs["albedo"]
-        state.gs.lwc = gs["lwc"]
-        state.gs.surface_heat = gs["surface_heat"]
-        state.gs.alpha = gs["alpha"]
-        state.gs.sdc_melt_mean = gs["sdc_melt_mean"]
-        state.gs.acc_melt = gs["acc_melt"]
-        state.gs.iso_pot_energy = gs["iso_pot_energy"]
-        state.gs.temp_swe = gs["temp_swe"]
-        state.kirchner.q = kirchner["q"]
-        return pt_gs_k.PTGSKStateIo().to_string(state)
 
     def _create_constant_geo_ts(self, geo_ts_type, geo_point, utc_period, value):
         """Create a time point ts, with one value at the start
@@ -66,7 +41,7 @@ class RegionModel(unittest.TestCase):
 
     def test_source_uid(self):
         cal = api.Calendar()
-        time_axis = api.TimeAxisFixedDeltaT(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         mid_point = api.GeoPoint(1000, 1000, 100)
         precip_source = self._create_constant_geo_ts(api.PrecipitationSource, mid_point, time_axis.total_period(), 5.0)
         self.assertIsNotNone(precip_source.uid)
@@ -85,7 +60,7 @@ class RegionModel(unittest.TestCase):
 
     def test_create_region_environment(self):
         cal = api.Calendar()
-        time_axis = api.TimeAxisFixedDeltaT(cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0)), api.deltahours(1), 240)
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
         re = self.create_dummy_region_environment(time_axis, api.GeoPoint(1000, 1000, 100))
         self.assertIsNotNone(re)
         self.assertEqual(len(re.radiation), 1)
@@ -98,6 +73,8 @@ class RegionModel(unittest.TestCase):
         cids_unspecified = api.IntVector()
         states = model.state.extract_state(cids_unspecified)
         self.assertEqual(len(states), model.size())
+        state_str= str(states.serialize_to_str())
+        states2 = states.__class__.deserialize_from_str(state_str)
         unapplied_list = model.state.apply_state(states, cids_unspecified)
         self.assertEqual(len(unapplied_list), 0)
 
@@ -121,6 +98,13 @@ class RegionModel(unittest.TestCase):
         num_cells = 20
         model_type = hbv_stack.HbvModel
         model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        self.verify_state_handler(model)
+
+    def test_pt_hps_k_model_init(self):
+        num_cells = 20
+        model_type = pt_hps_k.PTHPSKModel
+        model = self.build_model(model_type, pt_hps_k.PTHPSKParameter, num_cells)
         self.assertEqual(model.size(), num_cells)
         self.verify_state_handler(model)
 
@@ -378,201 +362,185 @@ class RegionModel(unittest.TestCase):
             self.assertAlmostEqual(orig_c1, opt_param.kirchner.c1, 4)
             self.assertAlmostEqual(orig_c2, opt_param.kirchner.c2, 4)
 
-        def test_hbv_model_initialize_and_run(self):
-            num_cells = 20
-            model_type = hbv_stack.HbvModel
-            model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
-            self.assertEqual(model.size(), num_cells)
-            opt_model = model.create_opt_model_clone()
-            self.assertIsNotNone(opt_model)
-            # now modify snow_cv forest_factor to 0.1
-            region_parameter = model.get_region_parameter()
-            # region_parameter.gs.snow_cv_forest_factor = 0.1
-            # region_parameter.gs.snow_cv_altitude_factor = 0.0001
-            # self.assertEqual(region_parameter.gs.snow_cv_forest_factor, 0.1)
-            # self.assertEqual(region_parameter.gs.snow_cv_altitude_factor, 0.0001)
+    def test_hbv_model_initialize_and_run(self):
+        num_cells = 20
+        model_type = hbv_stack.HbvModel
+        model = self.build_model(model_type, hbv_stack.HbvParameter, num_cells)
+        self.assertEqual(model.size(), num_cells)
+        opt_model = model.create_opt_model_clone()
+        self.assertIsNotNone(opt_model)
+        # now modify snow_cv forest_factor to 0.1
+        region_parameter = model.get_region_parameter()
+        # region_parameter.gs.snow_cv_forest_factor = 0.1
+        # region_parameter.gs.snow_cv_altitude_factor = 0.0001
+        # self.assertEqual(region_parameter.gs.snow_cv_forest_factor, 0.1)
+        # self.assertEqual(region_parameter.gs.snow_cv_altitude_factor, 0.0001)
 
-            # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
-            # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
-            cal = api.Calendar()
-            time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
-            model_interpolation_parameter = api.InterpolationParameter()
-            # degC/m, so -0.5 degC/100m
-            model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
-            # if possible use closest neighbor points and solve gradient using equation,(otherwise default min/max height)
-            model_interpolation_parameter.temperature_idw.gradient_by_equation = True
-            # Max number of temperature sources used for one interpolation
-            model_interpolation_parameter.temperature_idw.max_members = 6
-            # 20 km is max distance
-            model_interpolation_parameter.temperature_idw.max_distance = 20000
-            # zscale is used to discriminate neighbors at different elevation than target point
-            self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 1.0)
-            model_interpolation_parameter.temperature_idw.zscale = 0.5
-            self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 0.5)
-            # Pure linear interpolation
-            model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
-            # This enables IDW with default temperature gradient.
-            model_interpolation_parameter.use_idw_for_temperature = True
-            self.assertAlmostEqual(model_interpolation_parameter.precipitation.scale_factor, 1.02)  # just verify this one is as before change to scale_factor
-            model.run_interpolation(
-                model_interpolation_parameter, time_axis,
-                self.create_dummy_region_environment(time_axis,
-                                                     model.get_cells()[int(num_cells / 2)].geo.mid_point()))
-            s0 = hbv_stack.HbvStateVector()
-            for i in range(num_cells):
-                si = hbv_stack.HbvState()
-                si.tank.uz = 40.0
-                si.tank.lz = 40.0
-                s0.append(si)
-            model.set_states(s0)
-            model.set_state_collection(-1, True)  # enable state collection for all cells
-            model.run_cells()
-            cids = api.IntVector()  # optional, we can add selective catchment_ids here
-            sum_discharge = model.statistics.discharge(cids)
-            sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
-            self.assertGreaterEqual(sum_discharge_value, 32.0)
-            self.assertIsNotNone(sum_discharge)
-            # Verify that if we pass in illegal cids, then it raises exception(with first failing
-            try:
-                illegal_cids = api.IntVector([0, 4, 5])
-                model.statistics.discharge(illegal_cids)
-                self.assertFalse(True, "Failed test, using illegal cids should raise exception")
-            except RuntimeError as rte:
-                pass
+        # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 0.0), region_parameter.gs.snow_cv + 0.1)
+        # self.assertAlmostEqual(region_parameter.gs.effective_snow_cv(1.0, 1000.0), region_parameter.gs.snow_cv + 0.1 + 0.1)
+        cal = api.Calendar()
+        time_axis = api.TimeAxisFixedDeltaT(cal.time(2015, 1, 1, 0, 0, 0), api.deltahours(1), 240)
+        model_interpolation_parameter = api.InterpolationParameter()
+        # degC/m, so -0.5 degC/100m
+        model_interpolation_parameter.temperature_idw.default_temp_gradient = -0.005
+        # if possible use closest neighbor points and solve gradient using equation,(otherwise default min/max height)
+        model_interpolation_parameter.temperature_idw.gradient_by_equation = True
+        # Max number of temperature sources used for one interpolation
+        model_interpolation_parameter.temperature_idw.max_members = 6
+        # 20 km is max distance
+        model_interpolation_parameter.temperature_idw.max_distance = 20000
+        # zscale is used to discriminate neighbors at different elevation than target point
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 1.0)
+        model_interpolation_parameter.temperature_idw.zscale = 0.5
+        self.assertAlmostEqual(model_interpolation_parameter.temperature_idw.zscale, 0.5)
+        # Pure linear interpolation
+        model_interpolation_parameter.temperature_idw.distance_measure_factor = 1.0
+        # This enables IDW with default temperature gradient.
+        model_interpolation_parameter.use_idw_for_temperature = True
+        self.assertAlmostEqual(model_interpolation_parameter.precipitation.scale_factor, 1.02)  # just verify this one is as before change to scale_factor
+        model.run_interpolation(
+            model_interpolation_parameter, time_axis,
+            self.create_dummy_region_environment(time_axis,
+                                                 model.get_cells()[int(num_cells / 2)].geo.mid_point()))
+        s0 = hbv_stack.HbvStateVector()
+        for i in range(num_cells):
+            si = hbv_stack.HbvState()
+            si.tank.uz = 40.0
+            si.tank.lz = 40.0
+            s0.append(si)
+        model.set_states(s0)
+        model.set_state_collection(-1, True)  # enable state collection for all cells
+        model.run_cells()
+        cids = api.IntVector()  # optional, we can add selective catchment_ids here
+        sum_discharge = model.statistics.discharge(cids)
+        sum_discharge_value = model.statistics.discharge_value(cids, 0)  # at the first timestep
+        self.assertGreaterEqual(sum_discharge_value, 32.0)
+        self.assertIsNotNone(sum_discharge)
+        # Verify that if we pass in illegal cids, then it raises exception(with first failing
+        try:
+            illegal_cids = api.IntVector([0, 4, 5])
+            model.statistics.discharge(illegal_cids)
+            self.assertFalse(True, "Failed test, using illegal cids should raise exception")
+        except RuntimeError as rte:
+            pass
 
-            avg_temperature = model.statistics.temperature(cids)
-            avg_precipitation = model.statistics.precipitation(cids)
-            self.assertIsNotNone(avg_precipitation)
-            for time_step in range(time_axis.size()):
-                precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
-                self.assertEqual(precip_raster.size(), num_cells)
-            # example single value spatial aggregation (area-weighted) over cids for a specific timestep
-            # avg_gs_sc_value = model.gamma_snow_response.sca_value(cids, 1)
-            # self.assertGreaterEqual(avg_gs_sc_value,0.0)
-            # avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
-            # self.assertIsNotNone(avg_gs_sca)
-            # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
-            # avg_gs_albedo = model.gamma_snow_state.albedo(cids)
-            # self.assertIsNotNone(avg_gs_albedo)
-            self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
-            copy_region_model = model.__class__(model)
-            self.assertIsNotNone(copy_region_model)
-            copy_region_model.run_cells()  # just to verify we can copy and run the new model
+        avg_temperature = model.statistics.temperature(cids)
+        avg_precipitation = model.statistics.precipitation(cids)
+        self.assertIsNotNone(avg_precipitation)
+        for time_step in range(time_axis.size()):
+            precip_raster = model.statistics.precipitation(cids, time_step)  # example raster output
+            self.assertEqual(precip_raster.size(), num_cells)
+        # example single value spatial aggregation (area-weighted) over cids for a specific timestep
+        # avg_gs_sc_value = model.gamma_snow_response.sca_value(cids, 1)
+        # self.assertGreaterEqual(avg_gs_sc_value,0.0)
+        # avg_gs_sca = model.gamma_snow_response.sca(cids)  # swe output
+        # self.assertIsNotNone(avg_gs_sca)
+        # lwc surface_heat alpha melt_mean melt iso_pot_energy temp_sw
+        # avg_gs_albedo = model.gamma_snow_state.albedo(cids)
+        # self.assertIsNotNone(avg_gs_albedo)
+        self.assertEqual(avg_temperature.size(), time_axis.size(), "expect results equal to time-axis size")
+        copy_region_model = model.__class__(model)
+        self.assertIsNotNone(copy_region_model)
+        copy_region_model.run_cells()  # just to verify we can copy and run the new model
 
-        def test_model_state_io(self):
-            num_cells = 2
-            for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-                model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
-                state_list = []
-                x = ""
-                for i in range(num_cells):
-                    state_list.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
-                initial_states = x.join(state_list)
-                sio = model_type.state_t.serializer_t()
-                state_vector = sio.vector_from_string(initial_states)
-                model.set_states(state_vector)
-                m_state_vector = model_type.state_t.vector_t()
-                model.get_states(m_state_vector)
-                retrieved_states = sio.to_string(m_state_vector)
-                self.assertEqual(initial_states, retrieved_states)
+    def test_geo_cell_data_serializer(self):
+        """
+        This test the bulding block for the geo-cell caching mechanism that can be
+        implemented in GeoCell repository to cache complex information from the GIS system.
+        The test illustrates how to convert existing cell-vector geo info into a DoubleVector,
+        that can be converted .to_nump(),
+        and then how to re-create the cell-vector,(of any given type actually) based on
+        the geo-cell data DoubleVector (that can be created from .from_numpy(..)
 
-        def test_set_too_few_model_states(self):
-            num_cells = 20
-            for model_type in [pt_gs_k.PTGSKModel, pt_gs_k.PTGSKOptModel]:
-                model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells)
+        Notice that the from_numpy(np array) could have limited functionality when it comes
+        to strides etc, so if problem flatten out the np.array before passing it.
 
-                states = []
-                x = ""
-                for i in range(num_cells - 1):
-                    states.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
-                statestr = x.join(states)
-                sio = model_type.state_t.serializer_t()
-                state_vector = sio.vector_from_string(statestr)
+        """
+        n_cells = 3
+        n_values_pr_gcd = 11  # number of values in a geo_cell_data stride
+        model = self.build_model(pt_gs_k.PTGSKModel, pt_gs_k.PTGSKParameter, n_cells)
+        cell_vector = model.get_cells()
+        geo_cell_data_vector = cell_vector.geo_cell_data_vector(cell_vector)  # This gives a string, ultra fast, containing the serialized form of all geo-cell data
+        self.assertEqual(len(geo_cell_data_vector), n_values_pr_gcd * n_cells)
+        cell_vector2 = pt_gs_k.PTGSKCellAllVector.create_from_geo_cell_data_vector(
+            geo_cell_data_vector)  # This gives a cell_vector, of specified type, with exactly the same geo-cell data as the original
+        self.assertEqual(len(cell_vector), len(cell_vector2))  # just verify equal size, and then geometry, the remaining tests are covered by C++ testing
+        for i in range(len(cell_vector)):
+            self.assertAlmostEqual(cell_vector[i].geo.mid_point().z, cell_vector2[i].mid_point().z)
+            self.assertAlmostEqual(cell_vector[i].geo.mid_point().x, cell_vector2[i].mid_point().x)
+            self.assertAlmostEqual(cell_vector[i].geo.mid_point().y, cell_vector2[i].mid_point().y)
 
-                self.assertRaises(RuntimeError, model.set_states, state_vector)
-                for i in range(num_cells + 1):
-                    states.append(self.build_mock_state_dict(q=(i + 1) * 0.5 / num_cells))
-                statestr = x.join(states)
-                state_vector = sio.vector_from_string(statestr)
+    def test_state_with_id_handler(self):
+        num_cells = 20
+        model_type = pt_gs_k.PTGSKModel
+        model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells, 2)
+        cids_unspecified = api.IntVector()
+        cids_1 = api.IntVector([1])
+        cids_2 = api.IntVector([2])
 
-                self.assertRaises(RuntimeError, model.set_states, state_vector)
+        model_state_12 = model.state.extract_state(cids_unspecified)  # this is how to get all states from model
+        model_state_1 = model.state.extract_state(cids_1)  # this is how to get only specified states from model
+        model_state_2 = model.state.extract_state(cids_2)
+        self.assertEqual(len(model_state_1) + len(model_state_2), len(model_state_12))
+        # We need to store state into yaml text files, for this its nice to have it as a string:
+        ms2=pt_gs_k.PTGSKStateWithIdVector.deserialize_from_str(model_state_2.serialize_to_str()) # [0] verify state serialization
+        self.assertEqual(len(ms2),len(model_state_2))
+        for a,b in zip(ms2,model_state_2):
+            self.assertEqual(a.id,b.id)
+            self.assertAlmostEqual(a.state.kirchner.q,b.state.kirchner.q)
 
-        def test_geo_cell_data_serializer(self):
-            """
-            This test the bulding block for the geo-cell caching mechanism that can be
-            implemented in GeoCell repository to cache complex information from the GIS system.
-            The test illustrates how to convert existing cell-vector geo info into a DoubleVector,
-            that can be converted .to_nump(),
-            and then how to re-create the cell-vector,(of any given type actually) based on
-            the geo-cell data DoubleVector (that can be created from .from_numpy(..)
-
-            Notice that the from_numpy(np array) could have limited functionality when it comes
-            to strides etc, so if problem flatten out the np.array before passing it.
-
-            """
-            n_cells = 3
-            n_values_pr_gcd = 11  # number of values in a geo_cell_data stride
-            model = self.build_model(pt_gs_k.PTGSKModel, pt_gs_k.PTGSKParameter, n_cells)
-            cell_vector = model.get_cells()
-            geo_cell_data_vector = cell_vector.geo_cell_data_vector(cell_vector)  # This gives a string, ultra fast, containing the serialized form of all geo-cell data
-            self.assertEqual(len(geo_cell_data_vector), n_values_pr_gcd * n_cells)
-            cell_vector2 = pt_gs_k.PTGSKCellAllVector.create_from_geo_cell_data_vector(
-                geo_cell_data_vector)  # This gives a cell_vector, of specified type, with exactly the same geo-cell data as the original
-            self.assertEqual(len(cell_vector), len(cell_vector2))  # just verify equal size, and then geometry, the remaining tests are covered by C++ testing
-            for i in range(len(cell_vector)):
-                self.assertAlmostEqual(cell_vector[i].geo.mid_point().z, cell_vector2[i].mid_point().z)
-                self.assertAlmostEqual(cell_vector[i].geo.mid_point().x, cell_vector2[i].mid_point().x)
-                self.assertAlmostEqual(cell_vector[i].geo.mid_point().y, cell_vector2[i].mid_point().y)
-
-        def test_state_with_id_handler(self):
-            num_cells = 20
-            model_type = pt_gs_k.PTGSKModel
-            model = self.build_model(model_type, pt_gs_k.PTGSKParameter, num_cells, 2)
-            cids_unspecified = api.IntVector()
-            cids_1 = api.IntVector([1])
-            cids_2 = api.IntVector([2])
-
-            model_state_12 = model.state.extract_state(cids_unspecified)  # this is how to get all states from model
-            model_state_1 = model.state.extract_state(cids_1)  # this is how to get only specified states from model
-            model_state_2 = model.state.extract_state(cids_2)
-            self.assertEqual(len(model_state_1) + len(model_state_2), len(model_state_12))
-            self.assertGreater(len(model_state_1), 0)
-            self.assertGreater(len(model_state_2), 0)
-            for i in range(len(model_state_1)):  # verify selective extract catchment 1
-                self.assertEqual(model_state_1[i].id.cid, 1)
-            for i in range(len(model_state_2)):  # verify selective extract catchment 2
-                self.assertEqual(model_state_2[i].id.cid, 2)
-            for i in range(len(model_state_12)):
-                model_state_12[i].state.kirchner.q = 100 + i
-            model.state.apply_state(model_state_12, cids_unspecified)  # this is how to put all states into  model
-            ms_12 = model.state.extract_state(cids_unspecified)
-            for i in range(len(ms_12)):
+        self.assertGreater(len(model_state_1), 0)
+        self.assertGreater(len(model_state_2), 0)
+        for i in range(len(model_state_1)):  # verify selective extract catchment 1
+            self.assertEqual(model_state_1[i].id.cid, 1)
+        for i in range(len(model_state_2)):  # verify selective extract catchment 2
+            self.assertEqual(model_state_2[i].id.cid, 2)
+        for i in range(len(model_state_12)):
+            model_state_12[i].state.kirchner.q = 100 + i
+        model.state.apply_state(model_state_12, cids_unspecified)  # this is how to put all states into  model
+        ms_12 = model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            self.assertAlmostEqual(ms_12[i].state.kirchner.q, 100 + i)
+        for i in range(len(model_state_2)):
+            model_state_2[i].state.kirchner.q = 200 + i
+        unapplied = model.state.apply_state(model_state_2, cids_2)  # this is how to put a limited set of state into model
+        self.assertEqual(len(unapplied), 0)
+        ms_12 = model.state.extract_state(cids_unspecified)
+        for i in range(len(ms_12)):
+            if ms_12[i].id.cid == 1:
                 self.assertAlmostEqual(ms_12[i].state.kirchner.q, 100 + i)
-            for i in range(len(model_state_2)):
-                model_state_2[i].state.kirchner.q = 200 + i
-            unapplied = model.state.apply_state(model_state_2, cids_2)  # this is how to put a limited set of state into model
-            self.assertEqual(len(unapplied), 0)
-            ms_12 = model.state.extract_state(cids_unspecified)
-            for i in range(len(ms_12)):
-                if ms_12[i].id.cid == 1:
-                    self.assertAlmostEqual(ms_12[i].state.kirchner.q, 100 + i)
 
-            ms_2 = model.state.extract_state(cids_2)
-            for i in range(len(ms_2)):
-                self.assertAlmostEqual(ms_2[i].state.kirchner.q, 200 + i)
+        ms_2 = model.state.extract_state(cids_2)
+        for i in range(len(ms_2)):
+            self.assertAlmostEqual(ms_2[i].state.kirchner.q, 200 + i)
 
-            # serialization support, to and from bytes
+        # feature test: serialization support, to and from bytes
+        #
+        bytes = ms_2.serialize_to_bytes()  # first make some bytes out of the state
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            file_path = str(path.join(tmpdirname, "pt_gs_k_state_test.bin"))
+            api.byte_vector_to_file(file_path, bytes)  # stash it into a file
+            bytes = api.byte_vector_from_file(file_path)  # get it back from the file and into ByteVector
+        ms_2x = pt_gs_k.deserialize_from_bytes(bytes)  # then restore it from bytes to a StateWithIdVector
 
-            bytes = ms_2.serialize_to_bytes()  # first make some bytes out of the state
-            with tempfile.TemporaryDirectory() as tmpdirname:
-                file_path = str(path.join(tmpdirname, "pt_gs_k_state_test.bin"))
-                api.byte_vector_to_file(file_path, bytes)  # stash it into a file
-                bytes = api.byte_vector_from_file(file_path)  # get it back from the file and into ByteVector
-            ms_2x = pt_gs_k.deserialize_from_bytes(bytes)  # then restore it from bytes to a StateWithIdVector
+        self.assertIsNotNone(ms_2x)
+        for i in range(len(ms_2x)):
+            self.assertAlmostEqual(ms_2x[i].state.kirchner.q, 200 + i)
 
-            self.assertIsNotNone(ms_2x)
-            for i in range(len(ms_2x)):
-                self.assertAlmostEqual(ms_2x[i].state.kirchner.q, 200 + i)
+        # feature test: given a state-with-id-vector, get the pure state-vector
+        # suitable for rm.initial_state= <state_vector>
+        # note however that this is 'unsafe', you need to ensure that size/ordering is ok
+        # - that is the purpose of the cell-state-with-id
+        #   better solution could be to use
+        #     rm.state.apply( state_with_id) .. and maybe check the result, number of states== expected applied
+        #     rm.initial_state=rm.current_state  .. a new property to ease typical tasks
+        sv_2 = ms_2.state_vector
+        self.assertEqual(len(sv_2),len(ms_2))
+        for s,sid in zip(sv_2,ms_2):
+            self.assertAlmostEqual(s.kirchner.q,sid.state.kirchner.q)
+        # example apply, then initial state:
+        model.state.apply_state(ms_2,cids_unspecified)
+        model.initial_state=model.current_state
 
     if __name__ == "__main__":
         unittest.main()

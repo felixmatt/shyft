@@ -149,6 +149,7 @@
     <ClCompile Include="..\boostpython\api_geo_cell_data.cpp" />
     <ClCompile Include="..\boostpython\api_geo_point.cpp" />
     <ClCompile Include="..\boostpython\api_glacier_melt.cpp" />
+    <ClCompile Include="..\boostpython\api_hbv_physical_snow.cpp" />
     <ClCompile Include="..\boostpython\api_hbv_snow.cpp" />
     <ClCompile Include="..\boostpython\api_hbv_actual_evapotranspiration.cpp" />
     <ClCompile Include="..\boostpython\api_hbv_soil.cpp" />

@@ -8,7 +8,6 @@
 #include "core/kirchner.h"
 #include "core/pt_hs_k.h"
 #include "api/api.h"
-#include "api/pt_hs_k.h"
 #include "core/pt_hs_k_cell_model.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
@@ -103,6 +102,9 @@ namespace expose {
                 .def_readonly("kirchner_discharge",&PTHSKStateCollector::kirchner_discharge,"Kirchner state instant Discharge given in m^3/s")
                 .def_readonly("snow_swe",&PTHSKStateCollector::snow_swe,"")
                 .def_readonly("snow_sca",&PTHSKStateCollector::snow_sca,"")
+				.def_readonly("sp", &PTHSKStateCollector::sp, "")
+				.def_readonly("sw", &PTHSKStateCollector::sw, "")
+
             ;
 
         }
@@ -131,12 +133,6 @@ namespace expose {
         }
 
         static void
-        state_io() {
-            expose::state_io<shyft::api::pt_hs_k_state_io,shyft::core::pt_hs_k::state>("PTHSKStateIo");
-        }
-
-
-        static void
         model_calibrator() {
             expose::model_calibrator<shyft::core::region_model<pt_hs_k::cell_discharge_response_t, shyft::api::a_region_environment>>("PTHSKOptimizer");
         }
@@ -149,7 +145,6 @@ BOOST_PYTHON_MODULE(_pt_hs_k)
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_hs_k model";
     boost::python::def("version", version);
 	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
-    expose::pt_hs_k::state_io();
     expose::pt_hs_k::parameter_state_response();
     expose::pt_hs_k::cells();
     expose::pt_hs_k::models();

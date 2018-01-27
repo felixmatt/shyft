@@ -324,7 +324,7 @@ namespace shyft{
             TA ta;
             vector<double> v;
 			ts_point_fx fx_policy = POINT_INSTANT_VALUE;
-
+			bool operator==(const point_ts&o) const { return  ta == o.ta && fx_policy == o.fx_policy && v == o.v; }
             ts_point_fx point_interpretation() const { return fx_policy; }
             void set_point_interpretation(ts_point_fx point_interpretation) { fx_policy=point_interpretation;}
 

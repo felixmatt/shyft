@@ -16,9 +16,11 @@ namespace expose {
     extern void priestley_taylor();
     extern void actual_evapotranspiration();
     extern void gamma_snow();
+    extern void universal_snow();
     extern void kirchner();
     extern void precipitation_correction();
     extern void hbv_snow();
+    extern void hbv_physical_snow();
     extern void cell_environment();
     extern void interpolation();
     extern void skaugen_snow();
@@ -44,6 +46,36 @@ namespace expose {
             return std::vector<char>(begin(s), end(s));
         } else
             throw runtime_error(string("failed to open file for read:") + path);
+    }
+    static std::vector<char> byte_vector_from_hex_str(const std::string& s) {
+        using namespace std;
+        vector<char> r;
+        if(s.size()==0)
+            return r;
+        if(s.size() %2 )
+            throw runtime_error(string("hex_str should be even-sized"));
+        r.reserve(s.size()/2);
+        for(size_t i=0;i<s.size();i+=2) {
+            uint32_t b=0;
+            if(sscanf(s.c_str()+i,"%02x",&b)==1) {
+                r.push_back(b&0x00ffu);
+            } else {
+                throw runtime_error(string("illegal hex at ")+to_string(i)+ string(" offset "));
+            }
+        }
+        return r;
+    }
+    static std::string byte_vector_to_hex_str(const std::vector<char>&b) {
+        using namespace std;
+        string r;
+        r.reserve(b.size()*2);
+        for(const unsigned char c:b){
+            char s[10];
+            sprintf(s,"%02x",c); // c
+            r.push_back(s[0]);
+            r.push_back(s[1]);
+        }
+        return r;
     }
 
     static void byte_vector_to_file(std::string path, const std::vector<char>&bytes) {
@@ -74,6 +106,7 @@ namespace expose {
         gamma_snow();
         skaugen_snow();
         hbv_snow();
+        hbv_physical_snow();
         kirchner();
         cell_environment();
         interpolation();
@@ -87,6 +120,8 @@ namespace expose {
         using namespace boost::python;
         def("byte_vector_from_file", byte_vector_from_file, (arg("path")), "reads specified file and returns its contents as a ByteVector");
         def("byte_vector_to_file", byte_vector_to_file, (arg("path"), arg("byte_vector")), "write the supplied ByteVector to file as specified by path");
+        def("byte_vector_from_hex_str", byte_vector_from_hex_str, (arg("hex_str")), "converts earlier byte-vector hex-string to byte-vector");
+        def("byte_vector_to_hex_str", byte_vector_to_hex_str, (arg("byte_vector")), "return hex-string of byte-vector");
         dtss();
     }
 }

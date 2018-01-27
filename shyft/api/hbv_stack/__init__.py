@@ -1,4 +1,5 @@
 from ._hbv_stack import *
+from .. import ByteVector
 # Fix up types that we need attached to the model
 HbvStateVector.push_back = lambda self, x: self.append(x)
 HbvStateVector.size = lambda self: len(self)
@@ -34,17 +35,25 @@ HbvModel.opt_model_t =HbvOptModel
 HbvCellAll.vector_t = HbvCellAllVector
 HbvCellOpt.vector_t = HbvCellOptVector
 HbvState.vector_t = HbvStateVector
-HbvState.serializer_t= HbvStateIo
 
 #decorate StateWithId for serialization support
-def serialize_to_bytes(state_with_id_vector):
+def serialize_to_bytes(state_with_id_vector:HbvStateWithIdVector)->ByteVector:
     if not isinstance(state_with_id_vector,HbvStateWithIdVector):
         raise RuntimeError("supplied argument must be of type HbvStateWithIdVector")
     return serialize(state_with_id_vector)
 
-HbvStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+def __serialize_to_str(state_with_id_vector:HbvStateWithIdVector)->str:
+    return str(serialize_to_bytes(state_with_id_vector))  # returns hex-string formatted vector
 
-def deserialize_from_bytes(bytes):
+def __deserialize_from_str(s:str)->HbvStateWithIdVector:
+    return deserialize_from_bytes(ByteVector.from_str(s))
+
+HbvStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+HbvStateWithIdVector.serialize_to_str = lambda self: __serialize_to_str(self)
+HbvStateWithIdVector.state_vector = property(lambda self: extract_state_vector(self),doc=extract_state_vector.__doc__)
+HbvStateWithIdVector.deserialize_from_str = __deserialize_from_str
+
+def deserialize_from_bytes(bytes: ByteVector)->HbvStateWithIdVector:
     if not isinstance(bytes,ByteVector):
         raise RuntimeError("Supplied type must be a ByteVector, as created from serialize_to_bytes")
     states=HbvStateWithIdVector()

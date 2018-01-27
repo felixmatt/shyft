@@ -55,6 +55,27 @@ namespace shyfttest {
 			void set_end_response(const R& r) {}
 		};
 
+		struct PTUSKResponseCollector {
+			std::vector<shyft::time_series::point> evap;
+			std::vector<shyft::time_series::point> snow_storage;
+			std::vector<shyft::time_series::point> avg_discharge;
+
+			PTUSKResponseCollector(size_t n_pts) {
+				evap.reserve(n_pts);
+				snow_storage.reserve(n_pts);
+				avg_discharge.reserve(n_pts);
+			}
+
+			template<class R>
+			void collect(const shyft::core::utctime time, const R& response) {
+				evap.emplace_back(time, response.pt.pot_evapotranspiration);
+				snow_storage.emplace_back(time, response.us.storage);
+				avg_discharge.emplace_back(time, response.kirchner.q_avg);
+			}
+
+			template<class R>
+			void set_end_response(const R& r) {}
+		};
 		template<class T>
 		struct StateCollector {
 			// Collected from the response, to better understand the model

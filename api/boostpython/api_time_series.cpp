@@ -92,6 +92,15 @@ namespace expose {
 		return "not_yet_stringified_ts";
 	}
     static string ts_stringify(const apoint_ts&ats) { return nice_str(ats); }
+	static void expose_core_ts_vector() {
+		typedef vector<pts_t> core_ts_vector;
+		class_<core_ts_vector>("CoreTsVector",
+			doc_intro("A raw vector of core time-series.")
+			doc_intro("")
+			)
+			.def(vector_indexing_suite<core_ts_vector>());
+	}
+
     static void expose_ats_vector() {
         using namespace shyft::api;
         typedef ats_vector(ats_vector::*m_double)(double)const;
@@ -1326,6 +1335,7 @@ namespace expose {
         expose_apoint_ts();
 		expose_periodic_ts();
 		expose_correlation_functions();
+		expose_core_ts_vector();
 		expose_ats_vector();
 		expose_krls();
     }

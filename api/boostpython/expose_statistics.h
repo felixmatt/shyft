@@ -193,6 +193,96 @@ namespace expose {
                 ;
 
         }
+        template <class cell>
+        static void universal_snow(const char *cell_name) {
+            char state_name[200];sprintf(state_name,"%sUniversalSnowStateStatistics",cell_name);
+            char response_name[200];sprintf(response_name,"%sUniversalSnowResponseStatistics",cell_name);
+            typedef typename shyft::api::universal_snow_cell_state_statistics<cell>    sc_stat;
+            typedef typename shyft::api::universal_snow_cell_response_statistics<cell> rc_stat;
+
+            rts_ (sc_stat::*albedo_ts)(cids_) const = &sc_stat::albedo;
+            vd_  (sc_stat::*albedo_vd)(cids_,ix_) const =&sc_stat::albedo;
+
+            rts_ (sc_stat::*lwc_ts)(cids_) const = &sc_stat::lwc;
+            vd_  (sc_stat::*lwc_vd)(cids_,ix_) const =&sc_stat::lwc;
+
+            rts_ (sc_stat::*surface_heat_ts)(cids_) const = &sc_stat::surface_heat;
+            vd_  (sc_stat::*surface_heat_vd)(cids_,ix_) const =&sc_stat::surface_heat;
+
+            rts_ (sc_stat::*alpha_ts)(cids_) const = &sc_stat::alpha;
+            vd_  (sc_stat::*alpha_vd)(cids_,ix_) const =&sc_stat::alpha;
+
+            rts_ (sc_stat::*sdc_melt_mean_ts)(cids_) const = &sc_stat::sdc_melt_mean;
+            vd_  (sc_stat::*sdc_melt_mean_vd)(cids_,ix_) const =&sc_stat::sdc_melt_mean;
+
+            rts_ (sc_stat::*acc_melt_ts)(cids_) const = &sc_stat::acc_melt;
+            vd_  (sc_stat::*acc_melt_vd)(cids_,ix_) const =&sc_stat::acc_melt;
+
+            rts_ (sc_stat::*iso_pot_energy_ts)(cids_) const = &sc_stat::iso_pot_energy;
+            vd_  (sc_stat::*iso_pot_energy_vd)(cids_,ix_) const =&sc_stat::iso_pot_energy;
+
+            rts_ (sc_stat::*temp_swe_ts)(cids_) const = &sc_stat::temp_swe;
+            vd_  (sc_stat::*temp_swe_vd)(cids_,ix_) const =&sc_stat::temp_swe;
+
+            class_<sc_stat>(state_name,"UniversalSnow state statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct UniversalSnow cell state statistics object"))
+                .def("albedo",albedo_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("albedo",albedo_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("albedo_value", &sc_stat::albedo_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("lwc",lwc_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("lwc",lwc_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("lwc_value", &sc_stat::lwc_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("surface_heat",surface_heat_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("surface_heat",surface_heat_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("surface_heat_value", &sc_stat::surface_heat_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("alpha",alpha_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("alpha",alpha_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("alpha_value", &sc_stat::alpha_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sdc_melt_mean",sdc_melt_mean_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("sdc_melt_mean",sdc_melt_mean_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sdc_melt_mean_value", &sc_stat::sdc_melt_mean_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("acc_melt",acc_melt_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("acc_melt",acc_melt_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("acc_melt_value", &sc_stat::acc_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("iso_pot_energy",iso_pot_energy_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("iso_pot_energy",iso_pot_energy_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("iso_pot_energy_value", &sc_stat::iso_pot_energy_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("temp_swe",temp_swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("temp_swe",temp_swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("temp_swe_value", &sc_stat::temp_swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+            ;
+
+
+            rts_ (rc_stat::*sca_ts)(cids_) const = &rc_stat::sca;
+            vd_  (rc_stat::*sca_vd)(cids_,ix_) const =&rc_stat::sca;
+
+            rts_ (rc_stat::*swe_ts)(cids_) const = &rc_stat::swe;
+            vd_  (rc_stat::*swe_vd)(cids_,ix_) const =&rc_stat::swe;
+
+            rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
+            vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
+
+            rts_ (rc_stat::*glacier_melt_ts)(cids_) const = &rc_stat::glacier_melt;
+            vd_  (rc_stat::*glacier_melt_vd)(cids_, ix_) const = &rc_stat::glacier_melt;
+
+            class_<rc_stat>(response_name,"UniversalSnow response statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct UniversalSnow cell response statistics object"))
+                .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("swe_value", &rc_stat::swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca_value", &rc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("glacier_melt", glacier_melt_ts, args("catchment_indexes"), "returns sum  for catcment_ids[m3/s]")
+                .def("glacier_melt", glacier_melt_vd, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep [m3/s]")
+                .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
+
+                ;
+
+        }
 
         template <class cell>
         static void hbv_snow(const char *cell_name) {
@@ -232,6 +322,53 @@ namespace expose {
                 .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
                 ;
         }
+        
+
+        template <class cell>
+        static void hbv_physical_snow(const char *cell_name) {
+            char state_name[200];sprintf(state_name,"%sHBVPhysicalSnowStateStatistics",cell_name);
+            char response_name[200];sprintf(response_name,"%sHBVPhysicalSnowResponseStatistics",cell_name);
+            typedef typename shyft::api::hbv_physical_snow_cell_state_statistics<cell>    sc_stat;
+            typedef typename shyft::api::hbv_physical_snow_cell_response_statistics<cell> rc_stat;
+
+            rts_ (sc_stat::*swe_ts)(cids_) const = &sc_stat::swe;
+            vd_  (sc_stat::*swe_vd)(cids_,ix_) const =&sc_stat::swe;
+            rts_ (sc_stat::*sca_ts)(cids_) const = &sc_stat::sca;
+            vd_  (sc_stat::*sca_vd)(cids_,ix_) const =&sc_stat::sca;
+            rts_ (sc_stat::*surface_heat_ts)(cids_) const = &sc_stat::surface_heat;
+            vd_  (sc_stat::*surface_heat_vd)(cids_,ix_) const =&sc_stat::surface_heat;
+
+            class_<sc_stat>(state_name,"HBVPhysicalSnow state statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVPhysicalSnow cell state statistics object"))
+                .def("swe",swe_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("swe",swe_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("swe_value", &sc_stat::swe_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("sca",sca_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("sca",sca_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("sca_value", &sc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("surface_heat",surface_heat_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("surface_heat",surface_heat_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("surface_heat_value", &sc_stat::sca_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+
+            ;
+
+
+            rts_ (rc_stat::*outflow_ts)(cids_) const = &rc_stat::outflow;
+            vd_  (rc_stat::*outflow_vd)(cids_,ix_) const =&rc_stat::outflow;
+            rts_ (rc_stat::*glacier_melt_ts)(cids_) const = &rc_stat::glacier_melt;
+            vd_  (rc_stat::*glacier_melt_vd)(cids_, ix_) const = &rc_stat::glacier_melt;
+
+            class_<rc_stat>(response_name,"HBVSnow response statistics",no_init)
+                .def(init<std::shared_ptr<std::vector<cell>> >(args("cells"),"construct HBVSnow cell response statistics object"))
+                .def("outflow",outflow_ts,args("catchment_indexes"), "returns sum  for catcment_ids")
+                .def("outflow",outflow_vd,args("catchment_indexes","i"),"returns  for cells matching catchments_ids at the i'th timestep")
+				.def("outflow_value", &rc_stat::outflow_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep")
+                .def("glacier_melt", glacier_melt_ts, args("catchment_indexes"), "returns sum  for catcment_ids[m3/s]")
+                .def("glacier_melt", glacier_melt_vd, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep [m3/s]")
+                .def("glacier_melt_value", &rc_stat::glacier_melt_value, args("catchment_indexes", "i"), "returns  for cells matching catchments_ids at the i'th timestep[m3/s]")
+                ;
+        }
+
 
         template <class cell>
         static void skaugen(const char *cell_name) {

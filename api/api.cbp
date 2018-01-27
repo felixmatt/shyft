@@ -70,6 +70,7 @@
 		<Unit filename="api_state.h" />
 		<Unit filename="hbv_stack.h" />
 		<Unit filename="pt_gs_k.h" />
+		<Unit filename="pt_hps_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
 		<Extensions>

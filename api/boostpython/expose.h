@@ -2,23 +2,10 @@
 #include "expose_statistics.h"
 #include "api/api.h"
 #include "api/api_state.h"
-
 namespace expose {
     using namespace boost::python;
     namespace py=boost::python;
     using namespace std;
-
-    template <class StateIo,class state>
-    static void state_io(const char *state_io_name) {
-        std::string (StateIo::*to_string1)(const state& ) const = &StateIo::to_string;
-        std::string (StateIo::*to_string2)(const std::vector<state>& ) const = &StateIo::to_string;
-        class_<StateIo>(state_io_name)
-         .def("from_string",&StateIo::from_string,args("str","state"), "returns true if succeeded convertion string into state")
-         .def("to_string",to_string1,args("state"),"convert a state into readable string")
-         .def("to_string",to_string2,args("state_vector"),"convert a vector of state to a string" )
-         .def("vector_from_string",&StateIo::vector_from_string,args("s"),"given string s, convert it to a state vector")
-         ;
-    }
 
     template <class T>
     static vector<double> geo_cell_data_vector(shared_ptr<vector<T>> cell_vector) {
@@ -27,6 +14,7 @@ namespace expose {
             shyft::api::geo_cell_data_io::push_to_vector(r,cell.geo);
         return r;
     }
+
     template <class T>
     static vector<T> create_from_geo_cell_data_vector(const vector<double>& s) {
         if(s.size()==0 || s.size()% shyft::api::geo_cell_data_io::size())
@@ -36,6 +24,15 @@ namespace expose {
             T cell;
             cell.geo=shyft::api::geo_cell_data_io::from_raw_vector(s.data()+i);
             r.push_back(cell);
+        }
+        return r;
+    }
+    template <class S,class S_ID_V>
+    static shared_ptr<vector<S>> extract_cell_state_vector(const S_ID_V&v) {
+        auto r = make_shared<vector<S>>();
+        r->reserve(v->size());
+        for(const auto&sid:*v) {
+            r->push_back(sid.state);
         }
         return r;
     }
@@ -52,10 +49,17 @@ namespace expose {
             .staticmethod("cell_state")
             ;
         char csv_name[200];sprintf(csv_name, "%sVector", cs_name);
-        class_<std::vector<CellState>, bases<>, std::shared_ptr<std::vector<CellState>> >(csv_name, "vector of cell state")
+        typedef std::vector<CellState> cell_state_with_id_vector;
+        typedef std::shared_ptr<cell_state_with_id_vector> cell_state_with_id_vector_;
+        class_<cell_state_with_id_vector, bases<>, cell_state_with_id_vector_  >(csv_name, "vector of cell state")
             .def(vector_indexing_suite<std::vector<CellState>>())
-
             ;
+        def("extract_state_vector",extract_cell_state_vector<cstate_t,cell_state_with_id_vector_>,(py::arg("cell_state_id_vector")),
+            doc_intro("Given a cell-state-with-id-vector, returns a pure state vector that can be inserted directly into region-model")
+            doc_parameters()
+            doc_parameter("cell_state_id_vector","xStateWithIdVector","a complete consistent with region-model vector, all states, as in cell-order")
+            doc_returns("cell_state_vector","XStateVector","a vector with cell-id removed, order preserved")
+        );
         def("serialize", shyft::api::serialize_to_bytes<CellState>, args("states"), "make a blob out of the states");
         def("deserialize", shyft::api::deserialize_from_bytes<CellState>, args("bytes", "states"), "from a blob, fill in states");
     }
@@ -67,20 +71,22 @@ namespace expose {
         typedef shyft::api::state_io_handler<C> CellStateHandler;
         class_<CellStateHandler>(csh_name, "Provides functionality to extract and restore state from cells")
             .def(init<std::shared_ptr<std::vector<C>> >(args("cells"),"construct a cell state handler for the supplied cells"))
-            .def("extract_state", &CellStateHandler::extract_state, args("cids"),
-                "Extract cell state for the optionaly specified catchment ids, cids\n"
-                "Return\n"
-                "------\n"
-                " CellStateIdVector: the state for the cells\n"
+            .def("extract_state", &CellStateHandler::extract_state,( py::arg("self"),py::arg("cids")),
+                doc_intro("Extract cell state for the optionaly specified catchment ids, cids")
+                doc_parameters()
+                doc_parameter("cids","IntVector","list of catchment-id's, if empty, extract all")
+                doc_returns("cell_states","CellStateIdVector","the state with identifier for the cells")
             )
-            .def("apply_state", &CellStateHandler::apply_state,args("cell_id_state_vector","cids"),
-                "apply the supplied cell-identified state to the cells,\n"
-                "limited to the optionally supplied catchment id's\n"
-                "If no catchment-id's specifed, it applies to all cells\n"
-                "Return\n"
-                "------\n"
-                "IntVector: a list of indices into cell_id_state_vector that did not match any cells\n"
-                "\t taken into account the optionally catchment-id specification\n"
+            .def("apply_state", &CellStateHandler::apply_state,( py::arg("self"), py::arg("cell_id_state_vector"), py::arg("cids")),
+                doc_intro("apply the supplied cell-identified state to the cells,")
+                doc_intro("limited to the optionally supplied catchment id's")
+                doc_intro("If no catchment-id's specified, it applies to all cells")
+                doc_parameters()
+                doc_parameter("cell_id_state_vector","","")
+                doc_parameter("cids","IntVector","list of catchment-id's, if empty, apply all")
+                doc_returns("not_applied_list","IntVector",
+                            "a list of indices into cell_id_state_vector that did not match any cells\n"
+                            "\t taken into account the optionally catchment-id specification\n")
             )
         ;
 
@@ -146,6 +152,7 @@ namespace expose {
                 ,model_name);
         // NOTE: explicit expansion of the run_interpolate method is needed here, using this specific syntax
         auto run_interpolation_f= &M::run_interpolation;
+        auto run_interpolation_f_g=&M::run_interpolation_g;
 		auto interpolate_f = &M::interpolate;
         class_<M>(model_name,m_doc,no_init)
 	     .def(init<const M&>(py::arg("other_model"),"create a copy of the model"))
@@ -201,6 +208,24 @@ namespace expose {
                 doc_parameter("time_axis","TimeAxisFixedDeltaT","specifies the time-axis for the region-model, and thus the cells")
                 doc_returns("nothing","","")
 		 )
+		 .def("initialize_cell_environment",&M::initialize_cell_environment_g,(py::arg("self"),py::arg("time_axis")),
+                doc_intro("Initializes the cell enviroment (cell.env.ts* )")
+                doc_intro("")
+                doc_intro("The method initializes the cell environment, that keeps temperature, precipitation etc")
+                doc_intro("that is local to the cell.The initial values of these time - series is set to zero.")
+                doc_intro("The region-model time-axis is set to the supplied time-axis, so that")
+                doc_intro("the any calculation steps will use the supplied time-axis.")
+                doc_intro("This call is needed once prior to call to the .interpolate() or .run_cells() methods")
+                doc_intro("")
+                doc_intro("The call ensures that all cells.env ts are reset to zero, with a time-axis and")
+                doc_intro(" value-vectors according to the supplied time-axis.")
+                doc_intro(" Also note that the region-model.time_axis is set to the supplied time-axis.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("time_axis","TimeAxis","specifies the time-axis (fixed type) for the region-model, and thus the cells")
+                doc_returns("nothing","","")
+		 )
+
 		 .def("interpolate", interpolate_f, (py::arg("self"),py::arg("interpolation_parameter"),py::arg("env"),py::arg("best_effort")=true),
                 doc_intro("do interpolation interpolates region_environment temp,precip,rad.. point sources")
                 doc_intro("to a value representative for the cell.mid_point().")
@@ -236,6 +261,20 @@ namespace expose {
                 doc_parameters()
                 doc_parameter("interpolation_parameter","InterpolationParameter","contains wanted parameters for the interpolation")
                 doc_parameter("time_axis","TimeAxisFixedDeltaT","should be equal to the time-axis the region_model is prepared running for")
+                doc_parameter("env","RegionEnvironment","contains the ref: region_environment type")
+                doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
+                doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
+            )
+         .def("run_interpolation",run_interpolation_f_g,(py::arg("self"),py::arg("interpolation_parameter"),py::arg("time_axis"),py::arg("env"),py::arg("best_effort")=true),
+                doc_intro("run_interpolation interpolates region_environment temp,precip,rad.. point sources")
+                doc_intro("to a value representative for the cell.mid_point().")
+                doc_intro("")
+                doc_intro("note: This function is equivalent to")
+                doc_intro("    self.initialize_cell_environment(time_axis)")
+                doc_intro("    self.interpolate(interpolation_parameter,env)")
+                doc_parameters()
+                doc_parameter("interpolation_parameter","InterpolationParameter","contains wanted parameters for the interpolation")
+                doc_parameter("time_axis","TimeAxis","should be equal to the time-axis the region_model is prepared running for")
                 doc_parameter("env","RegionEnvironment","contains the ref: region_environment type")
                 doc_parameter("best_effort","bool","default=True, don't throw, just return True/False if problem, with best_effort, unfilled values is nan")
                 doc_returns("success","bool","True if interpolation runs with no exceptions(btk,raises if to few neighbours)")
@@ -356,8 +395,9 @@ namespace expose {
         .def("get_cells",&M::get_cells, (py::arg("self")),"cells as shared_ptr<vector<cell_t>>")
         .def("size",&M::size,(py::arg("self")),"return number of cells")
         .add_property("cells",&M::get_cells,"cells of the model")
-
+        .add_property("current_state",&M::current_state," a copy of the current model state")
          ;
+
     }
 
     template <class F, class O>

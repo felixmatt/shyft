@@ -293,10 +293,11 @@ namespace shyft {
 				// Initialize the method stack
 				precipitation_correction::calculator p_corr(parameter.p_corr.scale_factor);
 				priestley_taylor::calculator pt(parameter.pt.albedo, parameter.pt.alpha);
-				hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> snow(parameter.snow, state.snow);
+				hbv_snow::calculator<typename P::snow_parameter_t, typename S::snow_state_t> snow(parameter.snow);
 				hbv_soil::calculator<typename P::soil_parameter_t> soil(parameter.soil);
 				hbv_tank::calculator<typename P::tank_parameter_t> tank(parameter.tank);
 				R response;
+                state.snow.distribute(parameter.snow,false);// ensure dimensions for distributions match
 
                 const double glacier_fraction = geo_cell_data.land_type_fractions_info().glacier();
                 const double gm_direct = parameter.gm.direct_response; //glacier melt directly out of cell
@@ -316,7 +317,7 @@ namespace shyft {
 					double prec = p_corr.calc(prec_accessor.value(i));
 					state_collector.collect(i, state);///< \note collect the state at the beginning of each period (the end state is saved anyway)
 
-					snow.step(state.snow, response.snow, period.start, period.end, parameter.snow, prec, temp);
+					snow.step(state.snow, response.snow, period.start, period.end, prec, temp);
 
                     response.gm_melt_m3s = glacier_melt::step(parameter.gm.dtf,temp,geo_cell_data.area()*state.snow.sca,glacier_area_m2);// m3/s, that is, how much flow from the snow free glacier parts
                     response.pt.pot_evapotranspiration = pt.potential_evapotranspiration(temp, rad, rel_hum)*calendar::HOUR; // mm/h

@@ -1,6 +1,7 @@
 
+
 #include "test_pch.h"
-#include "core/pt_hs_k.h"
+#include "core/pt_hps_k.h"
 #include "mocks.h"
 #include "core/time_series.h"
 #include "core/utctime_utilities.h"
@@ -8,13 +9,13 @@
 // Some typedefs for clarity
 using namespace shyft::core;
 using namespace shyft::time_series;
-using namespace shyft::core::pt_hs_k;
+using namespace shyft::core::pt_hps_k;
 
 using namespace shyfttest::mock;
 using namespace shyfttest;
 
 namespace pt = shyft::core::priestley_taylor;
-namespace hs = shyft::core::hbv_snow;
+namespace hps = shyft::core::hbv_physical_snow;
 namespace gm = shyft::core::glacier_melt;
 namespace kr = shyft::core::kirchner;
 namespace ae = shyft::core::actual_evapotranspiration;
@@ -24,10 +25,10 @@ typedef TSPointTarget<ta::point_dt> catchment_t;
 
 namespace shyfttest {
     namespace mock {
-        // need specialization for pthsk_response_t above
+        // need specialization for pthpsk_response_t above
         template<> template<>
         void ResponseCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
-            _snow_output.set(idx, response.snow.outflow);
+            _snow_output.set(idx, response.hps.outflow);
         }
         template <> template <>
         void DischargeCollector<ta::fixed_dt>::collect<response>(size_t idx, const response& response) {
@@ -36,7 +37,7 @@ namespace shyfttest {
         }
     };
 }; // End namespace shyfttest
-TEST_SUITE("pt_hs_k") {
+TEST_SUITE("pt_hps_k") {
 TEST_CASE("test_call_stack") {
     xpts_t temp;
     xpts_t prec;
@@ -60,16 +61,17 @@ TEST_CASE("test_call_stack") {
     // Initialize parameters
     std::vector<double> s = {1.0, 1.0, 1.0, 1.0, 1.0}; // Zero cv distribution of snow (i.e. even)
     std::vector<double> a = {0.0, 0.25, 0.5, 0.75, 1.0};
+
     pt::parameter pt_param;
-    hs::parameter snow_param(s, a);
+    hps::parameter hps_param(s, a);
     ae::parameter ae_param;
     kr::parameter k_param;
     pc::parameter p_corr_param;
 
     // Initialize the state vectors
     kr::state kirchner_state {5.0};
-    hs::state snow_state(10.0, 0.5);
-    // should work without..snow_state.distribute(snow_param);
+    hps::state hps_state(vector<double>(5, 0.4), vector<double>(5, 0.0),30000.0, 10.0, 0.5);
+
     // Initialize response
     response run_response;
 
@@ -77,10 +79,10 @@ TEST_CASE("test_call_stack") {
     shyfttest::mock::ResponseCollector<ta::fixed_dt> response_collector(1000*1000, time_axis);
     shyfttest::mock::StateCollector<ta::fixed_dt> state_collector(state_time_axis);
 
-    state state {snow_state, kirchner_state};
-    parameter parameter(pt_param, snow_param, ae_param, k_param, p_corr_param);
+    state state {hps_state, kirchner_state};
+    parameter parameter(pt_param, hps_param, ae_param, k_param, p_corr_param);
     geo_cell_data geo_cell_data;
-    pt_hs_k::run<direct_accessor, response>(geo_cell_data, parameter, time_axis,0,0, temp,
+    pt_hps_k::run<direct_accessor, response>(geo_cell_data, parameter, time_axis,0,0, temp,
                                               prec, wind_speed, rel_hum, radiation, state,
                                               state_collector, response_collector);
 

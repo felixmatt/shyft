@@ -154,8 +154,8 @@ def forecast_demo():
 
     """
     utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_start = utc.time(YMDhms(2015, 10, 1))
+    t_start = utc.time(2011, 9, 1)
+    t_fc_start = utc.time(2015, 10, 1)
     dt = deltahours(1)
     n_obs = int(round((t_fc_start - t_start)/dt))
     n_fc = 65
@@ -164,7 +164,7 @@ def forecast_demo():
     total_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs + n_fc)
     q_obs_m3s_ts = observed_tistel_discharge(total_time_axis.total_period())
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
+    initial_state = burn_in_state(ptgsk, t_start, utc.time(2012, 9, 1), q_obs_m3s_ts)
     ptgsk.run(obs_time_axis, initial_state)
     plot_results(ptgsk, q_obs_m3s_ts)
 
@@ -181,9 +181,9 @@ def forecast_demo():
 
 def ensemble_demo():
     utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_ens_start = utc.time(YMDhms(2015, 7, 26))
-    disp_start = utc.time(YMDhms(2015, 7, 20))
+    t_start = utc.time(2011, 9, 1)
+    t_fc_ens_start = utc.time(2015, 7, 26)
+    disp_start = utc.time(2015, 7, 20)
     dt = deltahours(1)
     n_obs = int(round((t_fc_ens_start - t_start)/dt))
     n_fc_ens = 30
@@ -195,7 +195,7 @@ def ensemble_demo():
 
     q_obs_m3s_ts = observed_tistel_discharge(obs_time_axis.total_period())
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
+    initial_state = burn_in_state(ptgsk, t_start, utc.time(2012, 9, 1), q_obs_m3s_ts)
 
     ptgsk.run(obs_time_axis, initial_state)
     current_state = adjust_simulator_state(ptgsk, t_fc_ens_start, q_obs_m3s_ts)
@@ -214,15 +214,15 @@ def ensemble_demo():
 
 def continuous_calibration():
     utc = Calendar()
-    t_start = utc.time(YMDhms(2011, 9, 1))
-    t_fc_start = utc.time(YMDhms(2015, 10, 1))
+    t_start = utc.time(2011, 9, 1)
+    t_fc_start = utc.time(2015, 10, 1)
     dt = deltahours(1)
     n_obs = int(round((t_fc_start - t_start)/dt))
     obs_time_axis = TimeAxisFixedDeltaT(t_start, dt, n_obs + 1)
     q_obs_m3s_ts = observed_tistel_discharge(obs_time_axis.total_period())
 
     ptgsk = create_tistel_simulator(PTGSKOptModel, tistel.geo_ts_repository(tistel.grid_spec.epsg()))
-    initial_state = burn_in_state(ptgsk, t_start, utc.time(YMDhms(2012, 9, 1)), q_obs_m3s_ts)
+    initial_state = burn_in_state(ptgsk, t_start, utc.time(2012, 9, 1), q_obs_m3s_ts)
 
     num_opt_days = 30
     # Step forward num_opt_days days and store the state for each day:
@@ -236,8 +236,8 @@ def continuous_calibration():
         state = ptgsk.reg_model_state
         opt_states[t] = state
 
-    recal_stop = utc.time(YMDhms(2011, 10, 30))
-    recal_stop = utc.time(YMDhms(2012, 5, 30))
+    recal_stop = utc.time(2011, 10, 30)
+    recal_stop = utc.time(2012, 5, 30)
     curr_time = recal_start
     q_obs_avg = TsTransform().to_average(t_start, dt, n_obs + 1, q_obs_m3s_ts)
     target_spec = TargetSpecificationPts(q_obs_avg, IntVector([0]), 1.0, KLING_GUPTA)

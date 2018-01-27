@@ -25,7 +25,7 @@
 #include "geo_cell_data.h"
 #include "routing.h"
 #include "model_state_tuning.h"
-
+#include "time_axis.h"
 /**
  * This file now contains mostly things to provide the PTxxK model,or
  * in general a region model, based on distributed cells where
@@ -56,7 +56,7 @@ namespace shyft {
         namespace idw = inverse_distance;
         namespace btk = bayesian_kriging;
         using namespace std;
-
+        using shyft::time_axis::generic_dt;
         /** \brief the interpolation_parameter keeps parameter needed to perform the
          * interpolation steps as specified by the user.
          */
@@ -180,8 +180,8 @@ namespace shyft {
             shared_ptr<rel_hum_vec_t>       rel_hum;
 
         };
-        
-        
+
+
         ///< needs definition of the core time-series
         typedef shyft::time_series::point_ts<shyft::time_axis::fixed_dt> pts_t;
         /** \brief region_model is the calculation model for a region, where we can have
@@ -340,6 +340,7 @@ namespace shyft {
                 for (const auto&c : *cells) r.push_back(c.geo);
                 return r;
             }
+
 			/** \brief Initializes the cell enviroment (cell.env.ts* )
 			 *
 			 * The initializes the cell environment, that keeps temperature, precipitation etc
@@ -360,6 +361,21 @@ namespace shyft {
 				}
 				n_catchments = number_of_catchments();// keep this/assume invariant..
 				this->time_axis = time_axis;
+			}
+
+			/** helper to allow user pass in any time-axis, and require it to be convertible to a fixed-interval time-axis*/
+			timeaxis_t fixed_time_axis(const generic_dt&ta) const {
+			    if(ta.gt == generic_dt::generic_type::FIXED)
+                    return ta.f;
+                if(ta.gt == generic_dt::generic_type::CALENDAR) {
+                    if(ta.c.dt <= 86400)
+                        return timeaxis_t(ta.c.t,ta.c.dt,ta.c.n);
+			    }
+			    throw runtime_error("region-model routine requires a fixed-delta-t type of TimeAxis");
+			}
+
+			void initialize_cell_environment_g(const generic_dt&ta) {
+			  initialize_cell_environment(fixed_time_axis(ta));
 			}
 
 			/** \brief interpolate the supplied region_environment to the cells
@@ -532,6 +548,11 @@ namespace shyft {
 				return interpolate(ip_parameter, env);
             }
 
+            /** overload with generic-time-axis to help user-interface in python*/
+            bool run_interpolation_g(const interpolation_parameter& ip_parameter, const generic_dt& ta, const region_env_t& env, bool best_effort=true) {
+				initialize_cell_environment_g(ta);
+				return interpolate(ip_parameter, env);
+            }
             /** \brief run_cells calculations over specified time_axis
             *  the cell method stack is invoked for all the cells, using multicore up to a maximum number of
             *  tasks/cores. Notice that this implies that executing the cell method stack should have no
@@ -763,6 +784,12 @@ namespace shyft {
             void get_states(std::vector<state_t>& end_states) const {
                 end_states.clear();end_states.reserve(std::distance(begin(*cells), end(*cells)));
                 for(const auto& cell:*cells) end_states.emplace_back(cell.state);
+            }
+            /** \brief return current state vector as shared ptr for python exposure*/
+            std::shared_ptr<std::vector<state_t>> current_state() const {
+                auto r=std::make_shared<std::vector<state_t>>();
+                get_states(*r);
+                return r;
             }
 
             /**\brief set current state for all the cells in the model.

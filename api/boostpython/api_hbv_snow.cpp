@@ -7,6 +7,7 @@ namespace expose {
     void hbv_snow() {
         using namespace shyft::core::hbv_snow;
         using namespace boost::python;
+        namespace py = boost::python;
         using namespace std;
         class_<parameter>("HbvSnowParameter")
         .def(init<double,optional<double,double,double,double>>(args("tx","cx","ts","lw","cfr"),"create parameter object with specifed values"))
@@ -27,6 +28,13 @@ namespace expose {
          .def(init<double,optional<double>>(args("swe","sca"),"create a state with specified values"))
          .def_readwrite("swe",&state::swe,"snow water equivalent[mm]")
          .def_readwrite("sca",&state::sca,"snow covered area [0..1]")
+         .def("distribute", &state::distribute, (py::arg("self"), py::arg("p"),py::arg("force")=true),
+            doc_intro("Distribute state according to parameter settings.")
+            doc_parameters()
+            doc_parameter("p", "HbvSnowParameter", "descr")
+            doc_parameter("force","bool","default true, if false then only distribute if state vectors are of different size than parameters passed")
+            doc_returns("", "None", "")
+         )
          ;
 
         class_<response>("HbvSnowResponse")
@@ -43,8 +51,10 @@ namespace expose {
                 "include the end points 0 and 1 and must be given in ascending order.\n"
                 "\n",no_init
             )
-            .def(init<const parameter&,state&>(args("parameter","state"),"creates a calculator with given parameter and initial state, notice that state is updated in this call(hmm)"))
-            .def("step",&HbvSnowCalculator::step<response>,args("state","response","t0","t1","param","precipitation","temperature"),"steps the model forward from t0 to t1, updating state and response")
+            .def(init<const parameter&>(args("parameter"),"creates a calculator with given parameter"))
+            .def("step",&HbvSnowCalculator::step<response>,(py::arg("self"),py::arg("state"),py::arg("response"), py::arg("t0"), py::arg("t1"), py::arg("precipitation"), py::arg("temperature")),
+                 doc_intro("steps the model forward from t0 to t1, updating state and response")
+            )
 
             ;
 

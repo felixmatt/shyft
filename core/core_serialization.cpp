@@ -21,6 +21,7 @@
 #include "time_axis.h"
 #include "geo_cell_data.h"
 #include "hbv_snow.h"
+#include "hbv_physical_snow.h"
 #include "hbv_soil.h"
 #include "hbv_tank.h"
 #include "gamma_snow.h"
@@ -30,7 +31,7 @@
 #include "pt_gs_k.h"
 #include "pt_ss_k.h"
 #include "pt_hs_k.h"
-
+#include "pt_hps_k.h"
 // then include stuff you need like vector,shared, base_obj,nvp etc.
 
 
@@ -165,8 +166,23 @@ void shyft::core::geo_cell_data::serialize(Archive& ar, const unsigned int versi
 template <class Archive>
 void shyft::core::hbv_snow::state::serialize(Archive & ar, const unsigned int file_version) {
     ar
+    & core_nvp("sp", sp)
+    & core_nvp("sw", sw)
     & core_nvp("swe",swe)
     & core_nvp("sca",sca)
+    ;
+}
+
+template <class Archive>
+void shyft::core::hbv_physical_snow::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+    & core_nvp("sp", sp)
+    & core_nvp("sw", sw)
+    & core_nvp("albedo", albedo)
+    & core_nvp("iso_pot_energy", iso_pot_energy)
+    & core_nvp("surface_heat", surface_heat)
+    & core_nvp("swe", swe)
+    & core_nvp("sca", sca)
     ;
 }
 template <class Archive>
@@ -244,6 +260,14 @@ void shyft::core::pt_hs_k::state::serialize(Archive & ar, const unsigned int fil
 }
 
 
+template <class Archive>
+void shyft::core::pt_hps_k::state::serialize(Archive & ar, const unsigned int file_version) {
+    ar
+        & core_nvp("hps",hps)
+        & core_nvp("kirchner", kirchner)
+        ;
+}
+
 //-- export geo stuff
 x_serialize_implement(shyft::core::geo_point);
 x_serialize_implement(shyft::core::land_type_fractions);
@@ -267,6 +291,7 @@ x_serialize_implement(shyft::time_axis::generic_dt);
 
 //-- export method and method-stack state
 x_serialize_implement(shyft::core::hbv_snow::state);
+x_serialize_implement(shyft::core::hbv_physical_snow::state);
 x_serialize_implement(shyft::core::hbv_soil::state);
 x_serialize_implement(shyft::core::hbv_tank::state);
 x_serialize_implement(shyft::core::gamma_snow::state);
@@ -275,6 +300,7 @@ x_serialize_implement(shyft::core::kirchner::state);
 
 x_serialize_implement(shyft::core::pt_gs_k::state);
 x_serialize_implement(shyft::core::pt_hs_k::state);
+x_serialize_implement(shyft::core::pt_hps_k::state);
 x_serialize_implement(shyft::core::pt_ss_k::state);
 x_serialize_implement(shyft::core::hbv_stack::state);
 
@@ -302,6 +328,7 @@ x_arch(shyft::core::routing_info);
 x_arch(shyft::core::geo_cell_data);
 
 x_arch(shyft::core::hbv_snow::state);
+x_arch(shyft::core::hbv_physical_snow::state);
 x_arch(shyft::core::hbv_soil::state);
 x_arch(shyft::core::hbv_tank::state);
 x_arch(shyft::core::gamma_snow::state);
@@ -310,6 +337,7 @@ x_arch(shyft::core::kirchner::state);
 
 x_arch(shyft::core::pt_gs_k::state);
 x_arch(shyft::core::pt_hs_k::state);
+x_arch(shyft::core::pt_hps_k::state);
 x_arch(shyft::core::pt_ss_k::state);
 x_arch(shyft::core::hbv_stack::state);
 

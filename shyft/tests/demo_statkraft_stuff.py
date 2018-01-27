@@ -71,8 +71,8 @@ class GisRegionModelDemo(object):
                                              bounding_box=bbox, allow_subset=True)
                 # data_names = ("temperature", "wind_speed", "precipitation", "relative_humidity","radiation")
                 # utc_period = api.UtcPeriod(
-                #    api.Calendar().time(api.YMDhms(2015, 10, 1, 0, 0, 0)),
-                #    api.Calendar().time(api.YMDhms(2015, 10, 2, 0, 0, 0))
+                #    api.Calendar().time(2015, 10, 1, 0, 0, 0),
+                #    api.Calendar().time(2015, 10, 2, 0, 0, 0)
                 # )
                 # arome_ts=arome4.get_timeseries(["temperature"],utc_period)
                 # arome_points=[gts.mid_point() for gts in arome_ts['temperature']]

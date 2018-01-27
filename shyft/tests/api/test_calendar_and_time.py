@@ -107,8 +107,8 @@ class Calendar(unittest.TestCase):
     def test_utctime_now(self):
         a = api.utctime_now()
         x = dt.datetime.utcnow()
-        b = self.utc.time(api.YMDhms(x.year, x.month, x.day,
-                                     x.hour, x.minute, x.second))
+        b = self.utc.time(x.year, x.month, x.day,
+                                     x.hour, x.minute, x.second)
         self.assertLess(abs(a - b), 2, 'Should be less than 2 seconds')
 
     def test_utc_time_to_string(self):
