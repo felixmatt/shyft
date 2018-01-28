@@ -144,9 +144,9 @@ namespace shyft {
              *  \note that the state collected is instant in time, valid at the beginning of period
              */
             struct state_collector {
-                bool collect_state;  ///< if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)
+                bool collect_state{false};  ///< if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)
                 // these are the one that we collects from the response, to better understand the model::
-                double destination_area;
+                double destination_area{0.0};
                 pts_t kirchner_discharge; ///< Kirchner state instant Discharge given in m^3/s
 				vector<pts_t> sp;
 				vector<pts_t> sw;
@@ -157,19 +157,17 @@ namespace shyft {
 				pts_t hps_sca;
 
 				timeaxis_t time_axis;
-				int start_step;
-				int n_steps;
+				int start_step{0};
+				int n_steps{0};
 
-                state_collector() : collect_state(false), destination_area(0.0) {}
+                state_collector() =default;
 				state_collector(const timeaxis_t& time_axis)
 					: collect_state(false), destination_area(0.0),
 					kirchner_discharge(time_axis, 0.0),
 					hps_surface_heat(time_axis, 0.0),
 					hps_swe(time_axis, 0.0),
 					hps_sca(time_axis, 0.0),
-					time_axis(time_axis),
-					start_step(0),
-					n_steps(time_axis.size())
+					time_axis(time_axis)
                 { /* Do nothing */ }
                 /** brief called before run, prepares state time-series
                  *
@@ -188,6 +186,7 @@ namespace shyft {
                     ts_init(hps_sca, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(hps_swe, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(hps_surface_heat, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    sp.clear();sw.clear();albedo.clear();iso_pot_energy.clear();//enforce initialize vectors @collect
                 }
 
 				void initialize_vector_states(size_t size) {
@@ -210,7 +209,7 @@ namespace shyft {
 
                 /** called by the cell.run for each new state*/
                 void collect(size_t idx, const state_t& state) {
-					if (sp.size() == 0)
+					if (sp.size() != state.hps.sp.size())
 						initialize_vector_states(state.hps.sp.size());
                     if (collect_state) {
                         kirchner_discharge.set(idx, mmh_to_m3s(state.kirchner.q, destination_area));
