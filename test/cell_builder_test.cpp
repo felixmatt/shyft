@@ -3,6 +3,9 @@
 #include "core/model_calibration.h"
 #include "core/model_state_tuning.h"
 #include "core/pt_hs_k_cell_model.h"
+#include "core/pt_hps_k_cell_model.h"
+#include "core/pt_ss_k_cell_model.h"
+
 #include "core/core_archive.h"
 
 #include <boost/serialization/access.hpp>
@@ -165,8 +168,9 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
-TEST_CASE("test_read_and_run_region_model") {
-
+template <class cell_t>
+void run_full_model_test(const std::vector<int>& calibration_parameter_list){
+ // calibration_parameter list, contains the indexes to calibrate ref. pt_gs_k.h, parameter.get(i) etc.
 	//
 	// Arrange
 	//
@@ -178,13 +182,13 @@ TEST_CASE("test_read_and_run_region_model") {
 	using shyft::core::core_nvp;
 	// define a cell type
 	//typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
-	typedef ec::pt_hs_k::cell_complete_response_t cell_t;
+	//typedef ec::pt_hs_k::cell_complete_response_t cell_t;
 	// and a region model for that cell-type
 	typedef ec::region_model<cell_t, region_environment_t> region_model_t;
 	// Step 1: read cells from cell_file_repository
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
-    auto global_parameter = make_shared<cell_t::parameter_t>();
+    auto global_parameter = make_shared<typename cell_t::parameter_t>();
     const char *cell_path = "neanidelv/geo_cell_data.v3.bin";
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
@@ -207,7 +211,7 @@ TEST_CASE("test_read_and_run_region_model") {
         core_iarchive ia(geo_cell_xml_file,core_arch_flags);
         ia >> core_nvp("gcd",gcd);
         cells->reserve(gcd.size());
-        cell_t::state_t s0;
+        typename cell_t::state_t s0;
         s0.kirchner.q = 100.0;
         for (const auto& g : gcd) {
             cells->push_back(cell_t{ g, global_parameter, s0 });
@@ -320,7 +324,7 @@ TEST_CASE("test_read_and_run_region_model") {
 		return;
 	ok_ip = rm.interpolate(ip, re);
 	REQUIRE(ok_ip);
-	vector<cell_t::state_t> s0;
+	vector<typename cell_t::state_t> s0;
 	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
     //
     auto t0 = timing::now();
@@ -425,7 +429,7 @@ TEST_CASE("test_read_and_run_region_model") {
 	cout << "Calibration/parameter optimization" << endl;
 	using namespace shyft::core::model_calibration;
 	//typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
-	typedef cell_t::parameter_t parameter_accessor_t;
+	typedef typename cell_t::parameter_t parameter_accessor_t;
 	typedef target_specification<pts_t> target_specification_t;
 	target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, DISCHARGE);
 	target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_COVERED_AREA);
@@ -446,13 +450,13 @@ TEST_CASE("test_read_and_run_region_model") {
     auto orig_parameter= *global_parameter;
 	vector<bool> calibrate_parameter(n_params, false);
     // 25 is routing velocity
-	for (auto i : vector<int>{ 0,4,14,16,22}) calibrate_parameter[i] = true;
+	for (auto i : calibration_parameter_list) calibrate_parameter[i] = true;
 	for (size_t i = 0; i < n_params; ++i) {
 		double v = pa.get(i);
-		if (i!=22) {
+		if (pa.get_name(i) != "gs.winter_end_day_of_year" ) {
             lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
             upper.emplace_back(calibrate_parameter[i] ? 1.2*v : v);
-		} else {
+		} else { // special case for gs. winter-end of day.
 		    lower.emplace_back(calibrate_parameter[i] ? 100 : v);
 		    upper.emplace_back(calibrate_parameter[i] ? 250 : v);;
 		}
@@ -501,5 +505,19 @@ TEST_CASE("test_read_and_run_region_model") {
 	}
 	cout<< "done"<<endl;
 }
+
+TEST_CASE("test_read_and_run_region_model_pt_gs_k") {
+    run_full_model_test<shyft::core::pt_gs_k::cell_complete_response_t>(vector<int>{ 0,4,14,16,22});
+}
+TEST_CASE("test_read_and_run_region_model_pt_hs_k") {
+    run_full_model_test<shyft::core::pt_hs_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+}
+//TEST_CASE("test_read_and_run_region_model_pt_hps_k") {
+//   run_full_model_test<shyft::core::pt_hps_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+//}
+//TEST_CASE("test_read_and_run_region_model_pt_ss_k") {
+//    run_full_model_test<shyft::core::pt_ss_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+//}
+
 }
 
