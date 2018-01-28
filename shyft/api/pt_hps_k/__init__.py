@@ -55,7 +55,7 @@ PTHPSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(sel
 PTHPSKStateWithIdVector.serialize_to_str = lambda self: __serialize_to_str(self)
 PTHPSKStateWithIdVector.deserialize_from_str = __deserialize_from_str
 PTHPSKStateWithIdVector.state_vector = property(lambda self: extract_state_vector(self),doc=extract_state_vector.__doc__)
-
+PTHPSKStateWithId.vector_t = PTHPSKStateWithIdVector
 
 def deserialize_from_bytes(bytes: ByteVector)->PTHPSKStateWithIdVector:
     if not isinstance(bytes,ByteVector):

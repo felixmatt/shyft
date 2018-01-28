@@ -55,7 +55,7 @@ PTGSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self
 PTGSKStateWithIdVector.serialize_to_str = lambda self: __serialize_to_str(self)
 PTGSKStateWithIdVector.state_vector = property(lambda self: extract_state_vector(self),doc=extract_state_vector.__doc__)
 PTGSKStateWithIdVector.deserialize_from_str = __deserialize_from_str
-
+PTGSKStateWithId.vector_t = PTGSKStateWithIdVector
 def deserialize_from_bytes(bytes: ByteVector)->PTGSKStateWithIdVector:
     if not isinstance(bytes,ByteVector):
         raise RuntimeError("Supplied type must be a ByteVector, as created from serialize_to_bytes")

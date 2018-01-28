@@ -52,6 +52,7 @@ HbvStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
 HbvStateWithIdVector.serialize_to_str = lambda self: __serialize_to_str(self)
 HbvStateWithIdVector.state_vector = property(lambda self: extract_state_vector(self),doc=extract_state_vector.__doc__)
 HbvStateWithIdVector.deserialize_from_str = __deserialize_from_str
+HbvStateWithId.vector_t = HbvStateWithIdVector
 
 def deserialize_from_bytes(bytes: ByteVector)->HbvStateWithIdVector:
     if not isinstance(bytes,ByteVector):
