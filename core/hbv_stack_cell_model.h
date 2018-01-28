@@ -152,34 +152,61 @@ namespace shyft {
 				pts_t soil_moisture;
 				pts_t tank_uz;
 				pts_t tank_lz;
+				vector<pts_t> sp;
+				vector<pts_t> sw;
+
+				timeaxis_t time_axis;
+				int start_step=0;
+				int n_steps=0;
 
 				state_collector() : collect_state(false), destination_area(0.0) {}
 				explicit state_collector(const timeaxis_t& time_axis)
 					: collect_state(false), destination_area(0.0), snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0),
-						soil_moisture(time_axis, 0.0), tank_uz(time_axis, 0.0), tank_lz(time_axis, 0.0) { /* Do nothing */}
+						soil_moisture(time_axis, 0.0), tank_uz(time_axis, 0.0), tank_lz(time_axis, 0.0),time_axis(time_axis),n_steps(time_axis.size()) { /* Do nothing */}
 				/** brief called before run, prepares state time-series
 				*
-				* with preallocated room for the supplied time-axis.
+				* with pre-allocated room for the supplied time-axis.
 				*
 				* \note if collect_state is false, a zero length time-axis is used to ensure data is wiped/out.
 				*/
 				void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
 					destination_area = area;
 					timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+                    this->time_axis=time_axis;// make a copy of this for later
+                    this->start_step=start_step;
+                    this->n_steps=n_steps;
+
                     ts_init(snow_sca, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(snow_swe, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(soil_moisture, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(tank_uz, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(tank_lz, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
 				}
+
+				void initialize_vector_states(size_t size) {
+					sp.resize(size);
+					sw.resize(size);
+					timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+					for (auto& item : sp)
+						ts_init(item, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+					for (auto& item : sw)
+						ts_init(item, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+				}
 				/** called by the cell.run for each new state*/
 				void collect(size_t idx, const state_t& state) {
+				    if (sp.size() == 0)
+						initialize_vector_states(state.snow.sp.size());
+
 					if (collect_state) {
 						snow_sca.set(idx, state.snow.sca);
 						snow_swe.set(idx, state.snow.swe);
 						soil_moisture.set(idx, state.soil.sm);
 						tank_uz.set(idx, state.tank.uz);
 						tank_lz.set(idx, state.tank.lz);
+                        for (size_t i = 0; i < state.snow.sp.size(); ++i) {
+							sp[i].set(idx, state.snow.sp[i]);
+							sw[i].set(idx, state.snow.sw[i]);
+						}
 					}
 				}
 			};

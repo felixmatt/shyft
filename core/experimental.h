@@ -612,7 +612,7 @@ namespace shyft {
                     cells->reserve(rg.n_cells());
                     state_t cell_state;// need a state to fill in first time
                     cell_state.kirchner.q=100.0;
-                    auto global_parameter= make_shared<shyft::core::pt_gs_k::parameter_t>(); // do we need an initial
+                    auto global_parameter= make_shared<typename cell_t::parameter_t>(); // do we need an initial
                     for(const auto& kv:gcd_map) {
                         for(const auto& gcd:kv.second){
                             cells->emplace_back(cell_t{gcd,global_parameter,cell_state});

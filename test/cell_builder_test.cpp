@@ -2,7 +2,7 @@
 #include "core/experimental.h"
 #include "core/model_calibration.h"
 #include "core/model_state_tuning.h"
-
+#include "core/pt_hs_k_cell_model.h"
 #include "core/core_archive.h"
 
 #include <boost/serialization/access.hpp>
@@ -165,7 +165,7 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
-TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
+TEST_CASE("test_read_and_run_region_model") {
 
 	//
 	// Arrange
@@ -177,7 +177,8 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	using shyft::core::core_iarchive;
 	using shyft::core::core_nvp;
 	// define a cell type
-	typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
+	//typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
+	typedef ec::pt_hs_k::cell_complete_response_t cell_t;
 	// and a region model for that cell-type
 	typedef ec::region_model<cell_t, region_environment_t> region_model_t;
 	// Step 1: read cells from cell_file_repository
@@ -319,7 +320,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 		return;
 	ok_ip = rm.interpolate(ip, re);
 	REQUIRE(ok_ip);
-	vector<shyft::core::pt_gs_k::state_t> s0;
+	vector<cell_t::state_t> s0;
 	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
     //
     auto t0 = timing::now();
@@ -379,6 +380,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     for (auto&c : *rm.get_cells())
         c.begin_run(tax, 0, 0);
     rm.set_snow_sca_swe_collection(-1, true);
+    rm.set_state_collection(-1,true);// enable full state collection.
 	rm.run_cells();// this time only two catchments
 	cout << "6. Done, now compute new sum" << endl;
 	auto sum_discharge2 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
@@ -405,6 +407,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         cout << "Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST = TRUE; or win: set SHYFT_FULL_TEST = TRUE to enable calibration run of nea - nidelv in this test"<<endl;
         return;
     }
+    rm.set_state_collection(-1,false);
     // To enable cell-to river calibration, introduce a routing-effect between the cells and the river.
     // we do this by setting the routing distance in the cells, and then also adjust the parameter.routing.velocity
     //
@@ -421,7 +424,8 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	rm.revert_to_initial_state();//set_states(s0);// get back initial state
 	cout << "Calibration/parameter optimization" << endl;
 	using namespace shyft::core::model_calibration;
-	typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
+	//typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
+	typedef cell_t::parameter_t parameter_accessor_t;
 	typedef target_specification<pts_t> target_specification_t;
 	target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, DISCHARGE);
 	target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_COVERED_AREA);
@@ -434,7 +438,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	target_specs.push_back(snow_swe_target);
     target_specs.push_back(routed_target);
     *global_parameter = rm.get_region_parameter();//refresh the values to current
-	parameter_accessor_t& pa(*global_parameter);
+	auto& pa(*global_parameter);
 	// Define parameter ranges
 	const size_t n_params = pa.size();
 	std::vector<double> lower; lower.reserve(n_params);

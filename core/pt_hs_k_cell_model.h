@@ -144,9 +144,9 @@ namespace shyft {
              *  \note that the state collected is instant in time, valid at the beginning of period
              */
             struct state_collector {
-                bool collect_state;  ///< if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)
+                bool collect_state{false};  ///< if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)
                 // these are the one that we collects from the response, to better understand the model::
-                double destination_area;
+                double destination_area{0.0};
                 pts_t kirchner_discharge; ///< Kirchner state instant Discharge given in m^3/s
                 pts_t snow_swe;
                 pts_t snow_sca;
@@ -154,13 +154,14 @@ namespace shyft {
 				vector<pts_t> sw;
 
 				timeaxis_t time_axis;
-				int start_step;
-				int n_steps;
+				int start_step{0};
+				int n_steps{0};
 
-                state_collector() : collect_state(false), destination_area(0.0) {}
+                state_collector() =default;
                 explicit state_collector(const timeaxis_t& time_axis)
                  : collect_state(false), destination_area(0.0), kirchner_discharge(time_axis, 0.0),
-                    snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0), time_axis(time_axis), start_step(0), n_steps(time_axis.size()) { /* Do nothing */ }
+                    snow_swe(time_axis, 0.0), snow_sca(time_axis, 0.0), time_axis(time_axis) { /* Do nothing */ }
+
                 /** brief called before run, prepares state time-series
                  *
                  * with preallocated room for the supplied time-axis.
@@ -169,10 +170,14 @@ namespace shyft {
                  */
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
+                    this->time_axis=time_axis;// make a copy of this for later
+                    this->start_step=start_step;
+                    this->n_steps=n_steps;
                     timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
                     ts_init(kirchner_discharge, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(snow_sca, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(snow_swe, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
+                    sp.clear();sw.clear();//enforce initialize vectors @collect
                 }
 				void initialize_vector_states(size_t size) {
 					sp.resize(size);
@@ -186,7 +191,7 @@ namespace shyft {
 
                 /** called by the cell.run for each new state*/
                 void collect(size_t idx, const state_t& state) {
-					if (sp.size() == 0)
+					if (sp.size() != state.snow.sp.size())
 						initialize_vector_states(state.snow.sp.size());
 
                     if (collect_state) {

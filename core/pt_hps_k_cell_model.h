@@ -180,6 +180,10 @@ namespace shyft {
                 void initialize(const timeaxis_t& time_axis,int start_step,int n_steps, double area) {
                     destination_area = area;
                     timeaxis_t ta = collect_state ? time_axis : timeaxis_t(time_axis.start(), time_axis.delta(), 0);
+                    this->time_axis=time_axis;// make a copy of this for later
+                    this->start_step=start_step;
+                    this->n_steps=n_steps;
+
                     ts_init(kirchner_discharge, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(hps_sca, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
                     ts_init(hps_swe, ta, start_step, n_steps, ts_point_fx::POINT_INSTANT_VALUE);
