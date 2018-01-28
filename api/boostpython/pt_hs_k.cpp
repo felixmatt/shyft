@@ -102,8 +102,8 @@ namespace expose {
                 .def_readonly("kirchner_discharge",&PTHSKStateCollector::kirchner_discharge,"Kirchner state instant Discharge given in m^3/s")
                 .def_readonly("snow_swe",&PTHSKStateCollector::snow_swe,"")
                 .def_readonly("snow_sca",&PTHSKStateCollector::snow_sca,"")
-				.def_readonly("sp", &PTHSKStateCollector::sp, "")
-				.def_readonly("sw", &PTHSKStateCollector::sw, "")
+				.def_readonly("snow_sp", &PTHSKStateCollector::sp, "")
+				.def_readonly("snow_sw", &PTHSKStateCollector::sw, "")
 
             ;
 

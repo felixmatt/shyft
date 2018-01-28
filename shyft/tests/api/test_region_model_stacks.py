@@ -409,7 +409,10 @@ class RegionModel(unittest.TestCase):
             si.tank.lz = 40.0
             s0.append(si)
         model.set_states(s0)
-        model.set_state_collection(-1, True)  # enable state collection for all cells
+        model.set_state_collection(-1, False) # with out collection
+        model.run_cells()
+        model.set_states(s0)
+        model.set_state_collection(-1, True)  # with collection
         model.run_cells()
         cids = api.IntVector()  # optional, we can add selective catchment_ids here
         sum_discharge = model.statistics.discharge(cids)

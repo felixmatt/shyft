@@ -104,11 +104,14 @@ namespace expose {
 			typedef shyft::core::hbv_stack::state_collector HbvStateCollector;
 			class_<HbvStateCollector>("HbvStateCollector", "collects state, if collect_state flag is set to true")
 				.def_readwrite("collect_state", &HbvStateCollector::collect_state, "if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)")
-				.def_readonly("snow_swe", &HbvStateCollector::snow_swe, "")
+				.def_readonly("snow_swe", &HbvStateCollector::snow_swe, "[mm]")
 				.def_readonly("snow_sca", &HbvStateCollector::snow_sca, "")
-				.def_readonly("soil_moisture", &HbvStateCollector::soil_moisture, "")
-				.def_readonly("tank_uz", &HbvStateCollector::tank_uz, "")
-				.def_readonly("tank_lz", &HbvStateCollector::tank_lz, "");
+				.def_readonly("soil_moisture", &HbvStateCollector::soil_moisture, "[mm]")
+				.def_readonly("tank_uz", &HbvStateCollector::tank_uz, "[mm]")
+				.def_readonly("tank_lz", &HbvStateCollector::tank_lz, "[mm]")
+				.def_readonly("snow_sp",&HbvStateCollector::sp,"snow dry[mm]")
+				.def_readonly("snow_sw",&HbvStateCollector::sw,"snow wet[mm]")
+				;
 		}
 
 		static void

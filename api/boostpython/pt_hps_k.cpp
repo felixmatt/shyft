@@ -103,11 +103,11 @@ namespace expose {
                 .def_readonly("kirchner_discharge",&PTHPSKStateCollector::kirchner_discharge,"Kirchner state instant Discharge given in m^3/s")
                 .def_readonly("hps_swe",&PTHPSKStateCollector::hps_swe,"")
                 .def_readonly("hps_sca",&PTHPSKStateCollector::hps_sca,"")
-				.def_readonly("sp", &PTHPSKStateCollector::sp, "")
-				.def_readonly("sw", &PTHPSKStateCollector::sw, "")
+				.def_readonly("snow_sp", &PTHPSKStateCollector::sp, "")
+				.def_readonly("snow_sw", &PTHPSKStateCollector::sw, "")
 				.def_readonly("albedo", &PTHPSKStateCollector::albedo, "")
 				.def_readonly("iso_pot_energy", &PTHPSKStateCollector::iso_pot_energy, "")
-				
+
             ;
 
         }

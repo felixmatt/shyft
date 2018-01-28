@@ -35,6 +35,8 @@ namespace expose {
             doc_parameter("force","bool","default true, if false then only distribute if state vectors are of different size than parameters passed")
             doc_returns("", "None", "")
          )
+         .def_readwrite("sw",&state::sw,"snow water[mm]")
+         .def_readwrite("sp",&state::sp,"snow dry[mm]")
          ;
 
         class_<response>("HbvSnowResponse")

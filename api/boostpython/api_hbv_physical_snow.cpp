@@ -36,6 +36,9 @@ namespace expose {
          .def_readwrite("albedo",&state::albedo,"albedo (Broadband snow reflectivity fraction)")
          .def_readwrite("iso_pot_energy",&state::iso_pot_energy,"iso_pot_energy (Accumulated energy assuming isothermal snow surface) [J/m2]")
          .def_readwrite("surface_heat",&state::surface_heat,"surface_heat (Snow surface cold content) [J/m2]")
+         .def_readwrite("sw",&state::sw,"snow water[mm]")
+         .def_readwrite("sp",&state::sp,"snow dry[mm]")
+
          .def_readwrite("swe",&state::swe,"snow water equivalent[mm]")
          .def_readwrite("sca",&state::sca,"snow covered area [0..1]")
          .def("distribute", &state::distribute,(py::arg("self"), py::arg("p"),py::arg("force")=true),
