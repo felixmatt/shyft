@@ -221,6 +221,8 @@ namespace shyft {
             }
             /** support operator! bool  to let an empty ts evaluate to */
             bool operator !() const { // can't expose it as op, due to math promotion
+                if(ts && needs_bind())
+                    throw runtime_error("TimeSeries, or expression unbound, please bind sym-ts before use.");
                 return !(  ts && ts->size() > 0);
             }
             /**\brief Easy to compare for equality, but tricky if performance needed */
@@ -713,7 +715,7 @@ namespace shyft {
         struct periodic_ts : ipoint_ts {
             typedef shyft::time_series::periodic_ts<gta_t> pts_t;
             pts_t ts;
-            
+
             periodic_ts(const pts_t &pts):ts(pts) {}
             periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}
             periodic_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) : ts(pattern, dt,pattern_t0,ta) {}
@@ -941,15 +943,15 @@ namespace shyft {
             krls_p predictor;
 
             bool bound=false;
-            
+
             template <class TS_, class PRED_>
             krls_interpolation_ts(TS_&&ts, PRED_&& p):ts(std::forward<TS_>(ts)),predictor(std::forward<PRED_>(p)) {
                 if (!needs_bind())
                     local_do_bind();
             }
-            
+
             krls_interpolation_ts() = default;
-            
+
             krls_interpolation_ts(apoint_ts && ts,
                     core::utctimespan dt, double rbf_gamma, double tol, std::size_t size
                 ) : ts{ std::move(ts) }, predictor{ dt, rbf_gamma, tol, size }
@@ -1034,7 +1036,7 @@ namespace shyft {
                 if(!std::isfinite(a) && !std::isfinite(b)) return true;
                 return fabs(a-b) <= abs_e;
             }
-            
+
             bool equal(const qac_parameter& o, double abs_e=1e-9) const {
                 return max_timespan==o.max_timespan && nan_equal(min_x,o.min_x,abs_e) && nan_equal(max_x,o.max_x,abs_e);
             }

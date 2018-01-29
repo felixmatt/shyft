@@ -1112,5 +1112,15 @@ class TimeSeries(unittest.TestCase):
         assert_array_almost_equal(xa.values.to_numpy(), np.array([1.0, -1.0, 2.0, 10.0, 4.0, 10.0, 10.0]))
         assert_array_almost_equal(xa.time_axis.time_points, np.array([0, 1, 2, 3, 4, 10, 11, 12]))
 
+    def test_ts_bool(self):
+        a=api.TimeSeries()
+        self.assertFalse(a)  # ok empty
+        try:
+            b=api.TimeSeries("something")
+            x= bool(b)
+            self.assertTrue(False,"Expected exception here")
+        except RuntimeError as re:
+            pass
+
 if __name__ == "__main__":
     unittest.main()
