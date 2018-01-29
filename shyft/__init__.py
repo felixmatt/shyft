@@ -14,10 +14,10 @@ try:
 except:
     pass
 
-if "SHYFTDATA" in os.environ:
-    shyftdata_dir = os.environ["SHYFTDATA"]
+if "SHYFTDATA_override" in os.environ:
+    shyftdata_dir = os.environ["SHYFTDATA_override"]
 else:
-    # If SHYFTDATA environment variable is not here, then use a decent guess
+    # If SHYFTDATA_override environment variable is not here, then use a decent guess
     shyftdata_dir = path.join(path.dirname(__file__), path.pardir, path.pardir, "shyft-data")
 shyftdata_dir = path.normpath(shyftdata_dir)
 

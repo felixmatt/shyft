@@ -75,8 +75,7 @@ class SimulationTestCase(unittest.TestCase):
 
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                      geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(time_axis, state_repos.get_state(0))
 
     def test_run_arome_data_pt_gs_k_simulator(self):
@@ -98,23 +97,24 @@ class SimulationTestCase(unittest.TestCase):
         # get a simulator
         simulator = cfg.get_simulator()
 
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         state = state_repos.get_state(0)
-        simulator.run(cfg.time_axis, state)
-        simulator.region_model.get_states(state)
+        simulator.run(cfg.time_axis, state)  # Here we have already checked if StateIDs match with model cell ID. Further check is redundant.
+        #simulator.region_model.get_states(state.state_vector)
+        state = simulator.reg_model_state
         obs_discharge = 0.0
         state = simulator.discharge_adjusted_state(obs_discharge, state)
 
-        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].kirchner.q for i
-                                                          in range(state.size()))))
-        simulator.region_model.get_states(state)
+        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].state.kirchner.q for i
+                                                          in range(len(state)))))
+        #simulator.region_model.get_states(state.state_vector)
+        state = simulator.reg_model_state
 
         obs_discharge = 10.0  # m3/s
         state = simulator.discharge_adjusted_state(obs_discharge, state)
 
         # Convert from l/h to m3/s by dividing by 3.6e6
-        adj_discharge = reduce(operator.add, (state[i].kirchner.q*cell.geo.area() for (i, cell)
+        adj_discharge = reduce(operator.add, (state[i].state.kirchner.q*cell.geo.area() for (i, cell)
                                               in enumerate(simulator.region_model.get_cells())))/(3.6e6)
         self.assertAlmostEqual(obs_discharge, adj_discharge)
 
@@ -129,7 +129,7 @@ class SimulationTestCase(unittest.TestCase):
         simulator = cfg.get_simulator()
 
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(cfg.time_axis, state_repos.get_state(0))
         sim_copy = simulator.copy()
         sim_copy.run(cfg.time_axis, state_repos.get_state(0))
@@ -146,8 +146,7 @@ class SimulationTestCase(unittest.TestCase):
         # get a simulator
         simulator = cfg.get_simulator()
 
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         s0 = state_repos.get_state(0)
         param = simulator.region_model.get_region_parameter()
         # not needed, we auto initialize to default if not done explicitely
@@ -253,8 +252,7 @@ class SimulationTestCase(unittest.TestCase):
         # Construct target discharge series
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                      geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         cid = 1
         simulator.region_model.set_state_collection(cid, True)
         simulator.run(time_axis, state_repos.get_state(0))
@@ -321,8 +319,7 @@ class SimulationTestCase(unittest.TestCase):
         # Construct target discharge series
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
                                      geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
         target_discharge = api.TsTransform().to_average(t0, dt, n_steps, simulator.region_model.statistics.discharge([cid]))

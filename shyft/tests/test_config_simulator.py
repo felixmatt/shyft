@@ -26,8 +26,8 @@ class ConfigSimulationTestCase(unittest.TestCase):
         # These config files are versioned in shyft-data git. Read from ${SHYFTDATA}/netcdf/orchestration-testdata/
         # TODO: Put all config files needed to run this test under the same versioning system (shyft git)
         simulator = ConfigSimulator(cfg)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(simulator.region_model.__class__, n_cells)
+        #n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(cfg.time_axis, state_repos.get_state(0))
         cids = IntVector()
         discharge = simulator.region_model.statistics.discharge(cids)
