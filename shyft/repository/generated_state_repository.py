@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-from builtins import range
 from . import interfaces
+
 
 class GeneratedStateRepositoryError(Exception):
     pass
@@ -9,15 +8,20 @@ class GeneratedStateRepositoryError(Exception):
 class GeneratedStateRepository(interfaces.StateRepository):
 
     def __init__(self, model, init_values=None):
+        """
+
+        :param model: has to be an *instance* of the model it's going to generate the state for
+        :param init_values: if given, have to match the model it's belonging to
+        """
         self.model = model
         self.state_t = model.state_t
         self.state_with_id_t = model.state_with_id_t
         self.state_vec_t = model.state_with_id_t.vector_t
         self.init_values = init_values
 
-    def find_state(self, region_model_od_criteria=None, utc_period_criteria=None,
+    def find_state(self, region_model_id_criteria=None, utc_period_criteria=None,
                    tag_criteria=None):
-        return interfaces.StateInfo()
+        return [interfaces.StateInfo(state_id=0)]
 
     def get_state(self, state_id):
         state_vct = self.state_vec_t()

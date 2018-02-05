@@ -1,11 +1,10 @@
 ﻿"""
 Simulator classes for running SHyFT forward simulations.
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import numpy as np
 import math
 from shyft import api
+from shyft.repository.generated_state_repository import GeneratedStateRepository
 
 
 class SimulatorError(Exception):
@@ -83,11 +82,12 @@ class DefaultSimulator(object):
                                                                      catchments=catchments)
         self.epsg = self.region_model.bounding_region.epsg()
         self.initial_state_repo = initial_state_repository
-        if hasattr(self.region_model,"optimizer_t"):
+        if isinstance(self.initial_state_repo, GeneratedStateRepository):  # special case!
+            self.initial_state_repo.model = self.region_model  # have to ensure that the generated state match this model
+        if hasattr(self.region_model, "optimizer_t"):
             self.optimizer = self.region_model.optimizer_t(self.region_model)
         else:
             self.optimizer = None
-
 
     def _copy_construct(self, other):
         self.region_model_repository = other.region_model_repository
@@ -121,8 +121,8 @@ class DefaultSimulator(object):
 
     def simulate(self):
         runnable = all((self.region_model.initial_state.size() > 0, self.time_axis.size() > 0,
-                       all([len(getattr(self.region_model.region_env, attr)) > 0 for attr in
-                            ("temperature", "wind_speed", "precipitation", "rel_hum", "radiation")])))
+                        all([len(getattr(self.region_model.region_env, attr)) > 0 for attr in
+                             ("temperature", "wind_speed", "precipitation", "rel_hum", "radiation")])))
         if runnable:
             self.region_model.interpolate(self.region_model.interpolation_parameter, self.region_model.region_env)
             self.region_model.revert_to_initial_state()
@@ -141,7 +141,7 @@ class DefaultSimulator(object):
             Time axis defining the simulation period, and step sizes.
         state: shyft.api state
         """
-        #if time_axis is not None:
+        # if time_axis is not None:
         #    self.time_axis = time_axis
         if time_axis is None:
             time_axis = self.time_axis
@@ -206,13 +206,16 @@ class DefaultSimulator(object):
         elif optim_method == "sceua":
             p_vec_opt = self.optimizer.optimize_sceua(p_vec, **optim_method_params)
         else:
-            raise ValueError("Unknown optimization method: %s" % optim_method)
+            raise ValueError("Unknown optimization method: %s"%optim_method)
         p_res = self.region_model.parameter_t()
         p_res.set(p_vec_opt)
         return p_res
 
-    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method = 'min_bobyqa',
-                 optim_method_params={'max_n_evaluations':1500, 'tr_start':0.1, 'tr_stop':1.0e-5}, verbose_level=0, run_interp=True):
+    def optimize(self, time_axis, state, target_specification, p, p_min, p_max, optim_method='min_bobyqa',
+                 optim_method_params=None, verbose_level=0, run_interp=True):
+        if not optim_method_params:
+            optim_method_params={'max_n_evaluations': 1500, 'tr_start': 0.1, 'tr_stop': 1.0e-5}
+
         if self.optimizer is None:
             raise SimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
@@ -241,14 +244,14 @@ class DefaultSimulator(object):
         if self.initial_state_repo is None:
             raise SimulatorError("No repo to fetch init state from. Pass in state explicitly.")
         else:
-            if hasattr(self.initial_state_repo, 'model'): # No stored state, generated on-the-fly
+            if hasattr(self.initial_state_repo, 'model'):  # No stored state, generated on-the-fly
                 state_id = 0
             else:
                 states = self.initial_state_repo.find_state(
                     region_model_id_criteria=self.region_model_id,
                     utc_timestamp_criteria=self.time_axis.start, tag_criteria=None)
                 if len(states) > 0:
-                    state_id = states[0].state_id #most_recent_state i.e. <= start time
+                    state_id = states[0].state_id  # most_recent_state i.e. <= start time
                 else:
                     raise SimulatorError('No initial state matching criteria.')
             return self.initial_state_repo.get_state(state_id)

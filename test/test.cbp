@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=apoint_ts_expression_speed" />
+				<Option parameters="-nv -tc=test_read_and_run_region_model" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
