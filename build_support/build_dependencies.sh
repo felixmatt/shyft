@@ -5,7 +5,7 @@ export SHYFT_DEPENDENCIES_DIR=${WORKSPACE}/shyft_dependencies
 armadillo_name=armadillo-8.300.2
 dlib_name=dlib-19.8
 boost_ver=1_66_0
-pybind11_ver=v2.2.1
+pybind11_ver=v2.2.2
 cmake_common="-DCMAKE_INSTALL_MESSAGE=NEVER"
 echo ---------------
 echo Update/build shyft-dependencies
@@ -63,13 +63,19 @@ if [ ! -d miniconda/bin ]; then
     fi;
     if [ ! -f miniconda.sh ]; then
         wget  -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    fi;	
+    fi;
     bash miniconda.sh -b -p ${WORKSPACE}/miniconda
+    # The download currently contains Conda 4.3 which should be accessed by setting PATH
+    OLDPATH=${PATH}
     export PATH="${WORKSPACE}/miniconda/bin:$PATH"
-    conda config --set always_yes yes --set changeps1 no
     conda update conda
+    PATH=$OLDPATH
+    # But from Conda 4.4, the environment should be activated without toucing PATH:
+    source miniconda/etc/profile.d/conda.sh
+    conda activate
+    conda config --set always_yes yes --set changeps1 no
     conda install numpy
-    conda create -c conda-forge -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
+    conda create -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
     ln -s ${WORKSPACE}/miniconda/include/python3.6m ${WORKSPACE}/miniconda/include/python3.6
     ln -s ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6m ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6 
 fi;
@@ -98,6 +104,8 @@ if [ ! -d pybind11 ]; then
     git clone https://github.com/pybind/pybind11.git
 fi;
 pushd pybind11
+git checkout master
+git pull
 git checkout ${pybind11_ver} > /dev/null
 popd
 echo Done pybind11
