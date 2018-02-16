@@ -65,11 +65,17 @@ if [ ! -d miniconda/bin ]; then
         wget  -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     fi;
     bash miniconda.sh -b -p ${WORKSPACE}/miniconda
+    # The download currently contains Conda 4.3 which should be accessed by setting PATH
+    OLDPATH=${PATH}
     export PATH="${WORKSPACE}/miniconda/bin:$PATH"
     conda update conda
+    PATH=$OLDPATH
+    # But from Conda 4.4, the environment should be activated without toucing PATH:
+    source miniconda/etc/profile.d/conda.sh
+    conda activate
     conda config --set always_yes yes --set changeps1 no
     conda install numpy
-    conda create -c conda-forge -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
+    conda create -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
     ln -s ${WORKSPACE}/miniconda/include/python3.6m ${WORKSPACE}/miniconda/include/python3.6
     ln -s ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6m ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6 
 fi;
