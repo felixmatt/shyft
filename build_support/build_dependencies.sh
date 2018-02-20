@@ -13,6 +13,9 @@ echo WORKSPACE..............: ${WORKSPACE}
 echo SHYFT_DEPENDENCIES_DIR.: ${SHYFT_DEPENDENCIES_DIR}
 echo PACKAGES...............: miniconda w/shyft_env, doctest, boost_${boost_ver}, ${armadillo_name}, ${dlib_name} 
 
+# A helper function to compare versions
+function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
+
 # the current versions we are building
 mkdir -p ${SHYFT_DEPENDENCIES_DIR}
 cd ${SHYFT_DEPENDENCIES_DIR}
@@ -65,14 +68,33 @@ if [ ! -d miniconda/bin ]; then
         wget  -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     fi;
     bash miniconda.sh -b -p ${WORKSPACE}/miniconda
-    # The download currently contains Conda 4.3 which should be accessed by setting PATH
+
+    # Update conda to latest version, assume we start with 4.3 which
+    # requires PATH to be set
     OLDPATH=${PATH}
     export PATH="${WORKSPACE}/miniconda/bin:$PATH"
+
+    old_conda_version=$(conda --version | sed "s/conda \(.*\)/\1/")
+    echo "Old conda version is ${old_conda_version}"
+    if [[ $(version ${old_conda_version}) -ge $(version "4.4") ]]; then
+	PATH=$OLDPATH
+	source ${WORKSPACE}/miniconda/etc/profile.d/conda.sh
+	conda activate
+    else
+	source activate
+    fi
+
     conda update conda
-    PATH=$OLDPATH
-    # But from Conda 4.4, the environment should be activated without toucing PATH:
-    source miniconda/etc/profile.d/conda.sh
-    conda activate
+
+    new_conda_version=$(conda --version | sed "s/conda \(.*\)/\1/")
+    echo "New conda version is ${new_conda_version}"
+    if [[ $(version ${old_conda_version}) -lt $(version "4.4") &&
+	      $(version ${new_conda_version}) -ge $(version "4.4") ]]; then
+	PATH=$OLDPATH
+	source ${WORKSPACE}/miniconda/etc/profile.d/conda.sh
+	conda activate
+    fi
+
     conda config --set always_yes yes --set changeps1 no
     conda install numpy
     conda create -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
