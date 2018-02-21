@@ -1,5 +1,6 @@
 import unittest
 from os import path
+from os import environ
 
 from shyft import shyftdata_dir
 from shyft import api
@@ -13,6 +14,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         today = utc.trim(api.utctime_now(), api.Calendar.DAY)
         return today - api.Calendar.DAY  # yesterday
 
+    @unittest.skipIf("SHYFT_SKIP_OPENDAP_TEST" in environ, "gfs repository is not available from everywhere")
     def test_get_timeseries(self):
         """
         Simple regression test of OpenDAP data repository.
@@ -36,6 +38,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         self.assertLessEqual(data1.ts.time(0), period.start, 'expect returned fc ts to cover requested period')
         self.assertGreaterEqual(data1.ts.total_period().end, period.end, 'expect returned fc ts to cover requested period')
 
+    @unittest.skipIf("SHYFT_SKIP_OPENDAP_TEST" in environ, "gfs repository is not available from everywhere")
     def test_get_forecast(self):
         """
         Simple forecast regression test of OpenDAP data repository.
@@ -61,6 +64,7 @@ class GFSDataRepositoryTestCase(unittest.TestCase):
         self.assertLessEqual(data1.ts.time(0), period.start, 'expect returned fc ts to cover requested period')
         self.assertGreaterEqual(data1.ts.total_period().end, period.end, 'expect returned fc ts to cover requested period')
 
+    @unittest.skipIf("SHYFT_SKIP_OPENDAP_TEST" in environ, "gfs repository is not available from everywhere")
     def test_get_ensemble(self):
         """
         Simple ensemble regression test of OpenDAP data repository.
