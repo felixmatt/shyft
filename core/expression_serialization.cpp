@@ -101,6 +101,12 @@ template<class Archive>
 void shyft::time_series::dd::srep::srating_curve_ts::serialize(Archive &ar, const unsigned /*version*/) { ar & ts & rc_param; }
 
 template<class Archive>
+void shyft::time_series::dd::srep::sice_packing_ts::serialize(Archive &ar, const unsigned /*version*/) { ar & ts & ip_param & ipt_policy; }
+
+template<class Archive>
+void shyft::time_series::dd::srep::sice_packing_recession_ts::serialize(Archive &ar, const unsigned /*version*/) { ar & flow_ts & ip_ts & ipr_param; }
+
+template<class Archive>
 void shyft::time_series::dd::srep::skrls_interpolation_ts::serialize(Archive &ar, const unsigned /*version*/) { ar & ts & predictor; }
 
 x_serialize_implement(shyft::time_series::dd::srep::saverage_ts);
@@ -109,6 +115,8 @@ x_serialize_implement(shyft::time_series::dd::srep::saccumulate_ts);
 x_serialize_implement(shyft::time_series::dd::srep::speriodic_ts);
 x_serialize_implement(shyft::time_series::dd::srep::sconvolve_w_ts);
 x_serialize_implement(shyft::time_series::dd::srep::srating_curve_ts);
+x_serialize_implement(shyft::time_series::dd::srep::sice_packing_ts);
+x_serialize_implement(shyft::time_series::dd::srep::sice_packing_recession_ts);
 x_serialize_implement(shyft::time_series::dd::srep::skrls_interpolation_ts);
 x_serialize_implement(shyft::time_series::dd::compressed_ts_expression);
 
@@ -122,4 +130,6 @@ x_serialize_archive(shyft::time_series::dd::srep::saccumulate_ts, core_oarchive,
 x_serialize_archive(shyft::time_series::dd::srep::speriodic_ts, core_oarchive, core_iarchive);
 x_serialize_archive(shyft::time_series::dd::srep::sconvolve_w_ts, core_oarchive, core_iarchive);
 x_serialize_archive(shyft::time_series::dd::srep::srating_curve_ts, core_oarchive, core_iarchive);
+x_serialize_archive(shyft::time_series::dd::srep::sice_packing_ts, core_oarchive, core_iarchive);
+x_serialize_archive(shyft::time_series::dd::srep::sice_packing_recession_ts, core_oarchive, core_iarchive);
 x_serialize_archive(shyft::time_series::dd::srep::skrls_interpolation_ts, core_oarchive, core_iarchive);

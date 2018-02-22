@@ -64,7 +64,9 @@ namespace expose {
 	static string nice_str(const shared_ptr<time_series::dd::periodic_ts>&b) { return "periodic_ts("+nice_str(b->ts.ta) + ")"; }
 	static string nice_str(const shared_ptr<time_series::dd::convolve_w_ts>&b) { return "convolve_w_ts(" + nice_str(b->ts_impl.ts) + ",..)"; }
 	static string nice_str(const shared_ptr<time_series::dd::extend_ts>&b) { return "extend_ts(" + nice_str(b->lhs)+","+nice_str(b->rhs)+",..)"; }
-	static string nice_str(const shared_ptr<time_series::dd::rating_curve_ts>&b) { return "rating_curve_ts(" + nice_str(b->ts.level_ts) + ",..)"; }
+    static string nice_str(const shared_ptr<time_series::dd::rating_curve_ts>&b) { return "rating_curve_ts(" + nice_str(b->ts.level_ts) + ",..)"; }
+    static string nice_str(const shared_ptr<time_series::dd::ice_packing_ts>&b) { return "ice_packing_ts(" + nice_str(b->ts.temp_ts) + ",..)"; }
+    static string nice_str(const shared_ptr<time_series::dd::ice_packing_recession_ts>&b) { return "ice_packing_recession_ts(" + nice_str(b->flow_ts) + "," + nice_str(b->ice_packing_ts) + ",..)"; }
 	static string nice_str(const shared_ptr<time_series::dd::krls_interpolation_ts>&b) { return "krls(" + nice_str(b->ts) + ",..)"; }
 	static string nice_str(const shared_ptr<time_series::dd::qac_ts>&b) { return "qac_ts(" + nice_str(apoint_ts(b->ts)) + ", "+nice_str(apoint_ts(b->cts))+"..)"; }
 
@@ -85,7 +87,9 @@ namespace expose {
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::periodic_ts>(ats.ts)) return nice_str(b);
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::convolve_w_ts>(ats.ts)) return nice_str(b);
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::extend_ts>(ats.ts)) return nice_str(b);
-		if (const auto& b = dynamic_pointer_cast<time_series::dd::rating_curve_ts>(ats.ts)) return nice_str(b);
+        if (const auto& b = dynamic_pointer_cast<time_series::dd::rating_curve_ts>(ats.ts)) return nice_str(b);
+        if (const auto& b = dynamic_pointer_cast<time_series::dd::ice_packing_ts>(ats.ts)) return nice_str(b);
+        if (const auto& b = dynamic_pointer_cast<time_series::dd::ice_packing_recession_ts>(ats.ts)) return nice_str(b);
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::krls_interpolation_ts>(ats.ts)) return nice_str(b);
 		if (const auto& b = dynamic_pointer_cast<time_series::dd::qac_ts>(ats.ts)) return nice_str(b);
 
@@ -784,6 +788,159 @@ namespace expose {
 				doc_parameter("rc_param", "RatingCurveParameter", "RatingCurveParameter instance.")
 				doc_returns("rcts", "TimeSeries", "A new TimeSeries computed using self and rc_param.")
 			)
+            .def("ice_packing", &apoint_ts::ice_packing, (py::arg("self"), py::arg("ip_params"), py::arg("ipt_policy")),
+                doc_intro("Create a binary time-series indicating whether ice-packing is occuring or not.")
+                doc_intro("")
+                doc_intro("Notes\n-----")
+                doc_intro("    `self` is interpreted and assumed to be a temperature time-series.")
+                doc_intro("")
+                doc_intro("The ice packing detection is based on the mean temperature in a predetermined time")
+                doc_intro("window before the time-point of interrest (see `IcePackingParameters.window`.")
+                doc_intro("The algorithm determines there to be ice packing when the mean temperature is below")
+                doc_intro("a given threshold temperature (see `IcePackingParameters.threshold_temp`).")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("ip_param", "IcePackingParameters",
+                              "Parameter container controlling the ice packing detection.")
+                doc_parameter("ipt_policy", "ice_packing_temperature_policy",
+                              "Policy flags for determining how to deal with missing temperature values.")
+                doc_intro("")
+                doc_returns("ice_packing_ts", "TimeSeries", "A time-series indicating wheter ice packing occurs or not")
+                doc_intro("")
+                doc_intro("Example\n-------")
+                doc_intro(">>> import numpy as np")
+                doc_intro(">>> from shyft.api import (")
+                doc_intro("...     IcePackingParameters, ice_packing_temperature_policy,")
+                doc_intro("...     TimeAxis, TimeSeries, point_interpretation_policy, DoubleVector,")
+                doc_intro("...     utctime_now, deltahours, deltaminutes,")
+                doc_intro("... )")
+                doc_intro(">>> ")
+                doc_intro(">>> t0 = utctime_now()")
+                doc_intro(">>> dt = deltaminutes(15)")
+                doc_intro(">>> n = 100")
+                doc_intro(">>> ")
+                doc_intro(">>> # generate jittery data")
+                doc_intro(">>> # - first descending from +5 to -5 then ascending back to +5")
+                doc_intro(">>> # - include a NaN hole at the bottom of the V")
+                doc_intro(">>> n_ = n if (n//2)*2 == n else n+1  # assure even")
+                doc_intro(">>> data = np.concatenate((")
+                doc_intro("...     np.linspace(5, -5, n_//2), np.linspace(-5, 5, n_//2)")
+                doc_intro("... )) + np.random.uniform(-0.75, 0.75, n_)  # add uniform noise")
+                doc_intro(">>> data[n_//2 - 1:n_//2 + 2] = float('nan')  # add some missing data")
+                doc_intro(">>> ")
+                doc_intro(">>> # create SHyFT data structures")
+                doc_intro(">>> ta = TimeAxis(t0, dt, n_)")
+                doc_intro(">>> temperature_ts = TimeSeries(ta, DoubleVector.from_numpy(data),")
+                doc_intro("...                             point_interpretation_policy.POINT_AVERAGE_VALUE)")
+                doc_intro(">>> ")
+                doc_intro(">>> # do the ice packing detection")
+                doc_intro(">>> ip_param = IcePackingParameters(")
+                doc_intro("...     threshold_window=deltahours(5),")
+                doc_intro("...     threshold_temp=-1.0)")
+                doc_intro(">>> # try all the different temperature policies")
+                doc_intro(">>> ice_packing_ts_disallow = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.DISALLOW_MISSING)")
+                doc_intro(">>> ice_packing_ts_initial = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.ALLOW_INITIAL_MISSING)")
+                doc_intro(">>> ice_packing_ts_any = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.ALLOW_ANY_MISSING)")
+                doc_intro(">>> ")
+                doc_intro(">>> # plotting")
+                doc_intro(">>> from matplotlib import pyplot as plt")
+                doc_intro(">>> from shyft.api import time_axis_extract_time_points")
+                doc_intro(">>> ")
+                doc_intro(">>> # NOTE: The offsets below are added solely to be able to distinguish between the different time-axes")
+                doc_intro(">>> ")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], temperature_ts.values, label='Temperature')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], ice_packing_ts_disallow.values.to_numpy() + 1,")
+                doc_intro("...          label='Ice packing? [DISALLOW_MISSING]')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], ice_packing_ts_initial.values.to_numpy() - 1,")
+                doc_intro("...          label='Ice packing? [ALLOW_INITIAL_MISSING]')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], ice_packing_ts_any.values.to_numpy() - 3,")
+                doc_intro("...          label='Ice packing? [ALLOW_ANY_MISSING]')")
+                doc_intro(">>> plt.legend()")
+                doc_intro(">>> plt.show()")
+            )
+            .def("ice_packing_recession", &apoint_ts::ice_packing_recession, (py::arg("self"), py::arg("ip_ts"), py::arg("ipr_params")),
+                doc_intro("Create a new time series where segments are replaced by recession curves.")
+                doc_intro("")
+                doc_intro("Notes\n-----")
+                doc_intro("    The total period (`TimeSeries.total_period`) of `self` needs to be equal to,")
+                doc_intro("    or contained in the total period of `ip_ts`.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("ip_ts", "TimeSeries",
+                    "A binary time-series indicating if ice packing occurring. See `TimeSeries.ice_packing`.")
+                doc_parameter("ip_param", "IcePackingParameters",
+                    "Parameter container controlling the ice packing recession curve.")
+                doc_intro("")
+                doc_returns("ice_packing_recession_ts", "TimeSeries",
+                    "A time-series where sections in `self` is replaced by recession curves as indicated by `ip_ts`.")
+                doc_intro("")
+                doc_intro("Example\n-------")
+                doc_intro(">>> import numpy as np")
+                doc_intro(">>> from shyft.api import (")
+                doc_intro("...     IcePackingParameters, IcePackingRecessionParameters, ice_packing_temperature_policy,")
+                doc_intro("...     TimeAxis, TimeSeries, point_interpretation_policy, DoubleVector,")
+                doc_intro("...     utctime_now, deltahours, deltaminutes,")
+                doc_intro("... )")
+                doc_intro(">>> ")
+                doc_intro(">>> t0 = utctime_now()")
+                doc_intro(">>> dt = deltaminutes(15)")
+                doc_intro(">>> n = 100")
+                doc_intro(">>> ")
+                doc_intro(">>> # generate jittery temperature data")
+                doc_intro(">>> # - first descending from +5 to -5 then ascending back to +5")
+                doc_intro(">>> # - include a NaN hole at the bottom of the V")
+                doc_intro(">>> n_ = n if (n//2)*2 == n else n+1  # assure even")
+                doc_intro(">>> temperature_data = np.concatenate((")
+                doc_intro("...     np.linspace(5, -5, n_//2), np.linspace(-5, 5, n_//2)")
+                doc_intro("... )) + np.random.uniform(-0.75, 0.75, n_)  # add uniform noise")
+                doc_intro(">>> temperature_data[n_ // 2 - 1:n_ // 2 + 2] = float('nan')  # add some missing data")
+                doc_intro(">>> ")
+                doc_intro(">>> # create SHyFT data structures for temperature")
+                doc_intro(">>> ta = TimeAxis(t0, dt, n_)")
+                doc_intro(">>> temperature_ts = TimeSeries(ta, DoubleVector.from_numpy(temperature_data),")
+                doc_intro("...                             point_interpretation_policy.POINT_AVERAGE_VALUE)")
+                doc_intro(">>> ")
+                doc_intro(">>> # generate jittery waterflow data")
+                doc_intro(">>> # - an upwards curving parabola")
+                doc_intro(">>> x0 = ta.total_period().start")
+                doc_intro(">>> x1 = ta.total_period().end")
+                doc_intro(">>> x = np.linspace(x0, x1, n_)")
+                doc_intro(">>> flow_data = -0.0000000015*(x - x0)*(x - x1) + 1 + np.random.uniform(-0.5, 0.5, n_)")
+                doc_intro(">>> del x0, x1, x")
+                doc_intro(">>> ")
+                doc_intro(">>> # create SHyFT data structures for temperature")
+                doc_intro(">>> flow_ts = TimeSeries(ta, DoubleVector.from_numpy(flow_data),")
+                doc_intro("...                      point_interpretation_policy.POINT_AVERAGE_VALUE)")
+                doc_intro(">>> ")
+                doc_intro(">>> # do the ice packing detection")
+                doc_intro(">>> ip_param = IcePackingParameters(")
+                doc_intro("...     window=deltahours(5),")
+                doc_intro("...     threshold_temp=-1.0)")
+                doc_intro(">>> # compute the detection time-series")
+                doc_intro(">>> # ice_packing_ts = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.DISALLOW_MISSING)")
+                doc_intro(">>> # ice_packing_ts = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.ALLOW_INITIAL_MISSING)")
+                doc_intro(">>> ice_packing_ts = temperature_ts.ice_packing(ip_param, ice_packing_temperature_policy.ALLOW_ANY_MISSING)")
+                doc_intro(">>> ")
+                doc_intro(">>> # setup for the recession curve")
+                doc_intro(">>> ipr_param = IcePackingRecessionParameters(")
+                doc_intro("...     alpha=0.00009,")
+                doc_intro("...     recession_minimum=2.)")
+                doc_intro(">>> # compute a recession curve based on the ice packing ts")
+                doc_intro(">>> ice_packing_recession_ts_initial = flow_ts.ice_packing_recession(ice_packing_ts, ipr_param)")
+                doc_intro(">>> ")
+                doc_intro(">>> # plotting")
+                doc_intro(">>> from matplotlib import pyplot as plt")
+                doc_intro(">>> from shyft.api import time_axis_extract_time_points")
+                doc_intro(">>> ")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], temperature_ts.values, label='Temperature')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], flow_ts.values, label='Flow')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], ice_packing_ts.values.to_numpy(),")
+                doc_intro("...          label='Ice packing?')")
+                doc_intro(">>> plt.plot(time_axis_extract_time_points(ta)[:-1], ice_packing_recession_ts_initial.values.to_numpy(),")
+                doc_intro("...          label='Recession curve')")
+                doc_intro(">>> plt.legend()")
+                doc_intro(">>> plt.show()")
+            )
             .def("extend", &apoint_ts::extend, (py::arg("self"), py::arg("ts"), py::arg("split_policy") = extend_ts_split_policy::EPS_LHS_LAST, py::arg("fill_policy") = extend_ts_fill_policy::EPF_NAN, py::arg("split_at") = utctime(0), py::arg("fill_value") = shyft::nan),
                 doc_intro("create a new time-series that is self extended with ts")
                 doc_parameters()
@@ -902,7 +1059,7 @@ namespace expose {
 		def("accumulate", acc, args("ts", "time_axis"), "create a new ts that is the integral f(t) *dt, t0..ti, the specified time-axis");
         //def("max",time_series::dd::max,(boost::python::arg("ts_a"),boost::python::arg("ts_b")),"creates a new time-series that is the max of the supplied ts_a and ts_b");
 		def("ts_stringify",ts_stringify , (py::arg("ts")),
-			doc_intro("Given a TimeSeries, return a string showing the details/expression") 
+			doc_intro("Given a TimeSeries, return a string showing the details/expression")
 		);
         typedef apoint_ts (*ts_op_ts_t)(const apoint_ts&a, const apoint_ts&b);
         typedef apoint_ts (*double_op_ts_t)(double, const apoint_ts&b);
@@ -1082,6 +1239,70 @@ namespace expose {
 			.def("__str__", &shyft::core::rating_curve_parameters::operator std::string, "Stringify the parameters.")
 			;
 	}
+
+    static void expose_ice_packing_parameters() {
+        enum_<shyft::core::ice_packing_temperature_policy>("ice_packing_temperature_policy",
+            doc_intro("Policy enum to specify how `TimeSeries.ice_packing` handles missing temperature values.")
+            doc_intro("")
+            doc_intro("The enum defines three values:")
+            doc_intro(" * `DISALLOW_MISSING` disallows any missing values. With this policy whenever a NaN value is encountered,")
+            doc_intro("   or the window of values to consider extends outside the range of the time series, a NaN value will be")
+            doc_intro("   written to the result time-series.")
+            doc_intro(" * `ALLOW_INITIAL_MISSING` disallows explicit NaN values, but allows the window of values to consider")
+            doc_intro("   to expend past the range of the time-series for the initial values.")
+            doc_intro(" * `ALLOW_ANY_MISSING` allow the window of values to contain NaN values, averaging what it can.")
+            doc_intro("   Only if all the values in the window is NaN, the result wil be NaN.")
+            )
+            .value("DISALLOW_MISSING", shyft::core::ice_packing_temperature_policy::DISALLOW_MISSING)
+            .value("ALLOW_INITIAL_MISSING", shyft::core::ice_packing_temperature_policy::ALLOW_INITIAL_MISSING)
+            .value("ALLOW_ANY_MISSING", shyft::core::ice_packing_temperature_policy::ALLOW_ANY_MISSING)
+            .export_values()
+            ;
+
+        class_<shyft::core::ice_packing_parameters>("IcePackingParameters",
+            doc_intro("Parameter pack controlling ice packing computations.")
+            doc_intro("See `TimeSeries.ice_packing` for usage."),
+            init<core::utctimespan, double>((py::arg("self"), py::arg("threshold_window"), py::arg("threshold_temperature")),
+                doc_intro("Defines a paramter pack for ice packing detection.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("threshold_window", "int", "Positive integer seconds for the lookback window.")
+                doc_parameter("threshold_temperature", "float", "Floating point threshold temperature."))
+            )
+            .def_readwrite("threshold_window",
+                &shyft::core::ice_packing_parameters::window,
+                doc_intro("The period back in seconds for which the average temperature is computed when")
+                doc_intro("looking for ice packing.")
+            )
+            .def_readwrite("threshold_temperature",
+                &shyft::core::ice_packing_parameters::threshold_temp,
+                doc_intro("The threshold temperature for ice packing to occur. Ice packing will occur")
+                doc_intro("when the average temperature in the `window` period is less than the threshold.")
+            )
+            .def(self==self)
+            ;
+
+        class_<shyft::time_series::dd::ice_packing_recession_parameters>("IcePackingRecessionParameters",
+            doc_intro("Parameter pack controlling ice packing recession computations.")
+            doc_intro("See `TimeSeries.ice_packing_recession` for usage."),
+            init<double, double>((py::arg("self"), py::arg("alpha"), py::arg("recession_minimum")),
+                doc_intro("Defines a parameter pack for ice packing reduction using a simple recession for the water-flow.")
+                doc_intro("")
+                doc_parameters()
+                doc_parameter("alpha", "float", "Recession curve curving parameter.")
+                doc_parameter("recession_minimum", "float", "Minimum value for the recession."))
+            )
+            .def_readwrite("alpha",
+                &shyft::time_series::dd::ice_packing_recession_parameters::alpha,
+                doc_intro("Parameter controlling the curving of the recession curve.")
+            )
+            .def_readwrite("recession_minimum",
+                &shyft::time_series::dd::ice_packing_recession_parameters::recession_minimum,
+                doc_intro("The minimum value of the recession curve.")
+            )
+            .def(self==self)
+            ;
+    }
 
 	static void expose_correlation_functions() {
 		const char * kg_doc =
@@ -1332,6 +1553,7 @@ namespace expose {
         point_ts<time_axis::point_dt>("TsPoint","A time-series with a variable delta time-axis, used by the Shyft core,see also TimeSeries for end-user ts");
         TsFactory();
 		expose_rating_curve_classes();
+        expose_ice_packing_parameters();
         expose_apoint_ts();
 		expose_periodic_ts();
 		expose_correlation_functions();

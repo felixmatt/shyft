@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="-nv -tc=test_read_and_run_region_model" />
+				<Option parameters="-nv -tc=ice_packing" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -20,7 +20,7 @@
 					<Add directory="../bin/Debug" />
 				</Linker>
 				<ExtraCommands>
-					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -tc=qac_parameter" />
+					<Add after="cd ../bin/Debug &amp;&amp; ./test_shyft -nv -tc=ice_recession" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -184,6 +184,9 @@
 		</Unit>
 		<Unit filename="skaugen_test.cpp">
 			<Option virtualFolder="interpolation/" />
+		</Unit>
+		<Unit filename="test_ice_packing.cpp">
+			<Option virtualFolder="time_series/" />
 		</Unit>
 		<Unit filename="test_pch.cpp">
 			<Option compile="0" />

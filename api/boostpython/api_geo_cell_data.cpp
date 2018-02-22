@@ -5,6 +5,7 @@
 namespace expose {
     using namespace shyft::core;
     using namespace boost::python;
+    namespace py=boost::python;
     using namespace std;
 
     void api_geo_cell_data() {
@@ -34,7 +35,9 @@ namespace expose {
                               "  radiation_slope_factor def 0.9\n"
                               "  routing_info def(0,0.0), i.e. not routed and hydrological distance=0.0m\n"
         )
-        .def(init<geo_point,double,int,optional<double,const land_type_fractions&,routing_info>>(args("mid_point","area","catchment_id","radiation_slope_factor","land_type_fractions","routing_info"),"constructs a GeoCellData with all parameters specified"))
+        .def(init<geo_point,double,int,optional<double,const land_type_fractions&,routing_info>>(
+         (py::arg("self"),py::arg("mid_point"),py::arg("area"),py::arg("catchment_id"),py::arg("radiation_slope_factor"),py::arg("land_type_fractions"),py::arg("routing_info")),
+         "constructs a GeoCellData with all parameters specified"))
         .def("mid_point",&geo_cell_data::mid_point,"returns the mid_point",return_value_policy<copy_const_reference>())
         .def("catchment_id",&geo_cell_data::catchment_id,"returns the catchment_id")
         .def("set_catchment_id",&geo_cell_data::catchment_id,args("catchment_id"),"set the catchment_id")

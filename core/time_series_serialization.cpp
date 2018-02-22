@@ -190,6 +190,27 @@ void shyft::time_series::rating_curve_ts<TS>::serialize(Archive & ar, const unsi
 	bound = bd;
 }
 
+template<class Archive>
+void shyft::time_series::ice_packing_parameters::serialize(Archive & ar, const unsigned int version) {
+    ar
+        & core_nvp("window", window)
+        & core_nvp("threshold_temp", threshold_temp)
+        ;
+}
+
+template <class TS>
+template<class Archive>
+void shyft::time_series::ice_packing_ts<TS>::serialize(Archive & ar, const unsigned int version) {
+    bool bd = bound;
+    ar
+        & core_nvp("temp_ts", temp_ts)
+        & core_nvp("ip_param", ip_param)
+        & core_nvp("ipt_policy", ipt_policy)
+        & core_nvp("fx_policy", fx_policy)
+        & core_nvp("bound", bd)
+        ;
+    bound = bd;
+}
 
 template <class Archive>
 void shyft::dtss::ts_info::serialize(Archive& ar, const unsigned int file_version) {
@@ -346,6 +367,50 @@ void shyft::time_series::rating_curve_ts<shyft::time_series::dd::apoint_ts>::ser
 		& core_nvp("bound", bd)
 		;
 	bound = bd;
+}
+
+template<class Archive>
+void shyft::time_series::dd::ice_packing_ts::serialize(Archive & ar, const unsigned int version) {
+    ar
+        & core_nvp("ipoint_ts", base_object<shyft::time_series::dd::ipoint_ts>(*this))
+        & core_nvp("ts", ts)
+        ;
+}
+
+template<>
+template<class Archive>
+void shyft::time_series::ice_packing_ts<shyft::time_series::dd::apoint_ts>::serialize(Archive & ar, const unsigned int version) {
+    bool bd = bound;
+    ar
+        & core_nvp("temp_ts", temp_ts)
+        & core_nvp("ip_param", ip_param)
+        & core_nvp("ipt_policy", ipt_policy)
+        & core_nvp("fx_policy", fx_policy)
+        & core_nvp("bound", bd)
+        ;
+    bound = bd;
+}
+
+template<class Archive>
+void shyft::time_series::dd::ice_packing_recession_parameters::serialize(Archive & ar, const unsigned int version) {
+    ar
+        & core_nvp("alpha", alpha)
+        & core_nvp("recession_minimum", recession_minimum)
+        ;
+}
+
+template<class Archive>
+void shyft::time_series::dd::ice_packing_recession_ts::serialize(Archive & ar, const unsigned int version) {
+    bool bd = bound;
+    ar
+        & core_nvp("ipoint_ts", base_object<shyft::time_series::dd::ipoint_ts>(*this))
+        & core_nvp("flow_ts", flow_ts)
+        & core_nvp("ice_packing_ts", ice_packing_ts)
+        & core_nvp("ipr_param", ipr_param)
+        & core_nvp("fx_policy", fx_policy)
+        & core_nvp("bound", bd)
+        ;
+    bound = bd;
 }
 
 template<class Archive>
@@ -509,6 +574,12 @@ x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::po
 x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
 x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
+x_serialize_implement(shyft::time_series::ice_packing_parameters);
+x_serialize_implement(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_serialize_implement(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_serialize_implement(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_serialize_implement(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
+
 x_serialize_implement(shyft::time_series::dd::ipoint_ts);
 x_serialize_implement(shyft::time_series::dd::gpoint_ts);
 x_serialize_implement(shyft::time_series::dd::aref_ts);
@@ -522,6 +593,10 @@ x_serialize_implement(shyft::time_series::convolve_w_ts<shyft::time_series::dd::
 x_serialize_implement(shyft::time_series::dd::convolve_w_ts);
 x_serialize_implement(shyft::time_series::dd::rating_curve_ts);
 x_serialize_implement(shyft::time_series::rating_curve_ts<shyft::time_series::dd::apoint_ts>);
+x_serialize_implement(shyft::time_series::dd::ice_packing_ts);
+x_serialize_implement(shyft::time_series::ice_packing_ts<shyft::time_series::dd::apoint_ts>);
+x_serialize_implement(shyft::time_series::dd::ice_packing_recession_parameters);
+x_serialize_implement(shyft::time_series::dd::ice_packing_recession_ts);
 x_serialize_implement(shyft::time_series::dd::extend_ts);
 x_serialize_implement(shyft::time_series::dd::abin_op_scalar_ts);
 x_serialize_implement(shyft::time_series::dd::abin_op_ts);
@@ -573,6 +648,12 @@ x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::t
 x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
 x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
 
+x_arch(shyft::time_series::ice_packing_parameters);
+x_arch(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::fixed_dt>>);
+x_arch(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::calendar_dt>>);
+x_arch(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::point_dt>>);
+x_arch(shyft::time_series::ice_packing_ts<shyft::time_series::point_ts<shyft::time_axis::generic_dt>>);
+
 x_arch(shyft::prediction::krls_rbf_predictor);
 x_arch(shyft::dtss::cache_stats);
 
@@ -589,6 +670,10 @@ x_arch(shyft::time_series::convolve_w_ts<shyft::time_series::dd::apoint_ts>);
 x_arch(shyft::time_series::dd::convolve_w_ts);
 x_arch(shyft::time_series::dd::rating_curve_ts);
 x_arch(shyft::time_series::rating_curve_ts<shyft::time_series::dd::apoint_ts>);
+x_arch(shyft::time_series::dd::ice_packing_ts);
+x_arch(shyft::time_series::ice_packing_ts<shyft::time_series::dd::apoint_ts>);
+x_arch(shyft::time_series::dd::ice_packing_recession_parameters);
+x_arch(shyft::time_series::dd::ice_packing_recession_ts);
 x_arch(shyft::time_series::dd::extend_ts);
 x_arch(shyft::time_series::dd::abin_op_scalar_ts);
 x_arch(shyft::time_series::dd::abin_op_ts);

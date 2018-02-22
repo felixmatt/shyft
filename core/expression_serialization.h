@@ -102,6 +102,8 @@ namespace shyft { namespace time_series { namespace dd {
         o_index<convolve_w_ts>,
         o_index<extend_ts>,
         o_index<rating_curve_ts>,
+        o_index<ice_packing_ts>,
+        o_index<ice_packing_recession_ts>,
         o_index<krls_interpolation_ts>,
         o_index<qac_ts>
     >;
@@ -238,6 +240,30 @@ namespace shyft { namespace time_series { namespace dd {
         };
         template<> struct _type<rating_curve_ts> { using rep_t = srep::srating_curve_ts; };
 
+        struct sice_packing_ts {
+            using ts_t = ice_packing_ts;
+            a_index ts;
+            ice_packing_parameters ip_param;
+            ice_packing_temperature_policy ipt_policy;
+            bool operator==(const sice_packing_ts& o) const {
+                return ts == o.ts && ip_param == o.ip_param && ipt_policy == o.ipt_policy;
+            }
+            x_serialize_decl();// needed because of ip_param
+        };
+        template<> struct _type<ice_packing_ts> { using rep_t = srep::sice_packing_ts; };
+
+        struct sice_packing_recession_ts {
+            using ts_t = ice_packing_recession_ts;
+            a_index flow_ts;
+            a_index ip_ts;
+            ice_packing_recession_parameters ipr_param;
+            bool operator==(const sice_packing_recession_ts& o) const {
+                return flow_ts == o.flow_ts && ip_ts == o.ip_ts && ipr_param == o.ipr_param;
+            }
+            x_serialize_decl();// needed because of ipr_param
+        };
+        template<> struct _type<ice_packing_recession_ts> { using rep_t = srep::sice_packing_recession_ts; };
+
         struct skrls_interpolation_ts {
             using ts_t = krls_interpolation_ts;
             a_index ts;
@@ -304,7 +330,7 @@ namespace shyft { namespace time_series { namespace dd {
     template<class ...srep_types>
     struct ts_expression_compressor {
     private:
-        tuple< unordered_map< typename srep_types::ts_t*, o_index<typename srep_types::ts_t>> ...> ts_maps;
+        tuple< unordered_map<typename srep_types::ts_t*, o_index<typename srep_types::ts_t>> ... > ts_maps;
         unordered_map<gpoint_ts*, o_index<gpoint_ts>> gts_map; // terminal gpoint_ts is specially handled
         unordered_map<aref_ts *, o_index<aref_ts>> rts_map;// terminal aref_ts is also specially handled
         ts_expression<srep_types...> expr;
@@ -365,6 +391,12 @@ namespace shyft { namespace time_series { namespace dd {
             } else if (auto ts = dynamic_cast<rating_curve_ts*>(ats.ts.get())) {
                 _m_find_ts_map(ts);
                 return m[ts] = o_index<rating_curve_ts>{ expr.append(srep::_type<rating_curve_ts>::rep_t{ convert(ts->ts.level_ts),ts->ts.rc_param }) };
+            } else if (auto ts = dynamic_cast<ice_packing_ts*>(ats.ts.get())) {
+                _m_find_ts_map(ts);
+                return m[ts] = o_index<ice_packing_ts>{ expr.append(srep::_type<ice_packing_ts>::rep_t{ convert(ts->ts.temp_ts), ts->ts.ip_param, ts->ts.ipt_policy }) };
+            } else if (auto ts = dynamic_cast<ice_packing_recession_ts*>(ats.ts.get())) {
+                _m_find_ts_map(ts);
+                return m[ts] = o_index<ice_packing_recession_ts>{ expr.append(srep::_type<ice_packing_recession_ts>::rep_t{ convert(ts->flow_ts), convert(ts->ice_packing_ts), ts->ipr_param }) };
             } else if (auto ts = dynamic_cast<krls_interpolation_ts*>(ats.ts.get())) {
                 _m_find_ts_map(ts);
                 return m[ts] = o_index<krls_interpolation_ts>{ expr.append(srep::_type<krls_interpolation_ts>::rep_t{ convert(ts->ts),ts->predictor }) };
@@ -523,6 +555,19 @@ namespace shyft { namespace time_series { namespace dd {
             return make_shared<rating_curve_ts>(move(lts), rx.rc_param);
         }
 
+        shared_ptr<ice_packing_ts> make(o_index<ice_packing_ts> i) {
+            const auto& rx = expr.at(i);
+            apoint_ts tts{ boost::apply_visitor(*this, rx.ts) };
+            return make_shared<ice_packing_ts>(std::move(tts), rx.ip_param, rx.ipt_policy);
+        }
+
+        shared_ptr<ice_packing_recession_ts> make(o_index<ice_packing_recession_ts> i) {
+            const auto& rx = expr.at(i);
+            apoint_ts flow_ts{ boost::apply_visitor(*this, rx.flow_ts) };
+            apoint_ts ip_ts{ boost::apply_visitor(*this, rx.ip_ts) };
+            return make_shared<ice_packing_recession_ts>(std::move(flow_ts), std::move(ip_ts), rx.ipr_param);
+        }
+
         shared_ptr<krls_interpolation_ts> make(o_index<krls_interpolation_ts> i) {
             const auto& rx = expr.at(i);
             apoint_ts src_ts{ boost::apply_visitor(*this,rx.ts) };
@@ -597,7 +642,8 @@ namespace shyft { namespace time_series { namespace dd {
     //--
     /**convinient macro to use for all know types, use as parameter-pack to ts_exp_rep, etc.*/
 #define all_srep_types  srep::sbinop_op_ts, srep::sbinop_ts_scalar, srep::sbin_op_scalar_ts, srep::sabs_ts, srep::saverage_ts, srep::sintegral_ts, srep::saccumulate_ts, \
-            srep::stime_shift_ts, srep::speriodic_ts, srep::sconvolve_w_ts, srep::sextend_ts, srep::srating_curve_ts, srep::skrls_interpolation_ts, srep::sqac_ts
+            srep::stime_shift_ts, srep::speriodic_ts, srep::sconvolve_w_ts, srep::sextend_ts, srep::srating_curve_ts, srep::sice_packing_ts, srep::sice_packing_recession_ts, \
+            srep::skrls_interpolation_ts, srep::sqac_ts
 
     typedef ts_expression<all_srep_types> compressed_ts_expression;
     typedef ts_expression_compressor<all_srep_types> expression_compressor;
@@ -621,9 +667,9 @@ x_serialize_export_key(shyft::time_series::dd::srep::saccumulate_ts);
 x_serialize_export_key(shyft::time_series::dd::srep::speriodic_ts);
 x_serialize_export_key(shyft::time_series::dd::srep::sconvolve_w_ts);
 x_serialize_export_key(shyft::time_series::dd::srep::srating_curve_ts);
+x_serialize_export_key(shyft::time_series::dd::srep::sice_packing_ts);
+x_serialize_export_key(shyft::time_series::dd::srep::sice_packing_recession_ts);
 x_serialize_export_key(shyft::time_series::dd::srep::skrls_interpolation_ts);
-
-
 
 // annoying.. (could we just say binary serializable for all o_index<T>)
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::abin_op_ts>);
@@ -640,6 +686,8 @@ x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::perio
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::convolve_w_ts>);
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::extend_ts>);
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::rating_curve_ts>);
+x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::ice_packing_ts>);
+x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::ice_packing_recession_ts>);
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::krls_interpolation_ts>);
 x_serialize_binary(shyft::time_series::dd::o_index<shyft::time_series::dd::qac_ts>);
 x_serialize_binary(boost::blank);

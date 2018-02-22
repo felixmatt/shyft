@@ -130,6 +130,9 @@
     <ClCompile Include="time_series_fixup_test.cpp">
       <Filter>time_series</Filter>
     </ClCompile>
+    <ClCompile Include="test_ice_packing.cpp">
+      <Filter>time_series</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="methods">

@@ -398,8 +398,14 @@ namespace shyft{
 				auto ext = dynamic_cast<const extend_ts*>(its.get());
 				find_ts_bind_info(ext->lhs.ts, r);
 				find_ts_bind_info(ext->rhs.ts, r);
-			} else if (dynamic_cast<const rating_curve_ts*>(its.get())) {
-				find_ts_bind_info(dynamic_cast<const rating_curve_ts*>(its.get())->ts.level_ts.ts, r);
+            } else if (dynamic_cast<const ice_packing_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const ice_packing_ts*>(its.get())->ts.temp_ts.ts, r);
+            } else if (dynamic_cast<const ice_packing_recession_ts*>(its.get())) {
+                auto iprt = dynamic_cast<const ice_packing_recession_ts*>(its.get());
+                find_ts_bind_info(iprt->flow_ts.ts, r);
+                find_ts_bind_info(iprt->ice_packing_ts.ts, r);
+            } else if (dynamic_cast<const rating_curve_ts*>(its.get())) {
+                find_ts_bind_info(dynamic_cast<const rating_curve_ts*>(its.get())->ts.level_ts.ts, r);
 			} else if (dynamic_cast<const krls_interpolation_ts*>(its.get())) {
 				find_ts_bind_info(dynamic_cast<const krls_interpolation_ts*>(its.get())->ts.ts, r);
 			}
@@ -475,9 +481,22 @@ namespace shyft{
 			return apoint_ts(std::make_shared<convolve_w_ts>(*this, w, conv_policy));
 		}
 
-		apoint_ts apoint_ts::rating_curve(const rating_curve_parameters & rc_param) const {
-			return apoint_ts(std::make_shared<rating_curve_ts>(*this, rc_param));
-		}
+        apoint_ts apoint_ts::rating_curve(const rating_curve_parameters & rc_param) const {
+            return apoint_ts(std::make_shared<rating_curve_ts>(*this, rc_param));
+        }
+
+        apoint_ts apoint_ts::ice_packing(const ice_packing_parameters & ip_param, ice_packing_temperature_policy ipt_policy) const {
+            return apoint_ts(std::make_shared<ice_packing_ts>(*this, ip_param, ipt_policy));
+        }
+
+        apoint_ts apoint_ts::ice_packing_recession(
+            const apoint_ts & ice_packing_ts,
+            const ice_packing_recession_parameters & ipr_param
+        ) const {
+            return apoint_ts(std::make_shared<ice_packing_recession_ts>(
+                *this, ice_packing_ts, ipr_param
+            ));
+        }
 
 		apoint_ts apoint_ts::krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const {
 			return apoint_ts(std::make_shared<krls_interpolation_ts>(*this, dt, rbf_gamma, tol, size));
