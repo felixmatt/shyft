@@ -360,7 +360,7 @@ class CamelsTargetRepository(TsRepository):
         keys = ['sgid','Year','Month', 'Day', 'discharge', 'quality']
         dataframe = pd.read_table(filename, names=keys, delim_whitespace=True)
         dataframe = self._reindex_dataframe(dataframe)
-        dataframe.index = dataframe.index + dt.timedelta(hours=0) # TODO: + timedelta(12) gives better restults... why?
+        dataframe.index = dataframe.index + dt.timedelta(hours=12) # TODO: + timedelta(12) gives better restults... why?
 
         time = self._get_utc_time_from_daily_camels_streamgauge(dataframe.index.year, dataframe.index.month, dataframe.index.day, dataframe.index.hour)
         idx_min = np.searchsorted(time, utc_period.start, side='left')
