@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <ctime>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 namespace shyft {
 	namespace core {
         /** \brief utctime
@@ -116,7 +116,7 @@ namespace shyft {
              * where eu rules was introduced.
              */
             struct tz_table {
-                int start_year;
+                int64_t start_year;
                 string tz_name;
                 vector<utcperiod> dst;
                 vector<utctimespan> dt;
@@ -486,7 +486,7 @@ namespace shyft {
 	}
 }
 //-- serialization support: expose class keys
-x_serialize_export_key(shyft::core::utcperiod);
+x_serialize_export_key_nt(shyft::core::utcperiod);
 x_serialize_export_key(shyft::core::time_zone::tz_info_t);
 x_serialize_export_key(shyft::core::time_zone::tz_table);
 x_serialize_export_key(shyft::core::calendar);

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "utctime_utilities.h"
 
@@ -30,6 +30,10 @@ namespace shyft {
 				state(double uz = 20.0, double lz =10) :uz(uz), lz(lz) {}
 				double uz = 20.0; // mm
 				double lz = 10.0; // mm
+				void adjust_q(double scale_factor ) {
+					uz*=scale_factor;
+					lz*=scale_factor;
+				}
 				bool operator==(const state&x) const {
 					const double eps = 1e-6;
 					//return fabs(lz - x.lz)<eps; // example script

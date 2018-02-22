@@ -4,7 +4,7 @@
 	<Project>
 		<Option title="boostpython" />
 		<Option compiler="gcc" />
-		<Option virtualFolders="api/;" />
+		<Option virtualFolders="api/;pt_gs_k/;pt_hs_k/;pt_hps_k/;pt_ss_k/;hbv_stack/;pt_x_k_common/;" />
 		<Build>
 			<Target title="api_Debug">
 				<Option output="../../shyft/api/_api" prefix_auto="0" extension_auto="1" />
@@ -133,15 +133,44 @@
 					<Add directory="../../bin/Release" />
 				</Linker>
 			</Target>
+			<Target title="pt_hps_k_Debug">
+				<Option output="../../shyft/api/pt_hps_k/_pt_hps_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../bin/Debug" />
+				</Linker>
+			</Target>
+			<Target title="pt_hps_k_Release">
+				<Option output="../../shyft/api/pt_hps_k/_pt_hps_k" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../bin/Release" />
+				</Linker>
+			</Target>
 		</Build>
 		<VirtualTargets>
-			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_hs_k_Debug;pt_ss_k_Debug;hbv_stack_Debug;" />
-			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_hs_k_Release;pt_ss_k_Release;hbv_stack_Release;" />
+			<Add alias="Debug" targets="api_Debug;pt_gs_k_Debug;pt_hs_k_Debug;pt_ss_k_Debug;hbv_stack_Debug;pt_hps_k_Debug;" />
+			<Add alias="Release" targets="api_Release;pt_gs_k_Release;pt_hs_k_Release;pt_ss_k_Release;hbv_stack_Release;pt_hps_k_Release;" />
 		</VirtualTargets>
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++14" />
-			<Add option="-fexceptions" />
+			<Add option="-fexceptions -fPIC" />
+			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
+			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DARMA_DONT_PRINT_ERRORS" />
+			<Add option="-DARMA_NO_DEBUG" />
 			<Add directory="../.." />
 			<Add directory="$(#python.include)" />
 			<Add directory="$(#numpy.include)" />
@@ -207,6 +236,11 @@
 			<Option target="api_Release" />
 		</Unit>
 		<Unit filename="api_hbv_actual_evapotranspiration.cpp">
+			<Option virtualFolder="api/" />
+			<Option target="api_Debug" />
+			<Option target="api_Release" />
+		</Unit>
+		<Unit filename="api_hbv_physical_snow.cpp">
 			<Option virtualFolder="api/" />
 			<Option target="api_Debug" />
 			<Option target="api_Release" />
@@ -299,32 +333,53 @@
 		<Unit filename="boostpython_pch.cpp">
 			<Option compile="0" />
 			<Option link="0" />
+			<Option virtualFolder="pt_x_k_common/" />
 		</Unit>
 		<Unit filename="boostpython_pch.h">
 			<Option compile="1" />
 			<Option weight="0" />
+			<Option virtualFolder="pt_x_k_common/" />
 		</Unit>
-		<Unit filename="expose.h" />
-		<Unit filename="expose_statistics.h" />
+		<Unit filename="expose.h">
+			<Option virtualFolder="pt_x_k_common/" />
+		</Unit>
+		<Unit filename="expose_statistics.h">
+			<Option virtualFolder="pt_x_k_common/" />
+		</Unit>
 		<Unit filename="hbv_stack.cpp">
+			<Option virtualFolder="hbv_stack/" />
 			<Option target="hbv_stack_Debug" />
 			<Option target="hbv_stack_Release" />
 		</Unit>
-		<Unit filename="numpy_boost.hpp" />
-		<Unit filename="numpy_boost_python.hpp" />
+		<Unit filename="numpy_boost.hpp">
+			<Option virtualFolder="pt_x_k_common/" />
+		</Unit>
+		<Unit filename="numpy_boost_python.hpp">
+			<Option virtualFolder="pt_x_k_common/" />
+		</Unit>
 		<Unit filename="pt_gs_k.cpp">
+			<Option virtualFolder="pt_gs_k/" />
 			<Option target="pt_gs_k_Debug" />
 			<Option target="pt_gs_k_Release" />
 		</Unit>
+		<Unit filename="pt_hps_k.cpp">
+			<Option virtualFolder="pt_hps_k/" />
+			<Option target="pt_hps_k_Debug" />
+			<Option target="pt_hps_k_Release" />
+		</Unit>
 		<Unit filename="pt_hs_k.cpp">
+			<Option virtualFolder="pt_hs_k/" />
 			<Option target="pt_hs_k_Debug" />
 			<Option target="pt_hs_k_Release" />
 		</Unit>
 		<Unit filename="pt_ss_k.cpp">
+			<Option virtualFolder="pt_ss_k/" />
 			<Option target="pt_ss_k_Debug" />
 			<Option target="pt_ss_k_Release" />
 		</Unit>
-		<Unit filename="py_convertible.h" />
+		<Unit filename="py_convertible.h">
+			<Option virtualFolder="pt_x_k_common/" />
+		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion />

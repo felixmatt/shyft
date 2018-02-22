@@ -1,10 +1,10 @@
 # CMake file for compiling the C++ api library
 
 # library sources
-FILE(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
-FILE(GLOB cpps RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+#FILE(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+#FILE(GLOB cpps RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
-set(SOURCES ${headers} ${cpps})
+set(SOURCES api.cpp api_serialization.cpp )
 
 message(STATUS "Generating Makefile for the SHyFT api static library...")
 

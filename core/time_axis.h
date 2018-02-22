@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <algorithm>
-#include "core_pch.h"
+#include "core_serialization.h"
 #include "utctime_utilities.h"
 namespace shyft {
 
@@ -1147,7 +1147,7 @@ namespace shyft {
             }
         }
 
- 
+
 
         /** \brief fast&efficient combine for two fixed_dt time-axis */
         inline fixed_dt combine( const fixed_dt& a, const fixed_dt& b )  {
@@ -1574,8 +1574,8 @@ namespace shyft {
     }
 }
 //--serialization support
-x_serialize_export_key(shyft::time_axis::fixed_dt);
-x_serialize_export_key(shyft::time_axis::calendar_dt);
-x_serialize_export_key(shyft::time_axis::point_dt);
-x_serialize_export_key(shyft::time_axis::generic_dt);
+x_serialize_binary(shyft::time_axis::fixed_dt);
+x_serialize_export_key_nt(shyft::time_axis::calendar_dt);
+x_serialize_export_key_nt(shyft::time_axis::point_dt);
+x_serialize_export_key_nt(shyft::time_axis::generic_dt);
 

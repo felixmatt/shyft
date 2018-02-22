@@ -46,7 +46,7 @@ def convert_ta(shyft_ta):
     if isinstance(shyft_ta, api.TimeAxisFixedDeltaT):
         # Fixed TA
         ta = TimeAxis(Calendar.Utc, UtcTime.CreateFromUnixTime(shyft_ta.start), TimeSpan.FromSeconds(shyft_ta.delta_t), shyft_ta.n)
-    elif isinstance(shyft_ta, api.PointTimeaxis):
+    elif isinstance(shyft_ta, api.TimeAxisByPoints):
         # Point TA
         ta = create_point_ta(shyft_ta)
     elif isinstance(shyft_ta, api.TimeAxis):

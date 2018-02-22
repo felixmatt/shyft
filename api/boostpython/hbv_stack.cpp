@@ -9,7 +9,6 @@
 #include "core/hbv_tank.h"
 #include "core/hbv_stack.h"
 #include "api/api.h"
-#include "api/hbv_stack.h"
 #include "core/hbv_stack_cell_model.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
@@ -105,11 +104,14 @@ namespace expose {
 			typedef shyft::core::hbv_stack::state_collector HbvStateCollector;
 			class_<HbvStateCollector>("HbvStateCollector", "collects state, if collect_state flag is set to true")
 				.def_readwrite("collect_state", &HbvStateCollector::collect_state, "if true, collect state, otherwise ignore (and the state of time-series are undefined/zero)")
-				.def_readonly("snow_swe", &HbvStateCollector::snow_swe, "")
+				.def_readonly("snow_swe", &HbvStateCollector::snow_swe, "[mm]")
 				.def_readonly("snow_sca", &HbvStateCollector::snow_sca, "")
-				.def_readonly("soil_moisture", &HbvStateCollector::soil_moisture, "")
-				.def_readonly("tank_uz", &HbvStateCollector::tank_uz, "")
-				.def_readonly("tank_lz", &HbvStateCollector::tank_lz, "");
+				.def_readonly("soil_moisture", &HbvStateCollector::soil_moisture, "[mm]")
+				.def_readonly("tank_uz", &HbvStateCollector::tank_uz, "[mm]")
+				.def_readonly("tank_lz", &HbvStateCollector::tank_lz, "[mm]")
+				.def_readonly("snow_sp",&HbvStateCollector::sp,"snow dry[mm]")
+				.def_readonly("snow_sw",&HbvStateCollector::sw,"snow wet[mm]")
+				;
 		}
 
 		static void
@@ -137,12 +139,6 @@ namespace expose {
 		}
 
 		static void
-			state_io() {
-			expose::state_io<shyft::api::hbv_stack_state_io, shyft::core::hbv_stack::state>("HbvStateIo");
-		}
-
-
-		static void
 			model_calibrator() {
 			expose::model_calibrator<shyft::core::region_model<hbv_stack::cell_discharge_response_t, shyft::api::a_region_environment>>("HbvOptimizer");
 		}
@@ -155,7 +151,6 @@ BOOST_PYTHON_MODULE(_hbv_stack)
 	boost::python::scope().attr("__doc__") = "SHyFT python api for the hbv_stack model";
 	boost::python::def("version", version);
 	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
-	expose::hbv_stack::state_io();
 	expose::hbv_stack::parameter_state_response();
 	expose::hbv_stack::cells();
 	expose::hbv_stack::models();

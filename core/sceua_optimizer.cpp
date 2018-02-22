@@ -1,4 +1,3 @@
-#include "core_pch.h"
 #include "sceua_optimizer.h"
 
 using namespace std;

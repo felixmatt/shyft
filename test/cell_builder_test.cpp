@@ -1,9 +1,13 @@
 #include "test_pch.h"
 #include "core/experimental.h"
 #include "core/model_calibration.h"
+#include "core/model_state_tuning.h"
+#include "core/pt_hs_k_cell_model.h"
+#include "core/pt_hps_k_cell_model.h"
+#include "core/pt_ss_k_cell_model.h"
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+#include "core/core_archive.h"
+
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/shared_ptr.hpp>
@@ -164,27 +168,28 @@ static void print(ostream&os, const ts_t& ts, size_t i0, size_t max_sz) {
 	os << endl;
 }
 
-TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
-
+template <class cell_t>
+void run_full_model_test(const std::vector<int>& calibration_parameter_list){
+ // calibration_parameter list, contains the indexes to calibrate ref. pt_gs_k.h, parameter.get(i) etc.
 	//
 	// Arrange
 	//
 	const char *test_path = "neanidelv";
 	using namespace shyft::experimental;
 	using namespace shyft::experimental::repository;
+	using shyft::core::core_oarchive;
+	using shyft::core::core_iarchive;
+	using shyft::core::core_nvp;
 	// define a cell type
-	typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
+	//typedef ec::pt_gs_k::cell_discharge_response_t cell_t;
+	//typedef ec::pt_hs_k::cell_complete_response_t cell_t;
 	// and a region model for that cell-type
 	typedef ec::region_model<cell_t, region_environment_t> region_model_t;
 	// Step 1: read cells from cell_file_repository
 	cout << endl << "1. Reading cells from files" << endl;
     auto cells = make_shared<vector<cell_t>>();
-    auto global_parameter = make_shared<cell_t::parameter_t>();
-#ifdef _WIN32
-    const char *cell_path = "neanidelv/geo_cell_data.v2.win.bin";
-#else
-    const char *cell_path = "neanidelv/geo_cell_data.v2.bin";
-#endif
+    auto global_parameter = make_shared<typename cell_t::parameter_t>();
+    const char *cell_path = "neanidelv/geo_cell_data.v3.bin";
     bool verbose = getenv("SHYFT_VERBOSE") != nullptr;
     std::string geo_xml_fname = shyft::experimental::io::test_path(cell_path, false);
     if ( !boost::filesystem::is_regular_file(boost::filesystem::path(geo_xml_fname))) {
@@ -196,17 +201,17 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         gcd.reserve(cells->size());
         for (const auto&c : *cells) gcd.push_back(c.geo);
         std::ofstream geo_cell_xml_file(geo_xml_fname,ios::binary);
-        boost::archive::binary_oarchive oa(geo_cell_xml_file);
-        oa << BOOST_SERIALIZATION_NVP(gcd);
+        core_oarchive oa(geo_cell_xml_file,core_arch_flags);
+        oa << core_nvp("gcd",gcd);
     }
 
     {
         std::vector<shyft::core::geo_cell_data> gcd;gcd.reserve(5000);
         std::ifstream geo_cell_xml_file(geo_xml_fname,ios::binary);
-        boost::archive::binary_iarchive ia(geo_cell_xml_file);
-        ia >> BOOST_SERIALIZATION_NVP(gcd);
+        core_iarchive ia(geo_cell_xml_file,core_arch_flags);
+        ia >> core_nvp("gcd",gcd);
         cells->reserve(gcd.size());
-        cell_t::state_t s0;
+        typename cell_t::state_t s0;
         s0.kirchner.q = 100.0;
         for (const auto& g : gcd) {
             cells->push_back(cell_t{ g, global_parameter, s0 });
@@ -272,8 +277,24 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     auto avg_precip_ip_o_set_value2 = et::average_accessor<et::pts_t, ta::fixed_dt>(avg_precip_ip_o_set2, ta_one_step).value(0);
     FAST_CHECK_LT(std::abs(avg_precip_ip_set_value - avg_precip_ip_set_value2), 0.0001);
     FAST_CHECK_GT(avg_precip_ip_o_set_value2, 0.05);
-    //cout << "full:avg precip for selected    catchments is:" << avg_precip_ip_set_value2 << endl;
-    //cout << "full:avg precip for unselected  catchments is:" << avg_precip_ip_o_set_value2 << endl;
+    cout <<"3.  b.ii verify tune_flow to observed values"<<endl;
+    rm.get_states(rm.initial_state);
+    double q_wanted=70.0;
+    ec::adjust_state_model<region_model_t> adj_rm(rm,all_catchment_ids,0);
+    double q_0 = adj_rm.discharge(1.0);
+    auto tune_result = adj_rm.tune_flow(q_wanted);
+    double q_adjusted = tune_result.q_r;
+    TS_ASSERT_DELTA(tune_result.q_0,q_0,0.001);// ensure it can report q_0
+    TS_ASSERT_EQUALS(tune_result.diagnostics.size(),0);
+    TS_ASSERT_DELTA(q_adjusted,q_wanted,0.1);
+    if(verbose) {cout<<"Result for using all cells: q_0= "<< q_0<<", q_wanted="<<q_wanted<<", q_adjusted="<<q_adjusted<<endl;}
+    adj_rm.cids=catchment_ids; // juse a few
+    double q_wanted_2=34.21;
+    double q_adjusted_2 = adj_rm.tune_flow(q_wanted_2).q_r;
+    TS_ASSERT_DELTA(q_adjusted_2,q_wanted_2,0.1);
+    if(verbose) {cout<<"Results for using 2 cells:  "<< ", q_wanted="<<q_wanted_2<<", q_adjusted_2="<<q_adjusted_2<<endl;}
+
+    rm.revert_to_initial_state();// revert to state prior to state-adjustments.
     cout << "3. c Verify best_effort interpolation";
     auto re_temperature = *(re.temperature);
     for(auto& gts:*(re.temperature)) {
@@ -303,7 +324,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 		return;
 	ok_ip = rm.interpolate(ip, re);
 	REQUIRE(ok_ip);
-	vector<shyft::core::pt_gs_k::state_t> s0;
+	vector<typename cell_t::state_t> s0;
 	// not needed, the rm will provide the initial_state for us.rm.get_states(s0);
     //
     auto t0 = timing::now();
@@ -363,6 +384,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     for (auto&c : *rm.get_cells())
         c.begin_run(tax, 0, 0);
     rm.set_snow_sca_swe_collection(-1, true);
+    rm.set_state_collection(-1,true);// enable full state collection.
 	rm.run_cells();// this time only two catchments
 	cout << "6. Done, now compute new sum" << endl;
 	auto sum_discharge2 = ec::cell_statistics::sum_catchment_feature(*rm.get_cells(), catchment_ids, [](const cell_t&c) {return c.rc.avg_discharge; });
@@ -389,6 +411,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
         cout << "Please define SHYFT_FULL_TEST, export SHYFT_FULL_TEST = TRUE; or win: set SHYFT_FULL_TEST = TRUE to enable calibration run of nea - nidelv in this test"<<endl;
         return;
     }
+    rm.set_state_collection(-1,false);
     // To enable cell-to river calibration, introduce a routing-effect between the cells and the river.
     // we do this by setting the routing distance in the cells, and then also adjust the parameter.routing.velocity
     //
@@ -405,7 +428,8 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	rm.revert_to_initial_state();//set_states(s0);// get back initial state
 	cout << "Calibration/parameter optimization" << endl;
 	using namespace shyft::core::model_calibration;
-	typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
+	//typedef shyft::core::pt_gs_k::parameter_t parameter_accessor_t;
+	typedef typename cell_t::parameter_t parameter_accessor_t;
 	typedef target_specification<pts_t> target_specification_t;
 	target_specification_t discharge_target(*sum_discharge2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, DISCHARGE);
 	target_specification_t snow_sca_target(*snow_sca2, catchment_ids, 1.0, KLING_GUPTA, 1.0, 1.0, 1.0, SNOW_COVERED_AREA);
@@ -418,7 +442,7 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	target_specs.push_back(snow_swe_target);
     target_specs.push_back(routed_target);
     *global_parameter = rm.get_region_parameter();//refresh the values to current
-	parameter_accessor_t& pa(*global_parameter);
+	auto& pa(*global_parameter);
 	// Define parameter ranges
 	const size_t n_params = pa.size();
 	std::vector<double> lower; lower.reserve(n_params);
@@ -426,13 +450,13 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
     auto orig_parameter= *global_parameter;
 	vector<bool> calibrate_parameter(n_params, false);
     // 25 is routing velocity
-	for (auto i : vector<int>{ 0,4,14,16,22}) calibrate_parameter[i] = true;
+	for (auto i : calibration_parameter_list) calibrate_parameter[i] = true;
 	for (size_t i = 0; i < n_params; ++i) {
 		double v = pa.get(i);
-		if (i!=22) {
+		if (pa.get_name(i) != "gs.winter_end_day_of_year" ) {
             lower.emplace_back(calibrate_parameter[i] ? 0.7*v : v);
             upper.emplace_back(calibrate_parameter[i] ? 1.2*v : v);
-		} else {
+		} else { // special case for gs. winter-end of day.
 		    lower.emplace_back(calibrate_parameter[i] ? 100 : v);
 		    upper.emplace_back(calibrate_parameter[i] ? 250 : v);;
 		}
@@ -481,5 +505,19 @@ TEST_CASE("cell_builder_test::test_read_and_run_region_model") {
 	}
 	cout<< "done"<<endl;
 }
+
+TEST_CASE("test_read_and_run_region_model_pt_gs_k") {
+    run_full_model_test<shyft::core::pt_gs_k::cell_complete_response_t>(vector<int>{ 0,4,14,16,22});
+}
+TEST_CASE("test_read_and_run_region_model_pt_hs_k") {
+    run_full_model_test<shyft::core::pt_hs_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+}
+//TEST_CASE("test_read_and_run_region_model_pt_hps_k") {
+//   run_full_model_test<shyft::core::pt_hps_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+//}
+//TEST_CASE("test_read_and_run_region_model_pt_ss_k") {
+//    run_full_model_test<shyft::core::pt_ss_k::cell_complete_response_t>(vector<int>{ 0,4,5,6,9});
+//}
+
 }
 

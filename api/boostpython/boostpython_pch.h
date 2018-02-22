@@ -31,7 +31,7 @@
 
 #include <boost/multi_array.hpp>
 
-#include "core/core_pch.h"
+#include "core/core_serialization.h"
 
 // experiment with python doc standard macro helpers
 #define doc_intro(intro) intro  "\n"

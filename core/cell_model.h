@@ -11,7 +11,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core/core_serialization.h"
 
 #include "time_series.h"
 #include "geo_cell_data.h"

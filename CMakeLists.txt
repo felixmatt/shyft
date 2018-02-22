@@ -16,7 +16,7 @@
 #
 
 
-cmake_minimum_required(VERSION 3.2.0)
+cmake_minimum_required(VERSION 3.4.0)
 
 project(shyft)
 
@@ -26,11 +26,11 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION SHYFT_VERSION_STRING)
 message("Configuring for Shyft version: " ${SHYFT_VERSION_STRING})
 
 #if ccache, use it, but require cmake 3.4.0..
-#find_program(CCACHE_FOUND ccache)
-#if(CCACHE_FOUND)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-#endif(CCACHE_FOUND)
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif(CCACHE_FOUND)
 
 # options
 option(BUILD_TESTING "Build test programs for SHYFT C++ core library" ON)
@@ -59,10 +59,10 @@ message("SHYFT_DEPENDENCIES directory: " ${SHYFT_DEPENDENCIES})
 message("You can override the above via the $SHYFT_DEPENDENCIES_DIR environment variable.")
 
 # The flags for compile the beast
-set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++1y -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/lib" CACHE STRING "CXX flags." FORCE)
+set(CMAKE_CXX_FLAGS "-Wno-deprecated-declarations -std=c++14 -fPIC -fexceptions -pthread -Winvalid-pch -L${SHYFT_DEPENDENCIES}/lib" CACHE STRING "CXX flags." FORCE)
 
-# add defines that need to be consistent across sub-projects
-add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG ")
+# add defines that need to be consistent across sub-projects, notice that we need MINIMIZE_SIZE to ensure g++ vs. ms c++ compat
+add_definitions("-DARMA_DONT_USE_WRAPPER -DARMA_USE_CXX11 -DARMA_NO_DEBUG -DBOOST_VARIANT_MINIMIZE_SIZE ")
 
 # The directories to be included
 include_directories(${CMAKE_SOURCE_DIR} ${SHYFT_DEPENDENCIES}/include)

@@ -37,9 +37,10 @@ TEST_CASE("test_mass_balance_at_snowpack_reset") {
     double swe = 0.05;
     state.swe=swe;
     state.sca=sca;
+    state.distribute(p);
     double total_water_before = precipitation + swe;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     double total_water_after = state.swe + r.outflow;
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
 }
@@ -60,15 +61,17 @@ TEST_CASE("test_mass_balance_at_snowpack_buildup") {
     state.swe=swe;
     state.sca=sca;
     double total_water_before = precipitation + swe;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    state.distribute(p);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1,  precipitation, temperature);
     double total_water_after = state.swe + r.outflow;
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
     state.swe = 0.2;
     state.sca = 0.6;
+    state.distribute(p);
     temperature=p.tx;// special check fo tx
-    SnowModel snow_model2(p, state);
-    snow_model2.step(state, r, t0, t1, p, precipitation, temperature);
+    SnowModel snow_model2(p);
+    snow_model2.step(state, r, t0, t1, precipitation, temperature);
     TS_ASSERT_DELTA(total_water_before,state.swe+r.outflow, 1.0e-8);
 
 }
@@ -88,8 +91,9 @@ TEST_CASE("test_snow_distr_at_snowpack_buildup") {
     double swe = 10.0;
     state.swe = swe;
     state.sca = sca;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    state.distribute(p);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     TS_ASSERT_DELTA(state.sca,0.75,1e-8);
 }
 TEST_CASE("test_snow_uniform_distr_at_snowpack_buildup") {
@@ -107,8 +111,9 @@ TEST_CASE("test_snow_uniform_distr_at_snowpack_buildup") {
     double swe = 10.0;
     state.swe = swe;
     state.sca = sca;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    state.distribute(p);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     TS_ASSERT_DELTA(state.sca,1.0, 1e-8);
 }
 TEST_CASE("test_snow_skewed_distr_at_snowpack_buildup") {
@@ -126,8 +131,9 @@ TEST_CASE("test_snow_skewed_distr_at_snowpack_buildup") {
     double swe = 10.0;
     state.swe = swe;
     state.sca = sca;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    state.distribute(p);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     TS_ASSERT_DELTA(state.sca, 0.25, 1e-8);
 }
 
@@ -147,9 +153,10 @@ TEST_CASE("test_mass_balance_rain_no_snow") {
     double swe = 0.0;
     state.swe=swe;
     state.sca=sca;
+    state.distribute(p);
     double total_water_before = precipitation + swe;
-    SnowModel snow_model(p, state);
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    SnowModel snow_model(p);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     double total_water_after = state.swe + r.outflow;
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
     TS_ASSERT_DELTA(state.sca, 0.0, 1.0e-8);
@@ -171,10 +178,11 @@ TEST_CASE("test_mass_balance_melt_no_precip") {
     double swe = 10.0;
     state.swe=swe;
     state.sca=sca;
+    state.distribute(p);
     double total_water_before = precipitation + swe;
-    SnowModel snow_model(p, state);
+    SnowModel snow_model(p);
 
-    snow_model.step(state, r, t0, t1, p, precipitation, temperature);
+    snow_model.step(state, r, t0, t1, precipitation, temperature);
     double total_water_after = state.swe + r.outflow;
     TS_ASSERT_DELTA(total_water_before, total_water_after, 1.0e-8);
 }

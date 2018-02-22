@@ -2,12 +2,13 @@
 #include "mocks.h"
 #include "core/kirchner.h"
 
-
 namespace shyfttest {
     const double EPS = 1.0e-6;
 
 }
 using namespace shyft::core::kirchner;
+using namespace shyft::core;
+
 TEST_SUITE("kirchner") {
 TEST_CASE("test_single_solve") {
     using namespace shyft::core;
@@ -62,7 +63,6 @@ TEST_CASE("test_hard_case") {
     }
     TS_ASSERT(q < 100.0);
 }
-
 TEST_CASE("test_simple_average_loads") {
     using namespace shyft::core;
     parameter p;

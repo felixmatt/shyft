@@ -7,7 +7,7 @@
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
 #include "core/time_series_merge.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 
 #include <future>
@@ -31,13 +31,15 @@ namespace  fs=boost::filesystem;
 using namespace std;
 using namespace shyft;
 using namespace shyft::core;
+using shyft::time_series::dd::apoint_ts;
+using shyft::time_series::dd::gta_t;
 
-api::apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
+apoint_ts mk_expression(utctime t, utctimespan dt, int n) {
 
     std::vector<double> x; x.reserve(n);
     for (int i = 0; i < n; ++i)
         x.push_back(-double(n) / 2.0 + i);
-    api::apoint_ts aa(api::gta_t(t, dt, n), x);
+    apoint_ts aa(gta_t(t, dt, n), x);
     auto a = aa*3.0 + aa;
     return a;
 }
@@ -55,8 +57,8 @@ TEST_CASE("dtss_lru_cache") {
 	using std::vector;
 	using std::string;
 	using std::back_inserter;
-	using shyft::api::apoint_ts;
-	using shyft::api::gta_t;
+	using shyft::time_series::dd::apoint_ts;
+	using shyft::time_series::dd::gta_t;
 	const auto stair_case=shyft::time_series::POINT_AVERAGE_VALUE;
 	lru_cache<string, apoint_ts, map > c(2);
 
@@ -119,8 +121,8 @@ TEST_CASE("dtss_ts_cache") {
     using shyft::core::utctime;
     using shyft::core::deltahours;
     using shyft::dtss::cache_stats;
-    using shyft::api::apoint_ts;
-    using shyft::api::gta_t;
+    using shyft::time_series::dd::apoint_ts;
+    using shyft::time_series::dd::gta_t;
     using shyft::dtss::apoint_ts_frag;
     using dtss_cache=shyft::dtss::cache<apoint_ts_frag,apoint_ts>;
     const auto stair_case=shyft::time_series::POINT_AVERAGE_VALUE;
@@ -316,8 +318,8 @@ TEST_CASE("dlib_server_basics") {
         auto dt24 = deltahours(24);
         int n = 240;
         int n24 = n / 24;
-        shyft::time_axis::fixed_dt ta(t, dt, n);
-        api::gta_t ta24(t, dt24, n24);
+        time_axis::fixed_dt ta(t, dt, n);
+        gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
         read_call_back_t cb = [ta, &throw_exception](id_vector_t ts_ids, core::utcperiod p)
             ->ts_vector_t {
@@ -364,17 +366,17 @@ TEST_CASE("dlib_server_basics") {
         {
             string host_port = string("localhost:") + to_string(port_no);
             dlog << dlib::LINFO << "sending an expression ts to " << host_port ;
-            std::vector<api::apoint_ts> tsl;
+            std::vector<apoint_ts> tsl;
             for (size_t kb = 4;kb < 16;kb += 2)
-                tsl.push_back(mk_expression(t, dt, kb * 1000)*api::apoint_ts(string("netcdf://group/path/ts") + std::to_string(kb)));
+                tsl.push_back(mk_expression(t, dt, kb * 1000)*apoint_ts(string("netcdf://group/path/ts") + std::to_string(kb)));
             client dtss(host_port);
-            auto ts_b = dtss.evaluate(tsl, ta.total_period());
+            auto ts_b = dtss.evaluate(tsl, ta.total_period(),false,false);
             dlog << dlib::LINFO << "Got vector back, size= " << ts_b.size();
             for (const auto& ts : ts_b)
                 dlog << dlib::LINFO << "ts.size()" << ts.size();
             dlog << dlib::LINFO << "testing 2 time:";
             FAST_REQUIRE_UNARY(our_server.is_running());
-            dtss.evaluate(tsl, ta.period(0));
+            dtss.evaluate(tsl, ta.period(0),false,false);
             dlog << dlib::LINFO << "done second test";
             // test search functions
             dlog << dlib::LINFO << "test .find function";
@@ -384,14 +386,14 @@ TEST_CASE("dlib_server_basics") {
             dlog << dlib::LINFO << "test .find function done";
 
             throw_exception = true;// verify server-side exception gets back here.
-            TS_ASSERT_THROWS_ANYTHING(dtss.evaluate(tsl, ta.period(0)));
+            TS_ASSERT_THROWS_ANYTHING(dtss.evaluate(tsl, ta.period(0),false,false));
             dlog<<dlib::LINFO << "exceptions done,testing ordinary evaluate after exception";
             throw_exception = false;// verify server-side exception gets back here.
-            dtss.evaluate(tsl, ta.period(0)); // verify no exception here, should still work ok
+            dtss.evaluate(tsl, ta.period(0),false,false); // verify no exception here, should still work ok
             FAST_REQUIRE_UNARY(our_server.is_running());
             dlog << dlib::LINFO << "ok, -now testing percentiles";
-            std::vector<int> percentile_spec{ 0,25,50,-1,75,100 };
-            auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
+            std::vector<int64_t> percentile_spec{ 0,25,50,-1,75,100 };
+            auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec,false,false);
             FAST_CHECK_EQ(percentiles.size(), percentile_spec.size());
             FAST_CHECK_EQ(percentiles[0].size(), ta24.size());
             dlog << dlib::LINFO << "done with percentiles, stopping localhost server";
@@ -404,6 +406,71 @@ TEST_CASE("dlib_server_basics") {
     }
     dlog << dlib::LINFO << "done";
 }
+
+TEST_CASE("dlib_multi_server_basics") {
+    dlog.set_level(dlib::LALL);
+    dlib::set_all_logging_output_streams(std::cout);
+    dlib::set_all_logging_levels(dlib::LALL);
+    dlog << dlib::LINFO << "Starting dtss multi-test";
+    using namespace shyft::dtss;
+    try {
+        calendar utc;
+        auto t = utc.time(2016, 1, 1);
+        auto dt = deltahours(1);
+        auto dt24 = deltahours(24);
+        int n = 240;
+        int n24 = n / 24;
+        time_axis::fixed_dt ta(t, dt, n);
+        gta_t ta24(t, dt24, n24);
+        read_call_back_t rcb = [ta](id_vector_t ts_ids, core::utcperiod p)
+            ->ts_vector_t {
+            ts_vector_t r; r.reserve(ts_ids.size());
+            double fv = 1.0;
+            for (size_t i = 0; i < ts_ids.size(); ++i)
+                r.emplace_back(ta, fv += 1.0);
+            return r;
+        };
+
+        size_t n_servers=2;
+        vector<unique_ptr<server>> servers;
+        vector<string> host_ports;
+        int base_port=21000;
+        for(size_t i=0;i<n_servers;++i) {
+            auto srv = make_unique<server>(rcb);
+            srv->set_listening_ip("127.0.0.1");
+            srv->set_listening_port(base_port +i);
+            srv->start_async();
+            servers.emplace_back(move(srv));
+            host_ports.push_back(string("localhost:") + to_string(base_port + i));
+        }
+        {
+            dlog << dlib::LINFO << "sending an expression ts to "<<n_servers<< " hosts" ;
+            std::vector<apoint_ts> tsl;
+            for (size_t kb = 4;kb < 16;kb += 2)
+                tsl.push_back(mk_expression(t, dt, kb * 1000)*apoint_ts(string("netcdf://group/path/ts") + std::to_string(kb)));
+
+            client c(host_ports,false,1000);
+            auto ts_b = c.evaluate(tsl, ta.total_period(),true,true);
+            dlog << dlib::LINFO << "Got vector back, size= " << ts_b.size();
+            for (const auto& ts : ts_b)
+                dlog << dlib::LINFO << "ts.size()" << ts.size();
+            dlog << dlib::LINFO << "ok, -now testing percentiles";
+            std::vector<int64_t> percentile_spec{ 0,25,50,-1,75,100 };
+            auto percentiles = c.percentiles(tsl, ta.total_period(), ta24, percentile_spec,true,true);
+            FAST_CHECK_EQ(percentiles.size(), percentile_spec.size());
+            FAST_CHECK_EQ(percentiles[0].size(), ta24.size());
+            dlog << dlib::LINFO << "done with percentiles, stopping localhost server";
+            c.close();
+            for(size_t i =0;i<n_servers;++i)
+                servers[i]->clear();
+            dlog << dlib::LINFO << "done";
+        }
+    } catch (exception& e) {
+        cout << e.what() << endl;
+    }
+    dlog << dlib::LINFO << "done";
+}
+
 TEST_CASE("dlib_server_performance") {
     dlog.set_level(dlib::LALL);
     dlib::set_all_logging_output_streams(std::cout);
@@ -419,8 +486,8 @@ TEST_CASE("dlib_server_performance") {
         int n = 24 * 365 * 5;// 5years of hourly data
         int n24 = n / 24;
         int n_ts = 10;//83;
-        shyft::time_axis::generic_dt ta(t, dt, n);
-        api::gta_t ta24(t, dt24, n24);
+        gta_t ta(t, dt, n);
+        gta_t ta24(t, dt24, n24);
         bool throw_exception = false;
 		ts_vector_t from_disk; from_disk.reserve(n_ts);
 		double fv = 1.0;
@@ -450,15 +517,15 @@ TEST_CASE("dlib_server_performance") {
                     async(launch::async, [port_no,ta,ta24,i,n_ts]()         /** thread this */ {
                     string host_port = string("localhost:") + to_string(port_no);
                     dlog << dlib::LINFO << "sending an expression ts to " << host_port;
-                    std::vector<api::apoint_ts> tsl;
+                    std::vector<apoint_ts> tsl;
 					for (int x = 1; x <= n_ts; ++x) {// just make a  very thin request, that get loads of data back
 #if 0
-						auto ts_expr = api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
+						auto ts_expr = apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
 						tsl.push_back(ts_expr);
 #else
-						auto ts_expr = 10.0 + 3.0*api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
+						auto ts_expr = 10.0 + 3.0*apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x));
 						if (x > 1) {
-							ts_expr = ts_expr - 3.0*api::apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x - 1));
+							ts_expr = ts_expr - 3.0*apoint_ts(string("netcdf://group/path/ts_") + std::to_string(x - 1));
 						}
 						tsl.push_back(ts_expr.average(ta));
 #endif
@@ -471,8 +538,8 @@ TEST_CASE("dlib_server_performance") {
                     int kilo_points= tsl.size()*ta.size()/1000;
                     while (elapsed_ms(t0, timing::now()) < test_duration_ms) {
                         // burn cpu server side, save time on serialization
-                        std::vector<int> percentile_spec{ -1 };
-                        auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec);
+                        std::vector<int64_t> percentile_spec{ -1 };
+                        auto percentiles = dtss.percentiles(tsl, ta.total_period(), ta24, percentile_spec,false,false);
                         //slower due to serialization:
                         //auto ts_b = dtss.evaluate(tsl, ta.total_period());
                         ++eval_count;
@@ -500,7 +567,9 @@ TEST_CASE("dlib_server_performance") {
 }
 TEST_CASE("dtss_store_basics") {
         using namespace shyft::dtss;
-        using namespace shyft::api;
+		using namespace shyft::time_series::dd;
+		using time_series::point_ts;
+
         std::shared_ptr<core::calendar> utc = std::make_shared<core::calendar>();
         std::shared_ptr<core::calendar> osl = std::make_shared<core::calendar>("Europe/Oslo");
 
@@ -583,7 +652,7 @@ TEST_CASE("dtss_store_basics") {
             try {
                 auto rx=db.read(fn+".not.there", utcperiod{});
                 FAST_CHECK_UNARY(rx.size()==3);
-            } catch(const exception&ex) {
+            } catch(const exception&) {
                 FAST_CHECK_UNARY(true);
             }
 
@@ -684,7 +753,8 @@ TEST_CASE("dtss_store") { /*
     shyft ts-db-store.
     */
     using namespace shyft::dtss;
-    using namespace shyft::api;
+    using namespace shyft::time_series::dd;
+	using time_series::point_ts;
     using time_series::ts_point_fx;
 
     auto utc=make_shared<calendar>();
@@ -738,10 +808,10 @@ TEST_CASE("dtss_store") { /*
         vector<int> pc{10,50,90};
         auto t2 = timing::now();
         //auto er= dtss.percentiles(ev,fta.total_period(),gta,pc);//uncached read
-        auto er= dtss.evaluate(ev,fta.total_period());//uncached read
+        auto er= dtss.evaluate(ev,fta.total_period(),true,true);//uncached read
         auto t3 = timing::now();
         //auto ec = dtss.percentiles(ev, fta.total_period(),gta,pc);
-        auto ec = dtss.evaluate(ev, fta.total_period());
+        auto ec = dtss.evaluate(ev, fta.total_period(),true,true);
         auto t4 = timing::now();// cached read.
         //-- establish benchmark
         vector<vector<double>> bmr;bmr.reserve(n_ts);
@@ -790,7 +860,7 @@ TEST_CASE("dtss_store_merge_write") {
     namespace dtss = shyft::dtss;
     namespace ta = shyft::time_axis;
     namespace ts = shyft::time_series;
-	using shyft::api::gta_t;
+	using shyft::time_series::dd::gta_t;
     // setup db
     auto tmpdir = (fs::temp_directory_path()/"ts.db.test");
     dtss::ts_db db(tmpdir.string());
@@ -2028,7 +2098,8 @@ TEST_CASE("dtss_store_merge_write") {
 
 TEST_CASE("dtss_baseline") {
     using namespace shyft::dtss;
-    using namespace shyft::api;
+    using namespace shyft::time_series::dd;
+	using time_series::point_ts;
     using time_series::ts_point_fx;
     using std::cout;
     auto utc=make_shared<calendar>();
@@ -2100,7 +2171,8 @@ TEST_CASE("dtss_ltm") {
     // this is basically just for performance study of
     // for api type of ts-expressions,
     using namespace shyft::dtss;
-    using namespace shyft::api;
+    using namespace shyft::time_series::dd;
+	using shyft::time_series::point_ts;
     using time_series::ts_point_fx;
     using std::cout;
     auto utc=make_shared<calendar>();

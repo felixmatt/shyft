@@ -7,25 +7,26 @@
 #include <utility>
 #include <map>
 
-#include "core/core_pch.h"
+#include "core_serialization.h"
 
-#include "core/utctime_utilities.h"
-#include "core/time_axis.h"
-#include "core/time_series.h"
-#include "core/time_series_statistics.h"
-#include "core/predictions.h"
+#include "utctime_utilities.h"
+#include "time_axis.h"
+#include "time_series.h"
+#include "time_series_statistics.h"
+#include "predictions.h"
 
 namespace shyft {
-    namespace api {
+	namespace time_series {
+    namespace dd { // dd= dynamic_dispatch version of the time_series library, aiming at python api
         using namespace shyft::core;
-        using namespace shyft::time_series;
+
         /**
             time-series math to be exposed to python
 
             This provide functionality like
 
-            a = TsFactory.create_ts(..)
-            b = TsFactory.create_ts(..)
+            a = TimeSeries(..)
+            b = TimeSeries(..)
             c = a + 3*b
             d = max(c,0.0)
 
@@ -53,9 +54,11 @@ namespace shyft {
             point_dt ( a point at start of each interval, plus the end point of the last interval, could give performance hits in some scenarios)
 
          */
-        typedef shyft::time_axis::generic_dt gta_t;
-        typedef shyft::time_series::point_ts<gta_t> gts_t;
-        typedef shyft::time_series::point_ts<time_axis::fixed_dt> rts_t;
+        using gta_t=time_axis::generic_dt;
+        using gts_t=point_ts<gta_t>;
+        using rts_t=point_ts<time_axis::fixed_dt>;
+
+
         /** \brief A virtual abstract interface (thus the prefix i) base for point_ts
          *
          * There are three defining properties of a time-series:
@@ -218,6 +221,8 @@ namespace shyft {
             }
             /** support operator! bool  to let an empty ts evaluate to */
             bool operator !() const { // can't expose it as op, due to math promotion
+                if(ts && needs_bind())
+                    throw runtime_error("TimeSeries, or expression unbound, please bind sym-ts before use.");
                 return !(  ts && ts->size() > 0);
             }
             /**\brief Easy to compare for equality, but tricky if performance needed */
@@ -264,6 +269,7 @@ namespace shyft {
             apoint_ts min_max_check_linear_fill(double min_x,double max_x,utctimespan max_dt) const;
             apoint_ts min_max_check_ts_fill(double min_x,double max_x,utctimespan max_dt,const apoint_ts& cts) const;
 
+            apoint_ts merge_points(const apoint_ts& o);
             //-- in case the underlying ipoint_ts is a gpoint_ts (concrete points)
             //   we would like these to be working (exception if it's not possible,i.e. an expression)
             point get(size_t i) const {return point(time(i),value(i));}
@@ -621,7 +627,7 @@ namespace shyft {
                 if(!ts->needs_bind())
 					local_do_bind();
             }
-            time_shift_ts(const std::shared_ptr<ipoint_ts> &ts, utctime adt )
+            time_shift_ts(const std::shared_ptr<ipoint_ts> &ts, utctimespan adt )
                 :ts(ts),dt(adt){
                 if(!ts->needs_bind())
 					local_do_bind();
@@ -710,6 +716,7 @@ namespace shyft {
             typedef shyft::time_series::periodic_ts<gta_t> pts_t;
             pts_t ts;
 
+            periodic_ts(const pts_t &pts):ts(pts) {}
             periodic_ts(const vector<double>& pattern, utctimespan dt, const gta_t& ta) : ts(pattern, dt, ta) {}
             periodic_ts(const vector<double>& pattern, utctimespan dt, utctime pattern_t0,const gta_t& ta) : ts(pattern, dt,pattern_t0,ta) {}
             periodic_ts(const periodic_ts& c) : ts(c.ts) {}
@@ -751,7 +758,7 @@ namespace shyft {
             typedef vector<double> weights_t;
             typedef shyft::time_series::convolve_w_ts<apoint_ts> cnv_ts_t;
             cnv_ts_t ts_impl;
-
+            convolve_w_ts(const cnv_ts_t& cnv_ts):ts_impl(cnv_ts) {}
             convolve_w_ts(const apoint_ts& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(ats, w, conv_policy) {}
             convolve_w_ts(apoint_ts&& ats, const weights_t& w, convolve_policy conv_policy) :ts_impl(move(ats), w, conv_policy) {}
             // hmm: convolve_w_ts(const std::shared_ptr<ipoint_ts> &ats,const weights_t& w,convolve_policy conv_policy ):ts(ats),ts_impl(*ts,w,conv_policy) {}
@@ -889,7 +896,7 @@ namespace shyft {
 
 			rating_curve_ts() = default;
 			rating_curve_ts(apoint_ts && ts, rc_param_t && rcp)
-				: ts{ std::forward<apoint_ts>(ts), std::forward<rc_param_t>(rcp) } { }
+				: ts{ move(ts), move(rcp) } { }
 			rating_curve_ts(const apoint_ts & ts, const rc_param_t & rcp)
 				: ts{ ts, rcp } { }
 			// -----
@@ -937,10 +944,17 @@ namespace shyft {
 
             bool bound=false;
 
+            template <class TS_, class PRED_>
+            krls_interpolation_ts(TS_&&ts, PRED_&& p):ts(std::forward<TS_>(ts)),predictor(std::forward<PRED_>(p)) {
+                if (!needs_bind())
+                    local_do_bind();
+            }
+
             krls_interpolation_ts() = default;
+
             krls_interpolation_ts(apoint_ts && ts,
                     core::utctimespan dt, double rbf_gamma, double tol, std::size_t size
-                ) : ts{ std::forward<apoint_ts>(ts) }, predictor{ dt, rbf_gamma, tol, size }
+                ) : ts{ std::move(ts) }, predictor{ dt, rbf_gamma, tol, size }
             {
                 if( ! needs_bind() )
                     local_do_bind();
@@ -1018,8 +1032,16 @@ namespace shyft {
                     return false;
                 return true;
             }
+            static inline bool nan_equal(double a, double b, double abs_e) {
+                if(!std::isfinite(a) && !std::isfinite(b)) return true;
+                return fabs(a-b) <= abs_e;
+            }
 
-            x_serialize_decl();
+            bool equal(const qac_parameter& o, double abs_e=1e-9) const {
+                return max_timespan==o.max_timespan && nan_equal(min_x,o.min_x,abs_e) && nan_equal(max_x,o.max_x,abs_e);
+            }
+
+            // binary serialization, so no x_serialize_decl();
         };
 
         /** \brief The average_ts is used for providing ts average values over a time-axis
@@ -1093,7 +1115,7 @@ namespace shyft {
          *   E.g.: a+b
          *   The iop_t is used as the operation element of the abin_op_ts class
          */
-        enum iop_t {
+        enum iop_t:int8_t {
             OP_NONE,OP_ADD,OP_SUB,OP_DIV,OP_MUL,OP_MIN,OP_MAX
         };
 
@@ -1320,7 +1342,7 @@ namespace shyft {
          */
         template <class Ts,class TsV>
         std::vector<Ts>
-        deflate_ts_vector(TsV const&tsv1) {
+        deflate_ts_vector(TsV &&tsv1) {
             std::vector<Ts> tsv2(tsv1.size());
 
             auto deflate_range=[&tsv1,&tsv2](size_t i0,size_t n) {
@@ -1373,7 +1395,10 @@ namespace shyft {
             void reserve(size_t x) {ats_vec::reserve(x);}
             apoint_ts& operator()(size_t i) {return *(begin()+i);}
             apoint_ts const & operator()(size_t i) const {return *(begin()+i);}
-
+            /** support operator! bool  to let an empty tsv  evaluate to */
+            bool operator !() const { // can't expose it as op, due to math promotion
+                return !(size() > 0);
+            }
             vector<double> values_at_time(utctime t) const {
                 std::vector<double> r;r.reserve(size());
                 for (auto const &ts : *this ) r.push_back(ts(t));
@@ -1503,37 +1528,38 @@ namespace shyft {
         ats_vector max(apoint_ts const &b, ats_vector const &a);
         ats_vector max(ats_vector const &a, ats_vector const & b);
     }
+	}
     namespace time_series {
         template<>
-        inline size_t hint_based_search<api::apoint_ts>(const api::apoint_ts& source, const utcperiod& p, size_t i) {
+        inline size_t hint_based_search<dd::apoint_ts>(const dd::apoint_ts& source, const utcperiod& p, size_t i) {
             return source.index_of(p.start, i);
         }
 		template<>
-		inline size_t hint_based_search<api::ipoint_ts>(const api::ipoint_ts& source, const utcperiod& p, size_t i) {
+		inline size_t hint_based_search<dd::ipoint_ts>(const dd::ipoint_ts& source, const utcperiod& p, size_t i) {
 			return source.time_axis().index_of(p.start, i);
 		}
 	}
 }
 //-- serialization support
-x_serialize_export_key(shyft::api::ipoint_ts);
-x_serialize_export_key(shyft::api::gpoint_ts);
-x_serialize_export_key(shyft::api::average_ts);
-x_serialize_export_key(shyft::api::integral_ts);
-x_serialize_export_key(shyft::api::accumulate_ts);
-x_serialize_export_key(shyft::api::time_shift_ts);
-x_serialize_export_key(shyft::api::periodic_ts);
-x_serialize_export_key(shyft::api::extend_ts);
-x_serialize_export_key(shyft::api::abin_op_scalar_ts);
-x_serialize_export_key(shyft::api::abin_op_ts);
-x_serialize_export_key(shyft::api::abin_op_ts_scalar);
-x_serialize_export_key(shyft::api::aref_ts);
-x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::api::apoint_ts>); // oops need this from core
-x_serialize_export_key(shyft::api::convolve_w_ts);
-x_serialize_export_key(shyft::time_series::rating_curve_ts<shyft::api::apoint_ts>);
-x_serialize_export_key(shyft::api::rating_curve_ts);
-x_serialize_export_key(shyft::api::krls_interpolation_ts);
-x_serialize_export_key(shyft::api::apoint_ts);
-x_serialize_export_key(shyft::api::ats_vector);
-x_serialize_export_key(shyft::api::abs_ts);
-x_serialize_export_key(shyft::api::qac_ts);
-x_serialize_export_key(shyft::api::qac_parameter);
+x_serialize_export_key(shyft::time_series::dd::ipoint_ts);
+x_serialize_export_key(shyft::time_series::dd::gpoint_ts);
+x_serialize_export_key(shyft::time_series::dd::average_ts);
+x_serialize_export_key(shyft::time_series::dd::integral_ts);
+x_serialize_export_key(shyft::time_series::dd::accumulate_ts);
+x_serialize_export_key(shyft::time_series::dd::time_shift_ts);
+x_serialize_export_key(shyft::time_series::dd::periodic_ts);
+x_serialize_export_key(shyft::time_series::dd::extend_ts);
+x_serialize_export_key(shyft::time_series::dd::abin_op_scalar_ts);
+x_serialize_export_key(shyft::time_series::dd::abin_op_ts);
+x_serialize_export_key(shyft::time_series::dd::abin_op_ts_scalar);
+x_serialize_export_key(shyft::time_series::dd::aref_ts);
+x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::time_series::dd::apoint_ts>); // oops need this from core
+x_serialize_export_key(shyft::time_series::dd::convolve_w_ts);
+x_serialize_export_key(shyft::time_series::rating_curve_ts<shyft::time_series::dd::apoint_ts>);
+x_serialize_export_key(shyft::time_series::dd::rating_curve_ts);
+x_serialize_export_key(shyft::time_series::dd::krls_interpolation_ts);
+x_serialize_export_key_nt(shyft::time_series::dd::apoint_ts);
+x_serialize_export_key(shyft::time_series::dd::ats_vector);
+x_serialize_export_key(shyft::time_series::dd::abs_ts);
+x_serialize_export_key(shyft::time_series::dd::qac_ts);
+x_serialize_binary(shyft::time_series::dd::qac_parameter);

@@ -15,11 +15,11 @@ namespace expose {
     using namespace std;
 
     struct TsTransform {
-        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::api::apoint_ts& src) {
-            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::apoint_ts>(start,dt,n,src);
+        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::time_series::dd::apoint_ts& src) {
+            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::time_series::dd::apoint_ts>(start,dt,n,src);
         }
-        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,shared_ptr<shyft::api::apoint_ts> src) {
-            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::api::apoint_ts>(start,dt,n,src);
+        shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,shared_ptr<shyft::time_series::dd::apoint_ts> src) {
+            return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::time_series::dd::apoint_ts>(start,dt,n,src);
         }
 
         shared_ptr<shyft::core::pts_t> to_average(utctime start, utctimespan dt, size_t n,const shyft::core::pts_t& src) {
@@ -29,7 +29,7 @@ namespace expose {
             return shyft::model_calibration::ts_transform().to_average<shyft::core::pts_t,shyft::core::pts_t>(start,dt,n,src);
         }
     };
-    typedef shyft::api::apoint_ts target_ts_t;
+    typedef shyft::time_series::dd::apoint_ts target_ts_t;
     typedef shyft::time_series::pts_t core_ts_t;
     typedef  model_calibration::target_specification<target_ts_t> TargetSpecificationPts;
 
@@ -59,7 +59,7 @@ namespace expose {
             return  acreate_cids(target_ts_t(ts),cids,scale_factor,calc_mode,s_r,s_a,s_b,catchment_property_,uid);
         }
         static TargetSpecificationPts* acreate_cids(
-               const shyft::api::apoint_ts& ats,
+               const shyft::time_series::dd::apoint_ts& ats,
                const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
@@ -82,7 +82,7 @@ namespace expose {
         }
 
         static TargetSpecificationPts* acreate_cids2(
-               const shyft::api::apoint_ts& ats,
+               const shyft::time_series::dd::apoint_ts& ats,
                const vector<int>& cids,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode )
@@ -103,7 +103,7 @@ namespace expose {
             return  acreate_rid(target_ts_t(ts),river_id,scale_factor,calc_mode,s_r,s_a,s_b,uid);
         }
         static TargetSpecificationPts* acreate_rid(
-               const shyft::api::apoint_ts& ats,
+               const shyft::time_series::dd::apoint_ts& ats,
                int river_id,
                double scale_factor,
                model_calibration::target_spec_calc_type calc_mode = model_calibration::NASH_SUTCLIFFE,
@@ -271,8 +271,8 @@ namespace expose {
 			)
          ;
 
-        shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::api::apoint_ts& )=&TsTransform::to_average;
-        shared_ptr<shyft::core::pts_t> (TsTransform::*m2)(utctime , utctimespan , size_t ,shared_ptr<shyft::api::apoint_ts> )=&TsTransform::to_average;
+        shared_ptr<shyft::core::pts_t> (TsTransform::*m1)(utctime , utctimespan , size_t ,const shyft::time_series::dd::apoint_ts& )=&TsTransform::to_average;
+        shared_ptr<shyft::core::pts_t> (TsTransform::*m2)(utctime , utctimespan , size_t ,shared_ptr<shyft::time_series::dd::apoint_ts> )=&TsTransform::to_average;
         shared_ptr<shyft::core::pts_t> (TsTransform::*m3)(utctime , utctimespan , size_t ,const shyft::core::pts_t&) = &TsTransform::to_average;
         shared_ptr<shyft::core::pts_t> (TsTransform::*m4)(utctime , utctimespan , size_t ,shared_ptr<shyft::core::pts_t> ) = &TsTransform::to_average;
 
@@ -290,6 +290,20 @@ namespace expose {
             ;
         py_api::iterable_converter()
             .from_python< std::vector<TargetSpecificationPts> >()
+        ;
+        
+        class_<q_adjust_result>("FlowAdjustResult",
+            doc_intro("The result type of region-model .adjust_state_to_target_flow(..) method")
+            )
+            .def_readwrite("q_0",&q_adjust_result::q_0,
+                doc_intro("The flow m3/s from selected catchments before tuning")
+            )
+            .def_readwrite("q_r",&q_adjust_result::q_r,
+                doc_intro("The obtaioned flow m3/s after tuning")
+            )
+            .def_readwrite("diagnostics",&q_adjust_result::diagnostics,
+                doc_intro("If tuning failed, the diagnostics of failure, zero length/empty if success")
+            )
         ;
     }
 }

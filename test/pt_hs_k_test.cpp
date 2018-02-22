@@ -69,7 +69,7 @@ TEST_CASE("test_call_stack") {
     // Initialize the state vectors
     kr::state kirchner_state {5.0};
     hs::state snow_state(10.0, 0.5);
-
+    // should work without..snow_state.distribute(snow_param);
     // Initialize response
     response run_response;
 

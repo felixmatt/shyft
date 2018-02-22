@@ -3,7 +3,7 @@
 #include "core/utctime_utilities.h"
 #include "core/geo_cell_data.h"
 #include "core/routing.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 namespace shyft {
     namespace core {

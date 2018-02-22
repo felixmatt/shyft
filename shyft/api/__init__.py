@@ -62,6 +62,12 @@ IntVector.__str__ = lambda self: VectorString(self)
 
 StringVector.size = lambda self: len(self)
 
+#ByteVector to/from string
+
+
+ByteVector.__str__ = lambda self: byte_vector_to_hex_str(self)
+ByteVector.from_str = byte_vector_from_hex_str
+
 # fix up BW and pythonic syntax for TsVector
 
 TsVector.size = lambda self: len(self)
@@ -260,7 +266,7 @@ RelHumSource.vector_t = RelHumSourceVector
 WindSpeedSource.vector_t = WindSpeedSourceVector
 
 
-def np_array(dv):
+def np_array(dv:DoubleVector):
     """
     convert flattened double-vector to numpy array
     Parameters
@@ -296,8 +302,8 @@ def KalmanBiasPredictor_update_with_forecast(bp, fc_set, obs, time_axis):
     ----------
     bp
     fc_set : TemperatureSourceVector or TsVector
-    obs : Timeseries
-    time_axis : Timeaxis
+    obs : TimeSeries
+    time_axis : TimeAxis
 
     Returns
     -------
@@ -323,20 +329,20 @@ def KalmanBiasPredictor_compute_running_bias(bp, fc_ts, obs_ts, time_axis):
     bias_predictor : KalmanBiasPredictor
         The bias predictor object it self
 
-    forecast_ts : Timeseries
+    forecast_ts : TimeSeries
         a merged forecast ts
         with period covering the observation_ts and time_axis supplied
 
-    observation ts: Timeseries
+    observation ts: TimeSeries
         the observation time-series
 
-    time_axis : Timeaxis
+    time_axis : TimeAxis
         covering the period/timesteps to be updated
         e.g. yesterday, 3h resolution steps, according to the points in the filter
 
     Returns
     -------
-    bias_ts : Timeseries(time_axis,bias_vector,POINT_AVERAGE)
+    bias_ts : TimeSeries(time_axis,bias_vector,POINT_AVERAGE)
         computed running bias-ts
     """
     return KalmanBiasPredictor.compute_running_bias_ts(bp, fc_ts, obs_ts, time_axis)
@@ -345,34 +351,6 @@ def KalmanBiasPredictor_compute_running_bias(bp, fc_ts, obs_ts, time_axis):
 KalmanBiasPredictor.update_with_forecast = KalmanBiasPredictor_update_with_forecast
 KalmanBiasPredictor.compute_running_bias = KalmanBiasPredictor_compute_running_bias
 
-
-
-class Timeseries(TimeSeries):
-    @deprecated("please use the TimeSeries class instead")
-    def __init__(self, *args, **kwargs):
-        super(Timeseries, self).__init__(*args, **kwargs)
-
-class Timeaxis2(TimeAxis):
-    @deprecated("please use the TimeAxis class instead")
-    def __init__(self, *args, **kwargs):
-        super(Timeaxis2, self).__init__(*args, **kwargs)
-
-class Timeaxis(TimeAxisFixedDeltaT):
-    @deprecated("please start using TimeAxisFixedDeltaT")
-    def __init__(self, *args, **kwargs):
-        super(Timeaxis, self).__init__(*args, **kwargs)
-
-class CalendarTimeaxis(TimeAxisCalendarDeltaT):
-    @deprecated("please start using TimeAxisCalendarDeltaT")
-    def __init__(self, *args, **kwargs):
-        super(CalendarTimeaxis, self).__init__(*args, **kwargs)
-
-class PointTimeaxis(TimeAxisByPoints):
-    @deprecated("please start using TimeAxisByPoints")
-    def __init__(self, *args, **kwargs):
-        super(PointTimeaxis, self).__init__(*args, **kwargs)
-
-TimeaxisType = TimeAxisType  #  todo: deprecate it
 
 def ts_vector_values_at_time(tsv:TsVector, t:int):
     if not isinstance(tsv, TsVector):

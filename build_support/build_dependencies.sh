@@ -2,15 +2,19 @@
 export WORKSPACE=$(readlink --canonicalize --no-newline `dirname ${0}`/../..)
 # to align the cmake support:
 export SHYFT_DEPENDENCIES_DIR=${WORKSPACE}/shyft_dependencies
-armadillo_name=armadillo-8.200.2
-dlib_name=dlib-19.7
-boost_ver=1_65_1
+armadillo_name=armadillo-8.300.2
+dlib_name=dlib-19.8
+boost_ver=1_66_0
+pybind11_ver=v2.2.2
 cmake_common="-DCMAKE_INSTALL_MESSAGE=NEVER"
 echo ---------------
 echo Update/build shyft-dependencies
 echo WORKSPACE..............: ${WORKSPACE}
 echo SHYFT_DEPENDENCIES_DIR.: ${SHYFT_DEPENDENCIES_DIR}
 echo PACKAGES...............: miniconda w/shyft_env, doctest, boost_${boost_ver}, ${armadillo_name}, ${dlib_name} 
+
+# A helper function to compare versions
+function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
 
 # the current versions we are building
 mkdir -p ${SHYFT_DEPENDENCIES_DIR}
@@ -62,13 +66,38 @@ if [ ! -d miniconda/bin ]; then
     fi;
     if [ ! -f miniconda.sh ]; then
         wget  -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    fi;	
+    fi;
     bash miniconda.sh -b -p ${WORKSPACE}/miniconda
+
+    # Update conda to latest version, assume we start with 4.3 which
+    # requires PATH to be set
+    OLDPATH=${PATH}
     export PATH="${WORKSPACE}/miniconda/bin:$PATH"
-    conda config --set always_yes yes --set changeps1 no
+
+    old_conda_version=$(conda --version | sed "s/conda \(.*\)/\1/")
+    echo "Old conda version is ${old_conda_version}"
+    if [[ $(version ${old_conda_version}) -ge $(version "4.4") ]]; then
+	PATH=$OLDPATH
+	source ${WORKSPACE}/miniconda/etc/profile.d/conda.sh
+	conda activate
+    else
+	source activate
+    fi
+
     conda update conda
+
+    new_conda_version=$(conda --version | sed "s/conda \(.*\)/\1/")
+    echo "New conda version is ${new_conda_version}"
+    if [[ $(version ${old_conda_version}) -lt $(version "4.4") &&
+	      $(version ${new_conda_version}) -ge $(version "4.4") ]]; then
+	PATH=$OLDPATH
+	source ${WORKSPACE}/miniconda/etc/profile.d/conda.sh
+	conda activate
+    fi
+
+    conda config --set always_yes yes --set changeps1 no
     conda install numpy
-    conda create -c conda-forge -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
+    conda create -n shyft_env python=3.6 pyyaml numpy libgfortran netcdf4 gdal matplotlib requests nose coverage pip shapely  pyproj
     ln -s ${WORKSPACE}/miniconda/include/python3.6m ${WORKSPACE}/miniconda/include/python3.6
     ln -s ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6m ${WORKSPACE}/miniconda/envs/shyft_env/include/python3.6 
 fi;
@@ -91,6 +120,17 @@ if [ ! -d boost_${boost_ver} ]; then
     popd
 fi;
 echo  Done boost_${boost_ver}
+
+cd ${SHYFT_DEPENDENCIES_DIR}
+if [ ! -d pybind11 ]; then
+    git clone https://github.com/pybind/pybind11.git
+fi;
+pushd pybind11
+git checkout master
+git pull
+git checkout ${pybind11_ver} > /dev/null
+popd
+echo Done pybind11
 
 cd ${WORKSPACE}
 if [ -d shyft-data ]; then 

@@ -52,7 +52,7 @@ try:
                 ens_config = None)
     
             self.assertIsNotNone(geo_ts_repository)
-            utc_period = UtcPeriod(utc.time(YMDhms(2016, 1, 1, 0, 0, 0)), utc.time(YMDhms(2016, 1, 2, 0, 0, 0)))
+            utc_period = UtcPeriod(utc.time(2016, 1, 1, 0, 0, 0), utc.time(2016, 1, 2, 0, 0, 0))
             ts_types= ['temperature', 'precipitation']
             geo_ts_dict = geo_ts_repository.get_timeseries(ts_types, utc_period=utc_period, geo_location_criteria=None)
             self.assertIsNotNone(geo_ts_dict)
@@ -75,7 +75,7 @@ try:
                 ens_config = None)
     
             self.assertIsNotNone(geo_ts_repository)
-            utc_period = UtcPeriod(utc.time(YMDhms(2015, 10, 1, 0, 0, 0)), utc.time(YMDhms(2015, 10, 10, 0, 0, 0)))
+            utc_period = UtcPeriod(utc.time(2015, 10, 1, 0, 0, 0), utc.time(2015, 10, 10, 0, 0, 0))
             ts_types= ['temperature', 'precipitation']
             geo_ts_dict = geo_ts_repository.get_forecast(ts_types, utc_period=utc_period, t_c=None, geo_location_criteria=None)
             self.assertIsNotNone(geo_ts_dict)
@@ -114,7 +114,7 @@ try:
                 ens_config = ens_config)
     
             self.assertIsNotNone(geo_ts_repository)
-            utc_period = UtcPeriod(utc.time(YMDhms(2015, 10, 1, 0, 0, 0)),utc.time(YMDhms(2015, 10, 10, 0, 0, 0)))
+            utc_period = UtcPeriod(utc.time(2015, 10, 1, 0, 0, 0),utc.time(2015, 10, 10, 0, 0, 0))
             ts_types= ['temperature', 'precipitation']
             ens_geo_ts_dict = geo_ts_repository.get_forecast_ensemble(ts_types, utc_period=utc_period, t_c=None, geo_location_criteria=None)
             self.assertIsNotNone(ens_geo_ts_dict)

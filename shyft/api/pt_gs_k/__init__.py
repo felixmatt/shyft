@@ -38,17 +38,25 @@ PTGSKOptModel.create_full_model_clone.__doc__ = create_full_model_clone.__doc__
 PTGSKCellAll.vector_t = PTGSKCellAllVector
 PTGSKCellOpt.vector_t = PTGSKCellOptVector
 PTGSKState.vector_t = PTGSKStateVector
-PTGSKState.serializer_t= PTGSKStateIo
 
 #decorate StateWithId for serialization support
-def serialize_to_bytes(state_with_id_vector):
+def serialize_to_bytes(state_with_id_vector:PTGSKStateWithIdVector)->ByteVector:
     if not isinstance(state_with_id_vector,PTGSKStateWithIdVector):
         raise RuntimeError("supplied argument must be of type PTGSKStateWithIdVector")
     return serialize(state_with_id_vector)
 
-PTGSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+def __serialize_to_str(state_with_id_vector:PTGSKStateWithIdVector)->str:
+    return str(serialize_to_bytes(state_with_id_vector))  # returns hex-string formatted vector
 
-def deserialize_from_bytes(bytes):
+def __deserialize_from_str(s:str)->PTGSKStateWithIdVector:
+    return deserialize_from_bytes(ByteVector.from_str(s))
+
+PTGSKStateWithIdVector.serialize_to_bytes = lambda self: serialize_to_bytes(self)
+PTGSKStateWithIdVector.serialize_to_str = lambda self: __serialize_to_str(self)
+PTGSKStateWithIdVector.state_vector = property(lambda self: extract_state_vector(self),doc=extract_state_vector.__doc__)
+PTGSKStateWithIdVector.deserialize_from_str = __deserialize_from_str
+PTGSKStateWithId.vector_t = PTGSKStateWithIdVector
+def deserialize_from_bytes(bytes: ByteVector)->PTGSKStateWithIdVector:
     if not isinstance(bytes,ByteVector):
         raise RuntimeError("Supplied type must be a ByteVector, as created from serialize_to_bytes")
     states=PTGSKStateWithIdVector()

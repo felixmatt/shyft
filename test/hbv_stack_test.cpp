@@ -72,6 +72,7 @@ TEST_CASE("test_call_stack") {
 	soil::state soil_state{50.0};
 	tank::state tank_state {20.0, 10.0 };  // Check , I follow kirchner
 	snow::state snow_state(10.0, 0.5);
+    // should work automagically snow_state.distribute(snow_param);
 
 	// Initialize response
 	response run_response;

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include <cmath>
-#include "core_pch.h"
+#include "core_serialization.h"
 #include "geo_point.h"
 
 
@@ -79,10 +79,10 @@ namespace shyft {
         /** The routing_info contains the geo-static parts of the relation between
         * the cell and the routing sink point */
         struct routing_info {
-            routing_info(int destination_id = 0, double distance = 0.0) :
+            routing_info(int64_t destination_id = 0, double distance = 0.0) :
                 id(destination_id), distance(distance) {
             }
-            int id = 0; ///< target routing input identifier (similar to catchment_id), 0 means nil,none
+            int64_t id = 0; ///< target routing input identifier (similar to catchment_id), 0 means nil,none
             double distance = 0.0; ///< static routing distance[m] to the routing point
             x_serialize_decl();
         };

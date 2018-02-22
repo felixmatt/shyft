@@ -35,7 +35,7 @@ gcc_opt="-shared -L../../shyft_dependencies/lib -L/usr/local/lib64 -L/usr/lib64 
 r1_opt="-Wl,-rpath=\$ORIGIN/../lib"
 r2_opt="-Wl,-rpath=\$ORIGIN/../../lib"
 
-shyft_common_source="../core/utctime_utilities.cpp ../core/sceua_optimizer.cpp ../core/dream_optimizer.cpp ../api/api.cpp ../api/time_series.cpp ../core/core_serialization.cpp ../api/api_serialization.cpp"
+shyft_common_source="../core/utctime_utilities.cpp ../core/sceua_optimizer.cpp ../core/dream_optimizer.cpp ../api/api.cpp ../core/time_series_dd.cpp ../core/dtss.cpp ../core/dtss_client.cpp ../core/time_series_serialization.cpp ../core/core_serialization.cpp ../api/api_serialization.cpp"
 
 cd shyft 
 shyft_api_source=`ls ../api/boostpython/api*.cpp`

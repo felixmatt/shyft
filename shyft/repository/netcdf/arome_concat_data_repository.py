@@ -296,7 +296,7 @@ class AromeConcatDataRepository(interfaces.GeoTsRepository):
                 idx = np.argmin(time <= t) - 1
                 if idx < 0:
                     first_lead_time_of_last_fc = int(time[-1])
-                    if first_lead_time_of_last_fc < t:
+                    if first_lead_time_of_last_fc <= t:
                         idx = len(time) - 1
                     else:
                         raise AromeConcatDataRepositoryError(

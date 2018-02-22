@@ -6,10 +6,10 @@
 namespace shyft {
 namespace dtss {
 
-/** \brief dtss message-types 
+/** \brief dtss message-types
  *
  * The message types used for the wire-communication of dtss.
- * 
+ *
  */
 enum class message_type : uint8_t {
 	SERVER_EXCEPTION,
@@ -17,6 +17,11 @@ enum class message_type : uint8_t {
 	EVALUATE_TS_VECTOR_PERCENTILES,
 	FIND_TS,
 	STORE_TS,
+	CACHE_FLUSH,
+	CACHE_STATS,
+	EVALUATE_EXPRESSION,
+	EVALUATE_EXPRESSION_PERCENTILES,
+    MERGE_STORE_TS,
 	// EVALUATE_TS_VECTOR_HISTOGRAM //-- tsv,period,ta,bin_min,bin_max -> ts_vector[n_bins]
 };
 
@@ -25,7 +30,7 @@ enum class message_type : uint8_t {
 namespace msg {
 
 /** stream utility functions for reading basic message-types/parts
- * 
+ *
  */
 
 template <class T>

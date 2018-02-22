@@ -51,7 +51,7 @@ namespace expose {
     ///< a local wrapper with api-typical checks on the input to support use from python
     static geo_temperature_vector_ bayesian_kriging_temperature(geo_temperature_vector_ src,const geo_point_vector& dst_points,shyft::time_axis::fixed_dt time_axis,btk::parameter btk_parameter) {
         using namespace std;
-        typedef shyft::time_series::average_accessor<typename shyft::api::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
+        typedef shyft::time_series::average_accessor<typename shyft::time_series::dd::apoint_ts, shyft::time_axis::fixed_dt> btk_tsa_t;
         // 1. some minor checks to give the python user early warnings.
         validate_parameters(src, dst_points, time_axis);
         auto dst = make_dest_geo_ts<geo_temperature_vector>(dst_points, time_axis);

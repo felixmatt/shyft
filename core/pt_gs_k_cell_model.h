@@ -8,7 +8,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 #include "cell_model.h"
 #include "pt_gs_k.h"
 

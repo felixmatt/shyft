@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_shyft", "test\test.vcxproj", "{EDFDEE14-75D7-455C-AAE4-E89A4E43C062}"
 EndProject
@@ -20,6 +20,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pt_hs_k.python", "api\python\pt_hs_k.python.vcxproj", "{ABCDA123-75D7-455C-AAE4-E89A4E43C062}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hbv_stack.python", "api\python\hbv_stack.python.vcxproj", "{3256A123-75D7-455C-AAE4-E89A4E43C062}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pt_hps_k.python", "api\python\pt_hps_k.python.vcxproj", "{29388D23-75D7-455C-AAE4-E89A21EC8992}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -129,6 +131,18 @@ Global
 		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|Win32.ActiveCfg = Release|x64
 		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.ActiveCfg = Release|x64
 		{3256A123-75D7-455C-AAE4-E89A4E43C062}.Release|x64.Build.0 = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|Win32.ActiveCfg = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|x64.ActiveCfg = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Debug|x64.Build.0 = Debug|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|Any CPU.ActiveCfg = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|Mixed Platforms.Build.0 = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|Win32.ActiveCfg = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|x64.ActiveCfg = Release|x64
+		{29388D23-75D7-455C-AAE4-E89A21EC8992}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -140,6 +154,10 @@ Global
 		{CBADAA14-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
 		{ABCDA123-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
 		{3256A123-75D7-455C-AAE4-E89A4E43C062} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+		{29388D23-75D7-455C-AAE4-E89A21EC8992} = {B410953E-0D13-40A7-B94F-FE2A89DFBEC8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D2D1630B-DC48-40BC-B3B0-D67A492C6517}
 	EndGlobalSection
 	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
 		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}

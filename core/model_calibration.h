@@ -14,8 +14,6 @@
 #include <dlib/matrix.h>
 #include <dlib/statistics.h>
 
-#include "core_pch.h"
-
 #include "cell_model.h"
 #include "region_model.h"
 #include "dream_optimizer.h"

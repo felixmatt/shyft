@@ -3,7 +3,7 @@
 #include "core/time_series.h"
 #include "core/time_axis.h"
 #include "api/api.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "core/time_series_statistics.h"
 #include "core/time_series_merge.h"
 

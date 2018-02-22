@@ -26,17 +26,17 @@ namespace fs = boost::filesystem;
 #endif
 #include <fcntl.h>
 
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "time_series_info.h"
 #include "utctime_utilities.h"
 
 namespace shyft {
 namespace dtss {
 // TODO: Remove API dependency from core...
-using shyft::api::apoint_ts;
-using shyft::api::gpoint_ts;
-using shyft::api::gts_t;
-using shyft::api::aref_ts;
+using shyft::time_series::dd::apoint_ts;
+using shyft::time_series::dd::gpoint_ts;
+using shyft::time_series::dd::gts_t;
+using shyft::time_series::dd::aref_ts;
 using shyft::core::utctime;
 using shyft::core::utcperiod;
 using shyft::core::utctimespan;

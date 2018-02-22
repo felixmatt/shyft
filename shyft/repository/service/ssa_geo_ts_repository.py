@@ -4,7 +4,7 @@ PLEASE NOTE: This module relies on services specific to Statkraft, for other par
 """
 from __future__ import print_function
 from __future__ import absolute_import
-from abc import ABCMeta,abstractmethod
+from abc import ABCMeta, abstractmethod
 
 from shyft import api
 from shyft.repository import interfaces
@@ -17,7 +17,8 @@ class MetStationConfig(object):
     Later when this information-mapping is available directly in the underlying servies, this configuration
     will be obsolete
     """
-    def __init__(self,gis_id,temperature=None,precipitation=None,wind_speed=None,radiation=None,relative_humidity=None):
+
+    def __init__(self, gis_id, temperature=None, precipitation=None, wind_speed=None, radiation=None, relative_humidity=None):
         """ 
         Constructs a MetStationConfig objects with needed keys
         NOTICE that the attribute names are choosen with care, they matches exactly the shyft attribute names for observations/forecast
@@ -38,12 +39,13 @@ class MetStationConfig(object):
             - identifier for relative humidity [%] time-series in SSA ts service (SMG)
 
         """
-        self.gis_id=gis_id
-        self.temperature=temperature
-        self.precipitation=precipitation
-        self.wind_speed=wind_speed
-        self.radiation=radiation
-        self.relative_humidity=relative_humidity
+        self.gis_id = gis_id
+        self.temperature = temperature
+        self.precipitation = precipitation
+        self.wind_speed = wind_speed
+        self.radiation = radiation
+        self.relative_humidity = relative_humidity
+
 
 class EnsembleStation(object):
     """
@@ -53,7 +55,8 @@ class EnsembleStation(object):
     the i'th ensemble idx as argument and returns the name of it.
 
     """
-    def __init__(self,gis_id,n_ensembles,temperature_ens=None,precipitation_ens=None,wind_speed_ens=None,radiation_ens=None,relative_humidity_ens=None):
+
+    def __init__(self, gis_id, n_ensembles, temperature_ens=None, precipitation_ens=None, wind_speed_ens=None, radiation_ens=None, relative_humidity_ens=None):
         """
         Parameters
         ----------
@@ -71,13 +74,14 @@ class EnsembleStation(object):
             - callable that given ensemble_id returns identifier for relative humidity [%] time-series in SSA ts service (SMG)
 
         """
-        self.gis_id=gis_id
-        self.n_ensembles=n_ensembles
-        self.temperature=temperature_ens 
-        self.precipitation=precipitation_ens
-        self.wind_speed=wind_speed_ens
-        self.radiation=radiation_ens
-        self.relative_humidity=relative_humidity_ens
+        self.gis_id = gis_id
+        self.n_ensembles = n_ensembles
+        self.temperature = temperature_ens
+        self.precipitation = precipitation_ens
+        self.wind_speed = wind_speed_ens
+        self.radiation = radiation_ens
+        self.relative_humidity = relative_humidity_ens
+
 
 class EnsembleConfig(object):
     """
@@ -90,7 +94,8 @@ class EnsembleConfig(object):
      - describes each station, by location and property references (temperature,preciptiation etc...) it keeps.
     
     """
-    def __init__(self,n_ensembles,list_of_ens_station_cfg):
+
+    def __init__(self, n_ensembles, list_of_ens_station_cfg):
         """
         Parameters
         ----------
@@ -99,12 +104,11 @@ class EnsembleConfig(object):
         list_of_ens_station_cfg:list of EnsembleStation
             - a list of ensemble stations, each of them should have n_ensembles for each property they support.
         """
-        self.n_ensembles=n_ensembles
-        self.station_list=list_of_ens_station_cfg
-        #TODO: verify n_ensembles>0, and verify that each ens_station.n_ensembles are >0
+        self.n_ensembles = n_ensembles
+        self.station_list = list_of_ens_station_cfg
+        # TODO: verify n_ensembles>0, and verify that each ens_station.n_ensembles are >0
 
 
-    
 class GeoLocationRepository(object):
     """
     Responsible for providing geo-locations for specified gis-identifiers
@@ -114,8 +118,9 @@ class GeoLocationRepository(object):
     A candidate for interfaces
     """
     __metaclass__ = ABCMeta
+
     @abstractmethod
-    def get_locations(self,location_id_list,epsg_id=32632):
+    def get_locations(self, location_id_list, epsg_id=32632):
         """
         Given that we know the location-id (typically an integer, could be string)
         provide the locations (x,y,z) in a specified coordinate system
@@ -132,6 +137,7 @@ class GeoLocationRepository(object):
         """
         pass
 
+
 class TsRepository(object):
     """
     Defines the contract of a time-series repository for this specific use
@@ -144,14 +150,15 @@ class TsRepository(object):
 
     A candidate for interfaces
     """
+
     @abstractmethod
-    def read(self,list_of_ts_id,period):
+    def read(self, list_of_ts_id, period):
         """
         """
         pass
-    
+
     @abstractmethod
-    def read_forecast(self,list_of_fc_id,period):
+    def read_forecast(self, list_of_fc_id, period):
         """ 
         read and return the newest forecast that have the biggest overlap with specified period
         note that we should check that the semantic of this is reasonable
@@ -160,7 +167,7 @@ class TsRepository(object):
         pass
 
     @abstractmethod
-    def store(self,timeseries_dict):
+    def store(self, timeseries_dict):
         """ Store the supplied time-series to the underlying db-system.
             Parameters
             ----------
@@ -170,6 +177,7 @@ class TsRepository(object):
                 If the named time-series does not exist, create it.
         """
         pass
+
 
 class GeoTsRepositoryError(Exception):
     pass
@@ -212,7 +220,7 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     """
 
-    def __init__(self,epsg_id, geo_location_repository,ts_repository,met_station_list,ens_config):
+    def __init__(self, epsg_id, geo_location_repository, ts_repository, met_station_list, ens_config):
         """
         Parameters
         ----------
@@ -233,14 +241,14 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             ]
 
         """
-        if not isinstance(geo_location_repository,GeoLocationRepository): raise GeoTsRepositoryError("geo_location_repository should be an implementation of GeoLocationRepository")
-        if not isinstance(ts_repository,TsRepository):raise GeoTsRepositoryError("ts_repository should be an implementation of TsRepository")
-        self.epsg_id=epsg_id;
-        self.geo_location_repository=geo_location_repository
-        self.ts_repository= ts_repository # we pass this to the ssa smg db interface
-        self.met_station_list=met_station_list # this defines the scope of the service, and glue together consistent positions and time-series
-        self.ens_config=ens_config # defines ensemble stations, similar to met_station_list, except, each station have n_ensemble members for each property
-        self.source_type_map = {"relative_humidity": api.RelHumSource, #we need this map to provide shyft.api types back to the orchestrator
+        if not isinstance(geo_location_repository, GeoLocationRepository): raise GeoTsRepositoryError("geo_location_repository should be an implementation of GeoLocationRepository")
+        if not isinstance(ts_repository, TsRepository): raise GeoTsRepositoryError("ts_repository should be an implementation of TsRepository")
+        self.epsg_id = epsg_id;
+        self.geo_location_repository = geo_location_repository
+        self.ts_repository = ts_repository  # we pass this to the ssa smg db interface
+        self.met_station_list = met_station_list  # this defines the scope of the service, and glue together consistent positions and time-series
+        self.ens_config = ens_config  # defines ensemble stations, similar to met_station_list, except, each station have n_ensemble members for each property
+        self.source_type_map = {"relative_humidity": api.RelHumSource,  # we need this map to provide shyft.api types back to the orchestrator
                                 "temperature": api.TemperatureSource,
                                 "precipitation": api.PrecipitationSource,
                                 "radiation": api.RadiationSource,
@@ -260,88 +268,88 @@ class GeoTsRepository(interfaces.GeoTsRepository):
 
     def geo_match(self, geo_location_criteria):
         self._validate_geo_location_criteria(geo_location_criteria)
-        k, v = list(geo_location_criteria.items())[0]
+        k = 'None'
+        if geo_location_criteria:
+            k, v = list(geo_location_criteria.items())[0]
         if (k == 'bbox'):
             x_min, x_max = min(v[0]), max(v[0])
             y_min, y_max = min(v[1]), max(v[1])
-            geo_match_func = lambda location: (x_min<=location[0]<=x_max)&(y_min<=location[1]<=y_max)
+            geo_match_func = lambda location: (x_min <= location[0] <= x_max) & (y_min <= location[1] <= y_max)
         elif (k == 'polygon'):
-            geo_match_func = lambda location: v.contains(Point(location[0],location[1]))
+            geo_match_func = lambda location: v.contains(Point(location[0], location[1]))
         else:
             geo_match_func = lambda location: True
         return geo_match_func
 
-    def _get_ts_to_geo_ts_result(self,input_source_types,geo_match):
+    def _get_ts_to_geo_ts_result(self, input_source_types, geo_match):
         """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
         # 1 get the station-> location map
-        station_ids=[ x.gis_id for x in self.met_station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=self.epsg_id) 
+        station_ids = [x.gis_id for x in self.met_station_list]
+        geo_loc = self.geo_location_repository.get_locations(location_id_list=station_ids, epsg_id=self.epsg_id)
         # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
-        ts_to_geo_ts_info= dict()
-        result={}
-        for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
-            result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
+        ts_to_geo_ts_info = dict()
+        result = {}
+        for attr_name in input_source_types:  # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
+            result[attr_name] = self.source_type_map[attr_name].vector_t()  # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
             ts_to_geo_ts_info.update(
-                { k:v for k,v in ([ getattr(x,attr_name) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ) )] #this constructs a key,value list from the result below
-                         for x  in self.met_station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
+                {k: v for k, v in ([getattr(x, attr_name), (attr_name, api.GeoPoint(*geo_loc[x.gis_id]))]  # this constructs a key,value list from the result below
+                                   for x in self.met_station_list if getattr(x, attr_name) is not None and geo_match(geo_loc[x.gis_id]))  # this get out the matching station.attribute
                  })
-        return ts_to_geo_ts_info,result
+        return ts_to_geo_ts_info, result
 
-    def _get_ts_to_geo_ts_ensemble_result(self,input_source_types,geo_match):
+    def _get_ts_to_geo_ts_ensemble_result(self, input_source_types, geo_match):
         """ given the input-sources (temp,precip etc), and a geo-match, return back tsname->geopos, plus a result structure dict ready to add on the read ts"""
         # 1 get the station-> location map
-        station_ids=[ x.gis_id for x in self.ens_config.station_list ]
-        geo_loc= self.geo_location_repository.get_locations(location_id_list=station_ids,epsg_id=self.epsg_id)
+        station_ids = [x.gis_id for x in self.ens_config.station_list]
+        geo_loc = self.geo_location_repository.get_locations(location_id_list=station_ids, epsg_id=self.epsg_id)
         # 2 create map ts-id to tuple (attr_name,GeoPoint()), the xxxxSource.vector_t 
         #   fill in a startingpoint for result{'tempeature':xxxxSourve.vector_t} etc
-        ts_to_geo_ts_info= dict()
-        ens_result=[] #when done, it's filled with n_ensembles of 'result' dictionaries, one for each ensemble-member
+        ts_to_geo_ts_info = dict()
+        ens_result = []  # when done, it's filled with n_ensembles of 'result' dictionaries, one for each ensemble-member
         # get out the dimension of the ensemble from ens_station_list, .. each station needs the same number of ens.members.., otherwise in trouble..
         # because we need correlated temperature/precipitation/radiation (each of them belong to a certain ens.member).
         for i in range(self.ens_config.n_ensembles):
-            result={}
-            for attr_name in input_source_types: # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
-                result[attr_name]=self.source_type_map[attr_name].vector_t() # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
+            result = {}
+            for attr_name in input_source_types:  # we have selected the attr_name and the MetStationConfig with care, so attr_name corresponds to each member in MetStationConfig
+                result[attr_name] = self.source_type_map[attr_name].vector_t()  # create an empty vector of requested type, we fill in the read-result geo-ts stuff when we are done reading
                 ts_to_geo_ts_info.update(
-                    { k:v for k,v in
-                           #    ts-name             , (temperature, geopoint , ens result 
-                         ([ getattr(x,attr_name)(i) , (attr_name , api.GeoPoint(*geo_loc[x.gis_id] ), result )] #this constructs a key,value list from the result below
-                             for x  in self.ens_config.station_list if getattr(x,attr_name) is not None and geo_match(geo_loc[x.gis_id]) ) #this get out the matching station.attribute
+                    {k: v for k, v in
+                     #    ts-name             , (temperature, geopoint , ens result
+                     ([getattr(x, attr_name)(i), (attr_name, api.GeoPoint(*geo_loc[x.gis_id]), result)]  # this constructs a key,value list from the result below
+                      for x in self.ens_config.station_list if getattr(x, attr_name) is not None and geo_match(geo_loc[x.gis_id]))  # this get out the matching station.attribute
                      })
-            ens_result.append(result) # add this ens to the result.
-        return ts_to_geo_ts_info,ens_result
+            ens_result.append(result)  # add this ens to the result.
+        return ts_to_geo_ts_info, ens_result
 
-
-    def _remap_to_result(self,read_ts_map,result,ts_to_geo_ts_info):
+    def _remap_to_result(self, read_ts_map, result, ts_to_geo_ts_info):
         """ given read_ts_map, as a result from read,read_forecast
             map it into correct vector in result,
             using geo_ts_info
         """
-        for tsn,ts in iter(read_ts_map.items()):
-            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint() )
-            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
-            source_ts = self.source_type_map[attr_name](geo_ts_info[1],ts)
+        for tsn, ts in iter(read_ts_map.items()):
+            geo_ts_info = ts_to_geo_ts_info[tsn]  # this is a tuple( attr_name, api.GeoPoint() )
+            attr_name = geo_ts_info[0]  # this should be like temperature,precipitaton
+            source_ts = self.source_type_map[attr_name](geo_ts_info[1], ts)
             source_ts.uid = tsn
-            result[attr_name].append(source_ts) #pick up the vector, push back new geo-located ts
+            result[attr_name].append(source_ts)  # pick up the vector, push back new geo-located ts
         return result
 
-    def _remap_to_ensemble_result(self,read_ts_map,ens_result,ts_to_geo_ts_info):
+    def _remap_to_ensemble_result(self, read_ts_map, ens_result, ts_to_geo_ts_info):
         """ given read_ts_map, as a result from read,read_forecast
             map it into correct result in ens_result,
             using geo_ts_info
         """
-        for tsn,ts in iter(read_ts_map.items()):
-            geo_ts_info=ts_to_geo_ts_info[tsn]# this is a tuple( attr_name, api.GeoPoint(), and plain result )
-            attr_name=geo_ts_info[0] # this should be like temperature,precipitaton
-            result=geo_ts_info[2] # this should be the result dictionary of 'type':vector_t where this ts belongs to (ensembleset)
+        for tsn, ts in iter(read_ts_map.items()):
+            geo_ts_info = ts_to_geo_ts_info[tsn]  # this is a tuple( attr_name, api.GeoPoint(), and plain result )
+            attr_name = geo_ts_info[0]  # this should be like temperature,precipitaton
+            result = geo_ts_info[2]  # this should be the result dictionary of 'type':vector_t where this ts belongs to (ensembleset)
             source_ts = self.source_type_map[attr_name](geo_ts_info[1], ts)
             source_ts.uid = tsn
-            result[attr_name].append(source_ts) #pick up the vector, push back new geo-located ts
+            result[attr_name].append(source_ts)  # pick up the vector, push back new geo-located ts
         return ens_result
 
-
-    def get_timeseries(self, input_source_types, utc_period,geo_location_criteria=None):
+    def get_timeseries(self, input_source_types, utc_period, geo_location_criteria=None):
         """
         Parameters
         ----------
@@ -358,16 +366,15 @@ class GeoTsRepository(interfaces.GeoTsRepository):
             dictionary keyed by ts type, where values are api vectors of geo
             located timeseries.
         """
-        #if geo_location_criteria is not None:
+        # if geo_location_criteria is not None:
         #    raise GeoTsRepositoryError("geo_location_criteria is not yet implemented")
-        #geo_match= lambda location: True #geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
-        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,self.geo_match(geo_location_criteria))
-        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
-        read_ts_map=self.ts_repository.read(ts_list,utc_period)
-        return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
+        # geo_match= lambda location: True #geo_location_criteria is None # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        ts_to_geo_ts_info, result = self._get_ts_to_geo_ts_result(input_source_types, self.geo_match(geo_location_criteria))
+        ts_list = ts_to_geo_ts_info.keys()  # these we are going to read
+        read_ts_map = self.ts_repository.read(ts_list, utc_period)
+        return self._remap_to_result(read_ts_map, result, ts_to_geo_ts_info)  # map back to result
 
-
-    def get_forecast(self, input_source_types,utc_period,t_c,geo_location_criteria):
+    def get_forecast(self, input_source_types, utc_period, t_c, geo_location_criteria):
         """
         Parameters
         ----------
@@ -378,14 +385,14 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         forecast: same layout/type as for get_timeseries
         """
-        if t_c is not None: raise("t_c, time created spec is not yet implemented")
-        #geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
-        ts_to_geo_ts_info,result=self._get_ts_to_geo_ts_result(input_source_types,self.geo_match(geo_location_criteria))
-        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
-        read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
-        return self._remap_to_result(read_ts_map,result,ts_to_geo_ts_info) # map back to result
+        if t_c is not None: raise ("t_c, time created spec is not yet implemented")
+        # geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        ts_to_geo_ts_info, result = self._get_ts_to_geo_ts_result(input_source_types, self.geo_match(geo_location_criteria))
+        ts_list = ts_to_geo_ts_info.keys()  # these we are going to read
+        read_ts_map = self.ts_repository.read_forecast(ts_list, utc_period)  # TODO: maybe pass tc (t-created)
+        return self._remap_to_result(read_ts_map, result, ts_to_geo_ts_info)  # map back to result
 
-    def get_forecast_ensemble(self, input_source_types,utc_period,t_c,geo_location_criteria):
+    def get_forecast_ensemble(self, input_source_types, utc_period, t_c, geo_location_criteria):
         """
         alg:
         Using ensemble-generators? based on name rules passed to constructor.
@@ -405,16 +412,11 @@ class GeoTsRepository(interfaces.GeoTsRepository):
         -------
         ensemble: list of same type as get_timeseries
         """
-        if t_c is not None: raise("t_c, time created spec is not yet implemented")
-        #if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
-        #geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
+        if t_c is not None: raise ("t_c, time created spec is not yet implemented")
+        # if geo_location_criteria is not None:raise("geo_location_criteria is not yet implemented")
+        # geo_match= lambda location: True # TODO figure out the form of geo_location_criteria, a bounding box, lambda?
         # get the remap back to result[i], and the empty, but initialized result list.
-        ts_to_geo_ts_info,ens_result= self._get_ts_to_geo_ts_ensemble_result(input_source_types,self.geo_match(geo_location_criteria))
-        ts_list=ts_to_geo_ts_info.keys() # these we are going to read
-        read_ts_map=self.ts_repository.read_forecast(ts_list,utc_period) #TODO: maybe pass tc (t-created)
-        return self._remap_to_ensemble_result(read_ts_map,ens_result,ts_to_geo_ts_info) # map back to result
-        
-
-
-
-
+        ts_to_geo_ts_info, ens_result = self._get_ts_to_geo_ts_ensemble_result(input_source_types, self.geo_match(geo_location_criteria))
+        ts_list = ts_to_geo_ts_info.keys()  # these we are going to read
+        read_ts_map = self.ts_repository.read_forecast(ts_list, utc_period)  # TODO: maybe pass tc (t-created)
+        return self._remap_to_ensemble_result(read_ts_map, ens_result, ts_to_geo_ts_info)  # map back to result

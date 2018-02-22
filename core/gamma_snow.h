@@ -27,7 +27,7 @@
 #include <boost/math/tools/roots.hpp>
 #include <boost/math/tools/minima.hpp>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "time_series.h"
 #include "utctime_utilities.h"

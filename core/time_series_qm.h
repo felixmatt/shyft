@@ -32,17 +32,17 @@ namespace shyft {
             for (const auto& ts : tsv) tsa.emplace_back(ts, ta, shyft::time_series::extension_policy::USE_NAN);
 
             vector<vector<int>> qi(ta.size()); // result vector, qi[i] -> a vector of index-order tsv[i].value(t)
-            vector<int> pi(tsv.size()); for (size_t i = 0; i<tsv.size(); ++i) pi[i] = i;//initial order 0..n-1, and we re-use it in the loop
+            //vector<int> pi(tsv.size()); for (size_t i = 0; i<tsv.size(); ++i) pi[i] = i;//initial order 0..n-1, and we re-use it in the loop
             for (size_t t = 0; t<ta.size(); ++t) {
+				vector<int> pi;pi.reserve(pi.size()); // get rid of nan-members before sort
+				for (size_t i = 0; i<tsa.size(); ++i) {
+					if (isfinite(tsa[i].value(t))) {
+						pi.emplace_back(i);
+					}
+				}
                 sort(begin(pi), end(pi), [&tsa, t](int a, int b)->int {return tsa[a].value(t)<tsa[b].value(t); });
                 // Filter away the nans, which signal that we have time series that don't extend this far
-                vector<int> final_inds;
-                for (size_t i = 0; i<tsa.size(); ++i) {
-                    if (isfinite(tsa[pi[i]].value(t))) {
-                        final_inds.emplace_back(pi[i]);
-                    }
-                }
-                qi[t] = final_inds; // it's a copy assignment, ok, since sort above will start out with previous time-step order
+                qi[t] = pi; // it's a copy assignment, ok, since sort above will start out with previous time-step order
             }
             return qi;
         }
@@ -290,7 +290,12 @@ namespace shyft {
                 interpolation_period = core::utcperiod();
             }
 
-            auto wvo_fc = wvo_accessor<typename tsv_t::value_type>(fc_idx_v, fc_weights, fc_tsv);
+            vector<tsa_t> fc_accessor_vec;
+            pri_accessor_vec.reserve(fc_tsv.size());
+            for (const auto& ts : fc_tsv)
+                fc_accessor_vec.emplace_back(ts, time_axis);
+
+            auto wvo_fc = wvo_accessor<tsa_t>(fc_idx_v, fc_weights, fc_accessor_vec);
 
 
             tsv_t output;

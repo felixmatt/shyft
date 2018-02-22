@@ -13,15 +13,10 @@
   <ItemGroup>
     <ClCompile Include="api.cpp" />
     <ClCompile Include="api_serialization.cpp" />
-    <ClCompile Include="time_series.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api.h" />
     <ClInclude Include="api_state.h" />
-    <ClInclude Include="hbv_stack.h" />
-    <ClInclude Include="pt_gs_k.h" />
-    <ClInclude Include="pt_ss_k.h" />
-    <ClInclude Include="time_series.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FDFDAA14-75D7-455C-AAE4-E89A4E43C062}</ProjectGuid>
@@ -70,7 +65,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;BOOST_VARIANT_MINIMIZE_SIZE;XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -93,7 +88,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;BOOST_VARIANT_MINIMIZE_SIZE;XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>EnkiServicePch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>

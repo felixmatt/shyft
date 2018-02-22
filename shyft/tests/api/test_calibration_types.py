@@ -7,6 +7,7 @@ from shyft.api import pt_gs_k
 from shyft.api import pt_hs_k
 from shyft.api import pt_ss_k
 from shyft.api import hbv_stack
+from shyft.api import pt_hps_k
 
 
 class ShyftApi(unittest.TestCase):
@@ -40,7 +41,7 @@ class ShyftApi(unittest.TestCase):
 
 
     def test_pt_hs_k_param(self):
-        pthsk_size = 16
+        pthsk_size = 17
         pthsk = pt_hs_k.PTHSKParameter()
         self.assertIsNotNone(pthsk)
         self.assertEqual(pthsk.size(), pthsk_size)
@@ -67,12 +68,13 @@ class ShyftApi(unittest.TestCase):
             "pt.alpha",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(pthsk, pthsk_size, valid_names)
 
     def test_hbv_stack_param(self):
-        hbv_size = 20
+        hbv_size = 21
         hbv = hbv_stack.HbvParameter()
         self.assertIsNotNone(hbv)
         self.assertEqual(hbv.size(), hbv_size)
@@ -96,12 +98,13 @@ class ShyftApi(unittest.TestCase):
             "gm.dtf",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(hbv, hbv_size, valid_names)
 
     def test_pt_gs_k_param(self):
-        ptgsk_size = 29
+        ptgsk_size = 30
         valid_names = [
             "kirchner.c1",
             "kirchner.c2",
@@ -131,7 +134,8 @@ class ShyftApi(unittest.TestCase):
             "routing.velocity",
             "routing.alpha",
             "routing.beta",
-            "gs.n_winter_days"
+            "gs.n_winter_days",
+            "gm.direct_response"
         ]
         p = pt_gs_k.PTGSKParameter()
         special_values = {22: 130, 28: 221}
@@ -164,8 +168,61 @@ class ShyftApi(unittest.TestCase):
         self.assertFalse(p.gs.is_snow_season(utc.time(2017, 11, 31)))
         self.assertTrue(p.gs.is_snow_season(utc.time(2017, 2, 1)))
 
+
+    def test_pt_hps_k_param(self):
+        ptgsk_size = 23
+        valid_names = [
+            "kirchner.c1",
+            "kirchner.c2",
+            "kirchner.c3",
+            "ae.ae_scale_factor",
+            "hps.lw",
+            "hps.tx",
+            "hps.cfr",
+            "hps.wind_scale",
+            "hps.wind_const",
+            "hps.surface_magnitude",
+            "hps.max_albedo",
+            "hps.min_albedo",
+            "hps.fast_albedo_decay_rate",
+            "hps.slow_albedo_decay_rate",
+            "hps.snowfall_reset_depth",
+            "hps.calculate_iso_pot_energy",
+            "gm.dtf",
+            "p_corr.scale_factor",
+            "pt.albedo",
+            "pt.alpha",
+            "routing.velocity",
+            "routing.alpha",
+            "routing.beta"
+        ]
+        p = pt_hps_k.PTHPSKParameter()
+        self.verify_parameter_for_calibration(p, ptgsk_size, valid_names)
+        # special verification of bool parameter
+        #p.us.calculate_iso_pot_energy = True
+        #self.assertTrue(p.us.calculate_iso_pot_energy)
+        #self.assertAlmostEqual(p.get(23), 1.0, 0.00001)
+        #p.us.calculate_iso_pot_energy = False
+        #self.assertFalse(p.us.calculate_iso_pot_energy)
+        #self.assertAlmostEqual(p.get(23), 0.0, 0.00001)
+        pv = api.DoubleVector.from_numpy([p.get(i) for i in range(p.size())])
+        #pv[23] = 1.0
+        #p.set(pv)
+        #self.assertTrue(p.us.calculate_iso_pot_energy)
+        #pv[23] = 0.0;
+        p.set(pv)
+        #self.assertFalse(p.us.calculate_iso_pot_energy)
+        # checkout new parameters for routing
+        p.routing.velocity = 1 / 3600.0
+        p.routing.alpha = 1.1
+        p.routing.beta = 0.8
+        self.assertAlmostEqual(p.routing.velocity, 1 / 3600.0)
+        self.assertAlmostEqual(p.routing.alpha, 1.1)
+        self.assertAlmostEqual(p.routing.beta, 0.8)
+
+
     def test_pt_ss_k_param(self):
-        ptssk_size = 19
+        ptssk_size = 20
         valid_names = [
             "kirchner.c1",
             "kirchner.c2",
@@ -185,7 +242,8 @@ class ShyftApi(unittest.TestCase):
             "gm.dtf",
             "routing.velocity",
             "routing.alpha",
-            "routing.beta"
+            "routing.beta",
+            "gm.direct_response"
         ]
         self.verify_parameter_for_calibration(pt_ss_k.PTSSKParameter(), ptssk_size, valid_names)
 
@@ -265,7 +323,7 @@ class ShyftApi(unittest.TestCase):
         self.assertAlmostEqual(t.scale_factor, 1.0)
         # create a ts with some points
         cal = api.Calendar()
-        start = cal.time(api.YMDhms(2015, 1, 1, 0, 0, 0))
+        start = cal.time(2015, 1, 1, 0, 0, 0)
         dt = api.deltahours(1)
         tsf = api.TsFactory()
         times = api.UtcTimeVector()

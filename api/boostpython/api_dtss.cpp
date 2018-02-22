@@ -1,6 +1,6 @@
 #include "boostpython_pch.h"
 
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "core/dtss.h"
 #include "core/dtss_client.h"
 
@@ -36,6 +36,9 @@ private:
 
 namespace shyft {
     namespace dtss {
+	using time_series::dd::gta_t;
+	using time_series::dd::apoint_ts;
+	using time_series::dd::ats_vector;
 
         struct py_server : server {
             boost::python::object cb;///< callback for the read function
@@ -118,7 +121,7 @@ namespace shyft {
                 return r;
             }
             ts_vector_t fire_cb(id_vector_t const &ts_ids,core::utcperiod p) {
-                api::ats_vector r;
+                ats_vector r;
                 if (cb.ptr()!=Py_None) {
                     scoped_gil_aquire gil;
                     try {
@@ -128,9 +131,9 @@ namespace shyft {
                     }
                 } else {
                     // for testing, just fill in constant values.
-                    api::gta_t ta(p.start, core::deltahours(1), p.timespan() / core::deltahours(1));
+                    gta_t ta(p.start, core::deltahours(1), p.timespan() / core::deltahours(1));
                     for (size_t i = 0;i < ts_ids.size();++i)
-                        r.push_back(api::apoint_ts(ta, double(i), time_series::ts_point_fx::POINT_AVERAGE_VALUE));
+                        r.push_back(apoint_ts(ta, double(i), time_series::ts_point_fx::POINT_AVERAGE_VALUE));
                 }
                 return r;
             }
@@ -144,7 +147,8 @@ namespace shyft {
         // need to wrap core client to unlock gil during processing
         struct py_client {
             client impl;
-            explicit py_client(const std::string& host_port):impl(host_port) {}
+            py_client(const std::string& host_port,bool ac,int timeout_ms):impl(host_port,ac,timeout_ms) {}
+            py_client(const vector<string>&host_ports, bool ac,int timeout_ms):impl(host_ports,ac,timeout_ms) {}
             ~py_client() {
                 //std::cout << "~py_client" << std::endl;
             }
@@ -156,13 +160,18 @@ namespace shyft {
                 scoped_gil_release gil;
                 impl.close(timeout_ms);
             }
-            ts_vector_t percentiles(const ts_vector_t & tsv, core::utcperiod p,const api::gta_t &ta,const std::vector<int>& percentile_spec) {
+            void reopen(int timeout_ms=1000) {
                 scoped_gil_release gil;
-                return impl.percentiles(tsv,p,ta,percentile_spec);
+                impl.reopen(timeout_ms);
             }
-            ts_vector_t evaluate(const ts_vector_t& tsv, core::utcperiod p) {
+            ts_vector_t percentiles(const ts_vector_t & tsv, core::utcperiod p,const gta_t &ta,const std::vector<int>& percentile_spec,bool use_ts_cached_read,bool update_ts_cache) {
                 scoped_gil_release gil;
-                return ts_vector_t(impl.evaluate(tsv,p));
+                std::vector<int64_t> p_spec;for(auto p:percentile_spec) p_spec.push_back(p);
+                return impl.percentiles(tsv,p,ta,p_spec,use_ts_cached_read,update_ts_cache);
+            }
+            ts_vector_t evaluate(const ts_vector_t& tsv, core::utcperiod p,bool use_ts_cached_read,bool update_ts_cache) {
+                scoped_gil_release gil;
+                return ts_vector_t(impl.evaluate(tsv,p,use_ts_cached_read,update_ts_cache));
             }
             ts_info_vector_t find(const std::string& search_expression) {
                 scoped_gil_release gil;
@@ -172,7 +181,22 @@ namespace shyft {
                 scoped_gil_release gil;
                 impl.store_ts(tsv, overwrite_on_write, cache_on_write);
             }
+            void merge_store_ts(const ts_vector_t&tsv, bool cache_on_write) {
+                scoped_gil_release gil;
+                impl.merge_store_ts(tsv, cache_on_write);
+            }
 
+            void cache_flush() {
+                scoped_gil_release gil;
+                return impl.cache_flush();
+            }
+
+            cache_stats get_cache_stats() {
+                scoped_gil_release gil;
+                return impl.get_cache_stats();
+            }
+            bool get_compress_expressions() const {return impl.compress_expressions;}
+            void set_compress_expressions(bool v) {impl.compress_expressions=v;}
         };
     }
 }
@@ -207,7 +231,7 @@ namespace expose {
             .def_readwrite("point_fx", &TsInfo::point_fx,
                 doc_intro("how to interpret the points, instant value, or average over period")
             )
-            .def_readwrite("delta_t", &TsInfo::delta_t, 
+            .def_readwrite("delta_t", &TsInfo::delta_t,
                 doc_intro("time-axis steps, in seconds, 0 if irregular time-steps")
             )
             .def_readwrite("olson_tz_id", &TsInfo::olson_tz_id,
@@ -217,7 +241,7 @@ namespace expose {
             .def_readwrite("data_period", &TsInfo::data_period,
                 doc_intro("the period for data-stored, if applicable")
             )
-            .def_readwrite("created", &TsInfo::created, 
+            .def_readwrite("created", &TsInfo::created,
                 doc_intro("when time-series was created, seconds 1970s utc")
             )
             .def_readwrite("modified", &TsInfo::modified,
@@ -429,17 +453,34 @@ namespace expose {
 			doc_intro("and respond back to clients with the results")
 			doc_see_also("DtsServer"), no_init
 			)
-			.def(init<std::string>((py::arg("self"), py::arg("host_port")),
+			.def(init<const std::string&,bool,int>( (py::arg("self"),py::arg("host_port"),py::arg("auto_connect")=true,py::arg("timeout_ms")=1000),
 				doc_intro("constructs a dts-client with the specifed host_port parameter")
 				doc_intro("a connection is immediately done to the server at specified port.")
 				doc_intro("If no such connection can be made, it raises a RuntimeError.")
 				doc_parameter("host_port", "string", "a string of the format 'host:portnumber', e.g. 'localhost:20000'")
+                doc_parameter("auto_connect","bool","default True, connection pr. call. if false, connection last lifetime of object unless explicitely closed/reopened")
+                doc_parameter("timeout_ms","int","defalt 1000ms, used for timeout connect/reconnect/close operations" )
 				)
 			)
+            .def(init<const std::vector<std::string>&,bool,int>((py::arg("self"), py::arg("host_ports"),py::arg("auto_connect"),py::arg("timeout_ms")),
+				doc_intro("constructs a dts-client with the specifed host_ports parameters")
+				doc_intro("a connection is immediately done to the server at specified port.")
+				doc_intro("If no such connection can be made, it raises a RuntimeError.")
+                doc_intro("If several servers are passed, the .evaluate and .percentile function will partition the ts-vector between the")
+                doc_intro("provided servers and scale out the computation")
+				doc_parameter("host_ports", "StringVector", "a a list of string of the format 'host:portnumber', e.g. 'localhost:20000'")
+                doc_parameter("auto_connect","bool","default True, connection pr. call. if false, connection last lifetime of object unless explicitely closed/reopened")
+                doc_parameter("timeout_ms","int","defalt 1000ms, used for timeout connect/reconnect/close operations" )
+				)
+			)
+
 			.def("close", &DtsClient::close, (py::arg("self"), py::arg("timeout_ms") = 1000),
                 doc_intro("close the connection")
             )
-            .def("percentiles",&DtsClient::percentiles, (py::arg("self"),py::arg("ts_vector"), py::arg("utcperiod"), py::arg("time_axis"), py::arg("percentile_list")),
+            .def("reopen",&DtsClient::reopen,(py::arg("self"),py::arg("timeout_ms")=1000),
+                 doc_intro("(re)open a connection after close or server restart")
+            )
+            .def("percentiles",&DtsClient::percentiles, (py::arg("self"),py::arg("ts_vector"), py::arg("utcperiod"), py::arg("time_axis"), py::arg("percentile_list"),py::arg("use_ts_cached_read")=true,py::arg("update_ts_cache")=false),
                 doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
                 doc_intro("If the expression includes unbound symbolic references to time-series,")
                 doc_intro("these time-series will be passed to the binding service callback")
@@ -449,10 +490,12 @@ namespace expose {
                 doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
                 doc_parameter("time_axis","TimeAxis","the time_axis for the percentiles, e.g. a weekly time_axis")
                 doc_parameter("percentile_list","IntVector","a list of percentiles, where -1 means true average, 25=25percentile etc")
+                doc_parameter("use_ts_cached_read","bool","allow use of server-side cached results, use it for immutable data-reads!")
+                doc_parameter("update_ts_cache","bool","when reading time-series, also update the cache with the data, use it for immutable data-reads!")
                 doc_returns("tsvector","TsVector","an evaluated list of percentile time-series in the same order as the percentile input list")
                 doc_see_also(".evaluate(), DtsServer")
             )
-            .def("evaluate", &DtsClient::evaluate, (py::arg("self"),py::arg("ts_vector"), py::arg("utcperiod") ),
+            .def("evaluate", &DtsClient::evaluate, (py::arg("self"),py::arg("ts_vector"), py::arg("utcperiod"),py::arg("use_ts_cached_read")=true,py::arg("update_ts_cache")=false ),
                 doc_intro("Evaluates the expressions in the ts_vector for the specified utcperiod.")
                 doc_intro("If the expression includes unbound symbolic references to time-series,")
                 doc_intro("these time-series will be passed to the binding service callback")
@@ -460,6 +503,8 @@ namespace expose {
                 doc_parameters()
                 doc_parameter("ts_vector","TsVector","a list of time-series (expressions), including unresolved symbolic references")
                 doc_parameter("utcperiod","UtcPeriod","the period that the binding service should read from the backing ts-store/ts-service")
+                doc_parameter("use_ts_cached_read","bool","allow use of server-side cached results, use it for immutable data-reads!")
+                doc_parameter("update_ts_cache","bool","when reading time-series, also update the cache with the data, use it for immutable data-reads!")
                 doc_returns("tsvector","TsVector","an evaluated list of point time-series in the same order as the input list")
                 doc_see_also(".percentiles(),DtsServer")
             )
@@ -493,6 +538,37 @@ namespace expose {
                 doc_parameter("cache_on_write", "bool", "if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
                 doc_returns("None","","")
                 doc_see_also("TsVector")
+            )
+            .def("merge_store_ts_points", &DtsClient::merge_store_ts,
+                (   py::arg("self"),
+                    py::arg("tsv"),
+                    py::arg("cache_on_write") = false
+                ),
+                doc_intro("Merge the ts-points supplied in the tsv into the existing time-series on the server side.")
+                doc_intro("The effect of each ts is similar to as if:")
+                doc_intro("  1. read ts.total_period() from ts point store ")
+                doc_intro("  2. run the TimeSeries.merge_points(ts) on the read-ts")
+                doc_intro("  3. write the resulting merge-result back to the ts-store")
+				doc_intro("This function is suitable for typical data-collection tasks")
+                doc_intro("where the points collected is from an external source, appears as batches,")
+                doc_intro("that should just be added to the existing point-set")
+                doc_parameters()
+                doc_parameter("tsv","TsVector","ts-vector with time-series, url-reference and values to be stored at dtss server")
+                doc_parameter("cache_on_write", "bool", "if set True, the written contents is also put into the read-cache of the dtss, defaults to False")
+                doc_returns("None","","")
+                doc_see_also("TsVector")
+            )
+            .def("cache_flush",&DtsClient::cache_flush,(py::arg("self")),
+                 doc_intro("flush the cache (including statistics) on the server.")
+            )
+            .add_property("cache_stats",&DtsClient::get_cache_stats,
+                 doc_intro("get the cache_stats (including statistics) on the server.")
+            )
+            .add_property("compress_expressions",&DtsClient::get_compress_expressions,&DtsClient::set_compress_expressions,
+                doc_intro("if True, the expressions are compressed before sending to the server.")
+                doc_intro("for expressions of any size, like 100 elements, with expression")
+                doc_intro("depth 100 (e.g. nested sums), this can speed up")
+                doc_intro("the transmission by a factor or 3.")
             )
             ;
 

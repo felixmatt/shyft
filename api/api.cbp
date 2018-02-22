@@ -38,9 +38,12 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-std=c++1y" />
+			<Add option="-std=c++14" />
 			<Add option="-fexceptions -fPIC -pthread" />
+			<Add option="-DBOOST_VARIANT_MINIMIZE_SIZE" />
 			<Add option="-DARMA_DONT_USE_WRAPPER" />
+			<Add option="-DARMA_DONT_PRINT_ERRORS" />
+			<Add option="-DARMA_NO_DEBUG" />
 			<Add directory=".." />
 			<Add directory="$(#armadillo.include)" />
 			<Add directory="$(#dlib.include)" />
@@ -67,10 +70,9 @@
 		<Unit filename="api_state.h" />
 		<Unit filename="hbv_stack.h" />
 		<Unit filename="pt_gs_k.h" />
+		<Unit filename="pt_hps_k.h" />
 		<Unit filename="pt_hs_k.h" />
 		<Unit filename="pt_ss_k.h" />
-		<Unit filename="time_series.cpp" />
-		<Unit filename="time_series.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

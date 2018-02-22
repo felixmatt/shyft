@@ -4,8 +4,11 @@
 #include "core/time_series.h"
 #include "core/time_axis.h"
 #include "api/api.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "core/time_series_statistics.h"
+#include "core/time_series_point_merge.h"
+
+using shyft::time_series::dd::gta_t;
 
 namespace shyfttest {
 const double EPS = 1.0e-8;
@@ -556,7 +559,7 @@ TEST_SUITE("time_series") {
         TS_ASSERT_EQUALS(ps6.index_of_count,1u);
         TS_ASSERT_DELTA((7)/1.0,v,0.00001);
         ps.index_of_count=0;
-        average_accessor<shyfttest::test_timeseries,time_axis::fixed_dt> avg_a(ps,tx);
+        average_accessor<shyfttest::test_timeseries,time_axis::fixed_dt> avg_a(ps,tx,extension_policy::USE_DEFAULT);
         TS_ASSERT_DELTA(avg_a.value(0),(1*0.5+2*0.5)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
         TS_ASSERT_DELTA(avg_a.value(1),(2*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
         TS_ASSERT_DELTA(avg_a.value(2),(3*1.0)/1.0,0.000001);//(1*0.5+2*1.5+3*1.0)/3.0
@@ -664,7 +667,7 @@ TEST_SUITE("time_series") {
         time_axis::fixed_dt ta(calendar().time(2000, 1, 1, 0, 0, 0), deltahours(1), v.size()+2); // two more steps
         time_series::point_ts<time_axis::fixed_dt> ts(ts_ta,v,ts_point_fx::POINT_AVERAGE_VALUE);
         SUBCASE("average") {
-            time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+            time_series::average_accessor<decltype(ts),decltype(ta)> a_default(ts,ta,extension_policy::USE_DEFAULT);
             time_series::average_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
             time_series::average_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
             CHECK(a_default.value(ta.size()-1)==doctest::Approx(2.5));
@@ -672,7 +675,7 @@ TEST_SUITE("time_series") {
             CHECK(!std::isfinite(a_nan.value(ta.size()-1)));
         }
         SUBCASE("accumulate") {
-            time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta);
+            time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_default(ts,ta,extension_policy::USE_DEFAULT);
             time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_nan(ts,ta,extension_policy::USE_NAN);
             time_series::accumulate_accessor<decltype(ts),decltype(ta)> a_0(ts,ta,extension_policy::USE_ZERO);
             CHECK(a_default.value(ta.size()-1)==doctest::Approx(deltahours(1)*(1.0+2.0+2.5+2.5)));
@@ -797,7 +800,7 @@ TEST_SUITE("time_series") {
     }
 
     TEST_CASE("test_api_ts") {
-        using namespace shyft::api;
+        using namespace shyft::time_series::dd;
         calendar utc;
         utctime start = utc.time(YMDhms(2016,3,8));
         utctimespan dt = deltahours(1);
@@ -847,7 +850,7 @@ TEST_SUITE("time_series") {
         TS_ASSERT_DELTA(d.value(0),b_value+b_value,0.00001);
     }
 	TEST_CASE("test_api_ts_stair_nan_after_end") {
-		using namespace shyft::api;
+		using namespace shyft::time_series::dd;
 		apoint_ts ts{ gta_t{0, 1, 3}, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
 		auto a = ts.average(gta_t{ 0,1,4 });
 		auto av = a.values();
@@ -859,7 +862,7 @@ TEST_SUITE("time_series") {
 		FAST_CHECK_UNARY(!std::isfinite(av[a.size()-1]));
 	}
 	TEST_CASE("test_api_ts_integral_fine_resolution") {
-		using namespace shyft::api;
+		using namespace shyft::time_series::dd;
         using shyft::core::deltahours;
         auto utc = make_shared<calendar>();
 		apoint_ts ts{ gta_t{utc->time(2017,10,16),deltahours(24*7),219}, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
@@ -872,7 +875,7 @@ TEST_SUITE("time_series") {
 	}
 
 	TEST_CASE("extend_calendar_and_fixed_dt") {
-		using namespace shyft::api;
+		using namespace shyft::time_series::dd;
 		auto utc = make_shared<calendar>();
 		apoint_ts a{ gta_t{ 0, 1, 3 }, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
 		apoint_ts b{ gta_t{ utc,0, 1, 10 }, 1.0, shyft::time_series::POINT_AVERAGE_VALUE };
@@ -1105,21 +1108,21 @@ TEST_SUITE("time_series") {
         tta_t  ta(t0, calendar::HOUR, n_days*24);
         tta_t tad(t0, deltahours(24), n_days);
         auto tsv = create_test_ts(n_ts, ta, fx_1);
-        std::vector<shyft::api::apoint_ts> tsv1;
-        auto ts0 = shyft::api::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::time_series::POINT_AVERAGE_VALUE);
+        std::vector<shyft::time_series::dd::apoint_ts> tsv1;
+        auto ts0 = shyft::time_series::dd::apoint_ts(tsv[0].time_axis(), tsv[0].v, shyft::time_series::POINT_AVERAGE_VALUE);
 
         for (size_t i=0; i<tsv.size(); ++i) {
-            shyft::api::apoint_ts tsi(string("a_ref"));
+            shyft::time_series::dd::apoint_ts tsi(string("a_ref"));
             for(int j=0; j<n_x; ++j)
                 tsi = tsi+ts0*1000.0;
             tsv1.push_back(tsi);// make it an expression
         }
 
         {
-            std::vector<shyft::api::apoint_ts> bind_ts;
+            std::vector<shyft::time_series::dd::apoint_ts> bind_ts;
             for(auto const &ts : tsv)
-                bind_ts.push_back(shyft::api::apoint_ts(ts.time_axis(), ts.v, shyft::time_series::POINT_AVERAGE_VALUE));
-            std::vector<shyft::api::ts_bind_info> bi;
+                bind_ts.push_back(shyft::time_series::dd::apoint_ts(ts.time_axis(), ts.v, shyft::time_series::POINT_AVERAGE_VALUE));
+            std::vector<shyft::time_series::dd::ts_bind_info> bi;
             for (auto const& ats : tsv1) {
                 auto tsb = ats.find_ts_bind_info();
                 for (auto const&b : tsb)
@@ -1446,35 +1449,35 @@ TEST_SUITE("time_series") {
         auto d = deltahours(1);
         size_t n = utc.diff_units(t, utc.time(2016, 10, 1), d);
 
-        shyft::api::gta_t ta(t, d, n);
+        shyft::time_series::dd::gta_t ta(t, d, n);
         size_t n_years = 80;
         vector<double> values;
         values.reserve(n);
         for (size_t i = 0; i < n; ++i)
             values.push_back(i);//0, 1,2,4,5,6..9
-        shyft::api::apoint_ts src_a(ta, values, ts_point_fx::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
+        shyft::time_series::dd::apoint_ts src_a(ta, values, ts_point_fx::POINT_AVERAGE_VALUE);// so a is a straight increasing stair-case
 
         // core version : auto mk_time_shift = [](const decltype(src_a)  &ts, utctimespan dt)-> time_shift_ts<decltype(src_a)> {return time_shift(ts,dt);};
         // below is the raw- time-shift version
-        auto mk_raw_time_shift = [](const decltype(src_a)& ts, utctimespan dt)->shyft::api::apoint_ts {
-            return shyft::api::apoint_ts(std::make_shared<shyft::api::time_shift_ts>(ts, dt));
+        auto mk_raw_time_shift = [](const decltype(src_a)& ts, utctimespan dt)->shyft::time_series::dd::apoint_ts {
+            return shyft::time_series::dd::apoint_ts(std::make_shared<shyft::time_series::dd::time_shift_ts>(ts, dt));
         };
         /** A class that makes an average partition over the supplied time-axis*/
         struct mk_average_partition {
-            shyft::api::gta_t ta;///< the time-axis that is common for all generated partitions
-            mk_average_partition(const shyft::api::gta_t& ta) : ta(ta) {}
-            shyft::api::apoint_ts operator()(const shyft::api::apoint_ts& ts, utctimespan dt_shift) const {
-                shyft::api::apoint_ts r(std::make_shared<shyft::api::time_shift_ts>(ts, dt_shift));
+            shyft::time_series::dd::gta_t ta;///< the time-axis that is common for all generated partitions
+            mk_average_partition(const shyft::time_series::dd::gta_t& ta) : ta(ta) {}
+            shyft::time_series::dd::apoint_ts operator()(const shyft::time_series::dd::apoint_ts& ts, utctimespan dt_shift) const {
+                shyft::time_series::dd::apoint_ts r(std::make_shared<shyft::time_series::dd::time_shift_ts>(ts, dt_shift));
                 return r.average(ta);
             }
         };
         auto common_t0 = utc.time(2015, 9, 1);
-        shyft::api::gta_t ta_y2015(common_t0, deltahours(1), 365 * 24);
+        shyft::time_series::dd::gta_t ta_y2015(common_t0, deltahours(1), 365 * 24);
         mk_average_partition mk_avg_time_shift(ta_y2015);// callable that make partitions one year long
 
         // core version: auto  partitions=partition_by<time_shift_ts<decltype(src_a)>>(src_a,utc,t,calendar::YEAR,n_years,common_t0,mk_time_shift);
-        auto partitions_avg_year  = partition_by<shyft::api::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_avg_time_shift);
-        auto partitions_raw_shift = partition_by<shyft::api::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_raw_time_shift);
+        auto partitions_avg_year  = partition_by<shyft::time_series::dd::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_avg_time_shift);
+        auto partitions_raw_shift = partition_by<shyft::time_series::dd::apoint_ts>(src_a, utc, t, calendar::YEAR, n_years, common_t0, mk_raw_time_shift);
         TS_ASSERT_EQUALS(n_years, partitions_avg_year.size());
         TS_ASSERT_EQUALS(n_years, partitions_raw_shift.size());
         utctime ty = t;
@@ -1641,5 +1644,216 @@ TEST_SUITE("time_series") {
             TS_ASSERT_DELTA(sum_ts.value(t)+sum_ts.value(t), cc.value(t), 0.0001);
         }
     }
+    TEST_CASE("ts_point_merge") {
+        using namespace shyft::core;
+        using namespace shyft;
+        using gts_t=point_ts<time_axis::generic_dt>;
+        /** intermixed a and b */ {
+            //arrange
+            calendar utc;
+            utctime t0=utc.time(2016,1,1);
+            utctime t1 = utc.time(2016,1,1,0,30);
+            utctimespan dt=deltahours(1);
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            vector<double> c_v_expected={1.0,1.5,2.0,2.5,3.0,3.5};
+            vector<utctime>c_t_expected={t0,t1,t0+dt,t1+dt,t0+2*dt,t1+2*dt};
+            utctime c_t_end_expected=t1+3*dt;
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** disjoint a and b, b entirely after a */ {
+            //arrange
+            calendar utc;
+            utctime t0=utc.time(2016,1,1);
+            utctime t1 = utc.time(2017,1,1,0,30);
+            utctimespan dt=deltahours(1);
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.0,2.0,3.0,1.5,2.5,3.5};
+            vector<utctime>c_t_expected={t0,t0+dt,t0+2*dt,t1,t1+dt,t1+2*dt};
+            utctime c_t_end_expected=t1+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** disjoint a and b, a entirely after b */ {
+            //arrange
+            calendar utc;
+            utctime t0=utc.time(2017,1,1);
+            utctime t1 = utc.time(2016,1,1,0,30);
+            utctimespan dt=deltahours(1);
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.5,2.5,3.5,1.0,2.0,3.0};
+            vector<utctime>c_t_expected={t1,t1+dt,t1+2*dt,t0,t0+dt,t0+2*dt};
+            utctime c_t_end_expected=t0+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** a and b overlaps b replaces last point in a */{
+            //arrange
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t0=utc.time(2017,1,1);
+            utctime t1 = t0+2*dt;
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.0,2.0,1.5,2.5,3.5};
+            vector<utctime>c_t_expected={t0,t0+dt,t1,t1+dt,t1+2*dt};
+            utctime c_t_end_expected=t1+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** a and b overlaps, b replaces first point in a */{
+            //arrange
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t1=utc.time(2017,1,1);
+            utctime t0 = t1+2*dt;
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.5,2.5,3.5,2.0,3.0};
+            vector<utctime>c_t_expected={t1,t1+dt,t0,t0+dt,t0+2*dt};
+            utctime c_t_end_expected=t0+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** a and b overlaps perfectly */{
+            //arrange
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t1=utc.time(2017,1,1);
+            utctime t0 = t1;
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            time_axis::generic_dt tb(vector<utctime>{t1,t1+dt,t1+2*dt},t1+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b(tb,vector<double>{1.5,2.5,3.5},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.5,2.5,3.5};
+            vector<utctime>c_t_expected={t1,t1+dt,t1+2*dt};
+            utctime c_t_end_expected=t0+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** merge with empty is  noop */ {
+            //arrange
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t1=utc.time(2017,1,1);
+            utctime t0 = t1;
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            gts_t a(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            gts_t b{};
+            vector<double> c_v_expected={1.0,2.0,3.0};
+            vector<utctime>c_t_expected={t0,t0+dt,t0+2*dt};
+            utctime c_t_end_expected=t0+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** empty a merge with b gives b */ {
+            //arrange
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t1=utc.time(2017,1,1);
+            utctime t0 = t1;
+            time_axis::generic_dt ta(vector<utctime>{t0,t0+dt,t0+2*dt},t0+3*dt);
+            gts_t a{};
+            gts_t b(ta,vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE);
+            vector<double> c_v_expected={1.0,2.0,3.0};
+            vector<utctime>c_t_expected={t0,t0+dt,t0+2*dt};
+            utctime c_t_end_expected=t0+3*dt;
+            // act 
+            ts_point_merge(a,b);//modifies a
+            // assert
+            FAST_REQUIRE_EQ(a.size(),c_v_expected.size());
+            FAST_CHECK_EQ(a.total_period().end,c_t_end_expected);
+            for(size_t i=0;i<a.size();++i) {
+                FAST_CHECK_EQ(a.value(i),doctest::Approx(c_v_expected[i]));
+                FAST_CHECK_EQ(a.time(i),c_t_expected[i]);
+            }
+        }
+        /** verify apoint_ts a.merge_points(b) */ {
+            using dd::apoint_ts;
+            using time_axis::generic_dt;
+            apoint_ts a{};
+            calendar utc;
+            utctimespan dt=deltahours(1);
+            utctime t0=utc.time(2017,1,1);
+            utctime t1=t0+dt/2;
+            apoint_ts b{generic_dt{t0,dt,3},vector<double>{1.0,2.0,3.0},POINT_AVERAGE_VALUE};
+            a.merge_points(b);// a is empty, should get content of b
+            FAST_CHECK_EQ(true,is_equal_ts(a,b));
+            a.merge_points(apoint_ts{});// merge with empty gives noop
+            FAST_CHECK_EQ(true,is_equal_ts(a,b));
+            apoint_ts c{generic_dt{vector<utctime>{t1,t1+dt},t1+2*dt},vector<double>{5.0,6.0},POINT_AVERAGE_VALUE};
+            a.merge_points(c);// ok, this is more complex, intermixed points, enforces time-axis type point
+            apoint_ts a_expected_after_c{
+                generic_dt{vector<utctime>{t0,t1,t0+dt,t1+dt,t0+2*dt},t0+3*dt},
+                vector<double>{1.0,5.0,2.0,6.0,3.0},
+                POINT_AVERAGE_VALUE
+            };
+            FAST_CHECK_EQ(true,is_equal_ts(a,a_expected_after_c));
+        }
+
+    }
+
 
 }

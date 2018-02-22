@@ -8,7 +8,7 @@
 #include "core/utctime_utilities.h"
 #include "core/geo_point.h"
 #include "core/geo_cell_data.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 #include "api/api.h"
 
 namespace expose {
@@ -19,14 +19,16 @@ namespace expose {
     namespace sc=shyft::core;
     namespace ts=shyft::time_series;
     namespace py=boost::python;
+	using shyft::time_series::dd::ats_vector;
+	using shyft::time_series::dd::gta_t;
 
     static void* np_import() {
         import_array();
         return nullptr;
     }
 
-    sa::ats_vector create_tsv_from_np(const sa::gta_t& ta, const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
-        sa::ats_vector r;
+    ats_vector create_tsv_from_np(const gta_t& ta, const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
+        ats_vector r;
         size_t n_ts = a.shape()[0];
         size_t n_pts = a.shape()[1];
         if(ta.size() != n_pts)
@@ -41,7 +43,7 @@ namespace expose {
     }
 
     template <class S>
-    vector<S> create_from_geo_tsv_from_np(const sa::gta_t& ta,const vector<sc::geo_point>&gpv ,const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
+    vector<S> create_from_geo_tsv_from_np(const gta_t& ta,const vector<sc::geo_point>&gpv ,const numpy_boost<double,2>& a ,ts::ts_point_fx point_fx) {
         vector<S> r;
         size_t n_ts = a.shape()[0];
         size_t n_pts = a.shape()[1];
@@ -101,13 +103,13 @@ namespace expose {
     }
 
     typedef std::vector<shyft::core::geo_point> GeoPointVector;
-    static GeoPointVector create_from_x_y_z_vectors(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double> z) {
+    static GeoPointVector create_from_x_y_z_vectors(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& z) {
         if(!(x.size()==y.size() && y.size()==z.size()))
             throw std::runtime_error("x,y,z vectors need to have same number of elements");
-        GeoPointVector r(x.size());
+        GeoPointVector r;r.reserve(x.size());
         for(size_t i=0;i<x.size();++i)
             r.emplace_back(x[i],y[i],z[i]);
-        return std::move(r);
+        return r;
     }
 
     static void expose_geo_point_vector() {
@@ -198,6 +200,7 @@ namespace expose {
         np_import();
         expose_str_vector("StringVector");
         expose_vector<double>("DoubleVector");
+		expose_vector<vector<double>>("DoubleVectorVector");
         expose_vector<int>("IntVector");
         expose_vector<char>("ByteVector");
         expose_vector<utctime>("UtcTimeVector");

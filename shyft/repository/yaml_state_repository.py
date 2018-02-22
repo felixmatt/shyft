@@ -6,7 +6,6 @@ import os
 from glob import glob
 import yaml
 from shyft import api
-from shyft.api.pt_gs_k import PTGSKStateIo
 
 
 class StateRepositoryError(Exception):
@@ -49,6 +48,32 @@ class State(object):
         return len(self.state_list)
 
 
+class StateSerializer:
+    """
+    To be used with XXXXCellStateIdVector
+    """
+    def __init__(self, vector_type):
+        """
+        The vector_type
+        need to support
+            cls.deserialize_from_str(blob_str:str)->XXXXCellStateWithIdVector
+            instance.serialize_to_str()->str
+
+        Parameters
+        ----------
+        vector_type: of type XXXXCellStateIdVector stack specific ( __init__.py files fix)
+        """
+        self._state_vector_type = vector_type
+
+    def vector_from_string(self, blob_string: str):
+        return self._state_vector_type.deserialize_from_str(blob_string)
+
+    def to_string(self, region_model_state) -> str:
+        if not isinstance(region_model_state, self._state_vector_type):
+            raise StateRepositoryError(f"Wrong type passed{type(region_model_state)} expected {self._state_vector_type}")
+        return region_model_state.serialize_to_str()
+
+
 class YamlStateRepository(StateRepository):
     """
     Local yaml-file storage of states.
@@ -61,7 +86,7 @@ class YamlStateRepository(StateRepository):
     .. we could utilize file create/modified time
     """
 
-    def __init__(self, directory_path, state_serializer=None, file_pattern="*.yaml"):
+    def __init__(self, *, directory_path: str, state_serializer: StateSerializer, file_pattern="*.yaml"):
         """
         Parameters
         ----------
@@ -78,7 +103,7 @@ class YamlStateRepository(StateRepository):
             os.makedirs(directory_path)
 
         self._directory_path = directory_path
-        self._sio = state_serializer if state_serializer is not None else PTGSKStateIo()
+        self._sio = state_serializer
         self._file_pattern = file_pattern
         self._filename_item_separator = "@"  # We encode the filename with info separated by this
 
@@ -199,7 +224,7 @@ class YamlStateRepository(StateRepository):
             si = self._state_info_from_filename(os.path.basename(filename))
             if si is not None:
                 if region_model_id_criteria is None or \
-                   si.region_model_id == region_model_id_criteria:
+                        si.region_model_id == region_model_id_criteria:
                     res.append(si)
             # NOTE: in this implementation you have to specify regon_model_id AND time_spec..
         # Find state with max.utc_timestamp <= criteria

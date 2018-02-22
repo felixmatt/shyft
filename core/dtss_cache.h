@@ -5,23 +5,28 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
+#include <list>
 #include <algorithm>
 #include <memory>
 #include <utility>
 #include <mutex>
 #include <stdexcept>
 
-
+#include "core_serialization.h"
 #include "utctime_utilities.h"
 #include "time_series.h"
 #include "time_series_merge.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 namespace shyft {
     namespace dtss {
         using std::size_t;
         using std::vector;
         using std::map;
+        using std::unordered_map;
+        using std::pair;
+        using std::list;
         using std::make_shared;
         using std::shared_ptr;
         using std::lower_bound;
@@ -38,9 +43,9 @@ namespace shyft {
         using shyft::core::utcperiod;
         using shyft::core::utctime;
         using shyft::time_series::merge;
-        using shyft::api::apoint_ts;
-        using shyft::api::gta_t;
-        using shyft::api::gpoint_ts;
+        using shyft::time_series::dd::apoint_ts;
+        using shyft::time_series::dd::gta_t;
+        using shyft::time_series::dd::gpoint_ts;
 
         /** \brief lru-cache
          *
@@ -63,12 +68,12 @@ namespace shyft {
         struct lru_cache {
             using key_type = K;
             using value_type = V;
-            using key_tracker_type = std::list<key_type>;///< Key access history, most recent at back
+            using key_tracker_type = list<key_type>;///< Key access history, most recent at back
 
                                                          /** Key to value and key history iterator */
             using key_to_value_type = MAP<
                 key_type,
-                std::pair<value_type, typename key_tracker_type::iterator>
+                pair<value_type, typename key_tracker_type::iterator>
             >;
 
             /** Constructor specifies the cached function and
@@ -139,6 +144,13 @@ namespace shyft {
                 while (src != _key_tracker.rend()) *dst++ = *src++;
             }
 
+			/** scan items calling fx(key,vale) for each */
+			template <typename Fx>
+			void apply_to_items(Fx &&fx) const {
+				for (const auto& kv : _key_to_value) {
+					fx(kv.first, kv.second.first);
+				}
+			}
             /**adjust capacity, evict excessive items as needed */
             void set_capacity(size_t cap) {
                 if(cap==0) throw runtime_error("cache capacity must be >0");
@@ -150,6 +162,11 @@ namespace shyft {
             }
             size_t get_capacity() const {return _capacity;}
 
+			/** Flush cache */
+			void flush() {
+				_key_tracker.clear();
+				_key_to_value.clear();
+			}
             private:
 
                 /** Record a fresh key-value pair in the cache */
@@ -327,7 +344,20 @@ namespace shyft {
             size_t id_count{ 0 };///< current count of disticnt ts-ids in the cache
             size_t point_count{ 0 };///< current estimate of ts-points in the cache, one point ~8 bytes
             size_t fragment_count{ 0 };///< current count of ts-fragments, equal or larger than id_count
+        /** nice to have summary function */
+            friend inline cache_stats operator + (cache_stats l, const cache_stats& r) {
+                l.hits += r.hits;
+                l.misses += r.misses;
+                l.coverage_misses += r.coverage_misses;
+                l.id_count += r.id_count;
+                l.point_count += r.point_count;
+                l.fragment_count += r.fragment_count;
+                return l;
+            }
+
+            x_serialize_decl();
         };
+
 
         /** \brief a dtss cache for id-based ts-fragments
          *
@@ -353,7 +383,7 @@ namespace shyft {
         template<class ts_frag, class ts_t>
         struct cache {
             using value_type = mini_frag<ts_frag>;
-            using internal_cache = lru_cache<string, value_type, map>;
+            using internal_cache = lru_cache<string, value_type, unordered_map>;
         private:
             mutable mutex mx; ///< mutex to protect access to c and cs
             internal_cache c;///< internal cache implementation
@@ -433,9 +463,9 @@ namespace shyft {
              * \param p specifies the period requirement
              * \return a map<string,ts_t> with the time-series from cache that matches the criteria
              */
-            map<string, ts_t> get(const vector<string>& ids, const utcperiod& p) {
+            unordered_map<string, ts_t> get(const vector<string>& ids, const utcperiod& p) {
                 lock_guard<mutex> guard(mx);
-                map<string, ts_t> r;
+                unordered_map<string, ts_t> r;
                 for (const auto&id:ids) {
                     ts_t x;
                     if (internal_try_get(id, p, x)) {
@@ -512,10 +542,7 @@ namespace shyft {
              */
             void flush() {
                 lock_guard<mutex> guard(mx);
-                vector<string> ids;
-                c.get_mru_keys(back_inserter(ids));
-                for (const auto&id:ids)
-                    c.remove_item(id);
+				c.flush();
             }
 
             /** Provide cache-statistics
@@ -525,14 +552,12 @@ namespace shyft {
             cache_stats get_cache_stats() {
                 lock_guard<mutex> guard(mx);
                 cache_stats r{ cs };
-                vector<string> ids;
-                c.get_mru_keys(back_inserter(ids));
-                r.id_count = ids.size();
-                for (const auto&id:ids) {
-                    const auto& ci = c.get_item(id);
-                    r.point_count += ci.estimate_size();
-                    r.fragment_count += ci.count_fragments();
-                }
+				auto fx = [&r](const string&key,const value_type& ci )->void {
+					r.point_count += ci.estimate_size();
+					r.fragment_count += ci.count_fragments();
+					++r.id_count;
+				};
+				c.apply_to_items(fx);
                 return r;
             }
 
@@ -545,3 +570,4 @@ namespace shyft {
         };
     }
 }
+x_serialize_export_key(shyft::dtss::cache_stats);

@@ -9,8 +9,7 @@
 #include "core/time_axis.h"
 #include "core/time_series.h"
 
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
+#include "core/core_archive.h"
 
 
 namespace {
@@ -19,22 +18,23 @@ namespace sp = shyft::prediction;
 namespace core = shyft::core;
 namespace sta = shyft::time_axis;
 namespace sts = shyft::time_series;
+using core::core_nvp;
 
 template <class T>
 static T serialize_loop(const T& o) {
     std::ostringstream xmls;
 
-    boost::archive::binary_oarchive oa(xmls);
-    oa << BOOST_SERIALIZATION_NVP(o);
+    core::core_oarchive oa(xmls, core_arch_flags);
+    oa << core_nvp("o",o);
 
     xmls.flush();
 
     std::string ss=xmls.str();
     std::istringstream xmli(ss);
-    boost::archive::binary_iarchive ia(xmli);
+    core::core_iarchive ia(xmli,core_arch_flags);
 
     T o2;
-    ia >> BOOST_SERIALIZATION_NVP(o2);
+    ia >> core_nvp("o",o2);
 
     return o2;
 }

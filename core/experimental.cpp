@@ -1,4 +1,3 @@
-#include "core_pch.h"
 
 #include <string>
 #include <vector>

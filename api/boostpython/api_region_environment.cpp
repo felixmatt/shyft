@@ -11,6 +11,7 @@ namespace expose {
     namespace py=boost::python;
     namespace sc=shyft::core;
     namespace ts=shyft::time_series;
+	using ts::dd::ats_vector;
     namespace ta=shyft::time_axis;
     namespace sa=shyft::api;
 
@@ -26,7 +27,7 @@ namespace expose {
     }
 
     template<class T>
-    static std::vector<T> create_from_geo_and_tsv(const std::vector<sc::geo_point>& gpv, const sa::ats_vector& tsv) {
+    static std::vector<T> create_from_geo_and_tsv(const std::vector<sc::geo_point>& gpv, const ats_vector& tsv) {
         if(gpv.size()!=tsv.size())
             throw std::runtime_error("list of geo-points and time-series must have equal length");
         std::vector<T> r;r.reserve(tsv.size());

@@ -9,7 +9,6 @@
 #include "core/kirchner.h"
 #include "core/pt_ss_k.h"
 #include "api/api.h"
-#include "api/pt_ss_k.h"
 #include "core/pt_ss_k_cell_model.h"
 #include "core/region_model.h"
 #include "core/model_calibration.h"
@@ -140,12 +139,6 @@ namespace expose {
         }
 
         static void
-        state_io() {
-            expose::state_io<shyft::api::pt_ss_k_state_io,shyft::core::pt_ss_k::state>("PTSSKStateIo");
-        }
-
-
-        static void
         model_calibrator() {
             expose::model_calibrator<shyft::core::region_model<pt_ss_k::cell_discharge_response_t, shyft::api::a_region_environment>>("PTSSKOptimizer");
         }
@@ -160,7 +153,6 @@ BOOST_PYTHON_MODULE(_pt_ss_k)
     boost::python::scope().attr("__doc__")="SHyFT python api for the pt_ss_k model";
     boost::python::def("version", version);
 	boost::python::docstring_options doc_options(true, true, false);// all except c++ signatures
-    expose::pt_ss_k::state_io();
     expose::pt_ss_k::parameter_state_response();
     expose::pt_ss_k::cells();
     expose::pt_ss_k::models();

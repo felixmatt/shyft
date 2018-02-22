@@ -35,6 +35,9 @@ namespace shyft {
 			struct response {
 				double ae = 0.0;
 			};
+            inline double calc_pot_ratio(double water_level, double scale_factor) {
+                return 1.0 - std::exp(-water_level*3.0/ scale_factor);
+            }
 
 			/** \brief actual_evapotranspiration calculates actual evapotranspiration
 			 * based on supplied parameters
@@ -43,7 +46,7 @@ namespace shyft {
 			 * \param potential_evapotranspiration
 			 * \param scale_factor typically 1.5
 			 * \param snow_fraction 0..1 - only snow free areas have evapotranspiration in this model
-			 * \param dt delta_t \note currently not used in computation
+			 *  dt delta_t \note currently not used in computation
 			 * \return calculated actual evapotranspiration
 			 *
 			 */
@@ -52,8 +55,8 @@ namespace shyft {
 				const double potential_evapotranspiration,
 				const double scale_factor,
 				const double snow_fraction,
-				const utctime dt) {
-				return potential_evapotranspiration*(1.0 - std::exp(-water_level*3.0/ scale_factor))*(1.0 - snow_fraction);
+				const utctime ) {
+				return potential_evapotranspiration*calc_pot_ratio(water_level,scale_factor)*(1.0 - snow_fraction);
 			}
 		};
 	};

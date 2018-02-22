@@ -15,7 +15,7 @@ class TimeAxis(unittest.TestCase):
         self.d = api.deltahours(1)
         self.n = 24
         # self.t= self.c.trim(api.utctime_now(),self.d)
-        self.t = self.c.trim(self.c.time(api.YMDhms(1969, 12, 31, 0, 0, 0)), self.d)
+        self.t = self.c.trim(self.c.time(1969, 12, 31, 0, 0, 0), self.d)
         self.ta = api.TimeAxis(self.t, self.d, self.n)
 
     def tearDown(self):
@@ -57,7 +57,7 @@ class TimeAxis(unittest.TestCase):
         each period is defined as [ point_i .. point_i+1 >
         """
         all_points = api.UtcTimeVector([t for t in range(self.t, self.t + (self.n + 1) * self.d, self.d)])
-        tap = api.PointTimeaxis(all_points)
+        tap = api.TimeAxisByPoints(all_points)
         self.assertEqual(tap.size(), self.ta.size())
         for i in range(self.ta.size()):
             self.assertEqual(tap(i), self.ta(i))

@@ -26,15 +26,15 @@ class ConfigSimulationTestCase(unittest.TestCase):
         # These config files are versioned in shyft-data git. Read from ${SHYFTDATA}/netcdf/orchestration-testdata/
         # TODO: Put all config files needed to run this test under the same versioning system (shyft git)
         simulator = ConfigSimulator(cfg)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(simulator.region_model.__class__, n_cells)
+        #n_cells = simulator.region_model.size()
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(cfg.time_axis, state_repos.get_state(0))
         cids = IntVector()
         discharge = simulator.region_model.statistics.discharge(cids)
 
         # Regression tests on discharge values
         self.assertAlmostEqual(discharge.values[0],  0.0957723, 3)
-        self.assertAlmostEqual(discharge.values[3], 4.001477, 3)  #
+        self.assertAlmostEqual(discharge.values[3], 3.9098, 3)  #
         # x self.assertAlmostEqual(discharge.values[6400], 58.8385, 3) # was 58.9381,3 before glacier&fractions adjustments
         # x self.assertAlmostEqual(discharge.values[3578],5.5069,3)
         # glacier_melt, not much, but enough to test

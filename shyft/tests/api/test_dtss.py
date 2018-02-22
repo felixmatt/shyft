@@ -12,6 +12,7 @@ from shyft.api import Calendar
 from shyft.api import DtsClient
 from shyft.api import DtsServer
 from shyft.api import IntVector
+from shyft.api import UtcTimeVector
 from shyft.api import StringVector
 from shyft.api import TimeAxis
 from shyft.api import TimeSeries
@@ -22,7 +23,7 @@ from shyft.api import UtcPeriod
 from shyft.api import deltahours
 from shyft.api import point_interpretation_policy as point_fx
 from shyft.api import utctime_now
-
+from shyft.api import ts_stringify
 
 def shyft_store_url(name: str) -> str:
     return "shyft://test/{}".format(name)  # shyft:// maps to internal, test= container-name
@@ -129,7 +130,7 @@ class DtssTestCase(unittest.TestCase):
 
         dummy_ts = TimeSeries('dummy://a')
         tsv.append(dummy_ts.integral(ta))
-
+        self.assertGreater(len(ts_stringify(tsv[0])), 10)  # just ensure ts_stringify work on expr.
         # then start the server
         dtss = DtsServer()
         port_no = find_free_port()
@@ -141,7 +142,7 @@ class DtssTestCase(unittest.TestCase):
 
         dtss.start_async()
 
-        dts = DtsClient(host_port)
+        dts = DtsClient(StringVector([host_port]), True, 1000) # as number of hosts
         # then try something that should work
         dts.store_ts(store_tsv)
         r1 = dts.evaluate(tsv, ta.total_period())
@@ -317,27 +318,31 @@ class DtssTestCase(unittest.TestCase):
             dtss.set_container("test", c_dir)  # notice we set container 'test' to point to c_dir directory
             dtss.start_async()  # the internal shyft time-series will be stored to that container
 
-            dts = DtsClient(host_port)
+            dts = DtsClient(host_port, auto_connect=False)  # demonstrate object life-time connection
             cs0 = dtss.cache_stats
             dts.store_ts(store_tsv, overwrite_on_write=True, cache_on_write=cache_on_write)
-            r1 = dts.evaluate(tsv, ta.total_period())
+            r1 = dts.evaluate(tsv, ta.total_period(), use_ts_cached_read=True, update_ts_cache=True)
             cs1 = dtss.cache_stats
+            ccs1 = dts.cache_stats  # client can also provide cahce-stats
+
             dtss.flush_cache_all()  # force the cache empty
             dtss.clear_cache_stats()
             cs2 = dtss.cache_stats  # just to ensure clear did work
-            r1 = dts.evaluate(tsv, ta.total_period())  # second evaluation, cache is empty, will force read(misses)
+            r1 = dts.evaluate(tsv, ta.total_period(), use_ts_cached_read=True, update_ts_cache=True)  # second evaluation, cache is empty, will force read(misses)
             cs3 = dtss.cache_stats
-            r1 = dts.evaluate(tsv, ta.total_period())  # third evaluation, cache is now filled, all hits
+            r1 = dts.evaluate(tsv, ta.total_period(), use_ts_cached_read=True, update_ts_cache=True)  # third evaluation, cache is now filled, all hits
             cs4 = dtss.cache_stats
             # now verify explicit caching performed by the python callback
             self.cache_dtss = dtss
             self.cache_reads = True
-            dtss.flush_cache_all()
-            dtss.clear_cache_stats()
+            dts.cache_flush()  # is the equivalent of
+            #dtss.flush_cache_all()
+            #dtss.clear_cache_stats()
+            # use explicit cache-control instead of global
             dtss.set_auto_cache(False)  # turn off auto caching, we want to test the explicit caching
-            r1 = dts.evaluate(tsv, ta.total_period())  # evaluation, just misses, but we cache explict the external
+            r1 = dts.evaluate(tsv, ta.total_period(), use_ts_cached_read=True, update_ts_cache=False)  # evaluation, just misses, but we cache explict the external
             cs5 = dtss.cache_stats  # ok base line a lots of misses
-            r1 = dts.evaluate(tsv, ta.total_period())
+            r1 = dts.evaluate(tsv, ta.total_period(), use_ts_cached_read=True, update_ts_cache=False)
             cs6 = dtss.cache_stats  # should be one hit here
 
             dts.close()  # close connection (will use context manager later)
@@ -362,6 +367,13 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(cs1.id_count, n_ts + 1)
             self.assertEqual(cs1.point_count, (n_ts + 1)*n)
             self.assertEqual(cs1.fragment_count, n_ts + 1)
+            # verify client side cache_stats
+            self.assertEqual(ccs1.hits, n_ts)
+            self.assertEqual(ccs1.misses, 1)  # because we cache on store, so 10 cached, 1 external with miss
+            self.assertEqual(ccs1.coverage_misses, 0)
+            self.assertEqual(ccs1.id_count, n_ts + 1)
+            self.assertEqual(ccs1.point_count, (n_ts + 1)*n)
+            self.assertEqual(ccs1.fragment_count, n_ts + 1)
 
             self.assertEqual(cs2.hits, 0)
             self.assertEqual(cs2.misses, 0)
@@ -390,4 +402,55 @@ class DtssTestCase(unittest.TestCase):
             self.assertEqual(cs6.id_count, 1)
             self.assertEqual(cs6.point_count, 1*n)
             self.assertEqual(cs6.fragment_count,  1)
+
+    def test_merge_store_ts_points(self):
+        """
+        This test verifies the shyft internal time-series store,
+        that the merge_store_points function do the required
+        semantics.
+        """
+        with tempfile.TemporaryDirectory() as c_dir:
+            # setup data to be calculated
+            utc = Calendar()
+            d = deltahours(1)
+            t = utc.time(2016, 1, 1)
+            ta = TimeAxis(UtcTimeVector.from_numpy(np.array([t,t+d,t+3*d],dtype=np.int64)),t+4*d)
+
+            n_ts = 10
+            store_tsv = TsVector()  # something we store at server side
+
+            for i in range(n_ts):
+                ts_id=shyft_store_url("{0}".format(i))
+                store_tsv.append(TimeSeries(ts_id, TimeSeries(ta,fill_value=float(i),point_fx=point_fx.POINT_AVERAGE_VALUE)))
+            # then start the server
+            dtss = DtsServer()
+            port_no = find_free_port()
+            host_port = 'localhost:{0}'.format(port_no)
+            dtss.set_auto_cache(True)
+            dtss.set_listening_port(port_no)
+            dtss.set_container("test", c_dir)  # notice we set container 'test' to point to c_dir directory
+            dtss.start_async()  # the internal shyft time-series will be stored to that container
+            dts = DtsClient(host_port)
+
+            dts.store_ts(store_tsv)  # 1. store the initial time-series, they are required for the merge_store_points function
+
+            tb=TimeAxis(UtcTimeVector.from_numpy(np.array([t-d, t + 3*d, t+4*d],dtype=np.int64)), t + 5*d)  # make some points, one before, one in the middle and after
+            mpv=TsVector()  # merge point vector
+            for i in range(n_ts):
+                ts_id=shyft_store_url("{0}".format(i))
+                mpv.append(TimeSeries(ts_id, TimeSeries(tb,fill_value=-1-float(i),point_fx=point_fx.POINT_AVERAGE_VALUE)))
+
+            dts.merge_store_ts_points(mpv)
+
+            rts = TsVector()
+            rts[:] = [TimeSeries(shyft_store_url(f"{i}")) for i in range(n_ts)]
+
+            r = dts.evaluate(rts, tb.total_period())
+            dts.close()  # close connection (will use context manager later)
+            dtss.clear()  # close server
+
+            for i in range(len(r)):
+                self.assertEqual(r[i].time_axis.size(),5)
+                assert_array_almost_equal(r[i].values.to_numpy(),np.array([-i-1,i,i,-i-1,-i-1],dtype=np.float64))
+
 

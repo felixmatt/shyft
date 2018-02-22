@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
-#include "core/core_pch.h"
+#include "core/core_serialization.h"
 
 #include "core/geo_cell_data.h"
 #include "core/cell_model.h"
@@ -13,6 +13,7 @@
 #include "core/pt_gs_k.h"
 #include "core/pt_hs_k.h"
 #include "core/pt_ss_k.h"
+#include "core/pt_hps_k.h"
 
 namespace shyft {
     namespace api {
@@ -29,12 +30,12 @@ namespace shyft {
         *
         */
         struct cell_state_id {
-            int cid;///< the catchment id, if entirely different model, this might change
-            int x;///< the cell mid-point x (west-east), truncated to integer [meter]
-            int y;///< the cell mid-point y (south-north), truncated to integer [meter]
-            int area;///< the area in m[m2], - if different cell geometries, this changes
+            int64_t cid;///< the catchment id, if entirely different model, this might change
+            int64_t x;///< the cell mid-point x (west-east), truncated to integer [meter]
+            int64_t y;///< the cell mid-point y (south-north), truncated to integer [meter]
+            int64_t area;///< the area in m[m2], - if different cell geometries, this changes
             cell_state_id() = default; // python exposure
-            cell_state_id(int cid, int x, int y, int area) :cid(cid), x(x), y(y), area(area) {}
+            cell_state_id(int64_t cid, int64_t x, int64_t y, int64_t area) :cid(cid), x(x), y(y), area(area) {}
             bool operator==(const cell_state_id & o) const {
                 return cid == o.cid && x == o.x && y == o.y && area == o.area;
             }
@@ -76,12 +77,14 @@ namespace shyft {
           extern template std::vector<char> serialize_to_bytes(const std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_gs_k::state>>>& states);
           extern template std::vector<char> serialize_to_bytes(const std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_ss_k::state>>>& states);
           extern template std::vector<char> serialize_to_bytes(const std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_hs_k::state>>>& states);
+          extern template std::vector<char> serialize_to_bytes(const std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_hps_k::state>>>& states);
 
         template <class CS> void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<CS>>&states);
           extern  template void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<cell_state_with_id<shyft::core::hbv_stack::state>>>&states);
           extern  template void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_gs_k::state>>>&states);
           extern  template void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_hs_k::state>>>&states);
           extern  template void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_ss_k::state>>>&states);
+          extern  template void deserialize_from_bytes(const std::vector<char>& bytes, std::shared_ptr<std::vector<cell_state_with_id<shyft::core::pt_hps_k::state>>>&states);
         /** \brief state_io_handler for efficient handling of cell-identified states
         *
         * This class provides functionality to extract/apply state based on a
@@ -145,3 +148,5 @@ x_serialize_export_key(shyft::api::cell_state_with_id<shyft::core::hbv_stack::st
 x_serialize_export_key(shyft::api::cell_state_with_id<shyft::core::pt_gs_k::state>);
 x_serialize_export_key(shyft::api::cell_state_with_id<shyft::core::pt_ss_k::state>);
 x_serialize_export_key(shyft::api::cell_state_with_id<shyft::core::pt_hs_k::state>);
+x_serialize_export_key(shyft::api::cell_state_with_id<shyft::core::pt_hps_k::state>);
+

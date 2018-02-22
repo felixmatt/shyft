@@ -84,8 +84,8 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
             utc = api.Calendar()
             ds = SmGTsRepository(PREPROD, FC_PREPROD)
             nl = [u'/LTMS-Abisko........-T0000A5P_EC00_ENS']
-            t0 = utc.time(api.YMDhms(2016, 8, 1, 00, 00, 00))
-            t1 = utc.time(api.YMDhms(2016, 8, 10, 00, 00, 00))
+            t0 = utc.time(2016, 8, 1, 00, 00, 00)
+            t1 = utc.time(2016, 8, 10, 00, 00, 00)
             p = api.UtcPeriod(t0, t1)
             fclist = ds.read_forecast(nl, p)
             self.assertIsNotNone(fclist)
@@ -101,8 +101,8 @@ try: # we fail with a message on the import, to reduce noise outside statkraft e
   
         def test_period(self):
             utc = api.Calendar()
-            t0 = utc.time(api.YMDhms(2014, 1, 1, 00, 00, 00))
-            t1 = utc.time(api.YMDhms(2014, 3, 1, 00, 00, 00))
+            t0 = utc.time(2014, 1, 1, 00, 00, 00)
+            t1 = utc.time(2014, 3, 1, 00, 00, 00)
             p = api.UtcPeriod(t0, t1)
             self.assertEqual(p.start, t0)
             self.assertEqual(p.end, t1)

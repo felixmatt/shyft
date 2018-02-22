@@ -5,7 +5,7 @@
 
 #include "core/utctime_utilities.h"
 #include "core/time_axis.h"
-#include "api/time_series.h"
+#include "core/time_series_dd.h"
 
 
 
@@ -14,15 +14,15 @@ TEST_SUITE("time_series") {
     using shyft::core::no_utctime;
     using std::numeric_limits;
     const double eps = numeric_limits<double>::epsilon();
-    using shyft::api::apoint_ts;
+    using shyft::time_series::dd::apoint_ts;
     using shyft::time_axis::generic_dt;
     using shyft::time_series::ts_point_fx;
     using std::vector;
     using std::make_shared;
     using std::isfinite;
 
-    using shyft::api::qac_parameter;
-    using shyft::api::qac_ts;
+    using shyft::time_series::dd::qac_parameter;
+    using shyft::time_series::dd::qac_ts;
 
     TEST_CASE("qac_parameter") {
 

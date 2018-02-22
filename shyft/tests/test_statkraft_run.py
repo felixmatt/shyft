@@ -93,8 +93,8 @@ try:
 
             """
             utc = Calendar()  # No offset gives Utc
-            time_axis = TimeAxisFixedDeltaT(utc.time(YMDhms(2015, 9, 1, 0)), deltahours(1), 30 * 24)
-            fc_time_axis = TimeAxisFixedDeltaT(utc.time(YMDhms(2015, 10, 1, 0)), deltahours(1), 65)
+            time_axis = TimeAxisFixedDeltaT(utc.time(2015, 9, 1, 0), deltahours(1), 30 * 24)
+            fc_time_axis = TimeAxisFixedDeltaT(utc.time(2015, 10, 1, 0), deltahours(1), 65)
 
             interpolation_id = 0
             ptgsk = DefaultSimulator("Tistel-ptgsk",

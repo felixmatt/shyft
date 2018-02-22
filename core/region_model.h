@@ -15,9 +15,6 @@
 #include <future>
 #include <mutex>
 
-#include "core_pch.h"
-
-
 #include "bayesian_kriging.h"
 #include "inverse_distance.h"
 #include "kirchner.h"
@@ -27,7 +24,8 @@
 #include "pt_hs_k.h"
 #include "geo_cell_data.h"
 #include "routing.h"
-
+#include "model_state_tuning.h"
+#include "time_axis.h"
 /**
  * This file now contains mostly things to provide the PTxxK model,or
  * in general a region model, based on distributed cells where
@@ -58,7 +56,7 @@ namespace shyft {
         namespace idw = inverse_distance;
         namespace btk = bayesian_kriging;
         using namespace std;
-
+        using shyft::time_axis::generic_dt;
         /** \brief the interpolation_parameter keeps parameter needed to perform the
          * interpolation steps as specified by the user.
          */
@@ -182,6 +180,8 @@ namespace shyft {
             shared_ptr<rel_hum_vec_t>       rel_hum;
 
         };
+
+
         ///< needs definition of the core time-series
         typedef shyft::time_series::point_ts<shyft::time_axis::fixed_dt> pts_t;
         /** \brief region_model is the calculation model for a region, where we can have
@@ -340,6 +340,7 @@ namespace shyft {
                 for (const auto&c : *cells) r.push_back(c.geo);
                 return r;
             }
+
 			/** \brief Initializes the cell enviroment (cell.env.ts* )
 			 *
 			 * The initializes the cell environment, that keeps temperature, precipitation etc
@@ -360,6 +361,21 @@ namespace shyft {
 				}
 				n_catchments = number_of_catchments();// keep this/assume invariant..
 				this->time_axis = time_axis;
+			}
+
+			/** helper to allow user pass in any time-axis, and require it to be convertible to a fixed-interval time-axis*/
+			timeaxis_t fixed_time_axis(const generic_dt&ta) const {
+			    if(ta.gt == generic_dt::generic_type::FIXED)
+                    return ta.f;
+                if(ta.gt == generic_dt::generic_type::CALENDAR) {
+                    if(ta.c.dt <= 86400)
+                        return timeaxis_t(ta.c.t,ta.c.dt,ta.c.n);
+			    }
+			    throw runtime_error("region-model routine requires a fixed-delta-t type of TimeAxis");
+			}
+
+			void initialize_cell_environment_g(const generic_dt&ta) {
+			  initialize_cell_environment(fixed_time_axis(ta));
 			}
 
 			/** \brief interpolate the supplied region_environment to the cells
@@ -532,6 +548,11 @@ namespace shyft {
 				return interpolate(ip_parameter, env);
             }
 
+            /** overload with generic-time-axis to help user-interface in python*/
+            bool run_interpolation_g(const interpolation_parameter& ip_parameter, const generic_dt& ta, const region_env_t& env, bool best_effort=true) {
+				initialize_cell_environment_g(ta);
+				return interpolate(ip_parameter, env);
+            }
             /** \brief run_cells calculations over specified time_axis
             *  the cell method stack is invoked for all the cells, using multicore up to a maximum number of
             *  tasks/cores. Notice that this implies that executing the cell method stack should have no
@@ -574,6 +595,46 @@ namespace shyft {
                 parallel_run(time_axis,start_step,n_steps, begin(*cells), end(*cells),use_ncore);
                 run_routing(start_step,n_steps);
             }
+
+			/**\brief state adjustment to achieve wanted/observed flow
+			 *
+			 * This function provides an easy and consistent way to adjust the
+			 * state of the cells(kirchner, or hbv-tank-levels) so that the average output
+			 * from next time-step matches the wanted flow.
+			 *
+			 * This is quite complex, since the amount of adjustment needed is dependent of the
+			 * cell-state, temperature/precipitation in time-step, glacier-melt, length of the timestep,
+			 * and calibration factors sensitivity.
+			 *
+			 * The approach here is to use dlib::find_min_single_variable to solve
+			 * the problem, instead of trying to reverse compute the needed state.
+			 *
+			 * This has several benefits, it deals with the full stack and state, and it can be made
+			 * method stack independent.
+			 *
+			 * \note that the model should be prepared for run prior to calling this function
+			 *       and that there should be current state that gives the starting point
+			 *       for the adjustment.
+			 *       Also note that when returning, the active state reflects the
+			 *       achieved flow returned, and that current state is modified for cids at scope
+			 *
+			 * \param wanted_flow_m3s the average flow first time-step we want to achieve
+			 * \param cids catchments, represented by catchment-ids that should be adjusted
+			 * \param start_step, specifies the time_axis start-step/period to use during adjustment
+			 * \return obtained flow in m3/s units. This can deviate from wanted flow due to model and state constraints
+			 */
+			q_adjust_result adjust_state_to_target_flow(double wanted_flow_m3s,const std::vector<int>& cids,size_t start_step=0,double scale_range=3.0,double scale_eps=1e-3,size_t max_iter=300) {
+			    auto old_catchment_filter=catchment_filter;
+                adjust_state_model<region_model> a(*this,cids, start_step);
+                q_adjust_result r;
+                try {
+                    r=a.tune_flow(wanted_flow_m3s,scale_range,scale_eps,max_iter);
+                } catch (const exception&e) {
+                    r.diagnostics=string("Failed to tune_flow")+e.what();
+                }
+                catchment_filter=old_catchment_filter;
+				return r;
+			}
 
             /** \brief set the region parameter, apply it to all cells
              *        that do not have catchment specific parameters.
@@ -724,6 +785,12 @@ namespace shyft {
                 end_states.clear();end_states.reserve(std::distance(begin(*cells), end(*cells)));
                 for(const auto& cell:*cells) end_states.emplace_back(cell.state);
             }
+            /** \brief return current state vector as shared ptr for python exposure*/
+            std::shared_ptr<std::vector<state_t>> current_state() const {
+                auto r=std::make_shared<std::vector<state_t>>();
+                get_states(*r);
+                return r;
+            }
 
             /**\brief set current state for all the cells in the model.
              *
@@ -749,6 +816,26 @@ namespace shyft {
                     throw runtime_error("Initial state not yet established or set");
                 set_states(initial_state);
             }
+
+            /** \brief adjust the content of ground storage by scale-factor
+            *
+            * Adjust the content of the ground storage, e.g. state.kirchner.q, or
+            * hbv state.(tank|soil).(uz,lz|sm), by the specified scale factor.
+            * The this function plays key role for adjusting the state to
+            * achieve a specified/wanted average discharge flow output for the
+            * model at the first time-step.
+            *
+            * \param q_scale the scale factor to apply to current storage state
+            * \param cids if empty, all cells are in scope, otherwise only cells that have specified catchment ids.
+            */
+            void adjust_q(double q_scale,vector<int>&cids ) {
+                for(auto& cell:*cells) {
+                    if(cids.size()==0 || (find(begin(cids),end(cids),cell.geo.catchment_id())!=end(cids) )) {
+                        cell.state.adjust_q(q_scale);
+                    }
+                }
+            }
+
             /** \brief enable state collection for specified or all cells
              * \note that this only works if the underlying cell is configured to
              *       do state collection. THis is typically not the  case for

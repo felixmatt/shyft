@@ -31,15 +31,18 @@
 #include "core/pt_gs_k_cell_model.h"
 #include "core/pt_hs_k_cell_model.h"
 #include "core/pt_ss_k_cell_model.h"
+#include "core/pt_hps_k_cell_model.h"
 #include "core/hbv_stack_cell_model.h"
 
-#include "time_series.h"
+#include "core/time_series_dd.h"
 
 namespace shyft {
   using namespace shyft::core;
   using namespace std;
-  namespace api {
 
+  namespace api {
+  using shyft::time_series::dd::apoint_ts;
+  using shyft::time_series::dd::ats_vector;
 
     /** \brief TsFactor provides time-series creation function using supplied primitives like vector of double, start, delta-t, n etc.
      */
@@ -633,6 +636,217 @@ namespace shyft {
 
 	};
 
+	///<-- universal snow section
+    template <typename cell>
+    struct universal_snow_cell_state_statistics {
+        shared_ptr<vector<cell>> cells;
+        universal_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts albedo(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_albedo; }));
+        }
+		vector<double> albedo(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_albedo; }, ith_timestep);
+		}
+		double albedo_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_albedo; }, ith_timestep);
+		}
+
+		apoint_ts lwc(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_lwc; }));
+        }
+		vector<double> lwc(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_lwc; }, ith_timestep);
+		}
+		double lwc_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_lwc; }, ith_timestep);
+		}
+
+		apoint_ts surface_heat(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_surface_heat; }));
+        }
+		vector<double> surface_heat(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_surface_heat; }, ith_timestep);
+		}
+		double surface_heat_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_surface_heat; }, ith_timestep);
+		}
+
+		apoint_ts alpha(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_alpha; }));
+        }
+		vector<double> alpha(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_alpha; }, ith_timestep);
+		}
+		double alpha_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_alpha; }, ith_timestep);
+		}
+
+		apoint_ts sdc_melt_mean(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_sdc_melt_mean; }));
+        }
+		vector<double> sdc_melt_mean(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_sdc_melt_mean; }, ith_timestep);
+		}
+		double sdc_melt_mean_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_sdc_melt_mean; }, ith_timestep);
+		}
+
+		apoint_ts acc_melt(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_acc_melt; }));
+        }
+		vector<double> acc_melt(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_acc_melt; }, ith_timestep);
+		}
+		double acc_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_acc_melt; }, ith_timestep);
+		}
+
+		apoint_ts iso_pot_energy(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_iso_pot_energy; }));
+        }
+		vector<double> iso_pot_energy(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_iso_pot_energy; }, ith_timestep);
+		}
+		double iso_pot_energy_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_iso_pot_energy; }, ith_timestep);
+		}
+
+		apoint_ts temp_swe(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.sc.us_temp_swe; }));
+        }
+		vector<double> temp_swe(const vector<int>& catchment_indexes,size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.sc.us_temp_swe; }, ith_timestep);
+		}
+		double temp_swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.us_temp_swe; }, ith_timestep);
+		}
+	};
+
+    ///< cells with universal_snow response give access to time-series for these
+    template <typename cell>
+    struct universal_snow_cell_response_statistics {
+        shared_ptr<vector<cell>> cells;
+        universal_snow_cell_response_statistics(shared_ptr<vector<cell>> cells) :cells(cells) {}
+
+		apoint_ts sca(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.rc.snow_sca; }));
+        }
+		vector<double> sca(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.rc.snow_sca; }, ith_timestep);
+		}
+		double sca_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_sca; }, ith_timestep);
+		}
+
+		apoint_ts swe(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.rc.snow_swe; }));
+        }
+		vector<double> swe(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.rc.snow_swe; }, ith_timestep);
+		}
+		double swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_swe; }, ith_timestep);
+		}
+
+		apoint_ts outflow(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.rc.snow_outflow; }));
+        }
+		vector<double> outflow(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
+		}
+		double outflow_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.snow_outflow; }, ith_timestep);
+		}
+        apoint_ts glacier_melt(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) {
+                return c.rc.glacier_melt;
+            }
+                )
+            );
+        }
+        vector<double> glacier_melt(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+        double glacier_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                sum_catchment_feature_value(*cells, catchment_indexes,
+                    [](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+        }
+
+	};
+
+	///<-- end universal snow section
     ///< access to skaugen's snow routine's state statistics
     template <typename cell>
     struct skaugen_cell_state_statistics {
@@ -832,6 +1046,81 @@ namespace shyft {
 				average_catchment_feature_value(*cells, catchment_indexes,
 					[](const cell& c) { return c.sc.snow_sca; }, ith_timestep);
 		}
+		size_t find_size(const vector<int>& catchment_indexes) const {
+			if (catchment_indexes.size() == 0)
+				return (*cells)[0].sc.sp.size();
+			auto ci = catchment_indexes[0];
+			for (const auto& c : *cells) {
+				if (c.geo.catchment_id() == ci)
+					return c.sc.sp.size();
+			}
+			return 0;
+		}
+		ats_vector sp(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sp[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> sp(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sp[i]; }, ith_timestep));
+			}
+			return r;
+		}
+		vector<double> sp_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.sp[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+		ats_vector sw(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sw[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> sw(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sw[i]; }, ith_timestep));
+			}
+			return r;
+		}
+		vector<double> sw_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.sw[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+
 	};
 
     ///< access to hbv snow routine response statistics
@@ -878,6 +1167,253 @@ namespace shyft {
 
 	};
 
+
+    ///< access to hbv physical snow routine's state statistics
+    template <typename cell>
+    struct hbv_physical_snow_cell_state_statistics {
+        shared_ptr<vector<cell>> cells;
+        hbv_physical_snow_cell_state_statistics(shared_ptr<vector<cell>> cells) : cells(move(cells)) {}
+
+		apoint_ts swe(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.sc.hps_swe; }));
+        }
+		vector<double> swe(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.sc.hps_swe; }, ith_timestep);
+		}
+		double swe_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.hps_swe; }, ith_timestep);
+		}
+
+		apoint_ts sca(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.sc.hps_sca; }));
+        }
+		vector<double> sca(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) { return c.sc.hps_sca; }, ith_timestep);
+		}
+		double sca_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.sc.hps_sca; }, ith_timestep);
+		}
+
+        apoint_ts surface_heat(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [] (const cell& c) { return c.sc.hps_surface_heat; }));
+        }
+
+        vector<double> surface_heat(const vector<int>& catchment_indexes,
+                                    size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                catchment_feature(*cells, catchment_indexes,
+                    [] (const cell& c) { return c.sc.hps_surface_heat; },
+                    ith_timestep);
+        }
+
+        double surface_heat_value(const vector<int>& catchment_indexes,
+                                  size_t ith_timestep) const {
+            return shyft::core::cell_statistics::
+                average_catchment_feature_value(*cells, catchment_indexes,
+                        [] (const cell& c) {return c.sc.hps_surface_heat; },
+                        ith_timestep);
+        }
+		size_t find_size(const vector<int>& catchment_indexes) const {
+			if (catchment_indexes.size() == 0)
+				return (*cells)[0].sc.sp.size();
+			auto ci = catchment_indexes[0];
+			for (const auto& c : *cells) {
+				if (c.geo.catchment_id() == ci)
+					return c.sc.sp.size();
+			}
+			return 0;
+		}
+		ats_vector albedo(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.albedo[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> albedo(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.albedo[i]; }, ith_timestep));
+			}
+			return r;
+		}
+		vector<double> albedo_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.albedo[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+		ats_vector iso_pot_energy(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&](const cell& c) { return c.sc.iso_pot_energy[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> iso_pot_energy(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.iso_pot_energy[i]; }, ith_timestep));
+			}
+			return r;
+		}
+
+		vector<double> iso_pot_energy_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.iso_pot_energy[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+		ats_vector sp(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sp[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> sp(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sp[i]; }, ith_timestep));
+			}
+			return r;
+		}
+		vector<double> sp_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.sp[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+		ats_vector sw(const vector<int>& catchment_indexes) const {
+			ats_vector r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(apoint_ts(*shyft::core::cell_statistics::
+					average_catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sw[i]; })));
+			}
+			return r;
+		}
+		vector<vector<double>> sw(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			vector<vector<double>> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					catchment_feature(*cells, catchment_indexes,
+						[&i](const cell& c) { return c.sc.sw[i]; }, ith_timestep));
+			}
+			return r;
+		}
+		vector<double> sw_value(const vector<int>& catchment_indexes,
+			size_t ith_timestep) const {
+			vector<double> r;
+			size_t size = find_size(catchment_indexes);
+			for (size_t i = 0; i < size; ++i) {
+				r.push_back(shyft::core::cell_statistics::
+					average_catchment_feature_value(*cells, catchment_indexes,
+						[&i](const cell& c) {return c.sc.sw[i]; },
+						ith_timestep));
+			}
+			return r;
+		}
+	};
+
+
+    ///< access to hbv physical snow routine response statistics
+    template <typename cell>
+    struct hbv_physical_snow_cell_response_statistics {
+        shared_ptr<vector<cell>> cells;
+        hbv_physical_snow_cell_response_statistics(shared_ptr<vector<cell>> cells) : cells(cells) {}
+
+		apoint_ts outflow(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) { return c.rc.hps_outflow; }));
+        }
+		vector<double> outflow(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.rc.hps_outflow; }, ith_timestep);
+		}
+		double outflow_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.hps_outflow; }, ith_timestep);
+		}
+
+		apoint_ts glacier_melt(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                sum_catchment_feature(*cells, catchment_indexes,
+                    [](const cell& c) {
+                        return c.rc.glacier_melt;
+                    }
+                )
+            );
+        }
+        vector<double> glacier_melt(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+		}
+		double glacier_melt_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				sum_catchment_feature_value(*cells, catchment_indexes,
+					[](const cell& c) { return c.rc.glacier_melt; }, ith_timestep);
+		}
+
+	};
+
+
     template <typename cell>
     struct priestley_taylor_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
@@ -900,6 +1436,7 @@ namespace shyft {
 		}
 	};
 
+
 	template <typename cell>
 	struct hbv_soil_cell_response_statistics {
 		shared_ptr<vector<cell>> cells;
@@ -921,6 +1458,12 @@ namespace shyft {
 					[](const cell& c) { return c.rc.soil_outflow; }, ith_timestep);
 		}
 	};
+
+    /** helper class for pot_ratio method of ae cell_response */
+    struct pot_ratio_single_value_ts {
+        double v;
+        double value(size_t) const {return v;};
+    };
     template <typename cell>
     struct actual_evapotranspiration_cell_response_statistics {
         shared_ptr<vector<cell>> cells;
@@ -941,7 +1484,55 @@ namespace shyft {
 				average_catchment_feature_value(*cells, catchment_indexes,
 					[](const cell& c) { return c.rc.ae_output; }, ith_timestep);
 		}
-	};
+
+		/**  pot_ratio is needed to study the dry-level of kirchner and pot/act evapo ratio.
+         *
+         *  pot_ratio(t) = (1.0 - std::exp(-water_level*3.0/ scale_factor))  [ratio]
+         *
+         * where
+         *   water_level = kirchner.state.q(t) [mm/h]
+         *   scale_factor = cell.parameter.ae.scale_factor
+         */
+		apoint_ts pot_ratio(const vector<int>& catchment_indexes) const {
+            return apoint_ts(*shyft::core::cell_statistics::
+                average_catchment_feature(*cells, catchment_indexes,
+                [](const cell& c) {
+                    vector<double>  v; v.reserve(c.sc.kirchner_discharge.size());
+                    auto scale_factor = c.parameter->ae.ae_scale_factor;
+                    auto area_m2 = c.geo.area();
+                    for(size_t i=0;i<c.sc.kirchner_discharge.size();++i) {
+                        v.emplace_back(
+                            shyft::core::actual_evapotranspiration::calc_pot_ratio(m3s_to_mmh(c.sc.kirchner_discharge.value(i),area_m2),scale_factor)
+                        );
+                    }
+                    return shyft::core::pts_t(c.sc.kirchner_discharge.time_axis(),move(v),c.sc.kirchner_discharge.point_interpretation());
+                })
+            );
+        }
+		vector<double> pot_ratio(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				catchment_feature(*cells, catchment_indexes,
+				[ith_timestep](const cell& c) {
+                    auto scale_factor = c.parameter->ae.ae_scale_factor;
+                    auto area_m2 = c.geo.area();
+                    auto water_level = m3s_to_mmh(c.sc.kirchner_discharge.value(ith_timestep),area_m2);
+                    double pot_ratio_value=shyft::core::actual_evapotranspiration::calc_pot_ratio(water_level,scale_factor);
+                    return pot_ratio_single_value_ts{pot_ratio_value};
+                }, ith_timestep);
+		}
+		double pot_ratio_value(const vector<int>& catchment_indexes, size_t ith_timestep) const {
+			return shyft::core::cell_statistics::
+				average_catchment_feature_value(*cells, catchment_indexes,
+					[ith_timestep](const cell& c) {
+                        auto scale_factor = c.parameter->ae.ae_scale_factor;
+                        auto area_m2 = c.geo.area();
+                        auto water_level = m3s_to_mmh(c.sc.kirchner_discharge.value(ith_timestep),area_m2);
+                        double pot_ratio_value=shyft::core::actual_evapotranspiration::calc_pot_ratio(water_level,scale_factor);
+                        return pot_ratio_single_value_ts{pot_ratio_value};
+                    }, ith_timestep);
+		}
+
+    };
 
 	template <typename cell>
 	struct hbv_actual_evapotranspiration_cell_response_statistics {

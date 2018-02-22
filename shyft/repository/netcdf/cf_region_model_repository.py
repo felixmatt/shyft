@@ -17,6 +17,7 @@ from .. import interfaces
 from shyft import api
 from shyft import shyftdata_dir
 from shyft.orchestration.configuration.config_interfaces import RegionConfig, ModelConfig, RegionConfigError
+from shyft.orchestration.configuration.dict_configs import DictModelConfig, DictRegionConfig
 
 class CFRegionModelRepositoryError(Exception):
     pass
@@ -27,18 +28,29 @@ class CFRegionModelRepository(interfaces.RegionModelRepository):
     based on data found in netcdf files.
     """
 
-    def __init__(self, region_config, model_config):
+    def __init__(self, region, model):
         """
         Parameters
         ----------
-        region_config: subclass of interface RegionConfig
-            Object containing regional information, like
+        region: either a dictionary suitable to be instantiated as a
+            RegionConfig Object or a sublcass of the interface RegionConfig
+            containing regional information, like
             catchment overrides, and which netcdf file to read
-        model_config: subclass of interface ModelConfig
+        model: either a dictionary suitable to be instantiated as a
+            ModelConfig Object or a subclass of interface ModelConfig
             Object containing model information, i.e.
             information concerning interpolation and model
             parameters
         """
+
+        if not isinstance(region, RegionConfig):
+            region_config = DictRegionConfig(region)
+        if not isinstance(model, ModelConfig):
+            model_config = DictModelConfig(model)
+        else:
+            region_config = region
+            model_config = model
+
         if not isinstance(region_config, RegionConfig) or \
            not isinstance(model_config, ModelConfig):
             raise interfaces.InterfaceError()

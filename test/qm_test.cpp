@@ -5,7 +5,7 @@
 #include "core/utctime_utilities.h"
 #include "core/time_series_qm.h"
 //#include "api/api.h"
-//#include "api/time_series.h"
+//#include "core/time_series_dd.h"
 //#include "core/time_series_statistics.h"
 
 // workbench for qm data model and algorithms goes into shyft::qm

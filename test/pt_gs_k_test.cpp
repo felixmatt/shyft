@@ -214,16 +214,16 @@ TEST_CASE("test_mass_balance") {
     }
     TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000/cell_area + rc.ae_output.value(0), prec.value(0),0.0000001);
 	TS_ASSERT_DELTA(rc.snow_outflow.value(0)*dt * 1000 / cell_area, prec.value(0), 0.0000001);//verify snow out is m3/s
-    SUBCASE("direct_response_on_bare_lake_only") {
-        // verify that when it rains, verify that only (1-snow.sca)*(lake+rsv).fraction * precip_mm *cell_area goes directly to response.
+    SUBCASE("direct_response_on_reservoir_only") {
+        // verify that when it rains, verify that only rsv.fraction * precip_mm *cell_area goes directly to response.
         // case 1: no snow-covered area, close to zero in kirchner q, expect all rain directly
-        land_type_fractions ltf(0.0,0.5,0.5,0.0,0.0);// all is lake and reservoir
+        land_type_fractions ltf(0.0,0.5,0.5,0.0,0.0);// 50-50 lake and reservoir
         gcd.set_land_type_fractions(ltf);
         state.kirchner.q=1e-4;//
         state.gs.lwc=0.0;// no snow, should have direct response, 3 mm/h, over the cell_area
         state.gs.acc_melt=-1;// should be no snow, should go straight through
         pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
-        TS_ASSERT_DELTA(rc.avg_discharge.value(0)*dt*1000.0/cell_area,prec.value(0),0.001);
+        FAST_CHECK_EQ(rc.avg_discharge.value(0)*dt*1000.0/cell_area, doctest::Approx(0.5*prec.value(0)).epsilon(0.001));
         state.gs.lwc=1.0;
         state.gs.acc_melt=300.0;
         temp.v[0]=-10.0;//it's cold
@@ -241,11 +241,33 @@ TEST_CASE("test_mass_balance") {
                 break;// melt done, everything should be in kirchner response by now
         }
         TS_ASSERT_DELTA(rc.snow_sca.value(0),0.0,0.1);// almost entirely covered by snow, so we should have 0.04 of rain direct response
-        TS_ASSERT_DELTA(rc.avg_discharge.value(0),0.8333,0.001);//empirical
+        FAST_CHECK_EQ(rc.avg_discharge.value(0),doctest::Approx(0.5*0.8333).epsilon(0.001));//empirical
 
     }
+    SUBCASE("glacier_direct_response") {
+        // verify that glacier melt goes through kirchner according to gm.direct_response
+        // glac lake, reservoir
+        land_type_fractions ltf(0.5,0.0,0.0,0.0,0.5);// 50-50 glac unspecified
+        gcd.set_land_type_fractions(ltf);
+        state.kirchner.q=1e-4;// so small, that it's close to zero
+        state.gs.lwc=0.0;// no snow, should have direct response, 3 mm/h, over the cell_area
+        state.gs.acc_melt=-1;// should be no snow, should go straight through
 
+        parameter.gm.direct_response=1.0;// all direct
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        double expected_discharge =0.5*mmh_to_m3s(prec.value(0),cell_area)+rc.glacier_melt.value(0);
+        FAST_CHECK_EQ(rc.avg_discharge.value(0), doctest::Approx( expected_discharge).epsilon(0.001));
+
+        parameter.gm.direct_response=0.5;//  direct
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        expected_discharge =0.5*(0.5*mmh_to_m3s(prec.value(0),cell_area) + rc.glacier_melt.value(0));
+        FAST_CHECK_EQ(rc.avg_discharge.value(0), doctest::Approx( expected_discharge).epsilon(0.001));
+
+        parameter.gm.direct_response=0.0;// no direct
+        pt_gs_k::run_pt_gs_k<direct_accessor,pt_gs_k::response>(gcd,parameter,tax,0,0,temp,prec,wind_speed,rel_hum,radiation,state,sc,rc);
+        expected_discharge =2.778e-5;
+        FAST_CHECK_EQ(rc.avg_discharge.value(0), doctest::Approx( expected_discharge).epsilon(0.01e-5));
+    }
 }
-
 
 }

@@ -54,10 +54,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;BOOST_VARIANT_MINIMIZE_SIZE;XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=1;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -77,11 +77,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE;BOOST_VARIANT_MINIMIZE_SIZE;XSHYFT_NO_PCH;DLIB_DISABLE_ASSERTS;ARMA_DONT_PRINT_CXX11_WARNING;_CRT_SECURE_NO_WARNINGS;ARMA_DONT_PRINT_ERRORS;ARMA_USE_CXX11;BOOST_NUMERIC_ODEINT_CXX11;_CRT_SECURE_NO_WARNINGS;BOOSTSERIAL;BOOST_THREAD_USE_DLL;BOOST_LIB_DIAGNOSTIC=0;BOOST_ALL_DYN_LINK=1;_WINDOWS;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);ARMA_DONT_PRINT_CXX11_WARNING</PreprocessorDefinitions>
       <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -100,21 +100,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="core_pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">core_pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">core_pch.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="core_serialization.cpp" />
     <ClCompile Include="dream_optimizer.cpp" />
+    <ClCompile Include="dtss.cpp" />
+    <ClCompile Include="dtss_client.cpp" />
     <ClCompile Include="experimental.cpp" />
+    <ClCompile Include="expression_serialization.cpp" />
     <ClCompile Include="sceua_optimizer.cpp" />
+    <ClCompile Include="time_series_dd.cpp" />
+    <ClCompile Include="time_series_serialization.cpp" />
     <ClCompile Include="utctime_utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="actual_evapotranspiration.h" />
-    <ClInclude Include="core_pch.h" />
+    <ClInclude Include="core_archive.h" />
+    <ClInclude Include="core_serialization.h" />
     <ClInclude Include="dream_optimizer.h" />
     <ClInclude Include="dtss.h" />
     <ClInclude Include="dtss_cache.h" />
@@ -123,7 +123,9 @@
     <ClInclude Include="dtss_msg.h" />
     <ClInclude Include="dtss_url.h" />
     <ClInclude Include="experimental.h" />
+    <ClInclude Include="expression_serialization.h" />
     <ClInclude Include="hbv_actual_evapotranspiration.h" />
+    <ClInclude Include="hbv_physical_snow.h" />
     <ClInclude Include="hbv_soil.h" />
     <ClInclude Include="hbv_stack.h" />
     <ClInclude Include="hbv_stack_cell_model.h" />
@@ -139,6 +141,7 @@
     <ClInclude Include="bayesian_kriging.h" />
     <ClInclude Include="kriging.h" />
     <ClInclude Include="kirchner.h" />
+    <ClInclude Include="model_state_tuning.h" />
     <ClInclude Include="optimizer_utils.h" />
     <ClInclude Include="precipitation_correction.h" />
     <ClInclude Include="predictions.h" />
@@ -146,6 +149,8 @@
     <ClInclude Include="pt_gs_k.h" />
     <ClInclude Include="cell_model.h" />
     <ClInclude Include="pt_gs_k_cell_model.h" />
+    <ClInclude Include="pt_hps_k.h" />
+    <ClInclude Include="pt_hps_k_cell_model.h" />
     <ClInclude Include="pt_hs_k.h" />
     <ClInclude Include="pt_hs_k_cell_model.h" />
     <ClInclude Include="pt_ss_k.h" />
@@ -156,13 +161,14 @@
     <ClInclude Include="time_series.h" />
     <ClInclude Include="region_model.h" />
     <ClInclude Include="time_axis.h" />
+    <ClInclude Include="time_series_dd.h" />
     <ClInclude Include="time_series_info.h" />
     <ClInclude Include="time_series_merge.h" />
+    <ClInclude Include="time_series_point_merge.h" />
     <ClInclude Include="time_series_qm.h" />
     <ClInclude Include="time_series_statistics.h" />
     <ClInclude Include="unit_conversion.h" />
     <ClInclude Include="utctime_utilities.h" />
-    <ClInclude Include="compiler_compatiblity.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

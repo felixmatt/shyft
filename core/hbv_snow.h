@@ -25,48 +25,17 @@
 #include <cmath>
 #include <sstream>
 
-#include "core_pch.h"
+#include "core_serialization.h"
 
 #include "utctime_utilities.h"
+#include "hbv_snow_common.h"
 
 namespace shyft {
     namespace core {
         namespace hbv_snow {
             using namespace std;
+            using namespace hbv_snow_common;
 
-            /** \brief integrate function f given as linear interpolated between the f_i(x_i) from a to b for a, b in x.
-             * If f_rhs_is_zero is set, f(b) = 0, unless b = x[i] for some i in [0,n).
-             */
-            inline double integrate(const vector<double>& f, const vector<double>& x, size_t n, double a, double b, bool f_b_is_zero=false) {
-                size_t left = 0;
-                double area = 0.0;
-                double f_l = 0.0;
-                double x_l = a;
-                while (a > x[left]) ++left;
-
-                if (fabs(a - x[left]) > 1.0e-8 && left > 0) { // Linear interpolation of start point
-                    --left;
-                    f_l = (f[left + 1] - f[left])/(x[left + 1] - x[left])*(a - x[left]) + f[left];
-                } else
-                    f_l = f[left];
-
-                while (left < n - 1) {
-                    if (b >= x[left + 1]) {
-                        area += 0.5*(f_l + f[left + 1])*(x[left + 1] - x_l);
-                        x_l = x[left + 1];
-                        f_l = f[left + 1];
-                        ++left;
-                    }
-                    else {
-                        if (! f_b_is_zero)
-                            area += (f_l + 0.5*(f[left + 1] - f_l)/(x[left + 1] - x_l)*(b - x_l))*(b - x_l);
-                        else
-                            area += 0.5*f_l*(b - x_l);
-                        break;
-                    }
-                }
-                return area;
-            }
 
             struct parameter {
                 vector<double> s;///<snow redistribution factors
@@ -76,16 +45,25 @@ namespace shyft {
                 double ts;
                 double lw;
                 double cfr;
+
                 void set_std_distribution_and_quantiles() {
-                    double si[] = {1.0, 1.0, 1.0, 1.0, 1.0};
-                    double ii[] = {0, 0.25, 0.5, 0.75, 1.0};
-                    s.clear();s.reserve(5);
-                    intervals.clear();intervals.reserve(5);
-                    for(size_t i=0; i<5; ++i) {
+                    double si[] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
+                    double ii[] = { 0, 0.25, 0.5, 0.75, 1.0 };
+                    s.clear(); s.reserve(5);
+                    intervals.clear(); intervals.reserve(5);
+                    for (size_t i = 0; i<5; ++i) {
                         s.push_back(si[i]);
                         intervals.push_back(ii[i]);
                     }
+                    normalize_snow_distribution();
                 }
+
+                void normalize_snow_distribution() {
+                    const double mean = integrate(s, intervals, intervals.size(), intervals[0], intervals.back());
+                    for (auto &s_ : s) s_ /= mean;
+                }
+
+
                 parameter(double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   :  tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) {
                       set_std_distribution_and_quantiles();
@@ -94,22 +72,47 @@ namespace shyft {
                           double tx=0.0, double cx=1.0, double ts=0.0, double lw=0.1, double cfr=0.5)
                   : s(s), intervals(intervals), tx(tx), cx(cx), ts(ts), lw(lw), cfr(cfr) { /* Do nothing */ }
 
-                void set_snow_redistribution_factors(const vector<double>& values) { s = values; }
-                void set_snow_quantiles(const vector<double>& values) { intervals = values; }
+
+                void set_snow_redistribution_factors(const vector<double>& values) {
+                    if (values.size() != intervals.size())
+                        throw std::runtime_error("Incompatible size for snowdistribution factors: " + to_string(intervals.size()) + " != " + to_string(values.size()));
+                    s = values;
+                    normalize_snow_distribution();
+                }
+
+                void set_snow_quantiles(const vector<double>& values) {
+                    if (values.size() != s.size())
+                        throw std::runtime_error("Incompatible size for snowdistribution factors: " + to_string(s.size()) + " != " + to_string(values.size()));
+                    intervals = values;
+                    normalize_snow_distribution();
+                }
             };
 
 
 
 
             struct state {
+                vector<double> sp;
+                vector<double> sw;
                 double swe = 0.0;
                 double sca = 0.0;
 
                 state(double swe=0.0, double sca=0.0)
                   : swe(swe), sca(sca) { /* Do nothing */ }
-                bool operator==(const state& x)const {
+
+                bool operator==(const state& x) const {
                     const double eps=1e-6;
+                    if (sp.size() != sw.size()) return false;
+                    for (size_t i = 0; i<sp.size(); ++i) {
+                        if (fabs(sp[i]-x.sp[i])>= eps || fabs(sw[i]-x.sw[i])>=eps)
+                            return false;
+                    }
                     return fabs(swe-x.swe)<eps && fabs(sca-x.sca)<eps;
+                }
+                void distribute(const parameter& p, bool force=true) {
+                    if(force || sp.size() != p.s.size() || sw.size()!=p.s.size() ) {// if not force ,but a size miss-match
+                        distribute_snow(p, sp, sw,swe,sca);
+                    }
                 }
                 x_serialize_decl();
             };
@@ -140,49 +143,16 @@ namespace shyft {
              */
             template<class P, class S>
             struct calculator {
+                const P p;
 
-                vector<double> sd;
-                vector<double> I;
-                vector<double> sp;
-                vector<double> sw;
-                size_t I_n;
-
-                calculator(const P& p,  S& state):I(p.intervals),I_n(p.intervals.size()) {
-                    // Simple trapezoidal rule to normalize the snow redistribution quartiles
-                    auto s = p.s;
-
-                    const double mean = hbv_snow::integrate(s, I, I_n, I[0], I[I_n - 1]);
-                    sd = s;
-                    for (auto &sd_: sd) sd_ /= mean;
-
-                    double swe = state.swe;
-                    double sca = state.sca;
-
-                    sp = vector<double>(I_n, 0.0);
-                    sw = vector<double>(I_n, 0.0);
-                    if (swe <= 1.0e-3 || sca <= 1.0e-3) {
-                        state.swe = state.sca  = 0.0;
-                    } else {
-                        for (size_t i = 0; i < I_n; ++i)
-                            sp[i] = sca < I[i] ? 0.0 : s[i]*swe;
-
-                        swe = integrate(sp, I, I_n, 0.0, sca, true);
-
-                        if (swe < state.swe) {
-                            const double corr1 = state.swe/swe*p.lw;
-                            const double corr2 = state.swe/swe*(1.0 - p.lw);
-                            for (size_t i = 0; i< I_n; ++i) {
-                                sw[i] = corr1*sp[i];
-                                sp[i] *= corr2;
-                            }
-                        } else
-                            sw = vector<double>(I_n, 0.0);
-                    }
+                calculator(const P& p):p(p) {
                 }
 
-                void refreeze(double &sp, double &sw, const double rain, const double potmelt, const double lw) {
-                    // Note that the above calculations might violate the mass balance due to rounding errors. A fix might be to
-                    // replace sw by a sw_fraction, sp with s_tot, and compute sw and sp based on these.
+                static inline void refreeze(double &sp, double &sw, const double rain, const double potmelt, const double lw) {
+                    // Note that the above calculations might violate the mass
+                    // balance due to rounding errors. A fix might be to
+                    // replace sw by a sw_fraction, sp with s_tot, and compute
+                    // sw and sp based on these.
                     if (sp > 0.0) {
                         if (sw + rain > -potmelt) {
                             sp -= potmelt;
@@ -195,7 +165,8 @@ namespace shyft {
                     }
                 }
 
-                void update_state(double &sp, double &sw, const double rain, const double potmelt, const double lw) {
+
+                static inline void update_state(double &sp, double &sw, const double rain, const double potmelt, const double lw) {
                     if (sp > potmelt) {
                         sw += potmelt + rain;
                         sp -= potmelt;
@@ -204,23 +175,25 @@ namespace shyft {
                         sp = sw = 0.0;
                 }
 
-                size_t sca_index(double sca) const {
-                    for (size_t i = 0;  i < I_n - 1; ++i)
-                        if (sca >= I[i] && sca < I[i + 1])
+
+                inline size_t sca_index(double sca) const {
+                    for (size_t i = 0; i < p.intervals.size() - 1; ++i)
+                        if (sca >= p.intervals[i] && sca < p.intervals[i + 1])
                             return i;
-                    return I_n - 1;
+                    return p.intervals.size() - 1;
                 }
 
-                size_t melt_index(double potmelt) {
-                    for (size_t i = 0; i < I_n; ++i)
-                        if (sp[i] < potmelt)
+                size_t melt_index(double potmelt, const state &s) const {
+                    for (size_t i = 0; i < p.intervals.size(); ++i)
+                        if (s.sp[i] < potmelt)
                             return i;
-                    return I_n;
+                    return p.intervals.size();
                 }
 
-                template <class R> void step(S& s, R& r, shyft::core::utctime t0, shyft::core::utctime t1, const P& p, double prec, double temp) {
+                template <class R> void step(S& s, R& r, utctime t0, utctime t1, double prec, double temp) const {
                     double swe = s.swe;
                     double sca = s.sca;
+                    const auto &I = p.intervals;
                     const double total_water = prec + swe;
                     double snow,rain;
                     if( temp < p.tx ) {snow=prec;rain= 0.0;}
@@ -229,8 +202,8 @@ namespace shyft {
                     swe += snow + sca*rain;
                     if (swe < 0.1) {
                         r.outflow = total_water;
-                        fill(begin(sp), end(sp), 0.0);
-                        fill(begin(sw), end(sw), 0.0);
+                        fill(begin(s.sp), end(s.sp), 0.0);
+                        fill(begin(s.sw), end(s.sw), 0.0);
                         s.swe = 0.0;
                         s.sca = 0.0;
                         return;
@@ -239,18 +212,18 @@ namespace shyft {
                         auto idx = sca_index(sca);
                         if (sca > 1.0e-5 && sca < 1.0 - 1.0e-5) {
                             if (idx == 0) {
-                                sp[0] *= sca/(I[1] - I[0]);
-                                sw[0] *= sca/(I[1] - I[0]);
+                                s.sp[0] *= sca/(I[1] - I[0]);
+                                s.sw[0] *= sca/(I[1] - I[0]);
                             } else {
-                                sp[idx] *= (1.0 + (sca - I[idx])/(I[idx] - I[idx - 1]))/(1.0 + (I[idx + 1] - I[idx])/(I[idx] - I[idx - 1]));
-                                sw[idx] *= (1.0 + (sca - I[idx])/(I[idx] - I[idx - 1]))/(1.0 + (I[idx + 1] - I[idx])/(I[idx] - I[idx - 1]));
+                                s.sp[idx] *= (1.0 + (sca - I[idx])/(I[idx] - I[idx - 1]))/(1.0 + (I[idx + 1] - I[idx])/(I[idx] - I[idx - 1]));
+                                s.sw[idx] *= (1.0 + (sca - I[idx])/(I[idx] - I[idx - 1]))/(1.0 + (I[idx + 1] - I[idx])/(I[idx] - I[idx - 1]));
                             }
                         }
 
-                        for (size_t i = 0; i < I_n; ++i) sp[i] += snow*sd[i];
+                        for (size_t i = 0; i < p.s.size(); ++i) s.sp[i] += snow*p.s[i];
                         sca = I[1]; //  at least one bin filled after snow-fall
-                        for (size_t i = I_n - 2; i > 0; --i)
-                            if (sd[i] > 0.0) {
+                        for (size_t i = I.size() - 2; i > 0; --i)
+                            if (p.s[i] > 0.0) {
                                 sca = I[i + 1];
                                 break;
                             }
@@ -261,27 +234,27 @@ namespace shyft {
 
                     if (potmelt < 0.0) {
                         potmelt *= p.cfr;
-                        for (size_t i = 0; i < I_n; ++i)
-                            refreeze(sp[i], sw[i], rain, potmelt, lw);
+                        for (size_t i = 0; i < I.size(); ++i)
+                            refreeze(s.sp[i], s.sw[i], rain, potmelt, lw);
                     } else {
-                        size_t idx = melt_index(potmelt);
+                        size_t idx = melt_index(potmelt,s);
 
                         if (idx == 0) sca = 0.0;
-                        else if (idx == I_n) sca = 1.0;
+                        else if (idx == I.size()) sca = 1.0;
                         else {
-                            if (sp[idx] > 0.0) sca = I[idx] - (I[idx] - I[idx - 1])*(potmelt - sp[idx])/(sp[idx - 1] = sp[idx]);
-                            else sca = (1.0 - potmelt/sp[idx - 1])*(sca - I[idx - 1]) + I[idx - 1];
+                            if (s.sp[idx] > 0.0) sca = I[idx] - (I[idx] - I[idx - 1])*(potmelt - s.sp[idx])/(s.sp[idx - 1] = s.sp[idx]);
+                            else sca = (1.0 - potmelt/s.sp[idx - 1])*(sca - I[idx - 1]) + I[idx - 1];
                         }
 
-                        for (size_t i = 0; i < I_n; ++i)
-                            update_state(sp[i], sw[i], rain, potmelt, lw);
+                        for (size_t i = 0; i < I.size(); ++i)
+                            update_state(s.sp[i], s.sw[i], rain, potmelt, lw);
                     }
 
                     if (sca < 1.0e-6) swe = 0.0;
                     else {
                         bool f_is_zero = sca >= 1.0 ? false : true;
-                        swe = integrate(sp, I, I_n, 0, sca, f_is_zero);
-                        swe += integrate(sw, I, I_n, 0, sca, f_is_zero);
+                        swe = integrate(s.sp, I, I.size(), 0, sca, f_is_zero);
+                        swe += integrate(s.sw, I, I.size(), 0, sca, f_is_zero);
                     }
 
                     if (total_water < swe) {

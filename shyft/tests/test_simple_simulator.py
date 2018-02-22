@@ -74,9 +74,8 @@ class SimulationTestCase(unittest.TestCase):
         geo_ts_repository = GeoTsRepositoryCollection([ar1, ar2])
 
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+                                     geo_ts_repository, interp_repos, None)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(time_axis, state_repos.get_state(0))
 
     def test_run_arome_data_pt_gs_k_simulator(self):
@@ -98,24 +97,25 @@ class SimulationTestCase(unittest.TestCase):
         # get a simulator
         simulator = cfg.get_simulator()
 
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         state = state_repos.get_state(0)
-        simulator.run(cfg.time_axis, state)
-        simulator.region_model.get_states(state)
+        simulator.run(cfg.time_axis, state)  # Here we have already checked if StateIDs match with model cell ID. Further check is redundant.
+        #simulator.region_model.get_states(state.state_vector)
+        state = simulator.reg_model_state
         obs_discharge = 0.0
         state = simulator.discharge_adjusted_state(obs_discharge, state)
 
-        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].kirchner.q for i
-                                                          in range(state.size()))))
-        simulator.region_model.get_states(state)
+        self.assertAlmostEqual(0.0, reduce(operator.add, (state[i].state.kirchner.q for i
+                                                          in range(len(state)))))
+        #simulator.region_model.get_states(state.state_vector)
+        state = simulator.reg_model_state
 
         obs_discharge = 10.0  # m3/s
         state = simulator.discharge_adjusted_state(obs_discharge, state)
 
         # Convert from l/h to m3/s by dividing by 3.6e6
-        adj_discharge = reduce(operator.add, (state[i].kirchner.q*cell.geo.area() for (i, cell)
-                               in enumerate(simulator.region_model.get_cells())))/(3.6e6)
+        adj_discharge = reduce(operator.add, (state[i].state.kirchner.q*cell.geo.area() for (i, cell)
+                                              in enumerate(simulator.region_model.get_cells())))/(3.6e6)
         self.assertAlmostEqual(obs_discharge, adj_discharge)
 
     def test_run_geo_ts_data_simulator(self):
@@ -129,11 +129,10 @@ class SimulationTestCase(unittest.TestCase):
         simulator = cfg.get_simulator()
 
         n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(cfg.time_axis, state_repos.get_state(0))
         sim_copy = simulator.copy()
-        sim_copy.run(cfg.time_axis,state_repos.get_state(0))
-
+        sim_copy.run(cfg.time_axis, state_repos.get_state(0))
 
     def run_calibration(self, model_t):
         # set up configuration
@@ -147,15 +146,19 @@ class SimulationTestCase(unittest.TestCase):
         # get a simulator
         simulator = cfg.get_simulator()
 
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(cfg.model_t, n_cells)
-        simulator.run(time_axis, state_repos.get_state(0))
+        state_repos = DefaultStateRepository(simulator.region_model)
+        s0 = state_repos.get_state(0)
+        param = simulator.region_model.get_region_parameter()
+        # not needed, we auto initialize to default if not done explicitely
+        #if model_t in [pt_hs_k.PTHSKOptModel]:
+        #    for i in range(len(s0)):
+        #        s0[i].snow.distribute(param.hs)
+        simulator.run(time_axis, s0)
         cid = 1
 
         target_discharge_ts = simulator.region_model.statistics.discharge([cid])
-        target_discharge = api.TsTransform().to_average(time_axis.time(0), time_axis.time(1)-time_axis.time(0), time_axis.size(), target_discharge_ts)
+        target_discharge = api.TsTransform().to_average(time_axis.time(0), time_axis.time(1) - time_axis.time(0), time_axis.size(), target_discharge_ts)
         # Perturb parameters
-        param = simulator.region_model.get_region_parameter()
         p_vec_orig = [param.get(i) for i in range(param.size())]
         p_vec_min = p_vec_orig[:]
         p_vec_max = p_vec_orig[:]
@@ -179,20 +182,20 @@ class SimulationTestCase(unittest.TestCase):
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
-        target_spec_vec = api.TargetSpecificationVector() #([target_spec]) does not yet work
+        target_spec_vec = api.TargetSpecificationVector()  # ([target_spec]) does not yet work
         target_spec_vec.append(target_spec)
-        self.assertEqual(simulator.optimizer.trace_size,0)  # before optmize, trace_size should be 0
-        p_opt = simulator.optimize(time_axis, state_repos.get_state(0),
+        self.assertEqual(simulator.optimizer.trace_size, 0)  # before optmize, trace_size should be 0
+        p_opt = simulator.optimize(time_axis, s0,
                                    target_spec_vec, p_guess, p_min, p_max)
-        self.assertGreater(simulator.optimizer.trace_size,0)  # after opt, some trace values should be there
+        self.assertGreater(simulator.optimizer.trace_size, 0)  # after opt, some trace values should be there
         # the trace values are in the order of appearance 0...trace_size-1
         #
         goal_fn_values = simulator.optimizer.trace_goal_function_values.to_numpy()  # all of them, as np array
-        self.assertEqual(len(goal_fn_values),simulator.optimizer.trace_size)
-        p_last = simulator.optimizer.trace_parameter(simulator.optimizer.trace_size-1)  # get out the last (not neccessary the best)
+        self.assertEqual(len(goal_fn_values), simulator.optimizer.trace_size)
+        p_last = simulator.optimizer.trace_parameter(simulator.optimizer.trace_size - 1)  # get out the last (not neccessary the best)
         self.assertIsNotNone(p_last)
         simulator.region_model.set_catchment_parameter(cid, p_opt)
-        simulator.run(time_axis, state_repos.get_state(0))
+        simulator.run(time_axis, s0)
         found_discharge = simulator.region_model.statistics.discharge([cid])
 
         t_vs = np.array([target_discharge.value(i) for i in range(target_discharge.size())])
@@ -217,7 +220,7 @@ class SimulationTestCase(unittest.TestCase):
         dt = api.deltahours(24)
         n_steps = 400
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time(api.YMDhms(year, month, day, hour))
+        t0 = utc.time(year, month, day, hour)
         time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_steps)
 
         # Some fake ids
@@ -248,21 +251,20 @@ class SimulationTestCase(unittest.TestCase):
 
         # Construct target discharge series
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+                                     geo_ts_repository, interp_repos, None)
+        state_repos = DefaultStateRepository(simulator.region_model)
         cid = 1
         simulator.region_model.set_state_collection(cid, True)
         simulator.run(time_axis, state_repos.get_state(0))
-        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0], 0.039768354, 5) # just to verify pot.evap by regression, mm/h
+        self.assertAlmostEqual(simulator.region_model.cells[0].rc.pe_output.values[0], 0.039768354, 5)  # just to verify pot.evap by regression, mm/h
 
         percentile_list = [10, 25, 50, 75, 90]
         # From here, things could be calculated without copies (except for 't')
         # TODO: Graham optimize with numba :-)
-        #cells = simulator.region_model.get_cells()
-        #lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
-        #t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
-        #percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
+        # cells = simulator.region_model.get_cells()
+        # lwcs = [np.array(cell.sc.gs_lwc.v) for cell in cells]  # Contiguous
+        # t = np.array([cells[0].sc.gs_lwc.time(i) for i in range(cells[0].sc.gs_lwc.size())])
+        # percentiles = np.percentile(np.array(lwcs), percentile_list, 0)
         # The next should be moved into an example directory
         # if 'DISPLAY' in environ.keys():
         #     from matplotlib import pylab as plt
@@ -316,12 +318,11 @@ class SimulationTestCase(unittest.TestCase):
 
         # Construct target discharge series
         simulator = DefaultSimulator(region_id, interpolation_id, region_model_repository,
-                                    geo_ts_repository, interp_repos, None)
-        n_cells = simulator.region_model.size()
-        state_repos = DefaultStateRepository(model_t, n_cells)
+                                     geo_ts_repository, interp_repos, None)
+        state_repos = DefaultStateRepository(simulator.region_model)
         simulator.run(time_axis, state_repos.get_state(0))
         cid = 1
-        target_discharge = api.TsTransform().to_average(t0,dt,n_steps,simulator.region_model.statistics.discharge([cid]))
+        target_discharge = api.TsTransform().to_average(t0, dt, n_steps, simulator.region_model.statistics.discharge([cid]))
 
         # Construct kirchner parameters
         param = simulator.region_model.parameter_t(simulator.region_model.get_region_parameter())
@@ -336,7 +337,7 @@ class SimulationTestCase(unittest.TestCase):
         kirchner_param_max.kirchner.c1 *= 1.2
         kirchner_param_max.kirchner.c2 *= 1.2
         kirchner_param_max.kirchner.c3 *= 1.2
-        # kirchner_t_start = utc.time(api.YMDhms(2011, 4, 1, 0))
+        # kirchner_t_start = utc.time(2011, 4, 1, 0)
         # kirchner_time_axis = api.TimeAxisFixedDeltaT(kirchner_t_start, dt, 150)
         kirchner_time_axis = time_axis
 
@@ -354,7 +355,7 @@ class SimulationTestCase(unittest.TestCase):
         # Find parameters
         target_spec = api.TargetSpecificationPts(target_discharge, api.IntVector([cid]),
                                                  1.0, api.KLING_GUPTA)
-        target_spec_vec = api.TargetSpecificationVector() # TODO: We currently dont fix list initializer for vectors
+        target_spec_vec = api.TargetSpecificationVector()  # TODO: We currently dont fix list initializer for vectors
         target_spec_vec.append(target_spec)
         # Construct a fake, perturbed starting point for calibration
         p_vec = [param.get(i) for i in range(param.size())]
@@ -381,10 +382,10 @@ class SimulationTestCase(unittest.TestCase):
         simulator.run(time_axis, state_repos.get_state(0))
         found_discharge = simulator.region_model.statistics.discharge([cid])
 
-        #t_vs = np.array(target_discharge.values)
-        #t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
-        #f_vs = np.array(found_discharge.v)
-        #f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
+        # t_vs = np.array(target_discharge.values)
+        # t_ts = np.array([target_discharge.time(i) for i in range(target_discharge.size())])
+        # f_vs = np.array(found_discharge.v)
+        # f_ts = np.array([found_discharge.time(i) for i in range(found_discharge.size())])
         # The next should be moved into an example directory
         # Simple demo plotting that should be turned off during unit testing:
         # if 'DISPLAY' in environ.keys():
@@ -401,7 +402,7 @@ class SimulationTestCase(unittest.TestCase):
     def test_run_arome_ensemble(self):
         # Simulation time axis
         utc = api.Calendar()  # No offset gives Utc
-        t0 = utc.time( 2015, 7, 26, 0)
+        t0 = utc.time(2015, 7, 26, 0)
         n_hours = 30
         dt = api.deltahours(1)
         time_axis = api.TimeAxisFixedDeltaT(t0, dt, n_hours)
@@ -433,16 +434,17 @@ class SimulationTestCase(unittest.TestCase):
             self.skipTest("**** test_run_arome_ensemble: Arome data missing or wrong, test "
                           "inconclusive ****\n\t exception:{}".format(e))
         simulator = DefaultSimulator(region_id,
-                                    interpolation_id,
-                                    region_model_repository,
-                                    geo_ts_repository,
-                                    interp_repos,
-                                    None)
+                                     interpolation_id,
+                                     region_model_repository,
+                                     geo_ts_repository,
+                                     interp_repos,
+                                     None)
         n_cells = simulator.region_model.size()
         state_repos = DefaultStateRepository(model_t, n_cells)
         simulators = simulator.create_ensembles(time_axis, t0, state_repos.get_state(0))
         for s in simulators:
             s.simulate()
+
 
 if __name__ == '__main__':
     unittest.main()
