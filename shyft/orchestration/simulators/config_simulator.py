@@ -68,7 +68,7 @@ class ConfigCalibrator(simulator.DefaultSimulator):
         if self.optimizer is None:
             raise ConfigSimulatorError("Simulator's region model {} cannot be optimized, please choose "
                                  "another!".format(self.region_model.__class__.__name__))
-        self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA}
+        self.obj_funcs = {'NSE': api.NASH_SUTCLIFFE, 'KGE': api.KLING_GUPTA, 'RMSE': api.RMSE}
         self.region_model.initialize_cell_environment(sim_config.time_axis)
         self.region_model_id = sim_config.region_model_id
         self.model_config_file = sim_config.model_config_file
