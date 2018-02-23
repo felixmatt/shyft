@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <algorithm>
 #include <sstream>
+#include <boost/math/special_functions/relative_difference.hpp>
 #include "core_serialization.h"
 
 #include "utctime_utilities.h"
@@ -38,7 +39,7 @@ namespace shyft{
 
         using namespace shyft::core;
         using namespace std;
-
+        using boost::math::epsilon_difference;
         /** \brief Enumerates how points are mapped to f(t)
          *
          * If there is a point_ts, this determines how we would draw f(t).
@@ -1627,6 +1628,191 @@ namespace shyft{
 			x_serialize_decl();
 		};
 
+        /**  ice packing/reduction parameters
+        * keeps the minimal parameters needed to describe the
+        * ice_packing detection process.
+        */
+        struct ice_packing_parameters {
+
+            utctimespan window{0};     ///< the time-window in seconds for the temperature computation compared to threshold
+            double threshold_temp{0.0};  ///< the threshold temperature where ice-packing occurs, ref. .window for length
+
+            ice_packing_parameters() = default;
+            ice_packing_parameters(utctimespan window,
+                                   double threshold_temp)
+                : window{ window }, threshold_temp{ threshold_temp } { }
+
+            bool operator==(const ice_packing_parameters & other) const noexcept {
+                return window == other.window && epsilon_difference(threshold_temp,other.threshold_temp)<2.0;
+            }
+
+            x_serialize_decl();
+        };
+
+        enum class ice_packing_temperature_policy {
+            DISALLOW_MISSING,  ///< The result is NaN when temperature values are missing.
+                               /// Missing values are both explicit NaN temperature values,
+                               /// and at the beginning of the series where the scan window expend
+                               /// past the start of the temperature series.
+            ALLOW_INITIAL_MISSING,  ///< The result is NaN whenever explicit NaN temperature values are encountered.
+                                    /// However, the result is _not_ NaN at the beginning of the series where
+                                    /// the scan window extend past the end of the series.
+            ALLOW_ANY_MISSING,  ///< The result is only NaN when all temperature values in a scan window are missing or NaN.
+        };
+
+        /** \brief ice-packing ts that detect ice-packing from average temperature
+         *
+         * \tparam TS a time-series that satisfy std. time-series methods, or a shared ptr to
+         */
+        template < class TS >
+        struct ice_packing_ts {
+
+            // type api
+            using ts_t = TS;
+            using ipp_t = ice_packing_parameters;
+            using ta_t = typename TS::ta_t;
+
+            // data
+            ts_t temp_ts;
+            ipp_t ip_param;
+            ice_packing_temperature_policy ipt_policy = ice_packing_temperature_policy::DISALLOW_MISSING;
+            // -----
+            ts_point_fx fx_policy = ts_point_fx::POINT_AVERAGE_VALUE;
+            // -----
+            bool bound = false;
+
+            // con/de-struction, copy & move
+            ice_packing_ts() { // can't use default here,
+                if( ! e_needs_bind(d_ref(temp_ts)) ) // because we need this to get right
+                    local_do_bind();
+            }
+
+            template < class TS_A, class IPP >
+            ice_packing_ts(TS_A && ts, IPP && ipp,
+                           ice_packing_temperature_policy ipt_policy = ice_packing_temperature_policy::DISALLOW_MISSING,
+                           ts_point_fx fx_policy = ts_point_fx::POINT_AVERAGE_VALUE)
+                : temp_ts{ std::forward<TS_A>(ts) },
+                  ip_param{ std::forward<IPP>(ipp) },
+                  ipt_policy{ ipt_policy },
+                  fx_policy{ fx_policy }
+            {
+                if ( fx_policy != POINT_AVERAGE_VALUE )
+                    throw std::runtime_error("ice_packing_ts: fx_policy should be POINT_AVERAGE_VALUE only");
+                if( ! e_needs_bind(d_ref(temp_ts)) )
+                    local_do_bind();
+            }
+
+            // -----
+            ~ice_packing_ts() = default;
+            // -----
+            ice_packing_ts(const ice_packing_ts &) = default;
+            ice_packing_ts & operator= (const ice_packing_ts &) = default;
+            // -----
+            ice_packing_ts(ice_packing_ts &&) = default;
+            ice_packing_ts & operator= (ice_packing_ts &&) = default;
+
+            // usage
+            bool needs_bind() const {
+                return ! bound;
+            }
+            void do_bind() {
+                if ( !bound ) {
+                    d_ref(temp_ts).do_bind();
+                    local_do_bind();
+                }
+            }
+            void local_do_bind() {
+                fx_policy = POINT_AVERAGE_VALUE;
+                bound = true;
+            }
+            void ensure_bound() const {
+                if ( ! bound ) {
+                    throw runtime_error("ice_packing_ts: access to not yet bound attempted");
+                }
+            }
+            // -----
+            ts_point_fx point_interpretation() const {
+                return fx_policy;
+            }
+            void set_point_interpretation(ts_point_fx policy) {
+                if ( fx_policy != POINT_AVERAGE_VALUE )
+                    throw std::runtime_error("ice_packing_ts: fx_policy should be POINT_AVERAGE_VALUE only");
+                // fx_policy = POINT_AVERAGE_VALUE;
+            }
+
+            // api
+            std::size_t size() const {
+                return d_ref(temp_ts).size();
+            }
+            utcperiod total_period() const {
+                return d_ref(temp_ts).total_period();
+            }
+            const ta_t & time_axis() const {
+                return d_ref(temp_ts).time_axis();
+            }
+            // -----
+            std::size_t index_of(utctime t) const {
+                return d_ref(temp_ts).index_of(t);
+            }
+            double operator()(utctime t) const {
+                return detect_ice_packing(t);
+            }
+            // -----
+            utctime time(std::size_t i) const {
+                return d_ref(temp_ts).time(i);
+            }
+            double value(std::size_t i) const {
+                return detect_ice_packing(time(i));
+            }
+
+        private:
+
+            /** \brief detect if ice-packing can occurs
+             *
+             * A simple approach base on the simple detector:
+             *   if average temperature in [ t-window, t> is less than threshold_temp
+             *     return 1.0 otherwise 0.0
+             *   if not able to compute average, - return nan
+             *
+             *  policy for the average period:
+             *     ALLOW_ANY_MISSING : as long as it's possible to compute average, use it
+             *     DISALLOW_MISSING : average period must be complete (no nans)
+             *     ALLOW_INITIAL_MISSING : clip window period to the beginning of the temperature ts, then apply disallow missing
+             *
+             * \note this algorithm have rather large cost if called repeatedly for increasing time.
+             *       in those cases a more clever algoritm using moving averages (in case window overlap multiple flow-points)
+             *       or just one-pass scan from beginning.
+             */
+            double detect_ice_packing(utctime t) const {
+                ensure_bound();
+                utcperiod p(t-ip_param.window,t);
+                if(ipt_policy != ice_packing_temperature_policy::DISALLOW_MISSING) {
+                    // adjust beginning of period if needed (could get zero period)
+                    if(p.start < total_period().start) {
+                        p.start=std::min(total_period().start,p.end);
+                    }
+                }
+                // compute the integral of non-nan areas, and t_sum gives the non-nan time-span.
+                if(p.timespan()==0) {
+                    return 0.0;// either it's clipped to zero, or window is 0, in both cases no ice-packing
+                    //sih: as an alternative, use instant value at t, but that does not make sense for the purpose of this algorithm
+                }
+                utctimespan t_sum;
+                size_t ix_hint=-1;// if we could guess index from time t, we could set it here, for now it's just ok to pass none
+                double p_sum= accumulate_value(d_ref(temp_ts),p,ix_hint,t_sum,d_ref(temp_ts).point_interpretation()==ts_point_fx::POINT_INSTANT_VALUE);
+                if(!isfinite(p_sum) || t_sum==0) // if nan, or t_sum = 0, temperature and average is nan or undefined
+                    return shyft::nan; /// we return nan
+                if(ipt_policy == ice_packing_temperature_policy::ALLOW_ANY_MISSING  || (t_sum == p.timespan())) {
+                    return p_sum/t_sum < ip_param.threshold_temp?1.0:0.0; // finally a clear cut case, where we have the average, and can compare to threshold
+                }
+                return shyft::nan;
+            }
+
+            x_serialize_decl();
+        };
+
+        // --------------------
+
 		/** The template is_ts<T> is used to enable operator overloading +-/  etc to time-series only.
 		* otherwise the operators will interfere with other libraries doing the same.
 		*/
@@ -1641,7 +1827,8 @@ namespace shyft{
 		// This is to allow this ts to participate in ts-math expressions
 		template<class T> struct is_ts<glacier_melt_ts<T>> {static const bool value=true;};
 		template<class T> struct is_ts<shared_ptr<glacier_melt_ts<T>>> {static const bool value=true;};
-		template<class TS> struct is_ts<rating_curve_ts<TS>> { static const bool value = true; };
+        template<class TS> struct is_ts<rating_curve_ts<TS>> { static const bool value = true; };
+        template<class TS> struct is_ts<ice_packing_ts<TS>> { static const bool value = true; };
 
 		template<class TS,class TA> struct is_ts<average_ts<TS,TA>> {static const bool value=true;};
 		template<class TS,class TA> struct is_ts<shared_ptr<average_ts<TS,TA>>> {static const bool value=true;};

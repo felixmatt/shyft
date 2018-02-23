@@ -131,15 +131,17 @@ namespace shyft {
             point get(size_t i) const {return point(time(i),value(i));}
             x_serialize_decl();
         };
-        struct average_ts;//fwd api
-        struct accumulate_ts;//fwd api
-        struct integral_ts;// fwd api
-        struct time_shift_ts;// fwd api
-        struct aglacier_melt_ts;// fwd api
-        struct aref_ts;// fwd api
-        struct ts_bind_info;
-        struct ats_vector;//fwd
-        struct abs_ts;//fwd
+
+        struct average_ts;  // fwd api
+        struct accumulate_ts;  // fwd api
+        struct integral_ts;  // fwd api
+        struct time_shift_ts;  // fwd api
+        struct aglacier_melt_ts;  // fwd api
+        struct aref_ts;  // fwd api
+        struct ts_bind_info;  // fwd
+        struct ats_vector;  // fwd
+        struct abs_ts;  // fwd
+        struct ice_packing_recession_parameters;  // fwd
 
 		/** \brief Enumerates fill policies for time-axis extension.
 		 */
@@ -203,7 +205,9 @@ namespace shyft {
 
             apoint_ts()=default;
             bool needs_bind() const {
-                return sts()->needs_bind();
+                if(!ts)
+                    return false;// empty ts, counts as terminal, can't be bound
+                return ts->needs_bind();
             }
             string id() const;///< if the ts is aref_ts return it's id (or maybe better url?)
             void do_bind() {
@@ -261,7 +265,9 @@ namespace shyft {
             ats_vector partition_by(const calendar& cal, utctime t, utctimespan partition_interval, size_t n_partitions, utctime common_t0) const;
             apoint_ts convolve_w(const std::vector<double>& w, shyft::time_series::convolve_policy conv_policy) const;
             apoint_ts abs() const;
-			apoint_ts rating_curve(const rating_curve_parameters & rc_param) const;
+            apoint_ts rating_curve(const rating_curve_parameters & rc_param) const;
+            apoint_ts ice_packing(const ice_packing_parameters & ip_param, ice_packing_temperature_policy ipt_policy) const;
+            apoint_ts ice_packing_recession(const apoint_ts & ice_packing_ts, const ice_packing_recession_parameters & ipr_param) const;
 
             apoint_ts krls_interpolation(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
             prediction::krls_rbf_predictor get_krls_predictor(core::utctimespan dt, double rbf_gamma, double tol, std::size_t size) const;
@@ -935,6 +941,274 @@ namespace shyft {
 
 		};
 
+		/** \brief ice-packing detection time-series
+		 *
+		 * The purpose of this time-series is to provide 1.0 if
+		 * ice-packing is detected, according to specified parameters,
+		 * otherwise evaluate to 0.0 if no ice-packing occurs.
+		 *
+		 * Temperature time-series is the input to this algorithm,
+		 * and the time-axis etc. are just reflected through this class.
+        *
+		 *
+		 * To signal error conditions, the ice-packing ts returns nan
+		 * according to specified policy flags.
+		 *
+		 */
+        struct ice_packing_ts : ipoint_ts {
+
+            using ipt_t = shyft::time_series::ice_packing_ts<apoint_ts>;
+            using ip_param_t = shyft::time_series::ice_packing_parameters;
+
+            ipt_t ts; ///< the implementation time-series fetched from the core layer, with temp
+
+            ice_packing_ts() = default;
+            template < class TS, class IPP >
+            ice_packing_ts(
+                TS && ts, IPP && ipp,
+                ice_packing_temperature_policy ipt_policy = ice_packing_temperature_policy::DISALLOW_MISSING
+            ) : ts{ std::forward<TS>(ts), std::forward<IPP>(ipp), ipt_policy } { }
+            // -----
+            virtual ~ice_packing_ts() = default;
+            // -----
+            ice_packing_ts(const ice_packing_ts &) = default;
+            ice_packing_ts & operator= (const ice_packing_ts &) = default;
+            // -----
+            ice_packing_ts(ice_packing_ts &&) = default;
+            ice_packing_ts & operator= (ice_packing_ts &&) = default;
+
+            virtual bool needs_bind() const { return ts.needs_bind(); }
+            virtual void do_bind() { ts.do_bind(); }
+            // -----
+            virtual ts_point_fx point_interpretation() const { return ts.point_interpretation(); }
+            virtual void set_point_interpretation(ts_point_fx policy) { return ts.set_point_interpretation(policy); }
+            // -----
+            virtual std::size_t size() const { return ts.size(); }
+            virtual utcperiod total_period() const { return ts.total_period(); }
+            virtual const gta_t & time_axis() const { return ts.time_axis(); }
+            // -----
+            virtual std::size_t index_of(utctime t) const { return ts.index_of(t); }
+            virtual double value_at(utctime t) const { return ts(t); }
+            // -----
+            virtual utctime time(std::size_t i) const { return ts.time(i); }
+            virtual double value(std::size_t i) const { return ts.value(i); }
+            // -----
+            virtual std::vector<double> values() const {
+                std::size_t dim = size();
+                std::vector<double> ret; ret.reserve(dim);
+                for ( std::size_t i = 0; i < dim; ++i ) {
+                    ret.emplace_back(value(i));
+                }
+                return ret;
+            }
+
+            x_serialize_decl();
+
+        };
+
+        /** \brief  controls a simple ice_packing recession
+        *
+        * This class keep the two minimal parameters for
+        * the recession shape to be used while ice_packing is active.
+        *
+        * The recession formula is given by
+        *
+        *  f(t) = qbf + (qs - qbf) * std::exp(-alpha * (t - ts))
+        *
+        *  where
+        *    qbf -> recession_minium [m**3/s]
+        *    qs  -> flow observed just before start of ice-packing
+        *    ts  -> time when ice-packing starts (in seconds,epoch)
+        *    t   -> t time (in seconds, epoch, >= ts)
+        *    alpha -> the alpha parameter (unit 1/s)
+        *
+        * so
+        *   when time t =  ts,  then f(t) = qs
+        *   when time t -> +oo, then f(t) -> qbf
+        *
+        */
+        struct ice_packing_recession_parameters {
+            double alpha{0.0};///< recession factor, unit [1/s], default flat(no recession)
+            double recession_minimum{0.0};  ///< unit [m**3/s] minimum floor value for recession, default 0.0 m/s
+
+            ice_packing_recession_parameters() = default;
+            // -----
+            ice_packing_recession_parameters(double alpha, double recession_minimum)
+                : alpha{ alpha }, recession_minimum{ recession_minimum } { }
+            // -----
+            ~ice_packing_recession_parameters() = default;
+            // -----
+            ice_packing_recession_parameters(const ice_packing_recession_parameters &) = default;
+            ice_packing_recession_parameters & operator= (const ice_packing_recession_parameters &) = default;
+            // -----
+            ice_packing_recession_parameters(ice_packing_recession_parameters &&) = default;
+            ice_packing_recession_parameters & operator= (ice_packing_recession_parameters &&) = default;
+
+            bool operator==(const ice_packing_recession_parameters & other) const noexcept {
+                return alpha == other.alpha && epsilon_difference(recession_minimum, other.recession_minimum) < 2.0;
+            }
+
+            x_serialize_decl();
+        };
+
+        /** \brief ice-packing recession time-series
+        *
+        * The purpose of this time-series is to provide an all in one
+        * package taking an ice-packing signal time-series
+        * probably of type ice_packing_ts (but not necessary),
+        * and providing recession values according to
+        * specified parameters whenever the ice-packing ts
+        * provide a signal that there is ongoing ice-packing.
+        *
+        */
+        struct ice_packing_recession_ts : ipoint_ts {
+
+            using iprp_t = ice_packing_recession_parameters;
+
+            apoint_ts flow_ts;         ///< flow in [m**3/s] units
+            apoint_ts ice_packing_ts;  ///< ice-packing indicator, in 0..1 units (1.0->ice-packing).
+            // -----
+            iprp_t ipr_param;  ///< recession parameters to control the shape during ice-packing
+            // -----
+            ts_point_fx fx_policy = ts_point_fx::POINT_INSTANT_VALUE;  ///< ts-policy, questionable it should/could reflect underlying ts
+            // -----
+            bool bound = true;  ///< internal to keep bound/unbound state, def. true since null apoint_ts is terminals
+
+            ice_packing_recession_ts() = default;// all variables above get defaults, then bound must be true
+            // -----
+            template < class TS_A, class TS_B, class IPRP >
+            ice_packing_recession_ts(
+                TS_A && flow_ts, TS_B && ice_packing_ts,
+                IPRP && iprp,
+                ts_point_fx fx_policy = ts_point_fx::POINT_INSTANT_VALUE
+            ) : flow_ts{ std::forward<TS_A>(flow_ts) },
+                ice_packing_ts{ std::forward<TS_B>(ice_packing_ts) },
+                ipr_param{ std::forward<IPRP>(iprp) },
+                fx_policy{ fx_policy },
+                bound{false} // bound false here because we need to check below
+
+            {
+                if (!flow_ts.needs_bind() && !ice_packing_ts.needs_bind())
+                    local_do_bind();
+            }
+            // -----
+            virtual ~ice_packing_recession_ts() = default;
+            // -----
+            ice_packing_recession_ts(const ice_packing_recession_ts &) = default;
+            ice_packing_recession_ts & operator= (const ice_packing_recession_ts &) = default;
+            // -----
+            ice_packing_recession_ts(ice_packing_recession_ts &&) = default;
+            ice_packing_recession_ts & operator= (ice_packing_recession_ts &&) = default;
+
+          // dispatch
+            virtual bool needs_bind() const {
+                return !bound;
+            }
+            virtual void do_bind() {
+                if ( ! bound ) {
+                    flow_ts.do_bind();
+                    ice_packing_ts.do_bind();
+                    local_do_bind();
+                }
+            }
+        private:  // dispatch impl
+            void local_do_bind() {
+                fx_policy = d_ref(flow_ts).point_interpretation();
+                bound = true;
+            }
+            void ensure_bound() const {
+                if ( ! bound ) {
+                    throw runtime_error("ice_packing_recession_ts: access to not yet bound ts attempted");
+                }
+            }
+
+        public:  // api
+            virtual ts_point_fx point_interpretation() const {
+                return fx_policy;
+            }
+            virtual void set_point_interpretation(ts_point_fx policy) {
+                fx_policy = policy;
+            }
+            // -----
+            virtual std::size_t size() const {
+                return flow_ts.size();
+            }
+            virtual core::utcperiod total_period() const {
+                return flow_ts.total_period();
+            }
+            virtual const gta_t & time_axis() const {
+                return flow_ts.time_axis();
+            }
+            // -----
+            virtual std::size_t index_of(core::utctime t) const {
+                return flow_ts.index_of(t);
+            }
+            virtual double value_at(core::utctime t) const {
+                return evaluate(t);
+            }
+            // -----
+            virtual core::utctime time(std::size_t i) const {
+                return flow_ts.time(i);
+            }
+            virtual double value(std::size_t i) const {
+                return evaluate(time(i));
+            }
+            /** \note this is terribly inefficient..*/
+            virtual std::vector<double> values() const {
+                std::size_t dim = size();
+                std::vector<double> ret; ret.reserve(dim);
+                for ( std::size_t i = 0; i < dim; ++i ) {
+                    ret.emplace_back(value(i));
+                }
+                return ret;
+            }
+
+        private:
+            double evaluate(core::utctime t) const {
+                ensure_bound();
+                ensure_overlap();
+                double ice = ice_packing_ts(t);
+                if ( !isfinite(ice) ) { // should be policy driven! if we know it's summer...
+                    return shyft::nan;
+                }
+
+                const double indicator_limit = 0.5; // the indicator time-series is usually 0.0, or 1.0(packing), or nan (error).
+                if ( ice > indicator_limit ) { // Ok, ice is packing up, we need to get the flow before it started.
+                    // We *must* use the flow ts
+                    // and regardless flow shape (linear /staircase)
+                    // find the last flow point where there is no ice
+                    size_t f_ix= flow_ts.index_of(t); // locate left flow value
+                    assert(f_ix != string::npos);// there should be one
+                    while (f_ix > 0 && ice > indicator_limit) { // find where there is no ice
+                        ice=ice_packing_ts(flow_ts.time(--f_ix));// this is rather high cost search..
+                        if(!isfinite(ice)) { // hmm.. policy driven.. and why give up here,?
+                            return shyft::nan;// ... we could just search back to next point..
+                        }
+                    }
+                    const double qs= flow_ts.value(f_ix); // last flow value with no ice, or start value
+                    const utctime ts= flow_ts.time(f_ix);
+                    // Compute recession from packing_start_time until now
+                    const double qbf = ipr_param.recession_minimum;
+                    const double alpha = ipr_param.alpha;
+
+                    return qbf + (qs - qbf) * std::exp(-alpha * (t - ts));
+                } else {
+                    return flow_ts(t);
+                }
+            }
+            /// Ensure that the ice packing ts and the flow ts overlaps correctly.
+            /// In short the flow series should either equal or be contained in
+            /// the ice packing series.
+            void ensure_overlap() const {
+                if ( !ice_packing_ts.total_period().contains(flow_ts.total_period())) {
+                    throw std::runtime_error("ice_packing_recession_ts: total period of flow ts should equal or be contained in ice packing ts total period");
+                }
+            }
+
+            x_serialize_decl();
+        };
+
+
         struct krls_interpolation_ts : ipoint_ts
         {
             using krls_p = prediction::krls_rbf_predictor;
@@ -1157,8 +1431,12 @@ namespace shyft {
             ts_point_fx fx_policy=POINT_AVERAGE_VALUE;
             bool bound=false;
 
-            ts_point_fx point_interpretation() const {return fx_policy;}
-            void set_point_interpretation(ts_point_fx x) {fx_policy=x;}
+            ts_point_fx point_interpretation() const {
+                return fx_policy;
+            }
+            void set_point_interpretation(ts_point_fx x) {
+                fx_policy=x;
+            }
 
             void local_do_bind() {
                 if(!bound) {
@@ -1174,17 +1452,37 @@ namespace shyft {
                 if( !needs_bind() )
 					local_do_bind();
             }
-            void bind_check() const {if(!bound) throw runtime_error("attempting to use unbound timeseries, context abin_op_ts");}
-            virtual utcperiod total_period() const {return time_axis().total_period();}
-            const gta_t& time_axis() const {bind_check(); return ta;};// combine lhs,rhs
-            size_t index_of(utctime t) const{return time_axis().index_of(t);};
-            size_t size() const {return time_axis().size();};// use the combined ta.size();
-            utctime time( size_t i) const {return time_axis().time(i);}; // return combined ta.time(i)
+            void bind_check() const {
+                if(!bound)
+                    throw runtime_error("attempting to use unbound timeseries, context abin_op_ts");
+            }
+            virtual utcperiod total_period() const {
+                return time_axis().total_period();
+            }
+            const gta_t& time_axis() const {
+                bind_check();
+                return ta;
+            }// combine lhs,rhs
+            size_t index_of(utctime t) const{
+                return time_axis().index_of(t);
+            }
+            size_t size() const {
+                return time_axis().size();
+            }// use the combined ta.size();
+            utctime time( size_t i) const {
+                return time_axis().time(i);
+            } // return combined ta.time(i)
             double value_at(utctime t) const ;
             double value(size_t i) const;// return op( lhs(t), rhs(t)) ..
             std::vector<double> values() const;
-            bool needs_bind() const {return lhs.needs_bind() || rhs.needs_bind(); }
-            virtual void do_bind() {lhs.do_bind();rhs.do_bind();local_do_bind();}
+            bool needs_bind() const {
+                return lhs.needs_bind() || rhs.needs_bind();
+            }
+            virtual void do_bind() {
+                lhs.do_bind();
+                rhs.do_bind();
+                local_do_bind();
+            }
             x_serialize_decl();
 
         };
@@ -1557,6 +1855,10 @@ x_serialize_export_key(shyft::time_series::convolve_w_ts<shyft::time_series::dd:
 x_serialize_export_key(shyft::time_series::dd::convolve_w_ts);
 x_serialize_export_key(shyft::time_series::rating_curve_ts<shyft::time_series::dd::apoint_ts>);
 x_serialize_export_key(shyft::time_series::dd::rating_curve_ts);
+x_serialize_export_key(shyft::time_series::ice_packing_ts<shyft::time_series::dd::apoint_ts>);
+x_serialize_export_key(shyft::time_series::dd::ice_packing_ts);
+x_serialize_export_key(shyft::time_series::dd::ice_packing_recession_parameters);
+x_serialize_export_key(shyft::time_series::dd::ice_packing_recession_ts);
 x_serialize_export_key(shyft::time_series::dd::krls_interpolation_ts);
 x_serialize_export_key_nt(shyft::time_series::dd::apoint_ts);
 x_serialize_export_key(shyft::time_series::dd::ats_vector);
